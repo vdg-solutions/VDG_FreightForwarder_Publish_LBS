@@ -1,0 +1,1503 @@
+# Abstract Driven Development (A.D.D) V3 - Complete Reference
+
+**Version**: 3.2.1
+**Last Updated**: October 27, 2025
+
+---
+
+## Table of Contents
+1. [Fractal Architecture Pattern (F.A.P)](#fractal-architecture-pattern-fap)
+2. [LLM Context Navigation in F.A.P Tree](#llm-context-navigation-in-fap-tree)
+3. [Goals & Core Principles](#goals--core-principles)
+4. [5-Layer Architecture](#5-layer-architecture)
+5. [Dependency Rules](#dependency-rules)
+6. [Events & Communication](#events--communication)
+7. [Component Types](#component-types)
+8. [UI Layer Integration](#ui-layer-integration)
+9. [Web/REST API Integration](#webrest-api-integration)
+10. [A.D.D-Extended (Complex Domains)](#add-extended-complex-domains)
+11. [Quick Reference](#quick-reference)
+
+---
+
+## Fractal Architecture Pattern (F.A.P)
+
+### What is F.A.P?
+
+**Fractal Architecture Pattern** is a self-similar, infinitely nestable structure where:
+- Every module at any depth has the **same 5 layers**: Bootstrap, Operators, Core Abstractions, Implementations, Boundary
+- Only **Implementations layer** can contain sub-modules
+- Each sub-module repeats the same 5-layer structure → infinite nesting
+
+### Pure Fractal Rules
+
+**6 Node Types Total**:
+1. Module (container)
+2. Bootstrap (layer)
+3. Operators (layer)
+4. Core Abstractions (layer)
+5. Implementations (layer) - **can contain sub-modules**
+6. Boundary (layer)
+
+**No additional types allowed** - Every module at every depth has exactly these 5 layers.
+
+### Fractal Tree Structure
+
+```
+System Root (Module)
+├── Bootstrap
+├── Operators
+├── Core Abstractions
+├── Implementations
+│   ├── Module A (sub-module)
+│   │   ├── Bootstrap
+│   │   ├── Operators
+│   │   ├── Core Abstractions
+│   │   ├── Implementations
+│   │   │   ├── Module D (sub-sub-module)
+│   │   │   │   ├── Bootstrap
+│   │   │   │   ├── Operators
+│   │   │   │   ├── Core Abstractions
+│   │   │   │   ├── Implementations
+│   │   │   │   └── Boundary
+│   │   │   └── Module E
+│   │   │       └── (... same 5 layers ...)
+│   │   └── Boundary
+│   ├── Module B
+│   │   └── (... same 5 layers ...)
+│   └── Module C
+│       └── (... same 5 layers ...)
+└── Boundary
+```
+
+### Path Notation
+
+Use path notation to describe location in fractal tree:
+
+- `/` = System Root
+- `/Implementations` = Implementations layer of root
+- `/Implementations/A` = Module A (inside root's Implementations)
+- `/Implementations/A/Operators` = Operators layer of Module A
+- `/Implementations/A/Implementations` = Implementations layer of Module A
+- `/Implementations/A/Implementations/D` = Module D (inside A's Implementations)
+- `/Implementations/A/Implementations/D/Core Abstractions` = Core layer of Module D
+
+### Why Fractal?
+
+1. **Self-similarity**: Learn once, apply everywhere - same structure at all depths
+2. **Infinite composition**: No arbitrary nesting limits
+3. **Clear boundaries**: Each module is self-contained with all 5 layers
+4. **Context isolation**: LLM can zoom in/out to any level
+5. **Easy navigation**: Path notation shows exact location
+
+---
+
+## LLM Context Navigation in F.A.P Tree
+
+### Thinking Framework for LLMs
+
+When reading A.D.D V3 code, LLMs should ask these questions **in order**:
+
+#### 1. Where am I in the fractal tree?
+- Parse the file path to determine position
+- Example: `implementations/database/operators/migrate.ts`
+  - Path: `/Implementations/Database/Operators`
+  - Current module: Database (sub-module of root)
+  - Current layer: Operators
+
+#### 2. What is my current layer's responsibility?
+- Bootstrap → DI, configuration, composition root
+- Operators → Business orchestration, workflows, mapping
+- Core Abstractions → Interfaces (Ports), Entities, Events
+- Implementations → Technology adapters, concrete realizations
+- Boundary → External contracts (DTOs, Boundary Events)
+
+#### 3. What can I reference from this layer?
+- **Bootstrap** → Can reference ALL layers (wiring)
+- **Operators** → Can reference Boundary + Core Abstractions only
+- **Core Abstractions** → Cannot reference any other layer (pure abstractions)
+- **Implementations** → Can reference Core Abstractions only
+- **Boundary** → Cannot reference any other layer (pure contracts)
+
+#### 4. What context do I need to understand this code?
+- **Level 0 (Global)**: What is the overall system architecture? (F.A.P)
+- **Level 1 (Root Module)**: What are the root's 5 layers?
+- **Level 2 (Current Module Path)**: Navigate down tree to current module
+- **Level 3 (Current Layer)**: What layer am I in? What can it do?
+- **Level 4 (Sibling Context)**: What other components in this layer?
+- **Level 5 (Code)**: Read actual implementation
+
+### Vertical Navigation Strategy
+
+**To understand a piece of code**, LLMs should navigate vertically:
+
+```
+1. Read current file path → determine position in tree
+2. Move UP to parent module → understand container context
+3. Move UP to root → understand global architecture
+4. Move DOWN step-by-step → understand how we got here
+5. Read HORIZONTALLY → understand siblings at same level
+6. Read current code WITH FULL CONTEXT
+```
+
+### Example: Reading `/Implementations/A/Implementations/UserRepo.ts`
+
+**Step 1**: Where am I?
+- Path: `/Implementations/A/Implementations/UserRepo.ts`
+- Position: Inside Module A's Implementations layer
+- Module A is inside root's Implementations layer
+
+**Step 2**: Move up to understand Module A
+- Module A is a sub-module containing: Bootstrap, Operators, Core Abstractions, Implementations, Boundary
+- Module A's purpose: (read Module A's README or shared-terms.md)
+
+**Step 3**: Move up to understand root
+- Root module structure: 5 layers
+- Root's Implementations contains: Module A, B, C...
+
+**Step 4**: Understand current layer (Implementations)
+- Implementations = technology adapters
+- Can only reference Core Abstractions (interfaces/ports)
+- Must implement ports defined in `/Implementations/A/Core Abstractions/Ports`
+
+**Step 5**: Read siblings
+- What other files in `/Implementations/A/Implementations/`?
+- Are there other adapters, providers, modules?
+
+**Step 6**: Read code with context
+- Now I understand: This is a concrete adapter inside Module A
+- It should implement a Port from Module A's Core Abstractions
+- It can use providers/drivers from deeper modules
+
+### Common LLM Navigation Mistakes
+
+❌ **Reading code without determining position** → "I don't know if this is root or sub-module"
+
+✅ **Parse path first** → "/Implementations/X means X is a sub-module"
+
+❌ **Assuming flat structure** → "All modules are at same level"
+
+✅ **Understand tree depth** → "Modules can be nested infinitely via Implementations"
+
+❌ **Ignoring layer constraints** → "Operators can call Implementations directly"
+
+✅ **Check dependency rules** → "Operators → Core Abstractions only, never Implementations"
+
+❌ **Missing parent context** → "What is this module's purpose?"
+
+✅ **Read up the tree** → "Check parent module's README, shared-terms.md"
+
+### Practical LLM Workflow
+
+When given a task: "Implement feature X in Module Y"
+
+```
+1. Locate Module Y in tree
+   - Is Y at root level? Or inside another module's Implementations?
+   - Path: /Implementations/.../Y
+
+2. Read Module Y's context
+   - README.md → purpose, scope
+   - shared-terms.md → ubiquitous language
+   - Boundary/DTOs → external contracts
+
+3. Understand Module Y's 5 layers
+   - Core Abstractions → what interfaces (Ports) exist?
+   - Operators → what business flows exist?
+   - Implementations → what adapters exist? Any sub-modules?
+
+4. Determine which layer to add code
+   - External contract? → Boundary
+   - Interface/Port? → Core Abstractions
+   - Business flow? → Operators
+   - Technology adapter? → Implementations
+   - DI wiring? → Bootstrap
+
+5. Check dependencies
+   - What can this layer reference?
+   - Follow strict dependency rules
+
+6. Implement with fractal awareness
+   - If adding sub-module → place in Implementations
+   - New sub-module must have all 5 layers
+```
+
+---
+
+## Goals & Core Principles
+
+### Goals
+1. **DIP-first**: Abstractions never depend on concretes
+2. **Easy replacement**: Swap technology without changing business logic
+3. **Simplicity**: Same structure everywhere (fractal)
+4. **Testability**: Pure rules, clear boundaries
+
+### Core Principles
+
+1. **Dependency Inversion**: All concrete classes depend on abstractions (Ports in Core Abstractions)
+2. **Layer Isolation**: Each layer has single responsibility
+3. **Interface-driven**: Operators call Ports, never concrete implementations
+4. **Event-based**: Core Events for internal coordination; Boundary Events for external
+5. **Fractal structure**: Self-similar modules at all depths
+
+---
+
+## 5-Layer Architecture
+
+Every module (root or nested) has exactly 5 layers:
+
+### 1. Bootstrap
+**Responsibility**: Composition root, DI configuration
+**Contains**: DI container, service registration, app configuration
+**Depends on**: ALL layers (wires them together)
+**Never contains**: Business logic
+
+### 2. Operators
+**Responsibility**: Business orchestration, workflows
+**Contains**: TGO (Transaction Group Operators), Coordinators, DTO↔Entity mapping
+**Depends on**: Boundary + Core Abstractions only
+**Never depends on**: Implementations (calls via Ports)
+
+### 3. Core Abstractions
+**Responsibility**: Internal abstractions, domain models
+**Contains**: Entities, Ports (interfaces), Core Events, RuleSets
+**Depends on**: Nothing (pure abstractions)
+
+### 4. Implementations
+**Responsibility**: Technology adapters, concrete implementations
+**Contains**: Adapters (implement Ports), Providers, ACL, **sub-modules**
+**Depends on**: Core Abstractions only
+
+### 5. Boundary
+**Responsibility**: System ingress/egress, external contracts
+**Contains**: DTOs, Boundary Events, input validation
+**Depends on**: Nothing (pure contracts)
+
+---
+
+## Dependency Rules
+
+### Valid References
+
+```
+Bootstrap → Operators + Implementations (wiring only)
+Operators → Boundary + Core Abstractions
+Implementations → Core Abstractions + Boundary*
+Core Abstractions → nothing
+Boundary → nothing
+```
+
+***Conditional**: Implementations → Boundary ONLY for adapters at system edge (see conditions below)
+
+### Forbidden
+
+```
+❌ Operators → Implementations (direct)
+❌ Implementations → Operators
+❌ Core Abstractions → any layer
+❌ Boundary → any layer
+```
+
+### Implementations → Boundary: Conditional Rule
+
+**ALLOWED when adapter is at system boundary:**
+
+✅ **API Clients** (calling external REST APIs)
+✅ **Webhook Handlers** (receiving external events)
+✅ **External Message Queue Consumers** (reading external messages)
+✅ **External Event Subscribers** (subscribing to external event streams)
+
+**When to allow:**
+- Adapter communicates **directly with external system**
+- External contract **matches Boundary DTO** structure
+- **Cost of conversion > benefit of isolation** (avoiding needless mapping)
+
+**NEVER allow when:**
+
+❌ **Internal implementations**: Database Repositories, In-memory Cache, File Storage
+❌ **Semantic difference exists** between external and internal representation
+❌ **Business logic needs different structure** than external contract
+
+**Rationale:**
+- **Pragmatic over purist**: Reduces boilerplate when no semantic benefit
+- **Single source of truth**: Boundary DTO is the external contract
+- **Performance**: Avoids needless mapping overhead
+- **Hexagonal alignment**: Outbound adapters at system edge can reference external contracts
+
+**Example - API Client (ALLOWED):**
+
+```typescript
+// Boundary/PaymentResultDto.ts
+export interface PaymentResultDto {
+  transactionId: string;
+  status: 'success' | 'failed';
+  amount: number;
+}
+
+// Implementations/PaymentGatewayApiClient.ts
+class PaymentGatewayApiClient implements IPaymentGateway {
+  async processPayment(): Promise<PaymentResultDto> { // ✅ Returns Boundary DTO directly
+    const response = await fetch('/external-payment-api');
+    return response.json() as PaymentResultDto; // ✅ No needless conversion
+  }
+}
+```
+
+**Example - Repository (FORBIDDEN):**
+
+```typescript
+// ❌ WRONG: Internal adapter should NOT use Boundary DTO
+class PostgresUserRepository implements IUserRepository {
+  async findById(id: string): Promise<UserDto> { // ❌ Should return Entity from Core Abstractions
+    const row = await this.db.query('SELECT * FROM users WHERE id = $1', [id]);
+    return this.mapRowToDto(row); // ❌ Internal data should use internal model
+  }
+}
+
+// ✅ CORRECT: Use Core Abstractions Entity
+class PostgresUserRepository implements IUserRepository {
+  async findById(id: string): Promise<User> { // ✅ Returns Entity from Core Abstractions
+    const row = await this.db.query('SELECT * FROM users WHERE id = $1', [id]);
+    return this.mapRowToEntity(row);
+  }
+}
+```
+
+### Cross-Module Communication
+
+**Modules communicate via**:
+- Ports (interfaces) defined in Core Abstractions
+- Core Events (internal events)
+
+**Direct calls forbidden**:
+- Module A's Operators cannot directly call Module B's Operators
+- Must go through Ports or emit Core Events
+
+---
+
+## Events & Communication
+
+### Event Types
+
+#### Boundary Events
+- **Location**: Boundary layer
+- **Purpose**: Events crossing system boundary (webhooks, external MQ)
+- **Versioned**: Yes (public contract)
+
+#### Core Events
+- **Location**: Core Abstractions layer
+- **Purpose**: Internal coordination between Operators ↔ Implementations
+- **Two types**:
+  - **BusinessSignal**: Reflects business state (Order.Created, Payment.Completed)
+  - **TechnicalSignal**: Operational signals (Job.Retry, Cache.Invalidated)
+
+### Event Structure (Envelope)
+
+```typescript
+{
+  eventName: "Domain.PastTenseAction",  // e.g., "Order.Created"
+  version: 1,
+  correlationId: "uuid",
+  causationId: "uuid",
+  occurredAt: "ISO8601",
+  payload: { /* event-specific data */ },
+  metadata: {
+    source: "path/to/emitter",
+    consistency: "strong | eventual"
+  }
+}
+```
+
+### Event Naming Rules
+
+✅ **Good**: Order.Created, Payment.Completed, User.Registered
+❌ **Bad**: Order.Create (imperative), CreateOrder (command-style)
+
+**Pattern**: `Domain.PastTenseAction` - Use past tense (event already happened)
+
+---
+
+## Component Types
+
+### Data Components
+
+**DTO (Data Transfer Object)**:
+- Location: Boundary
+- Purpose: External contracts
+- Rules: No logic, pure data
+
+**Entity**:
+- Location: Core Abstractions
+- Purpose: Domain models
+- Rules: Thin structure, validation only, no business logic
+
+### Action Components
+
+**Port (Interface)**:
+- Location: Core Abstractions
+- Purpose: Abstract contracts
+- Examples: IUserRepository, IPaymentGateway, ITranslator
+
+**Adapter**:
+- Location: Implementations
+- Purpose: Concrete implementation of Port
+- Examples: PostgresUserRepository implements IUserRepository
+
+**Operator**:
+- Location: Operators layer
+- Purpose: Business orchestration
+- Types:
+  - **TGO (Transaction Group Operator)**: Strong consistency, transaction boundary
+  - **Coordinator**: Eventual consistency, multi-step flows via events
+
+### Rule Components
+
+**RuleSet**:
+- Location: Core Abstractions
+- Purpose: Pure function validating business rules
+- Returns: RuleReport (passed: bool, reasons: string[])
+
+**Checkpoint**:
+- Location: Core Abstractions
+- Purpose: Pipeline combining multiple RuleSets
+- Executed: Before state changes in Operators
+
+---
+
+## UI Layer Integration
+
+### Overview
+
+UI/Frontend/Presentation layer **follows the same 5-layer fractal pattern**. Depending on deployment architecture, UI can be:
+1. **Separate Module** (SPA, Mobile App) - Independent deployment unit
+2. **Sub-Module** (Monolith, SSR) - Nested inside root's Implementations
+
+Both approaches maintain fractal consistency: **UI always has 5 layers**.
+
+---
+
+### Approach 1: UI as Separate Module
+
+**Use when**: Frontend and Backend are separate deployment units (SPA + REST API, Mobile App + Backend).
+
+**Structure**:
+```
+Frontend Module (Root)
+├── Bootstrap
+│   ├── Router configuration
+│   ├── DI container for UI components
+│   ├── Theme/styling initialization
+│   └── Global UI state setup
+├── Operators
+│   ├── Presentation Orchestrators (navigation flows, multi-step forms)
+│   ├── ViewModel Composers (Backend DTOs → ViewModels)
+│   ├── Navigation Logic (route guards, breadcrumbs)
+│   └── UI Workflows (wizards, modal sequences)
+├── Core Abstractions
+│   ├── Ports
+│   │   ├── INavigationService (navigate between screens)
+│   │   ├── IDialogService (modals, confirmations)
+│   │   ├── IToastService (notifications)
+│   │   ├── IFormValidator (client-side validation)
+│   │   └── IApiClient (backend communication contract)
+│   ├── ViewModels (internal display models with computed properties)
+│   └── UI Events (Screen.Viewed, Form.Submitted, Navigation.Completed)
+├── Implementations
+│   ├── Component Libraries (React/Vue/Blazor components)
+│   ├── State Management Adapters (Redux/MobX/Zustand implementing IStateStore port)
+│   ├── API Client Adapters (Axios/Fetch implementing IApiClient port)
+│   ├── Navigation Adapters (React Router/Vue Router implementing INavigationService)
+│   └── Sub-modules (Chart Library, Rich Text Editor with their own 5 layers)
+└── Boundary
+    ├── Screen DTOs (props contracts for pages/screens)
+    ├── Display Events (analytics, external tracking)
+    └── Accessibility Contracts (ARIA labels, screen reader contracts)
+```
+
+**Communication Pattern**:
+```
+Backend Module                          Frontend Module
+└── Boundary (API DTOs) ←────HTTP────→ Implementations/API Client Adapter
+                                       └── Maps to Core Abstractions (ViewModels)
+                                           └── Used by Operators (ViewModel Composers)
+                                               └── Passed to Implementations (Components)
+```
+
+**Path Examples**:
+- `/Bootstrap/app-init.ts` - Frontend app initialization
+- `/Operators/profile-view-composer.ts` - Compose profile ViewModel
+- `/Core Abstractions/Ports/INavigationService.ts` - Navigation abstraction
+- `/Implementations/React/ProfileScreen.tsx` - React component
+- `/Boundary/ScreenDTOs/ProfileScreenProps.ts` - Screen contract
+
+---
+
+### Approach 2: UI as Sub-Module
+
+**Use when**: Frontend embedded in Backend (SSR, Blazor Server, Monolith with embedded UI).
+
+**Structure**:
+```
+System Root
+├── Bootstrap
+├── Operators (Backend business logic)
+├── Core Abstractions (Domain)
+├── Implementations
+│   ├── Database (sub-module with 5 layers)
+│   ├── PaymentGateway (sub-module with 5 layers)
+│   └── UI (sub-module with 5 layers)
+│       ├── Bootstrap (UI-specific setup: router, theme)
+│       ├── Operators (Presentation logic, ViewModel mapping)
+│       ├── Core Abstractions (INavigationService, IDialogService, ViewModels)
+│       ├── Implementations (React components, state adapters)
+│       └── Boundary (Screen props, analytics events)
+└── Boundary (API DTOs - may also serve UI)
+```
+
+**Path Examples**:
+- `/Implementations/UI/Bootstrap/theme-config.ts` - UI theme setup
+- `/Implementations/UI/Operators/dashboard-composer.ts` - Dashboard ViewModel composer
+- `/Implementations/UI/Core Abstractions/Ports/IDialogService.ts` - Dialog abstraction
+- `/Implementations/UI/Implementations/React/Dashboard.tsx` - React component
+- `/Implementations/UI/Boundary/DashboardScreenProps.ts` - Screen contract
+
+---
+
+### UI Layer Definitions
+
+#### 1. Bootstrap (UI)
+**Responsibility**: UI application composition root, initialization
+**Contains**:
+- Router configuration (React Router, Vue Router)
+- DI container for UI components
+- Theme/styling initialization
+- Global UI state setup (Redux store, Context providers)
+
+**Depends on**: All UI layers (wiring)
+
+#### 2. Operators (UI)
+**Responsibility**: Presentation orchestration, ViewModel mapping
+**Contains**:
+- **Presentation Orchestrators**: Multi-step navigation flows, form wizards
+- **ViewModel Composers**: Map backend DTOs → ViewModels for display
+- **Navigation Logic**: Route guards, breadcrumb generation, deep linking
+- **UI Workflows**: Modal sequences, progressive disclosure
+
+**Depends on**: UI Boundary + UI Core Abstractions
+**Never depends on**: UI Implementations (calls via Ports like INavigationService)
+
+**Example**:
+```typescript
+// UI/Operators/ProfileViewModelComposer.ts
+class ProfileViewModelComposer {
+  constructor(
+    private apiClient: IApiClient, // Port from Core Abstractions
+    private translator: ITranslator // Port from Core Abstractions
+  ) {}
+
+  async compose(userId: string): Promise<ProfileViewModel> {
+    const dto = await this.apiClient.get<UserProfileDTO>(`/users/${userId}`);
+
+    return {
+      id: dto.id,
+      email: dto.email,
+      displayCreatedAt: this.formatDate(dto.createdAt),
+      isEmailVerified: this.checkVerification(dto),
+      avatarUrl: dto.avatarUrl || '/default-avatar.png'
+    };
+  }
+}
+```
+
+#### 3. Core Abstractions (UI)
+**Responsibility**: UI abstractions, ViewModels, UI events
+**Contains**:
+- **Ports (Interfaces)**:
+  - `INavigationService`: Navigate between screens, history management
+  - `IDialogService`: Show modals, confirmations, alerts
+  - `IToastService`: Notifications, snackbars
+  - `IFormValidator`: Client-side validation rules
+  - `IApiClient`: Backend communication contract
+  - `IStateStore`: State management abstraction
+- **ViewModels** (internal): Rich display models with computed properties, formatting
+- **UI Events**: `Screen.Viewed`, `Form.Submitted`, `Navigation.Completed`
+
+**Depends on**: Nothing (pure abstractions)
+
+**Example**:
+```typescript
+// UI/Core Abstractions/Ports/INavigationService.ts
+interface INavigationService {
+  navigateTo(route: string, params?: Record<string, any>): void;
+  goBack(): void;
+  getCurrentRoute(): string;
+}
+
+// UI/Core Abstractions/ViewModels/ProfileViewModel.ts
+interface ProfileViewModel {
+  id: string;
+  email: string;
+  displayCreatedAt: string; // Formatted: "January 1, 2025"
+  isEmailVerified: boolean; // Computed
+  avatarUrl: string; // With default fallback
+}
+```
+
+#### 4. Implementations (UI)
+**Responsibility**: Concrete UI components, state adapters, API clients
+**Contains**:
+- **Component Libraries**: React/Vue/Blazor components implementing UI abstractions
+- **State Management Adapters**: Redux, MobX, Zustand adapters implementing `IStateStore` port
+- **API Client Adapters**: Axios, Fetch implementing `IApiClient` port (consume backend Boundary DTOs)
+- **Navigation Adapters**: React Router, Vue Router implementing `INavigationService`
+- **Sub-modules**: Complex UI features (Chart Library, Rich Text Editor, Form Builder) with their own 5 layers
+
+**Depends on**: UI Core Abstractions only
+
+**Example**:
+```typescript
+// UI/Implementations/React/ProfileScreen.tsx
+function ProfileScreen({ userId }: ProfileScreenProps) {
+  const composer = useInjection<ProfileViewModelComposer>('ProfileComposer');
+  const [vm, setVm] = useState<ProfileViewModel | null>(null);
+
+  useEffect(() => {
+    composer.compose(userId).then(setVm);
+  }, [userId]);
+
+  if (!vm) return <Loading />;
+
+  return (
+    <div>
+      <Avatar src={vm.avatarUrl} />
+      <Email value={vm.email} verified={vm.isEmailVerified} />
+      <CreatedAt value={vm.displayCreatedAt} />
+    </div>
+  );
+}
+```
+
+#### 5. Boundary (UI)
+**Responsibility**: External UI contracts, screen interfaces
+**Contains**:
+- **Screen DTOs**: Props contracts for pages/screens (external interface of UI module)
+- **Display Events**: Analytics events, external tracking payloads
+- **Accessibility Contracts**: ARIA labels, screen reader contracts
+
+**Depends on**: Nothing (pure contracts)
+
+**Example**:
+```typescript
+// UI/Boundary/ScreenDTOs/ProfileScreenProps.ts
+interface ProfileScreenProps {
+  userId: string;
+  onNavigateBack?: () => void;
+}
+
+// UI/Boundary/DisplayEvents/ScreenViewedEvent.ts
+interface ScreenViewedEvent {
+  eventName: 'Screen.Viewed';
+  screenName: string;
+  timestamp: string;
+  metadata: {
+    userId?: string;
+    referrer?: string;
+  };
+}
+```
+
+---
+
+### UI Communication Patterns
+
+#### Frontend → Backend
+```
+UI/Implementations/API Client (Axios adapter)
+  → implements UI/Core Abstractions/Ports/IApiClient
+    → called by UI/Operators (ViewModel Composers)
+      → fetch Backend/Boundary/DTOs
+        → map to UI/Core Abstractions/ViewModels
+```
+
+#### Backend → Frontend (SSR or embedded)
+```
+Backend/Operators
+  → emit Backend/Core Abstractions/Events
+    → consumed by /Implementations/UI/Operators
+      → update UI/Core Abstractions/ViewModels
+        → trigger re-render in /Implementations/UI/React Components
+```
+
+---
+
+### Benefits of UI Module with 5 Layers
+
+✅ **Testability**: UI Operators testable in isolation (mock INavigationService, IApiClient)
+✅ **Swappable Technology**: Replace React → Vue only changes Implementations, keeps Operators
+✅ **Clear Boundaries**: ViewModel mapping logic separated from components
+✅ **Fractal Consistency**: Complex UI features (Chart Library) also have 5 layers
+✅ **Dependency Inversion**: Components depend on UI Ports, not concrete Redux/Router
+✅ **Technology Independence**: Business presentation logic (Operators) not tied to framework
+
+---
+
+### Example: User Profile Feature (Full Stack)
+
+**Backend Side**:
+```
+/Boundary/UserProfileDTO.ts
+  ↓
+Backend API exposes: GET /users/{id} → UserProfileDTO
+```
+
+**Frontend Side (Approach 1 - Separate Module)**:
+```
+/Implementations/API/AxiosClient.ts (implements IApiClient)
+  ↓ fetch UserProfileDTO
+/Operators/ProfileViewModelComposer.ts
+  ↓ map DTO → ProfileViewModel (formatted dates, computed fields)
+/Implementations/React/ProfileScreen.tsx
+  ↓ render ProfileViewModel
+```
+
+**Frontend Side (Approach 2 - Sub-Module)**:
+```
+/Implementations/UI/Implementations/API/AxiosClient.ts (implements IApiClient)
+  ↓ fetch UserProfileDTO
+/Implementations/UI/Operators/ProfileViewModelComposer.ts
+  ↓ map DTO → ProfileViewModel
+/Implementations/UI/Implementations/React/ProfileScreen.tsx
+  ↓ render ProfileViewModel
+```
+
+---
+
+### Common UI Patterns in A.D.D V3
+
+#### Pattern 1: Form Submission Flow
+```
+Component (Implementations)
+  → call Operator.submitForm(formData)
+    → Operator validates via IFormValidator port
+      → Operator maps to DTO (Boundary)
+        → Operator calls IApiClient.post(dto)
+          → API Client (Implementations) sends to Backend/Boundary
+```
+
+#### Pattern 2: Navigation with Side Effects
+```
+Component triggers navigation
+  → call INavigationService.navigateTo('/dashboard')
+    → Navigation Adapter (Implementations) handles routing
+      → Operator listens to Navigation.Completed event
+        → Operator emits Screen.Viewed event (analytics)
+```
+
+#### Pattern 3: Multi-Step Wizard
+```
+Wizard Operator (Operators)
+  → manages step state via IStateStore port
+    → validates each step via IFormValidator port
+      → final step: compose full ViewModel
+        → submit via IApiClient port
+```
+
+---
+
+### UI Layer Decision Tree
+
+**Question**: Where should I add this code in UI module?
+
+- **External screen contract?** → Boundary (Screen DTOs)
+- **Navigation/Dialog/Toast abstraction?** → Core Abstractions (Ports)
+- **ViewModel with formatting logic?** → Core Abstractions (ViewModels) OR Operators (Composers)
+- **Multi-step flow, navigation logic?** → Operators (Presentation Orchestrators)
+- **DTO → ViewModel mapping?** → Operators (ViewModel Composers)
+- **React/Vue component?** → Implementations (Component Libraries)
+- **Redux/Router adapter?** → Implementations (State/Navigation Adapters)
+- **DI wiring for components?** → Bootstrap
+
+---
+
+## Web/REST API Integration
+
+### Overview
+
+Web/REST API framework code (ASP.NET Controllers, Minimal API, Express routes, FastAPI routes) is **technology-specific** and belongs in **Implementations layer** as **Web Adapters**.
+
+**Key principle**: Operators are framework-agnostic. They receive DTOs and return DTOs. Web Adapters translate between HTTP and Operators.
+
+---
+
+### Layer Responsibilities
+
+#### Boundary Layer
+- **DTOs**: Request/response contracts (input validation, JSON serialization attributes)
+- **Endpoint path constants** (optional): Documented API surface
+
+**Example**:
+```csharp
+// Boundary/DTOs/CreateUserDto.cs
+public class CreateUserDto
+{
+    [JsonPropertyName("email")]
+    [Required]
+    public string Email { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; }
+}
+
+// Boundary/Web/ApiEndpoints.cs (optional)
+public static class ApiEndpoints
+{
+    public const string CreateUser = "/api/users";
+    public const string GetUser = "/api/users/{id}";
+}
+```
+
+#### Operators Layer
+- **Business orchestration** (framework-agnostic)
+- Input: DTO (from Boundary)
+- Output: DTO (to Boundary)
+- **NEVER return framework types** (`IResult`, `IActionResult`, `Response`, etc.)
+- **NEVER depend on HTTP context** (`HttpContext`, `Request`, `Response`)
+
+**Example**:
+```csharp
+// Operators/UserOperator.cs
+public class UserOperator
+{
+    private readonly IUserRepository _repo; // Port from Core Abstractions
+
+    // Framework-agnostic: DTO in, DTO out
+    public async Task<UserDto> CreateUser(CreateUserDto dto)
+    {
+        var entity = MapDtoToEntity(dto);
+        await _repo.Save(entity);
+        return MapEntityToDto(entity);
+    }
+
+    public async Task<UserDto> GetUser(string id)
+    {
+        var entity = await _repo.FindById(id);
+        if (entity == null) throw new UserNotFoundException(id);
+        return MapEntityToDto(entity);
+    }
+}
+```
+
+#### Implementations/Web/
+- **Web Adapters**: Translate HTTP requests ↔ Operator calls ↔ HTTP responses
+- Framework-specific code (ASP.NET, Express, FastAPI, etc.)
+- Handle HTTP concerns: status codes, headers, content negotiation
+- Error handling: catch exceptions → HTTP error responses
+
+**Responsibilities**:
+- Receive HTTP request → extract DTO from body/query/route
+- Call Operator (via Port interface)
+- Map Operator result → HTTP response (status code, body)
+- Handle exceptions → appropriate HTTP error responses
+
+---
+
+### Common Mistake: Framework Code in Operators
+
+❌ **WRONG: Returning framework types from Operators**
+```csharp
+// Operators/UserOperator.cs - WRONG!
+public class UserOperator
+{
+    // ❌ Returns IResult (ASP.NET Core type)
+    public async Task<IResult> GetUser(string id)
+    {
+        var entity = await _repo.FindById(id);
+        if (entity == null)
+            return Results.NotFound(); // ❌ Framework-specific
+
+        return Results.Ok(MapEntityToDto(entity)); // ❌ Framework-specific
+    }
+}
+```
+
+**Why WRONG?**
+- `IResult` is ASP.NET Core type → Operators now depend on framework
+- Violates dependency rule: **Operators → Boundary + Core Abstractions ONLY**
+- Cannot swap framework (locked to ASP.NET Core)
+- Cannot test Operators without framework
+
+✅ **CORRECT: Operators return DTOs, Web Adapters handle HTTP**
+```csharp
+// Operators/UserOperator.cs - CORRECT
+public class UserOperator
+{
+    // ✅ Returns DTO (framework-agnostic)
+    public async Task<UserDto> GetUser(string id)
+    {
+        var entity = await _repo.FindById(id);
+        if (entity == null) throw new UserNotFoundException(id);
+        return MapEntityToDto(entity);
+    }
+}
+
+// Implementations/Web/UserWebAdapter.cs - CORRECT
+public class UserWebAdapter
+{
+    private readonly IUserOperator _userOp; // Port from Core Abstractions
+
+    // ✅ Framework-specific code isolated here
+    public async Task<IResult> GetUser(string id)
+    {
+        try
+        {
+            var dto = await _userOp.GetUser(id);
+            return Results.Ok(dto);
+        }
+        catch (UserNotFoundException)
+        {
+            return Results.NotFound();
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(ex.Message);
+        }
+    }
+}
+```
+
+---
+
+### Patterns for Different Frameworks
+
+#### Pattern 1: ASP.NET Core Minimal API
+
+**Approach A: Inline in Bootstrap (simple cases)**
+```csharp
+// Bootstrap/WebApplicationExtensions.cs
+public static void MapUserEndpoints(this WebApplication app)
+{
+    app.MapPost("/api/users",
+        async (CreateUserDto dto, IUserOperator userOp) =>
+        {
+            try
+            {
+                var result = await userOp.CreateUser(dto);
+                return Results.Created($"/api/users/{result.Id}", result);
+            }
+            catch (ValidationException ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        });
+
+    app.MapGet("/api/users/{id}",
+        async (string id, IUserOperator userOp) =>
+        {
+            try
+            {
+                var result = await userOp.GetUser(id);
+                return Results.Ok(result);
+            }
+            catch (UserNotFoundException)
+            {
+                return Results.NotFound();
+            }
+        });
+}
+```
+
+**Approach B: Web Adapter class (complex cases)**
+```csharp
+// Implementations/Web/UserWebAdapter.cs
+public class UserWebAdapter
+{
+    private readonly IUserOperator _userOp;
+
+    public UserWebAdapter(IUserOperator userOp)
+    {
+        _userOp = userOp;
+    }
+
+    public async Task<IResult> CreateUser(CreateUserDto dto)
+    {
+        try
+        {
+            var result = await _userOp.CreateUser(dto);
+            return Results.Created($"/api/users/{result.Id}", result);
+        }
+        catch (ValidationException ex)
+        {
+            return Results.BadRequest(ex.Message);
+        }
+    }
+
+    public async Task<IResult> GetUser(string id)
+    {
+        try
+        {
+            var result = await _userOp.GetUser(id);
+            return Results.Ok(result);
+        }
+        catch (UserNotFoundException)
+        {
+            return Results.NotFound();
+        }
+    }
+}
+
+// Bootstrap/WebApplicationExtensions.cs
+public static void MapUserEndpoints(this WebApplication app)
+{
+    var adapter = app.Services.GetRequiredService<UserWebAdapter>();
+    app.MapPost("/api/users", adapter.CreateUser);
+    app.MapGet("/api/users/{id}", adapter.GetUser);
+}
+
+// Bootstrap/DI/ServiceRegistration.cs
+services.AddScoped<UserWebAdapter>();
+```
+
+#### Pattern 2: ASP.NET Core Controller-based
+
+```csharp
+// Implementations/Web/Controllers/UsersController.cs
+[ApiController]
+[Route("api/users")]
+public class UsersController : ControllerBase
+{
+    private readonly IUserOperator _userOp;
+
+    public UsersController(IUserOperator userOp)
+    {
+        _userOp = userOp;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
+    {
+        try
+        {
+            var result = await _userOp.CreateUser(dto);
+            return CreatedAtAction(nameof(GetUser), new { id = result.Id }, result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUser(string id)
+    {
+        try
+        {
+            var result = await _userOp.GetUser(id);
+            return Ok(result);
+        }
+        catch (UserNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+}
+```
+
+#### Pattern 3: Express.js (Node.js)
+
+```typescript
+// implementations/web/user-routes.ts
+import express from 'express';
+import { IUserOperator } from '../../core-abstractions/ports/IUserOperator';
+
+export function createUserRoutes(userOp: IUserOperator): express.Router {
+    const router = express.Router();
+
+    router.post('/api/users', async (req, res) => {
+        try {
+            const dto = req.body as CreateUserDto;
+            const result = await userOp.createUser(dto);
+            res.status(201).json(result);
+        } catch (error) {
+            if (error instanceof ValidationException) {
+                res.status(400).json({ message: error.message });
+            } else {
+                res.status(500).json({ message: 'Internal server error' });
+            }
+        }
+    });
+
+    router.get('/api/users/:id', async (req, res) => {
+        try {
+            const result = await userOp.getUser(req.params.id);
+            res.status(200).json(result);
+        } catch (error) {
+            if (error instanceof UserNotFoundException) {
+                res.status(404).end();
+            } else {
+                res.status(500).json({ message: 'Internal server error' });
+            }
+        }
+    });
+
+    return router;
+}
+
+// bootstrap/app.ts
+import { createUserRoutes } from '../implementations/web/user-routes';
+
+const userOp = container.resolve<IUserOperator>('IUserOperator');
+app.use(createUserRoutes(userOp));
+```
+
+#### Pattern 4: FastAPI (Python)
+
+```python
+# implementations/web/user_routes.py
+from fastapi import APIRouter, HTTPException, Depends
+from boundary.dtos import CreateUserDto, UserDto
+from core_abstractions.ports import IUserOperator
+from core_abstractions.exceptions import UserNotFoundException, ValidationException
+
+router = APIRouter(prefix="/api/users")
+
+def get_user_operator() -> IUserOperator:
+    # DI resolution from Bootstrap
+    from bootstrap.container import container
+    return container.resolve(IUserOperator)
+
+@router.post("/", status_code=201, response_model=UserDto)
+async def create_user(
+    dto: CreateUserDto,
+    user_op: IUserOperator = Depends(get_user_operator)
+):
+    try:
+        result = await user_op.create_user(dto)
+        return result
+    except ValidationException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/{id}", response_model=UserDto)
+async def get_user(
+    id: str,
+    user_op: IUserOperator = Depends(get_user_operator)
+):
+    try:
+        result = await user_op.get_user(id)
+        return result
+    except UserNotFoundException:
+        raise HTTPException(status_code=404, detail="User not found")
+
+# bootstrap/app.py
+from implementations.web.user_routes import router as user_router
+app.include_router(user_router)
+```
+
+---
+
+### Error Handling Pattern
+
+**Operators throw domain exceptions**:
+```csharp
+// Core Abstractions/Exceptions/UserNotFoundException.cs
+public class UserNotFoundException : Exception
+{
+    public UserNotFoundException(string id)
+        : base($"User with ID {id} not found") { }
+}
+
+// Operators/UserOperator.cs
+public async Task<UserDto> GetUser(string id)
+{
+    var entity = await _repo.FindById(id);
+    if (entity == null) throw new UserNotFoundException(id); // Domain exception
+    return MapEntityToDto(entity);
+}
+```
+
+**Web Adapters map exceptions to HTTP status codes**:
+```csharp
+// Implementations/Web/UserWebAdapter.cs
+public async Task<IResult> GetUser(string id)
+{
+    try
+    {
+        var dto = await _userOp.GetUser(id);
+        return Results.Ok(dto);
+    }
+    catch (UserNotFoundException)
+    {
+        return Results.NotFound(); // 404
+    }
+    catch (ValidationException ex)
+    {
+        return Results.BadRequest(ex.Message); // 400
+    }
+    catch (UnauthorizedException)
+    {
+        return Results.Unauthorized(); // 401
+    }
+    catch (Exception ex)
+    {
+        // Log error
+        return Results.Problem(ex.Message); // 500
+    }
+}
+```
+
+**Alternative: Global exception middleware (in Bootstrap)**:
+```csharp
+// Bootstrap/Middleware/ExceptionHandlerMiddleware.cs
+public class ExceptionHandlerMiddleware
+{
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (UserNotFoundException ex)
+        {
+            context.Response.StatusCode = 404;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        catch (ValidationException ex)
+        {
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+        // ... other exceptions
+    }
+}
+
+// Bootstrap/Program.cs
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+```
+
+---
+
+### When to Use Each Approach
+
+#### Inline in Bootstrap (Minimal API)
+**Use when**:
+- Simple mapping (DTO → Operator → response)
+- No complex error handling
+- Thin HTTP layer
+
+**Pros**: Less code, direct wiring
+**Cons**: Hard to test HTTP layer separately
+
+#### Web Adapter Class (Implementations)
+**Use when**:
+- Complex error handling (multiple exception types)
+- Request/response transformation logic
+- Want to test HTTP layer separately
+- Reusable across multiple endpoints
+
+**Pros**: Testable, encapsulated, clear separation
+**Cons**: More files, more indirection
+
+#### Controller-based (ASP.NET MVC)
+**Use when**:
+- Team familiar with MVC pattern
+- Need controller features (filters, model binding)
+- Large API surface
+
+**Pros**: Framework conventions, attribute routing, filters
+**Cons**: More ceremony, tied to framework
+
+---
+
+### Directory Structure
+
+```
+/Boundary
+  /DTOs
+    CreateUserDto.cs
+    UserDto.cs
+  /Web (optional)
+    ApiEndpoints.cs
+
+/Operators
+  UserOperator.cs
+
+/Core Abstractions
+  /Ports
+    IUserOperator.cs
+  /Exceptions
+    UserNotFoundException.cs
+
+/Implementations
+  /Web
+    UserWebAdapter.cs (or)
+    /Controllers
+      UsersController.cs
+
+/Bootstrap
+  /Middleware
+    ExceptionHandlerMiddleware.cs
+  WebApplicationExtensions.cs
+  Program.cs
+```
+
+---
+
+### Web API Decision Tree
+
+**Question**: Where should I add this code?
+
+- **Request/response DTO contract?** → Boundary/DTOs
+- **Business logic (orchestration)?** → Operators
+- **HTTP-specific code (IResult, status codes)?** → Implementations/Web
+- **Routing/endpoint mapping?** → Bootstrap
+- **Global middleware (exception, logging)?** → Bootstrap/Middleware
+- **Domain exceptions?** → Core Abstractions/Exceptions
+
+---
+
+### Common Mistakes
+
+❌ **Operators returning `IResult` or `IActionResult`**
+- Operators must be framework-agnostic
+
+❌ **Operators accessing `HttpContext`**
+- HTTP concerns belong in Web Adapters
+
+❌ **Business logic in Controllers/Web Adapters**
+- Controllers are thin adapters; orchestration in Operators
+
+❌ **DTOs containing framework attributes beyond serialization**
+- DTOs are pure contracts; validation attributes OK, but no `[FromBody]`, `[Route]`, etc.
+
+❌ **Direct exception-to-HTTP mapping in Operators**
+- Operators throw domain exceptions; Web Adapters map to HTTP
+
+---
+
+## A.D.D-Extended (Complex Domains)
+
+### Scope Modules
+
+**Definition**: Self-contained module with full 5-layer structure
+
+**Communication**:
+- Via Ports (interfaces in Core Abstractions)
+- Via Core Events
+- Direct cross-access forbidden
+
+### Transaction Group Operator (TGO)
+
+**Purpose**: Transaction boundary for related data group
+
+**Characteristics**:
+- Runs Checkpoint (RuleSets) before persisting
+- Loads/saves via Repository Port (operations through group root)
+- Decides commit/rollback
+- **Consistency**: Strong (within single transaction)
+
+### Coordinator Operator
+
+**Purpose**: Multi-step flows with eventual consistency
+
+**Characteristics**:
+- Orchestrates via Core Events (BusinessSignals)
+- Uses Compensators for rollback on failure
+- **Consistency**: Eventual
+
+### Compensator
+
+**Purpose**: Describes inverse action for eventual consistency rollback
+
+**Characteristics**:
+- Pure function (no side effects)
+- Returns: CompensationResult (success: bool, reasons: string[])
+- Defined as Port in Core Abstractions
+
+### Ports (Interface Types)
+
+**Repository Port**:
+- Read/write data group via root
+- Used by TGO
+
+**Translator Port**:
+- Translate DTOs between modules
+- Pure, bidirectional
+- Part of Interaction Map
+
+**Compensator Port**:
+- Inverse action for eventual consistency
+- Pure, returns success/reasons
+
+### Anti-Corruption Layer (ACL)
+
+**Location**: Implementations
+
+**Purpose**: Protect domain from external system complexity
+
+**Responsibilities**:
+- **Inbound**: Translate external payload → clean DTO/Core Events
+- **Outbound**: Translate internal calls → external API format
+- Isolate mapping, versioning, idempotency logic
+
+---
+
+## Quick Reference
+
+### When adding code, ask:
+
+- **Is this a DTO or external contract?** → Boundary
+- **Is this an interface/port or domain entity?** → Core Abstractions
+- **Is this business orchestration or workflow?** → Operators
+- **Is this technology-specific (DB, API, MQ)?** → Implementations
+- **Is this DI wiring or configuration?** → Bootstrap
+
+### Dependency Checklist
+
+✅ Can Operators reference Boundary? → **Yes**
+✅ Can Operators reference Core Abstractions? → **Yes**
+❌ Can Operators reference Implementations? → **No** (use Ports)
+✅ Can Implementations reference Core Abstractions? → **Yes**
+✅ Can Implementations reference Boundary? → **Yes*** (only for system edge adapters: API clients, webhook handlers, external event subscribers)
+❌ Can Implementations reference Operators? → **No**
+✅ Can Bootstrap reference all layers? → **Yes** (wiring only)
+
+### Common Mistakes
+
+❌ Business logic in Implementations → Move to Operators
+❌ Operators calling concrete classes → Use Ports from Core Abstractions
+❌ Technology details (SQL, HTTP) in Operators → Hide in Implementations behind Ports
+❌ Heavy business logic in Entities → Keep thin, validation only
+❌ Creating new layer types for sub-modules → Use same 5 layers (fractal)
+
+### Fractal Checklist
+
+When creating sub-module:
+1. ✅ Place in parent's Implementations layer
+2. ✅ Create all 5 layers (Bootstrap, Operators, Core Abstractions, Implementations, Boundary)
+3. ✅ Sub-module's Implementations can contain deeper sub-modules
+4. ✅ Use path notation to track position: `/Implementations/A/Implementations/B`
+5. ❌ Do NOT create custom layer types (Core', Providers') - violates fractal
+
+### LLM Workflow Summary
+
+```
+1. Parse file path → determine position in fractal tree
+2. Identify current layer → know responsibilities and constraints
+3. Check dependency rules → ensure valid references
+4. Read parent context → understand module purpose
+5. Read sibling context → understand related components
+6. Implement with fractal awareness → maintain self-similar structure
+```
+
+---
+
+## Summary
+
+**A.D.D V3 in one sentence**: Business flows (Operators) orchestrate via interfaces (Core Abstractions) implemented by technology adapters (Implementations), in a fractal self-similar structure that enables infinite composition.
+
+**Fractal Pattern**: Every module at any depth has the same 5 layers. Only Implementations can contain sub-modules. This creates an infinitely nestable tree where LLMs can navigate vertically to understand context at any level.
+
+**UI Integration**: UI/Frontend also follows the same 5-layer fractal pattern, either as a separate module (SPA, Mobile) or sub-module (SSR, Monolith), ensuring consistency from backend to presentation layer.
+
+**Web API Integration**: Web framework code (Controllers, Minimal API handlers, Express routes) are Web Adapters in Implementations layer. Operators remain framework-agnostic (DTO in, DTO out), enabling framework swapping without changing business logic.
+
+**Core insight**: By enforcing strict layer dependencies and fractal self-similarity, A.D.D makes architecture evolvable, testable, and technology-independent by design.

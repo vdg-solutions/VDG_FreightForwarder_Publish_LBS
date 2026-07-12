@@ -1,0 +1,55 @@
+{"iata_code":"SGN","icao_code":"VVTS","name":"Tan Son Nhat International Airport","city":"Ho Chi Minh City","country":"VN"}
+{"iata_code":"HAN","icao_code":"VVNB","name":"Noi Bai International Airport","city":"Hanoi","country":"VN"}
+{"iata_code":"DAD","icao_code":"VVDN","name":"Da Nang International Airport","city":"Da Nang","country":"VN"}
+{"iata_code":"HPH","icao_code":"VVCI","name":"Cat Bi International Airport","city":"Hai Phong","country":"VN"}
+{"iata_code":"CXR","icao_code":"VVCR","name":"Cam Ranh International Airport","city":"Khanh Hoa","country":"VN"}
+{"iata_code":"VCL","icao_code":"VVCA","name":"Chu Lai Airport","city":"Quang Nam","country":"VN"}
+{"iata_code":"PQC","icao_code":"VVPQ","name":"Phu Quoc International Airport","city":"Phu Quoc","country":"VN"}
+{"iata_code":"HUI","icao_code":"VVPB","name":"Phu Bai International Airport","city":"Hue","country":"VN"}
+{"iata_code":"BMV","icao_code":"VVBM","name":"Buon Ma Thuot Airport","city":"Dak Lak","country":"VN"}
+{"iata_code":"VCS","icao_code":"VVCS","name":"Con Dao Airport","city":"Ba Ria-Vung Tau","country":"VN"}
+{"iata_code":"HKG","icao_code":"VHHH","name":"Hong Kong International Airport","city":"Hong Kong","country":"HK"}
+{"iata_code":"ICN","icao_code":"RKSI","name":"Incheon International Airport","city":"Seoul","country":"KR"}
+{"iata_code":"GMP","icao_code":"RKSS","name":"Gimpo International Airport","city":"Seoul","country":"KR"}
+{"iata_code":"NRT","icao_code":"RJAA","name":"Narita International Airport","city":"Tokyo","country":"JP"}
+{"iata_code":"HND","icao_code":"RJTT","name":"Tokyo Haneda Airport","city":"Tokyo","country":"JP"}
+{"iata_code":"KIX","icao_code":"RJBB","name":"Kansai International Airport","city":"Osaka","country":"JP"}
+{"iata_code":"NGO","icao_code":"RJGG","name":"Chubu Centrair International Airport","city":"Nagoya","country":"JP"}
+{"iata_code":"SIN","icao_code":"WSSS","name":"Singapore Changi Airport","city":"Singapore","country":"SG"}
+{"iata_code":"KUL","icao_code":"WMKK","name":"Kuala Lumpur International Airport","city":"Kuala Lumpur","country":"MY"}
+{"iata_code":"BKK","icao_code":"VTBS","name":"Suvarnabhumi Airport","city":"Bangkok","country":"TH"}
+{"iata_code":"MNL","icao_code":"RPLL","name":"Ninoy Aquino International Airport","city":"Manila","country":"PH"}
+{"iata_code":"CGK","icao_code":"WIII","name":"Soekarno-Hatta International Airport","city":"Jakarta","country":"ID"}
+{"iata_code":"SYD","icao_code":"YSSY","name":"Sydney Kingsford Smith Airport","city":"Sydney","country":"AU"}
+{"iata_code":"MEL","icao_code":"YMML","name":"Melbourne Airport","city":"Melbourne","country":"AU"}
+{"iata_code":"AKL","icao_code":"NZAA","name":"Auckland Airport","city":"Auckland","country":"NZ"}
+{"iata_code":"PEK","icao_code":"ZBAA","name":"Beijing Capital International Airport","city":"Beijing","country":"CN"}
+{"iata_code":"PVG","icao_code":"ZSPD","name":"Shanghai Pudong International Airport","city":"Shanghai","country":"CN"}
+{"iata_code":"CAN","icao_code":"ZGGG","name":"Guangzhou Baiyun International Airport","city":"Guangzhou","country":"CN"}
+{"iata_code":"TPE","icao_code":"RCTP","name":"Taiwan Taoyuan International Airport","city":"Taipei","country":"TW"}
+{"iata_code":"LAX","icao_code":"KLAX","name":"Los Angeles International Airport","city":"Los Angeles","country":"US"}
+{"iata_code":"JFK","icao_code":"KJFK","name":"John F. Kennedy International Airport","city":"New York","country":"US"}
+{"iata_code":"SFO","icao_code":"KSFO","name":"San Francisco International Airport","city":"San Francisco","country":"US"}
+{"iata_code":"SEA","icao_code":"KSEA","name":"Seattle-Tacoma International Airport","city":"Seattle","country":"US"}
+{"iata_code":"ORD","icao_code":"KORD","name":"O'Hare International Airport","city":"Chicago","country":"US"}
+{"iata_code":"MIA","icao_code":"KMIA","name":"Miami International Airport","city":"Miami","country":"US"}
+{"iata_code":"DFW","icao_code":"KDFW","name":"Dallas-Fort Worth International Airport","city":"Dallas","country":"US"}
+{"iata_code":"ATL","icao_code":"KATL","name":"Hartsfield-Jackson Atlanta International Airport","city":"Atlanta","country":"US"}
+{"iata_code":"YVR","icao_code":"CYVR","name":"Vancouver International Airport","city":"Vancouver","country":"CA"}
+{"iata_code":"YYZ","icao_code":"CYYZ","name":"Toronto Pearson International Airport","city":"Toronto","country":"CA"}
+{"iata_code":"FRA","icao_code":"EDDF","name":"Frankfurt Airport","city":"Frankfurt","country":"DE"}
+{"iata_code":"AMS","icao_code":"EHAM","name":"Amsterdam Airport Schiphol","city":"Amsterdam","country":"NL"}
+{"iata_code":"CDG","icao_code":"LFPG","name":"Charles de Gaulle Airport","city":"Paris","country":"FR"}
+{"iata_code":"LHR","icao_code":"EGLL","name":"London Heathrow Airport","city":"London","country":"GB"}
+{"iata_code":"MUC","icao_code":"EDDM","name":"Munich Airport","city":"Munich","country":"DE"}
+{"iata_code":"HEL","icao_code":"EFHK","name":"Helsinki-Vantaa Airport","city":"Helsinki","country":"FI"}
+{"iata_code":"SVO","icao_code":"UUEE","name":"Sheremetyevo International Airport","city":"Moscow","country":"RU"}
+{"iata_code":"ZRH","icao_code":"LSZH","name":"Zurich Airport","city":"Zurich","country":"CH"}
+{"iata_code":"CPH","icao_code":"EKCH","name":"Copenhagen Airport","city":"Copenhagen","country":"DK"}
+{"iata_code":"ARN","icao_code":"ESSA","name":"Stockholm Arlanda Airport","city":"Stockholm","country":"SE"}
+{"iata_code":"DXB","icao_code":"OMDB","name":"Dubai International Airport","city":"Dubai","country":"AE"}
+{"iata_code":"DOH","icao_code":"OTHH","name":"Hamad International Airport","city":"Doha","country":"QA"}
+{"iata_code":"AUH","icao_code":"OMAA","name":"Abu Dhabi International Airport","city":"Abu Dhabi","country":"AE"}
+{"iata_code":"BOM","icao_code":"VABB","name":"Chhatrapati Shivaji Maharaj International Airport","city":"Mumbai","country":"IN"}
+{"iata_code":"DEL","icao_code":"VIDP","name":"Indira Gandhi International Airport","city":"New Delhi","country":"IN"}
+{"iata_code":"NBO","icao_code":"HKJK","name":"Jomo Kenyatta International Airport","city":"Nairobi","country":"KE"}

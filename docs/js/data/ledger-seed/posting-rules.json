@@ -1,0 +1,50 @@
+{
+  "pnl_lines": {
+    "FreightRevenue":       { "account_code": "5113", "side": "Credit" },
+    "SurchargeRevenue":     { "account_code": "5113", "side": "Credit" },
+    "HandlingFeeRevenue":   { "account_code": "5113", "side": "Credit" },
+    "CustomsRevenue":       { "account_code": "5113", "side": "Credit" },
+    "DocumentationRevenue": { "account_code": "5113", "side": "Credit" },
+    "InsuranceRevenue":     { "account_code": "5113", "side": "Credit" },
+    "RebateReceived":       { "account_code": "5113", "side": "Credit" },
+    "MiscOperatingRevenue": { "account_code": "5118", "side": "Credit" },
+    "FreightCost":          { "account_code": "632",  "side": "Debit" },
+    "SurchargeCost":        { "account_code": "632",  "side": "Debit" },
+    "HandlingCost":         { "account_code": "632",  "side": "Debit" },
+    "CustomsCost":          { "account_code": "632",  "side": "Debit" },
+    "DocumentationCost":    { "account_code": "632",  "side": "Debit" },
+    "InsuranceCost":        { "account_code": "632",  "side": "Debit" },
+    "TruckingCost":         { "account_code": "632",  "side": "Debit" },
+    "BankCharge":           { "account_code": "6428", "side": "Debit" },
+    "TaxOnBehalf":          { "account_code": "131",  "side": "Debit" },
+    "MiscOperatingExpense": { "account_code": "642",  "side": "Debit" }
+  },
+  "tax_accrual": {
+    "Vat":                      { "account_code": "3331", "side": "Credit" },
+    "PersonalIncomeCommission": { "account_code": "3335", "side": "Credit" },
+    "CorporateIncome":          { "account_code": "3334", "side": "Credit" },
+    "Other":                    { "account_code": "3389", "side": "Credit" }
+  },
+  "commissions": {
+    "CustomerRebate":  { "account_code": "3388", "side": "Credit" },
+    "LineCommission":  { "account_code": "6414", "side": "Debit" }
+  },
+  "pnl_kind_live": {
+    "OceanFreight":    { "expense": "632",  "revenue": "5113" },
+    "Air":             { "expense": "632",  "revenue": "5113" },
+    "THC":             { "expense": "632",  "revenue": "5113" },
+    "BAF":             { "expense": "632",  "revenue": "5113" },
+    "CAF":             { "expense": "632",  "revenue": "5113" },
+    "EBS":             { "expense": "632",  "revenue": "5113" },
+    "Customs":         { "expense": "632",  "revenue": "5113" },
+    "CO":              { "expense": "632",  "revenue": "5113" },
+    "HandlingAgent":   { "expense": "632",  "revenue": "5113" },
+    "BankCharge":      { "expense": "6428", "revenue": null },
+    "KiemHoa":         { "expense": "632",  "revenue": "5113" },
+    "KiemDich":        { "expense": "632",  "revenue": "5113" },
+    "HaCont":          { "expense": "632",  "revenue": "5113" },
+    "FreightRevenue":  { "expense": null,   "revenue": "5113" },
+    "FreightCost":     { "expense": "632",  "revenue": null },
+    "Other":           { "expense": "642",  "revenue": "5118" }
+  }
+}

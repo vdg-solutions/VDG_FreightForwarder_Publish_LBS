@@ -1,0 +1,12 @@
+{"flight_no":"VN221","carrier_iata_code":"VN","origin_iata":"SGN","dest_iata":"HAN","schedule":"07:00"}
+{"flight_no":"VN223","carrier_iata_code":"VN","origin_iata":"SGN","dest_iata":"HAN","schedule":"09:30"}
+{"flight_no":"VN201","carrier_iata_code":"VN","origin_iata":"HAN","dest_iata":"SGN","schedule":"08:00"}
+{"flight_no":"VN203","carrier_iata_code":"VN","origin_iata":"HAN","dest_iata":"SGN","schedule":"10:00"}
+{"flight_no":"VN230","carrier_iata_code":"VN","origin_iata":"SGN","dest_iata":"DAD","schedule":"07:30"}
+{"flight_no":"VN241","carrier_iata_code":"VN","origin_iata":"HAN","dest_iata":"DAD","schedule":"09:00"}
+{"flight_no":"VN422","carrier_iata_code":"VN","origin_iata":"SGN","dest_iata":"ICN","schedule":"10:30"}
+{"flight_no":"VN423","carrier_iata_code":"VN","origin_iata":"ICN","dest_iata":"SGN","schedule":"14:00"}
+{"flight_no":"VN413","carrier_iata_code":"VN","origin_iata":"SGN","dest_iata":"NRT","schedule":"11:00"}
+{"flight_no":"VN411","carrier_iata_code":"VN","origin_iata":"HAN","dest_iata":"NRT","schedule":"09:00"}
+{"flight_no":"VN540","carrier_iata_code":"VN","origin_iata":"SGN","dest_iata":"HKG","schedule":"08:00"}
+{"flight_no":"VN541","carrier_iata_code":"VN","origin_iata":"HKG","dest_iata":"SGN","schedule":"12:00"}

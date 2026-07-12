@@ -1,0 +1,18 @@
+{
+  "Manager": [
+    { "path": "*", "access": "write" }
+  ],
+  "SalesRep": [
+    { "path": "users/{sales_prefix}", "access": "write" },
+    { "path": "_shared/customers", "access": "read" },
+    { "path": "_shared/fx-rates", "access": "read" }
+  ],
+  "Accountant": [
+    { "path": "_shared/ledger", "access": "write" },
+    { "path": "users/*", "access": "read" },
+    { "path": "_shared/fx-rates", "access": "read" }
+  ],
+  "Auditor": [
+    { "path": "*", "access": "read" }
+  ]
+}

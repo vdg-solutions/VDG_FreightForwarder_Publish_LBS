@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VDG FreightForwarder</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Google Fonts: dynamic CSS per font-variant negotiation — SRI not applicable (hash changes per UA/subset) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <script>
+    const oldErr = console.error;
+    console.error = function(...args) {
+      if (String(args[0]).includes('[GSI_LOGGER]')) {
+        oldErr.apply(console, args);
+        return;
+      }
+      document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:100px;left:50px;background:orange;color:black;z-index:999999;padding:20px;font-size:18px;max-width:800px;overflow:auto;">CONSOLE ERR: ' + String(args[0]) + (args[1] && args[1].stack ? ' ' + args[1].stack : '') + '<br><small>(Click to dismiss)</small></div>');
+      oldErr.apply(console, args);
+    };
+    window.addEventListener('error', e => {
+      document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:50px;left:50px;background:red;color:white;z-index:999999;padding:20px;font-size:24px;">' + e.message + '<br><small>(Click to dismiss)</small></div>');
+    });
+    window.addEventListener('unhandledrejection', e => {
+      document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:50px;left:50px;background:red;color:white;z-index:999999;padding:20px;font-size:24px;max-width:800px;overflow:auto;">' + (e.reason && e.reason.stack || e.reason) + '<br><small>(Click to dismiss)</small></div>');
+    });
+  </script>
+  <!-- Dark mode disabled until the view layer has dark: variants — force light, ignore stale saved pref -->
+  <script>document.documentElement.classList.remove('dark');</script>
+  <!-- Tailwind Play CDN: runtime JIT build — SRI not applicable (hash changes per config/usage) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            fsm: {
+              created: '#94a3b8',
+              booked: '#3b82f6',
+              transit: '#eab308',
+              arrived: '#22c55e',
+              delivered: '#14b8a6',
+              closed: '#1f2937',
+              draft: '#94a3b8',
+              issued: '#22c55e',
+              cancelled: '#ef4444',
+              billed: '#3b82f6',
+              paid: '#22c55e',
+              raised: '#f97316',
+              escalated: '#dc2626',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="stylesheet" href="/css/styles.css" onerror="this.remove()" />
+
+  <!-- AG Grid community 31.3.2 — pinned, SRI-protected -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-grid.css"
+    integrity="sha384-LNcL0K2K7L8L9H0XdFjFVke0Q1STyt3EhtpjMIai3xF3YpjvIOIoQlplKoTiaCS0"
+    crossorigin="anonymous"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/styles/ag-theme-quartz.css"
+    integrity="sha384-uTU2hjrm7DPUmOLAzmReq/x6GkOLV02xfmo+RhGpMCURmmNbiZGfGouIdpLh9m1u"
+    crossorigin="anonymous"
+  />
+  <script
+    src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.3.2/dist/ag-grid-community.min.js"
+    integrity="sha384-0cD1zEe4XGTK8UhKDApU/gCZiWTHgDHKDV7g6/7SDKxCi3hjeBxmI2G04f2871jf"
+    crossorigin="anonymous"
+  ></script>
+  <!-- Chart.js 4.4.3 — pinned, SRI-protected -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"
+    integrity="sha384-tgbB5AKnszdcfwcZtTfuhR3Ko1XZdlDfsLtkxiiAZiVkkXCkFmp+FQFh+V/UTo54"
+    crossorigin="anonymous"
+  ></script>
+  <!-- Google Identity Services — hash stable across fetches; private Cache-Control means Google controls versioning -->
+  <script
+    src="https://accounts.google.com/gsi/client"
+    integrity="sha384-OC4PPN5bAduJ2NPdQoTS4IqDk6UfQrtv7+YcLVr5oRdnkt1PvOTR2YaBkh6yzT8i"
+    crossorigin="anonymous"
+    async
+    defer
+  ></script>
+  <!--
+    Lit 3.1.4: loaded via ES module `import` in component JS files — browsers do not support
+    `integrity` on dynamic ESM imports, so SRI cannot be applied at the HTML level.
+    SheetJS (xlsx-latest): lazy-loaded at runtime via dynamic script injection in close-period.js /
+    pnl-report.js using a floating `-latest` URL — SRI not applicable (hash changes on each release).
+    Trade-off accepted: both libraries run in isolated module scope; replace with bundled/pinned
+    versions when moving to a build pipeline (F-15-10).
+  -->
+
+  <style>
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .ag-theme-quartz { --ag-font-family: 'Inter', sans-serif; --ag-font-size: 13px; }
+    /* F-15-19 AC-5 — kill UA button border/padding leakage in topbar (Chromium loses to UA in some builds) */
+    header button { padding: 0; border: 0; box-sizing: border-box; min-height: 0; }
+  </style>
+</head>
+<body class="h-full">
+  <vdg-offline-banner></vdg-offline-banner>
+  <vdg-orphan-folder-banner></vdg-orphan-folder-banner>
+  <div id="app" class="h-full flex">
+    <vdg-sidebar></vdg-sidebar>
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <vdg-topbar></vdg-topbar>
+
+      <main id="view-root" class="flex-1 overflow-auto scrollbar-thin">
+        <div id="view-loading" class="p-6 text-slate-500 text-sm">Loading view…</div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/js/sw.js', { scope: '/' }).catch(function(err) {
+        console.warn('[SW] registration failed:', err);
+      });
+      navigator.serviceWorker.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'VDG_SW_UPDATE_AVAILABLE')
+          window.dispatchEvent(new CustomEvent('vdg:sw-update-available'));
+      });
+    }
+  </script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
