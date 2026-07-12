@@ -15,8 +15,8 @@ const CHART_FILE_NAME               = 'chart-of-accounts.json';
 const POSTING_RULES_FILE_NAME       = 'posting-rules.json';
 const POSTED_INDEX_FILE_NAME        = 'posted-index.jsonl'; // F-23-03: source+version -> entry_ids dedup log
 const RECONCILIATION_LOG_FILE_NAME  = 'reconciliation-log.jsonl'; // F-23-06: weekly balance-check run log
-const CHART_SEED_URL                = '/js/data/ledger-seed/chart-of-accounts.json';
-const POSTING_RULES_SEED_URL        = '/js/data/ledger-seed/posting-rules.json';
+const CHART_SEED_URL                = 'js/data/ledger-seed/chart-of-accounts.json';
+const POSTING_RULES_SEED_URL        = 'js/data/ledger-seed/posting-rules.json';
 const LEDGER_APPEND_MAX_ATTEMPTS    = 3;
 const LEDGER_APPEND_BACKOFF_BASE_MS = 200; // 200ms, 400ms, 800ms (exponential)
 

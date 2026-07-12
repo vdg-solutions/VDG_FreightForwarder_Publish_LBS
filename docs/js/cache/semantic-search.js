@@ -10,7 +10,7 @@ import { t } from '../i18n/index.js';
 // env.remoteHost defaults to https://huggingface.co (allowed by the CSP in _headers).
 env.allowLocalModels = false;
 env.allowRemoteModels = true;
-env.backends.onnx.wasm.wasmPaths = '/wasm/'; // serve WASM locally too
+env.backends.onnx.wasm.wasmPaths = new URL('wasm/', document.baseURI).href; // serve WASM locally too
 env.useBrowserCache = true;
 
 let extractor = null;

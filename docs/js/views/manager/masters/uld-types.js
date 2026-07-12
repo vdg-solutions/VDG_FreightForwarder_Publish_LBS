@@ -8,7 +8,7 @@ import { showConfirm } from '../../../helpers/show-confirm.js';
 
 const KIND        = 'uld-types';
 const KIND_PREFIX = 'ULD';
-const SEED_URL    = '/seed/masters/uld-types.jsonl';
+const SEED_URL    = 'seed/masters/uld-types.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

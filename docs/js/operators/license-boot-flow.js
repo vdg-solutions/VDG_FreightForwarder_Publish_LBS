@@ -5,7 +5,7 @@
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 
 export const LICENSE_FETCH_TIMEOUT_MS = SAFE_AWAIT_DEFAULT_MS;
-export const LICENSE_URL              = '/license.jwt';
+export const LICENSE_URL              = 'license.jwt';
 const HTTP_STATUS_NOT_FOUND           = 404;
 
 export const LICENSE_STATE_VALID   = 'valid';

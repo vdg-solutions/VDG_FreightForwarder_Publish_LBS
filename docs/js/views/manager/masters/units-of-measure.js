@@ -5,7 +5,7 @@
 import { runSeedMigrations } from '../../../cache/seed-migrator.js';
 
 const KIND     = 'units-of-measure';
-const SEED_URL = '/seed/masters/units-of-measure.jsonl';
+const SEED_URL = 'seed/masters/units-of-measure.jsonl';
 // Bump this id (or add a new one) when the seed file gains rows — versioned, idempotent.
 const SEED_MIGRATION = { id: '2026-07-09-units-of-measure-v1', kind: KIND, url: SEED_URL, key: (e) => e.code };
 

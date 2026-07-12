@@ -3,7 +3,7 @@
 // direct implementations/* import). UserDriveRepo (F-24-02) and the ACL seed (F-24-01) are
 // both consumed through their existing contracts, not reimplemented here.
 
-const ACL_SEED_URL      = '/js/data/permissions/role-drive-acl.json';
+const ACL_SEED_URL      = 'js/data/permissions/role-drive-acl.json';
 const SALES_PREFIX_TOKEN = '{sales_prefix}';
 const WILDCARD_PATH      = '*';
 const WILDCARD_SUFFIX    = '/*';

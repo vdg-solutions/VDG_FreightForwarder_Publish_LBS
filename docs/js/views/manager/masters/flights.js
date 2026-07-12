@@ -10,7 +10,7 @@ import { showConfirm } from '../../../helpers/show-confirm.js';
 
 const KIND        = 'flights';
 const KIND_PREFIX = 'FLT';
-const SEED_URL    = '/seed/masters/flights.jsonl';
+const SEED_URL    = 'seed/masters/flights.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

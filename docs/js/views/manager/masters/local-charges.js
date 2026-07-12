@@ -6,8 +6,8 @@ import { runSeedMigrations } from '../../../cache/seed-migrator.js';
 
 const KIND      = 'local-charges';
 const UNIT_KIND = 'units-of-measure';
-const SEED_URL  = '/seed/masters/local-charges.jsonl';
-const UNIT_SEED = '/seed/masters/units-of-measure.jsonl';
+const SEED_URL  = 'seed/masters/local-charges.jsonl';
+const UNIT_SEED = 'seed/masters/units-of-measure.jsonl';
 // Versioned seeds — add a new migration id when a shipping line / rows are appended.
 const SEED_MIGRATIONS = [
   { id: '2026-07-09-units-of-measure-v1', kind: UNIT_KIND, url: UNIT_SEED, key: (e) => e.code },

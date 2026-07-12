@@ -60,7 +60,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 3. Load WASM — mandatory, no fallback. Must run BEFORE any license check (both branches
   // below call into WASM to verify) — this fixed a latent hang on the NOT_PROVISIONED branch.
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import('/pkg/vdg_freight.js');
+  const wasmMod = await import(new URL('pkg/vdg_freight.js', document.baseURI).href);
   await wasmMod.default();
   window.__vdg_wasm = wasmMod;
   window.dispatchEvent(new Event('vdg:wasm-ready'));

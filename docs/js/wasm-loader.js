@@ -18,7 +18,7 @@ const BRIDGE_EXPORTS = [
 export async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import('/pkg/vdg_freight.js');
+    const mod = await import(new URL('pkg/vdg_freight.js', document.baseURI).href);
     await mod.default();
     cached = mod;
     window.__vdg_wasm = mod;

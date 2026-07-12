@@ -5,7 +5,7 @@ import { t }          from '../../i18n/index.js';
 import { calcResult } from '../../operators/air-rate-calculator.js';
 
 const KIND     = 'air-rates';
-const SEED_URL = '/seed/masters/air-rates.jsonl';
+const SEED_URL = 'seed/masters/air-rates.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

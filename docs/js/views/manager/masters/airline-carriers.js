@@ -10,7 +10,7 @@ import { showConfirm } from '../../../helpers/show-confirm.js';
 
 const KIND        = 'airline-carriers';
 const KIND_PREFIX = 'ACR';
-const SEED_URL    = '/seed/masters/airline-carriers.jsonl';
+const SEED_URL    = 'seed/masters/airline-carriers.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
