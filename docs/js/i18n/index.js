@@ -8,7 +8,7 @@ let _msgs   = {};
 
 export async function loadLocale(locale) {
   const target = SUPPORTED_LOCALES.includes(locale) ? locale : DEFAULT_LOCALE;
-  const resp   = await fetch(`/js/i18n/${target}.json`);
+  const resp   = await fetch(`js/i18n/${target}.json`);
   if (!resp.ok) throw new Error(`i18n: failed to load ${target}.json`);
   _msgs   = await resp.json();
   _locale = target;
