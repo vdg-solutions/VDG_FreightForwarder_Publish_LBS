@@ -341,6 +341,7 @@
   "commission.col.amount":   "Amount (FX)",
   "commission.col.currency": "Currency",
   "commission.col.fx":       "FX Rate",
+  "commission.col.fx_date":  "FX Date",
   "commission.col.bank_fee": "Bank Fee",
   "commission.col.tncn_pct": "TNCN %",
   "commission.col.tncn_vnd": "TNCN VND",

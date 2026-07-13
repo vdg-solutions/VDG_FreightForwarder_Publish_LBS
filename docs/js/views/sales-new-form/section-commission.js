@@ -1,6 +1,7 @@
 // section-commission.js — Section C: HOA HONG parent-detail accordion (F-20-01)
 
 import { t } from '../../i18n/index.js';
+import { commFxCellsHtml, wireCommissionFx } from './section-commission-fx.js';
 
 const DEFAULT_TNCN_PCT = 15;
 // # | Loai | Mo ta | Tong chi | Thuc nhan | toggle | delete
@@ -58,11 +59,9 @@ function commParentRowHtml(idx, row = {}) {
     </tr>`;
 }
 
-// Detail panel (accordion body) — 5 inputs + auto/manual TNCN VND + breakdown display
-function commDetailPanelHtml(idx, row = {}) {
+// Detail panel (accordion body) — 6 inputs + auto/manual TNCN VND + breakdown display
+function commDetailPanelHtml(idx, row = {}, headerCurrency) {
   const amountFx   = row.amount_fx   != null ? row.amount_fx   : '';
-  const currency   = row.currency    || 'USD';
-  const fxRate     = row.fx_rate     != null ? row.fx_rate     : '';
   const bankFee    = row.bank_fee    != null ? row.bank_fee    : '';
   const tncnPct    = row.tncn_pct    != null ? row.tncn_pct    : DEFAULT_TNCN_PCT;
   const tncnAmount = row.tncn_amount != null ? row.tncn_amount : '';
@@ -80,17 +79,7 @@ function commDetailPanelHtml(idx, row = {}) {
                 value="${amountFx}" placeholder="0"
                 class="${INPUT_CLS} text-right" />
             </label>
-            <label class="flex flex-col gap-0.5">
-              <span class="text-slate-500">${t('commission.col.currency')}</span>
-              <input name="comm_currency" value="${currency}" placeholder="USD"
-                class="${INPUT_CLS} text-center uppercase" />
-            </label>
-            <label class="flex flex-col gap-0.5">
-              <span class="text-slate-500">${t('commission.col.fx')}</span>
-              <input name="comm_fx_rate" type="number" step="any"
-                value="${fxRate}" placeholder="1"
-                class="${INPUT_CLS} text-right" />
-            </label>
+            ${commFxCellsHtml(row, headerCurrency)}
             <label class="flex flex-col gap-0.5">
               <span class="text-slate-500">${t('commission.col.bank_fee')}</span>
               <input name="comm_bank_fee" type="number" step="any"
@@ -139,12 +128,13 @@ function commDetailPanelHtml(idx, row = {}) {
 }
 
 // Combined parent + panel HTML for one entry (always starts collapsed)
-export function commEntryHtml(idx, row = {}) {
-  return commParentRowHtml(idx, row) + commDetailPanelHtml(idx, row);
+export function commEntryHtml(idx, row = {}, headerCurrency) {
+  return commParentRowHtml(idx, row) + commDetailPanelHtml(idx, row, headerCurrency);
 }
 
 export function sectionCHtml(draft = {}) {
-  const rows = (draft.commission_lines || []).map((r, i) => commEntryHtml(i, r)).join('');
+  const headerCurrency = draft.currency || '';
+  const rows = (draft.commission_lines || []).map((r, i) => commEntryHtml(i, r, headerCurrency)).join('');
   return `
     <div id="sec-c-body" class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="flex items-center justify-between mb-3">
@@ -239,14 +229,17 @@ function toggleEntry(tbody, idx, expand) {
   if (btn) btn.style.transform = expand ? 'rotate(90deg)' : '';
 }
 
-export function wireCommissionSection(root, onChanged) {
+export function wireCommissionSection(root, onChanged, fxRepo, docDate) {
   const tbody = root.querySelector('#commission-tbody');
   if (!tbody) return;
 
+  wireCommissionFx(tbody, fxRepo, docDate);
+
   root.querySelector('#add-comm-btn')?.addEventListener('click', () => {
-    const idx = tbody.querySelectorAll('[data-comm-row]').length;
+    const idx            = tbody.querySelectorAll('[data-comm-row]').length;
+    const headerCurrency = root.querySelector('[name=currency]')?.value || '';
     const tmp = document.createElement('tbody');
-    tmp.innerHTML = commEntryHtml(idx);
+    tmp.innerHTML = commEntryHtml(idx, {}, headerCurrency);
     while (tmp.firstElementChild) tbody.appendChild(tmp.firstElementChild);
     toggleEntry(tbody, idx, true);   // AC-07: auto-expand new row
     onChanged?.();
@@ -327,6 +320,7 @@ export function collectCommission(root) {
       amount_fx:     parseFloat(panel.querySelector('[name=comm_amount_fx]')?.value) || 0,
       currency:      panel.querySelector('[name=comm_currency]')?.value             || 'USD',
       fx_rate:       parseFloat(panel.querySelector('[name=comm_fx_rate]')?.value)   || 1,
+      fx_date:       panel.querySelector('[name=comm_fx_date]')?.value              || '',
       bank_fee:      parseFloat(panel.querySelector('[name=comm_bank_fee]')?.value)  || 0,
       tncn_pct:      parseFloat(panel.querySelector('[name=comm_tncn_pct]')?.value)  || 0,
       tncn_amount:   parseFloat(tncnEl?.value)                                       || 0,

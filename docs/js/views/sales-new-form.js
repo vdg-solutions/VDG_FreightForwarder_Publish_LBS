@@ -60,7 +60,7 @@ export async function renderForm(root, opts = {}) {
 
   wireHeaderSection(root, onChanged);
   wireLinesSection(root, onChanged, salesRepId, fxRepo, docDate);
-  wireCommissionSection(root, onChanged);
+  wireCommissionSection(root, onChanged, fxRepo, docDate);
   wireWaterfallSection(root, onChanged);
 
   _recomputeWaterfall(root, userConfig);
@@ -144,6 +144,11 @@ export function validateNiForm(state) {
     if (l.sell_currency && l.sell_currency !== 'VND' && l.sell_amt && !l.sell_fx_rate) {
       lineFxMissing = true;
     }
+  }
+  // F-29-02 AC-04: same hard block, extended to mục C commission rows
+  for (const l of state.commission_lines || []) {
+    if (l.amount_fx && !l.currency) lineCurrencyMissing = true;
+    if (l.currency && l.currency !== 'VND' && l.amount_fx && !l.fx_rate) lineFxMissing = true;
   }
   if (lineCurrencyMissing) errs.push(t('sales_new.validation.line_currency_required'));
   if (lineFxMissing)       errs.push(t('sales_new.validation.line_fx_required'));

@@ -29,10 +29,12 @@ export async function prefillFxRate(fxRepo, currency, fxDate) {
   return getRateForDate(fxRepo, fxDate, currency);
 }
 
-function currencySelectHtml(name, selected) {
+// F-29-02: exported with optional cls so mục C's detail-panel widget can reuse the same
+// select markup at full-width instead of mục B's fixed w-16 table-cell sizing.
+export function currencySelectHtml(name, selected, cls = `w-16 ${FX_CELL_CLS}`) {
   const opts = LINE_CURRENCY_OPTIONS.map((c) =>
     `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
-  return `<select name="${name}" class="w-16 ${FX_CELL_CLS}">${opts}</select>`;
+  return `<select name="${name}" class="${cls}">${opts}</select>`;
 }
 
 /** fxCellsHtml — AC-01/03/04/06: currency + fx_rate + fx_date cells for one side ('buy'|'sell') */

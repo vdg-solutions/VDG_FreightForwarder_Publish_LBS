@@ -17,11 +17,15 @@ const PNL_REVENUE_SUBTYPES = [
 function _resolveCommissionLines(shipment, ce) {
   if (shipment.commission_lines?.length > 0) return shipment.commission_lines;
   if (ce?.gross_amount > 0) {
+    // F-29-02 §5: same importFxDate pattern mục B lines already use (pnl-vertical-autofill.js
+    // niDtoToDraft below, `s.etd || today`) — VND-locked shim still gets a sane fx_date.
+    const importFxDate = shipment.etd || new Date().toISOString().slice(0, 10);
     return [{
       kind:          'Line',
       amount_fx:     ce.gross_amount          || 0,
       currency:      'VND',
       fx_rate:       ce.fx_rate_commission    || 1,
+      fx_date:       importFxDate,
       bank_fee:      ce.bank_charge           || 0,
       tncn_pct:      15,
       tncn_amount:   ce.personal_tax_15       || 0,
@@ -45,6 +49,9 @@ export function niDtoToDraft(pair) {
   const ce = (pair.commission_entries || []).find((e) => e.kind === 'CustomerRebate') || {};
   const mblDoc = (s.documents || []).find((d) => d.kind === 'Mbl');
   const hblDoc = (s.documents || []).find((d) => d.kind === 'Hbl');
+  // F-29-01 §5 / F-29-02 §5: to_canonical.rs::make_line always emits Currency::Vnd, fx_rate=1 —
+  // carry the same import-time fx_date default through mục B lines AND the mục C AC-09 shim.
+  const importFxDate = s.etd || new Date().toISOString().slice(0, 10);
 
   return {
     _autofilled: true,
@@ -72,9 +79,6 @@ export function niDtoToDraft(pair) {
       const qty       = Number(ln.quantity)              || 0;
       const nativeAmt = Number(ln.amount?.amount)         || 0;
       const vndAmt    = Number(ln.amount_in_job_ccy?.amount) || 0;
-      // F-29-01 §5: to_canonical.rs::make_line always emits Currency::Vnd, fx_rate=1 —
-      // carry that forward so a freshly-imported row satisfies the AC-05 save gate untouched.
-      const importFxDate = s.etd || new Date().toISOString().slice(0, 10);
       return {
         desc:        kindI18nLabel(effectiveKind, currentLocale()),
         kind:        effectiveKind,
@@ -101,6 +105,7 @@ export function niDtoToDraft(pair) {
       amount_fx:     ce.gross_amount || 0,
       currency:      'VND',
       fx_rate:       1,
+      fx_date:       importFxDate,
       bank_fee:      0,
       tncn_pct:      15,
       tncn_amount:   ce.tax_amount   || 0,

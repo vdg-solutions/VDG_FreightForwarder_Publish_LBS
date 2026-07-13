@@ -340,6 +340,7 @@
   "commission.col.amount":   "Số tiền (FX)",
   "commission.col.currency": "Tiền tệ",
   "commission.col.fx":       "Tỷ giá",
+  "commission.col.fx_date":  "Ngày TG",
   "commission.col.bank_fee": "Phí NH",
   "commission.col.tncn_pct": "TNCN %",
   "commission.col.tncn_vnd": "TNCN VND",
