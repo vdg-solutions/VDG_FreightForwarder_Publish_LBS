@@ -11,8 +11,6 @@ const KIND_FOLDER_RE      = /\/([^/]+)\/\d{4}-\d{2}\.jsonl$/; // .../kind/YYYY-M
 const BUNDLE_NAME_RE      = /^(\d{4}-\d{2})\.jsonl$/;
 const QUOTA_PIGGYBACK_TICK = 120; // check quota once per ~60min (120 × 30s ticks)
 
-const HTTP_CONFLICT = 412; // Precondition Failed — triggers conflict resolution
-
 export class DeltaPoller {
   constructor(driveApi, db) {
     this._api          = driveApi;
@@ -22,13 +20,9 @@ export class DeltaPoller {
     this._userPaused   = false; // user explicit pause
     this._backoffIdx   = 0;
     this._tickCount    = 0;
-    this._resolver     = null; // set via setResolver()
     this._onVisibility = () => this._handleVisibility();
     this._onCommand    = (e) => this._handleCommand(e);
   }
-
-  // Inject ConflictResolver after construction (circular dep avoided)
-  setResolver(resolver) { this._resolver = resolver; }
 
   start() {
     document.addEventListener('visibilitychange', this._onVisibility);
@@ -151,33 +145,6 @@ export class DeltaPoller {
       last_change_token: initToken,
       last_full_pull_ms: Date.now(),
     });
-  }
-
-  // Flush pending outbox ops; on HTTP 412 delegate to ConflictResolver
-  async flushOutbox(outboxItems) {
-    for (const item of outboxItems) {
-      try {
-        const { kind, id, op, body } = item;
-        if (op === 'delete') {
-          await this._api.driveFetch('DELETE', `/vdg/${kind}/${id}`);
-        } else {
-          const res = await this._api.driveFetch('PUT', `/vdg/${kind}/${id}`, body);
-          if (res?.status === HTTP_CONFLICT && this._resolver) {
-            const remote = await this._api.driveFetch('GET', `/vdg/${kind}/${id}`).catch(() => null);
-            if (remote) await this._resolver.on412(kind, id, body, remote);
-          }
-        }
-      } catch (err) {
-        const status = err?.status ?? err?.code;
-        if (status === HTTP_CONFLICT && this._resolver) {
-          const { kind, id, body } = item;
-          const remote = await this._api.driveFetch('GET', `/vdg/${kind}/${id}`).catch(() => null);
-          if (remote) await this._resolver.on412(kind, id, body, remote);
-        } else {
-          console.warn('[delta-poll] outbox flush error:', err?.message ?? err); // DEV
-        }
-      }
-    }
   }
 
   async _applyChange(change) {

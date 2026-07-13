@@ -1,8 +1,8 @@
 import { idbGet, idbPut, idbGetAllByIndex, idbDelete, STORE_ENTITIES, STORE_META, STORE_OUTBOX } from '../cache/idb-cache.js';
 import { getFile, uploadFile, getOrCreateFolder, findWorkspaceRoot } from '../auth/drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
+import { MASTER_REGISTRY } from './master-registry.js';
 
-const MASTER_KINDS = ['customers', 'carriers', 'services', 'dunning_templates', 'user', 'airports', 'flights', 'airline-carriers', 'uld-types', 'air-rates', 'ocean-carriers', 'user_audit_log'];
 const LOG_KINDS = ['error_log', 'audit_log'];
 const MASTERS_PATH = 'shared/masters';
 const USERS_PATH   = 'users';
@@ -12,6 +12,15 @@ const KIND_PATH_OVERRIDES = {
   error_log: '_shared/error-log',
   audit_log: '_shared/logs/audit-log'
 };
+
+// Registry lookup replaces the old MASTER_KINDS membership check. A kind absent from the
+// registry is not necessarily a bug — most entity kinds (shipments, quotes, pnl, commission
+// entries, outbox…) are per-user by default and were never master-declared; they keep
+// today's per-user fallback below. Only a registered `team` entry routes to shared/masters.
+function _isTeamMaster(kind) {
+  const entry = MASTER_REGISTRY[kind];
+  return Boolean(entry) && entry.audience === 'team';
+}
 
 // STORE_ENTITIES keyPath is ['kind','id']: the entity-type lives in `kind`. A record whose own
 // domain `kind` (e.g. commission_entry's CommissionKind) is stashed as `_domain_kind` on write
@@ -91,7 +100,7 @@ export class WasmIoPort {
     if (!rootId) throw new Error('Workspace root not found');
 
     let folderId;
-    if (MASTER_KINDS.includes(kind) || LOG_KINDS.includes(kind)) {
+    if (_isTeamMaster(kind) || LOG_KINDS.includes(kind)) {
       const kindPath = KIND_PATH_OVERRIDES[kind] ?? `${MASTERS_PATH}/${kind}`;
       folderId = await this._ensureNestedFolder(rootId, kindPath);
     } else {
@@ -113,7 +122,7 @@ export class WasmIoPort {
   }
 
   async drive_read_bundle(kind, period) {
-    let fileName = MASTER_KINDS.includes(kind) ? 'all.jsonl' : `${period}.jsonl`;
+    let fileName = _isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
@@ -133,7 +142,7 @@ export class WasmIoPort {
   }
 
   async drive_write_bundle(kind, period, newContent, etag) {
-    let fileName = MASTER_KINDS.includes(kind) ? 'all.jsonl' : `${period}.jsonl`;
+    let fileName = _isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
@@ -157,6 +166,12 @@ export class WasmIoPort {
 
   async dispatch_event(eventName, detail) {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
+  }
+
+  // Author identity for _rev_by provenance (F-28-06) — reads the live signed-in user,
+  // falls back to the boot-time email this port was constructed with.
+  async current_user_email() {
+    return window.__vdg_auth?.getCurrentUser?.()?.email || this.userEmail || 'unknown';
   }
 
   // ── Ledger Operations ────────────────────────────────────────────────────────

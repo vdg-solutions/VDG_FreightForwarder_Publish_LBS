@@ -1,9 +1,12 @@
 // F-15-09 — Workspace backup: zip all JSONL bundles → browser download
 
 import { activeWorkspaceName } from './workspace-registry.js';
+import { MASTER_REGISTRY } from '../data/master-registry.js';
 
 const JSZIP_CDN          = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-const MASTER_KINDS       = ['customers', 'carriers', 'services'];
+// F-28-01: derived from the registry instead of a hand-maintained list — the old 3-item
+// array silently skipped airports/flights/air-rates/ocean-carriers/etc from backup.
+const TEAM_MASTER_KINDS   = Object.keys(MASTER_REGISTRY).filter((k) => MASTER_REGISTRY[k].audience === 'team');
 const ABOUT_FIELDS       = 'storageQuota(limit,usage)';
 const BUNDLE_FILE_NAME   = 'all.jsonl';
 const MONTHLY_BUNDLE_RE  = /^\d{4}-\d{2}\.jsonl$/;
@@ -52,7 +55,7 @@ async function _collectBundles(driveApi, zip, folderId, zipPath) {
 
 /**
  * Export full workspace as zip. Downloads via browser.
- * @param {object} repo     — DriveEntityRepo (for MASTER_KINDS listing)
+ * @param {object} repo     — DriveEntityRepo (for TEAM_MASTER_KINDS listing)
  * @param {object} driveApi — drive-api module
  * @param {function} onProgress — (pct 0-100, label string) callback
  */
@@ -66,13 +69,13 @@ export async function exportWorkspace(repo, driveApi, onProgress = () => {}) {
 
   // Masters
   onProgress(10, 'Exporting masters…');
-  for (let i = 0; i < MASTER_KINDS.length; i++) {
-    const kind  = MASTER_KINDS[i];
+  for (let i = 0; i < TEAM_MASTER_KINDS.length; i++) {
+    const kind  = TEAM_MASTER_KINDS[i];
     const items = await repo.list(kind, null).catch(() => []);
     if (items.length > 0) {
       zip.file(`masters/${kind}/all.jsonl`, items.map((e) => JSON.stringify(e)).join('\n') + '\n');
     }
-    onProgress(10 + Math.round((i + 1) / MASTER_KINDS.length * 30), `Masters: ${kind}`);
+    onProgress(10 + Math.round((i + 1) / TEAM_MASTER_KINDS.length * 30), `Masters: ${kind}`);
   }
 
   // Users (monthly bundles) — traverse Drive folder tree

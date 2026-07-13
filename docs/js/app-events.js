@@ -42,13 +42,17 @@ export function initConflictModal() {
       </div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    const resolver = window.__vdg_resolver;
+    // F-28-06: re-put the winning body directly — this re-enters the Rust rebase gate
+    // (apply_put). Stamp local's _rev to the remote _rev this conflict event just carried
+    // (the freshest known state, no extra fetch) so "keep mine" fast-forwards instead of
+    // conflicting again against its own stale base.
+    const repo = window.__vdg_repo;
     dlg.querySelector('#keep-mine').addEventListener('click', async () => {
-      await resolver?.resolveConflict(kind, id, local, fieldLabel);
+      await repo?.put(kind, id, { ...local, _rev: remote?._rev });
       dlg.close(); dlg.remove();
     });
     dlg.querySelector('#use-theirs').addEventListener('click', async () => {
-      await resolver?.resolveConflict(kind, id, remote, fieldLabel);
+      await repo?.put(kind, id, remote);
       dlg.close(); dlg.remove();
     });
   });

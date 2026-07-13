@@ -141,9 +141,15 @@ async function _deferredInit(user, db, driveApi, repo) {
       () => currentSalesRepId(),
     );
 
-    // Conflict resolver
-    const { ConflictResolver } = await import('../sync/conflict-resolver.js');
-    window.__vdg_resolver = new ConflictResolver(db, repo);
+    // Master-scope migration (F-28-02): local-charges/units-of-measure flipped to team
+    // audience — sweep each user's stranded per-user records into shared once, guarded by
+    // an IDB meta flag. Fire-and-forget: bounded internally by safeAwait, never blocks boot.
+    const { migrateMasterScope } = await import('../cache/master-scope-migrator.js');
+    const masterScopePrefix = user.email.split('@')[0].toLowerCase();
+    migrateMasterScope(
+      repo, driveApi, db,
+      () => driveApi.findWorkspaceRoot(activeWorkspaceName()), masterScopePrefix,
+    ).catch((err) => console.warn('[VDG] master-scope migration error:', err.message)); // DEV
 
     // Error log
     const { initErrorLog } = await import('../sync/error-log.js');
