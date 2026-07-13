@@ -9,6 +9,7 @@ const I18N_ROUTES = [
   { pattern: /^#\/sales\/me$/,           group: 'nav.group.sales',     viewKey: 'nav.sales.my_pnl' },
   { pattern: /^#\/sales\/edit\/(.+)$/,   group: 'nav.group.sales',     viewKey: 'nav.sales.edit_pnl', paramKey: 'ref' },
   { pattern: /^#\/masters\/customers$/,  group: 'nav.group.masters',   viewKey: 'nav.masters.customers' },
+  { pattern: /^#\/masters\/ocean-carriers$/, group: 'nav.group.masters', viewKey: 'nav.masters.ocean_carriers' },
   { pattern: /^#\/manager\/reports\/pnl$/, group: 'nav.group.reports', viewKey: 'nav.reports.pnl_report' },
   { pattern: /^#\/manager\/fx-rates$/,   group: 'nav.group.manager',   viewKey: 'nav.manager.fx_rates' },
   { pattern: /^#\/manager\/settings$/,   group: 'nav.group.manager',   viewKey: 'nav.manager.settings' },

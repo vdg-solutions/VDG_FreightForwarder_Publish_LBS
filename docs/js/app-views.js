@@ -51,6 +51,8 @@ export const VIEWS = {
   '/masters/airports':           () => import('./views/manager/masters/airports.js'),
   '/masters/flights':            () => import('./views/manager/masters/flights.js'),
   '/masters/airline-carriers':   () => import('./views/manager/masters/airline-carriers.js'),
+  // E-26 F-26-04
+  '/masters/ocean-carriers':     () => import('./views/manager/masters/ocean-carriers.js'),
   // E-16 F-16-04
   '/masters/uld-types':          () => import('./views/manager/masters/uld-types.js'),
   '/manager/manifest':           () => import('./views/manager/manifest.js'),

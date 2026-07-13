@@ -149,20 +149,6 @@ export function is_period_closed(entity_kind: string, entity_etd_ms: bigint, clo
  */
 export function license_status(license_str: string, current_unix_ts: bigint): any;
 
-export function permission_can_merge(role: string, ref_name: string): boolean;
-
-export function permission_can_pull(role: string, ref_name: string): boolean;
-
-export function permission_can_push(role: string, ref_name: string): boolean;
-
-export function permission_can_push_own_fork(role: string): boolean;
-
-/**
- * Returns Vec<PermissionEntry> as JSON (`[{path, access}]`) — role-assignment-service.js's
- * resolveAcl() consumes this directly, replacing the role-drive-acl.json fetch.
- */
-export function permission_resolve_grants(role: string, user_prefix?: string | null): any;
-
 export function process_excel_file(bytes: Uint8Array): any;
 
 /**
@@ -241,11 +227,6 @@ export interface InitOutput {
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
     readonly license_status: (a: number, b: number, c: bigint) => number;
-    readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly permission_can_push_own_fork: (a: number, b: number, c: number) => void;
-    readonly permission_resolve_grants: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly process_excel_file: (a: number, b: number, c: number) => void;
     readonly provision_sales_rep: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly provision_workspace: (a: number, b: number, c: number) => void;
@@ -266,8 +247,8 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly __wasm_bindgen_func_elem_6563: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_6576: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6448: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6461: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -7,16 +7,23 @@ import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../util/master-l
 
 const LOAD_ERROR_MSG   = 'Không tải được dữ liệu.';
 const LOAD_RETRY_LABEL = 'Thử lại';
-const LOAD_COL_SPAN    = 4;
+const LOAD_COL_SPAN    = 5;
 
-const KIND      = 'local-charges';
-const UNIT_KIND = 'units-of-measure';
-const SEED_URL  = 'seed/masters/local-charges.jsonl';
-const UNIT_SEED = 'seed/masters/units-of-measure.jsonl';
+const KIND         = 'local-charges';
+const UNIT_KIND    = 'units-of-measure';
+const CARRIER_KIND = 'ocean-carriers';
+const SEED_URL     = 'seed/masters/local-charges.jsonl';
+const UNIT_SEED    = 'seed/masters/units-of-measure.jsonl';
+const CARRIER_SEED = 'seed/masters/ocean-carriers.jsonl';
+// Matches ocean-carriers.js genId()'s KIND_PREFIX — same row must resolve to the same id
+// whichever view seeds it first (this migration or the ocean-carriers master's own seed).
+const CARRIER_ID_PREFIX = 'OCR';
+
 // Versioned seeds — add a new migration id when a shipping line / rows are appended.
 const SEED_MIGRATIONS = [
-  { id: '2026-07-09-units-of-measure-v1', kind: UNIT_KIND, url: UNIT_SEED, key: (e) => e.code },
-  { id: '2026-07-09-local-charges-v1',    kind: KIND,      url: SEED_URL,  key: (e) => e.id },
+  { id: '2026-07-09-units-of-measure-v1', kind: UNIT_KIND,    url: UNIT_SEED,    key: (e) => e.code },
+  { id: '2026-07-09-local-charges-v1',    kind: KIND,         url: SEED_URL,     key: (e) => e.id },
+  { id: '2026-07-13-ocean-carriers-v1',   kind: CARRIER_KIND, url: CARRIER_SEED, key: (e) => `${CARRIER_ID_PREFIX}-${e.scac}` },
 ];
 
 function escHtml(s) {
@@ -31,7 +38,7 @@ const STATUS_LABEL = { free: 'Miễn phí', not_applicable: 'Không áp dụng',
 const DIR_LABEL    = { export: 'Xuất', import: 'Nhập' };
 
 
-function rowHtml(c, unitLabel) {
+function rowHtml(c, unitLabel, carrierLabel) {
   const amt = c.amount_status
     ? `<span class="text-slate-400 italic">${STATUS_LABEL[c.amount_status] || c.amount_status}</span>`
     : `${fmtVnd(c.amount_exclude_vat)} <span class="text-slate-300">/</span> <span class="text-slate-900 font-medium">${fmtVnd(c.amount_include_vat)}</span>`;
@@ -40,6 +47,7 @@ function rowHtml(c, unitLabel) {
   const searchStr = norm([c.line_name, c.charge_name, c.charge_code, unitLabel, ...(c.line_aliases || []), ...(c.charge_aliases || [])].join(' '));
   return `
     <tr class="border-b border-slate-100 hover:bg-slate-50" data-line="${escHtml(c.line_scac)}" data-dir="${escHtml(c.direction)}" data-search="${escHtml(searchStr)}">
+      <td class="py-2 px-3 text-xs text-slate-600">${escHtml(carrierLabel)}</td>
       <td class="py-2 px-3 text-xs font-medium text-slate-900">${escHtml(c.charge_name)}${kindBadge}
         <div class="text-[10px] text-slate-400 font-normal">${escHtml(c.charge_description || '')}</div></td>
       <td class="py-2 px-3 text-xs text-slate-600">${escHtml(unitLabel)}</td>
@@ -54,7 +62,7 @@ export async function render(root) {
     <div class="p-6">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
-          <h1 class="text-lg font-semibold text-slate-900">Biểu phí Local Charge</h1>
+          <h1 class="text-lg font-semibold text-slate-900">Biểu phí địa phương</h1>
           <p class="text-xs text-slate-500">Theo hãng tàu — cột phí: <b>chưa VAT / có VAT</b>. Tìm theo tên phí, hãng, hay mã.</p>
         </div>
         <div class="flex gap-2 items-center">
@@ -67,14 +75,14 @@ export async function render(root) {
       </div>
       <div class="rounded-xl border border-slate-200 overflow-hidden">
         <table class="w-full text-left border-collapse">
-          <thead class="bg-slate-50"><tr>${['Phí', 'Đơn vị tính', 'VND (chưa / có VAT)', ''].map((h) => `<th class="py-2 px-3 text-xs font-medium text-slate-600">${h}</th>`).join('')}</tr></thead>
-          <tbody id="lc-body"><tr><td colspan="4" class="p-4 text-slate-400 text-center text-xs">Đang tải…</td></tr></tbody>
+          <thead class="bg-slate-50"><tr>${['Hãng tàu', 'Phí', 'Đơn vị tính', 'VND (chưa / có VAT)', ''].map((h) => `<th class="py-2 px-3 text-xs font-medium text-slate-600">${h}</th>`).join('')}</tr></thead>
+          <tbody id="lc-body"><tr><td colspan="${LOAD_COL_SPAN}" class="p-4 text-slate-400 text-center text-xs">Đang tải…</td></tr></tbody>
         </table>
       </div>
     </div>`;
 
   const body = root.querySelector('#lc-body');
-  if (!repo) { body.innerHTML = `<tr><td colspan="4" class="p-4 text-red-500 text-center text-xs">Chưa sẵn sàng dữ liệu.</td></tr>`; return; }
+  if (!repo) { body.innerHTML = `<tr><td colspan="${LOAD_COL_SPAN}" class="p-4 text-red-500 text-center text-xs">Chưa sẵn sàng dữ liệu.</td></tr>`; return; }
 
   // F-20-01: seed + list bounded as one sequence — a stalled Drive write on a fresh
   // workspace resolves to a caught failure instead of hanging at "Đang tải…".
@@ -84,6 +92,7 @@ export async function render(root) {
       return Promise.all([
         repo.list(KIND, null).catch(() => []),
         repo.list(UNIT_KIND, null).catch(() => []),
+        repo.list(CARRIER_KIND, null).catch(() => []),
       ]);
     }, 'local-charges:load');
 
@@ -92,8 +101,10 @@ export async function render(root) {
       return;
     }
 
-    const [charges, units] = loadRes.value;
+    const [charges, units, carriers] = loadRes.value;
     const unitLabel = new Map(units.map((u) => [u.code, u.label_vi || u.code]));
+    // FK resolve: line_scac -> ocean-carrier master name (single source, AC-05)
+    const carrierName = new Map(carriers.map((oc) => [oc.scac, oc.name]));
 
     // line filter options (tên thân thiện, không SCAC)
     const lines = [...new Map(charges.map((c) => [c.line_scac, c.line_name])).entries()];
@@ -101,8 +112,8 @@ export async function render(root) {
 
     charges.sort((a, b) => (a.line_name || '').localeCompare(b.line_name || '') || (a.direction || '').localeCompare(b.direction || '') || (a.charge_code || '').localeCompare(b.charge_code || ''));
     body.innerHTML = charges.length
-      ? charges.map((c) => rowHtml(c, unitLabel.get(c.unit_code) || c.unit_code)).join('')
-      : `<tr><td colspan="4" class="p-4 text-slate-400 text-center text-xs">Chưa có biểu phí.</td></tr>`;
+      ? charges.map((c) => rowHtml(c, unitLabel.get(c.unit_code) || c.unit_code, carrierName.get(c.line_scac) || c.line_name)).join('')
+      : `<tr><td colspan="${LOAD_COL_SPAN}" class="p-4 text-slate-400 text-center text-xs">Chưa có biểu phí.</td></tr>`;
   }
 
   await loadAndRender();

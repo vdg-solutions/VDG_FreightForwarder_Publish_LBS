@@ -2,7 +2,7 @@ import { idbGet, idbPut, idbGetAllByIndex, idbDelete, STORE_ENTITIES, STORE_META
 import { getFile, uploadFile, getOrCreateFolder, findWorkspaceRoot } from '../auth/drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 
-const MASTER_KINDS = ['customers', 'carriers', 'services', 'dunning_templates', 'user', 'airports', 'flights', 'airline-carriers', 'uld-types', 'air-rates', 'user_audit_log'];
+const MASTER_KINDS = ['customers', 'carriers', 'services', 'dunning_templates', 'user', 'airports', 'flights', 'airline-carriers', 'uld-types', 'air-rates', 'ocean-carriers', 'user_audit_log'];
 const LOG_KINDS = ['error_log', 'audit_log'];
 const MASTERS_PATH = 'shared/masters';
 const USERS_PATH   = 'users';

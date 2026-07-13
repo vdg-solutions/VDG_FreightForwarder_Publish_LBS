@@ -33,6 +33,8 @@ const V1_ITEMS = [
   { group: 'masters',   route: '/masters/customers',   labelKey: 'nav.masters.customers', icon: 'db',  allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   { group: 'masters',   route: '/masters/local-charges',    labelKey: 'nav.masters.local_charges', icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   { group: 'masters',   route: '/masters/units-of-measure', labelKey: 'nav.masters.units',         icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // E-26 F-26-04: ocean-carrier master, reachable from Danh mục like local-charges/units
+  { group: 'masters',   route: '/masters/ocean-carriers',   labelKey: 'nav.masters.ocean_carriers', icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
 ];
 
 const V1_GROUPS = [
@@ -216,7 +218,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 3dca8b1">v0.1.41</span>
+        <span class="font-mono whitespace-nowrap" title="build e418a7d">v0.1.42</span>
       </div>
     `;
   }
