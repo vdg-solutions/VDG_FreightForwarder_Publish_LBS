@@ -7,6 +7,7 @@ import {
   validateAirlineIata, validateAirlineIcao, checkIataUnique,
 } from '../../../util/iata-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
+import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../util/master-load.js';
 
 const KIND        = 'airline-carriers';
 const KIND_PREFIX = 'ACR';
@@ -17,23 +18,6 @@ function escHtml(s) {
 }
 
 function genId(iata) { return `${KIND_PREFIX}-${iata || Date.now()}`; }
-
-async function seedIfEmpty(repo, items) {
-  if (items.length > 0) return items;
-  try {
-    const res   = await fetch(SEED_URL);
-    if (!res.ok) return items;
-    const lines = (await res.text()).trim().split('\n').filter(Boolean);
-    const seeded = [];
-    for (const line of lines) {
-      const entry = JSON.parse(line);
-      if (!entry.id) entry.id = genId(entry.iata_code);
-      await repo.put(KIND, entry.id, entry);
-      seeded.push(entry);
-    }
-    return seeded;
-  } catch { /* seed optional */ return items; }
-}
 
 function buildModal(entity) {
   const e = entity || {};
@@ -148,14 +132,26 @@ export async function render(root) {
 
   let items = [];
 
+  // F-20-01: bounded — a stalled Drive read/write on a fresh workspace resolves to an
+  // actionable retry instead of hanging at "Loading...".
   async function reload() {
-    items = repo ? await repo.list(KIND, null).catch(() => []) : [];
-    if (isM) items = await seedIfEmpty(repo, items);
-    const tbody   = root.querySelector('#m-tbody');
-    const emptyEl = root.querySelector('#m-empty');
+    const tbody    = root.querySelector('#m-tbody');
+    const emptyEl  = root.querySelector('#m-empty');
+    const statusEl = root.querySelector('#m-status');
+    if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
+
+    const listRes = await boundedList(repo, KIND, 'airline-carriers:list');
+    if (!listRes.ok) {
+      if (tbody) tbody.innerHTML = '';
+      emptyEl?.classList.add('hidden');
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('retry'), reload);
+      return;
+    }
+    items = listRes.value;
+    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, (e) => genId(e.iata_code), 'airline-carriers:seed');
     if (tbody) tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
     if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
-    root.querySelector('#m-status').textContent = '';
+    if (statusEl) statusEl.textContent = '';
   }
 
   await reload();

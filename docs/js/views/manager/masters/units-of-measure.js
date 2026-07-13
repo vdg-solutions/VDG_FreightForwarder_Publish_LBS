@@ -3,11 +3,16 @@
 // Sales-friendly: hiển thị label_vi + aliases; mã ISO 6346 chỉ ở cột phụ mờ.
 
 import { runSeedMigrations } from '../../../cache/seed-migrator.js';
+import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../util/master-load.js';
 
 const KIND     = 'units-of-measure';
 const SEED_URL = 'seed/masters/units-of-measure.jsonl';
 // Bump this id (or add a new one) when the seed file gains rows — versioned, idempotent.
 const SEED_MIGRATION = { id: '2026-07-09-units-of-measure-v1', kind: KIND, url: SEED_URL, key: (e) => e.code };
+
+const LOAD_ERROR_MSG   = 'Không tải được dữ liệu.';
+const LOAD_RETRY_LABEL = 'Thử lại';
+const LOAD_COL_SPAN    = 5;
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -23,9 +28,13 @@ function norm(s) {
 
 const CATEGORY_LABEL = { container: 'Container', billing: 'Cách tính' };
 
+// F-20-01: bounded — a stalled Drive write on a fresh workspace resolves to
+// { ok: false } instead of hanging the caller at "Đang tải…".
 async function loadUnits(repo) {
-  await runSeedMigrations(repo, [SEED_MIGRATION]); // versioned + idempotent, không đè user edit
-  return await repo.list(KIND, null).catch(() => []) || [];
+  return safeMasterLoad(async () => {
+    await runSeedMigrations(repo, [SEED_MIGRATION]); // versioned + idempotent, không đè user edit
+    return (await repo.list(KIND, null).catch(() => [])) || [];
+  }, 'units-of-measure:load');
 }
 
 function rowHtml(u) {
@@ -62,12 +71,21 @@ export async function render(root) {
       </div>
     </div>`;
 
-  if (!repo) { root.querySelector('#uom-body').innerHTML = `<tr><td colspan="5" class="p-4 text-red-500 text-center text-xs">Chưa sẵn sàng dữ liệu.</td></tr>`; return; }
-
-  const units = await loadUnits(repo);
-  units.sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.label_vi || '').localeCompare(b.label_vi || ''));
   const body = root.querySelector('#uom-body');
-  body.innerHTML = units.length ? units.map(rowHtml).join('') : `<tr><td colspan="5" class="p-4 text-slate-400 text-center text-xs">Chưa có đơn vị.</td></tr>`;
+  if (!repo) { body.innerHTML = `<tr><td colspan="5" class="p-4 text-red-500 text-center text-xs">Chưa sẵn sàng dữ liệu.</td></tr>`; return; }
+
+  async function loadAndRender() {
+    const loadRes = await loadUnits(repo);
+    if (!loadRes.ok) {
+      renderMasterLoadRetryRow(body, LOAD_COL_SPAN, LOAD_ERROR_MSG, LOAD_RETRY_LABEL, loadAndRender);
+      return;
+    }
+    const units = loadRes.value;
+    units.sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.label_vi || '').localeCompare(b.label_vi || ''));
+    body.innerHTML = units.length ? units.map(rowHtml).join('') : `<tr><td colspan="5" class="p-4 text-slate-400 text-center text-xs">Chưa có đơn vị.</td></tr>`;
+  }
+
+  await loadAndRender();
 
   root.querySelector('#uom-search').addEventListener('input', (e) => {
     const q = norm(e.target.value);

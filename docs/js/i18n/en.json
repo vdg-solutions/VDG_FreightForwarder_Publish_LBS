@@ -366,6 +366,7 @@
   "awb.admin.title":             "AWB Documents",
   "awb.kind.master":             "Master",
   "awb.kind.house":              "House",
+  "masters.load_error":             "Couldn't load data. Please retry.",
   "masters.airports.title":         "Airports",
   "masters.airports.add_button":    "Add Airport",
   "masters.airports.edit_title":    "Edit Airport",

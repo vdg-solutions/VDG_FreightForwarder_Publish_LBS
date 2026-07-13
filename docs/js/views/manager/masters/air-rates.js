@@ -4,6 +4,7 @@
 import { isManager } from '../../../auth/auth-gate.js';
 import { t }         from '../../../i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
+import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../util/master-load.js';
 
 const KIND       = 'air-rates';
 const SEED_URL   = 'seed/masters/air-rates.jsonl';
@@ -13,23 +14,6 @@ function escHtml(s) {
 }
 
 function genId(r) { return `AR-${r.route_origin || ''}-${r.route_dest || ''}-${r.carrier_iata || ''}-${Date.now()}`; }
-
-async function seedIfEmpty(repo, items) {
-  if (items.length > 0) return items;
-  try {
-    const res = await fetch(SEED_URL);
-    if (!res.ok) return items;
-    const lines  = (await res.text()).trim().split('\n').filter(Boolean);
-    const seeded = [];
-    for (const line of lines) {
-      const entry = JSON.parse(line);
-      if (!entry.id) entry.id = entry.rate_id || genId(entry);
-      await repo.put(KIND, entry.id, entry);
-      seeded.push(entry);
-    }
-    return seeded;
-  } catch { /* seed optional */ return items; }
-}
 
 function breaksLabel(breaks) {
   if (!Array.isArray(breaks) || !breaks.length) return '—';
@@ -173,14 +157,26 @@ export async function render(root) {
 
   let items = [];
 
+  // F-20-01: bounded — a stalled Drive read/write on a fresh workspace resolves to an
+  // actionable retry instead of hanging at "Loading...".
   async function reload() {
-    items = repo ? await repo.list(KIND, null).catch(() => []) : [];
-    if (isM) items = await seedIfEmpty(repo, items);
-    const tbody   = root.querySelector('#ar-tbody');
-    const emptyEl = root.querySelector('#ar-empty');
+    const tbody    = root.querySelector('#ar-tbody');
+    const emptyEl  = root.querySelector('#ar-empty');
+    const statusEl = root.querySelector('#ar-status');
+    if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
+
+    const listRes = await boundedList(repo, KIND, 'air-rates:list');
+    if (!listRes.ok) {
+      if (tbody) tbody.innerHTML = '';
+      emptyEl?.classList.add('hidden');
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('retry'), reload);
+      return;
+    }
+    items = listRes.value;
+    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, (e) => e.rate_id || genId(e), 'air-rates:seed');
     if (tbody)   tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
     if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
-    root.querySelector('#ar-status').textContent = '';
+    if (statusEl) statusEl.textContent = '';
   }
 
   await reload();

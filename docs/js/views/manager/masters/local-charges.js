@@ -3,6 +3,11 @@
 // Sales tra cứu biểu phí local charge theo hãng tàu; tên Việt, VAT kép, search alias.
 
 import { runSeedMigrations } from '../../../cache/seed-migrator.js';
+import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../util/master-load.js';
+
+const LOAD_ERROR_MSG   = 'Không tải được dữ liệu.';
+const LOAD_RETRY_LABEL = 'Thử lại';
+const LOAD_COL_SPAN    = 4;
 
 const KIND      = 'local-charges';
 const UNIT_KIND = 'units-of-measure';
@@ -71,21 +76,36 @@ export async function render(root) {
   const body = root.querySelector('#lc-body');
   if (!repo) { body.innerHTML = `<tr><td colspan="4" class="p-4 text-red-500 text-center text-xs">Chưa sẵn sàng dữ liệu.</td></tr>`; return; }
 
-  await runSeedMigrations(repo, SEED_MIGRATIONS); // versioned + idempotent
-  const [charges, units] = await Promise.all([
-    repo.list(KIND, null).catch(() => []),
-    repo.list(UNIT_KIND, null).catch(() => []),
-  ]);
-  const unitLabel = new Map(units.map((u) => [u.code, u.label_vi || u.code]));
+  // F-20-01: seed + list bounded as one sequence — a stalled Drive write on a fresh
+  // workspace resolves to a caught failure instead of hanging at "Đang tải…".
+  async function loadAndRender() {
+    const loadRes = await safeMasterLoad(async () => {
+      await runSeedMigrations(repo, SEED_MIGRATIONS); // versioned + idempotent
+      return Promise.all([
+        repo.list(KIND, null).catch(() => []),
+        repo.list(UNIT_KIND, null).catch(() => []),
+      ]);
+    }, 'local-charges:load');
 
-  // line filter options (tên thân thiện, không SCAC)
-  const lines = [...new Map(charges.map((c) => [c.line_scac, c.line_name])).entries()];
-  root.querySelector('#lc-line').innerHTML = `<option value="">Tất cả hãng</option>` + lines.map(([scac, name]) => `<option value="${escHtml(scac)}">${escHtml(name)}</option>`).join('');
+    if (!loadRes.ok) {
+      renderMasterLoadRetryRow(body, LOAD_COL_SPAN, LOAD_ERROR_MSG, LOAD_RETRY_LABEL, loadAndRender);
+      return;
+    }
 
-  charges.sort((a, b) => (a.line_name || '').localeCompare(b.line_name || '') || (a.direction || '').localeCompare(b.direction || '') || (a.charge_code || '').localeCompare(b.charge_code || ''));
-  body.innerHTML = charges.length
-    ? charges.map((c) => rowHtml(c, unitLabel.get(c.unit_code) || c.unit_code)).join('')
-    : `<tr><td colspan="4" class="p-4 text-slate-400 text-center text-xs">Chưa có biểu phí.</td></tr>`;
+    const [charges, units] = loadRes.value;
+    const unitLabel = new Map(units.map((u) => [u.code, u.label_vi || u.code]));
+
+    // line filter options (tên thân thiện, không SCAC)
+    const lines = [...new Map(charges.map((c) => [c.line_scac, c.line_name])).entries()];
+    root.querySelector('#lc-line').innerHTML = `<option value="">Tất cả hãng</option>` + lines.map(([scac, name]) => `<option value="${escHtml(scac)}">${escHtml(name)}</option>`).join('');
+
+    charges.sort((a, b) => (a.line_name || '').localeCompare(b.line_name || '') || (a.direction || '').localeCompare(b.direction || '') || (a.charge_code || '').localeCompare(b.charge_code || ''));
+    body.innerHTML = charges.length
+      ? charges.map((c) => rowHtml(c, unitLabel.get(c.unit_code) || c.unit_code)).join('')
+      : `<tr><td colspan="4" class="p-4 text-slate-400 text-center text-xs">Chưa có biểu phí.</td></tr>`;
+  }
+
+  await loadAndRender();
 
   const apply = () => {
     const line = root.querySelector('#lc-line').value;
