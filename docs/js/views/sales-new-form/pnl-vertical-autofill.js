@@ -72,16 +72,25 @@ export function niDtoToDraft(pair) {
       const qty       = Number(ln.quantity)              || 0;
       const nativeAmt = Number(ln.amount?.amount)         || 0;
       const vndAmt    = Number(ln.amount_in_job_ccy?.amount) || 0;
+      // F-29-01 §5: to_canonical.rs::make_line always emits Currency::Vnd, fx_rate=1 —
+      // carry that forward so a freshly-imported row satisfies the AC-05 save gate untouched.
+      const importFxDate = s.etd || new Date().toISOString().slice(0, 10);
       return {
         desc:        kindI18nLabel(effectiveKind, currentLocale()),
         kind:        effectiveKind,
         buy_qty:     isRevenue ? 0 : qty,
         buy_unit:    '',
         buy_amt:     isRevenue ? 0 : nativeAmt,
+        buy_currency: 'VND',
+        buy_fx_rate:  1,
+        buy_fx_date:  importFxDate,
         vnd_pay:     isRevenue ? 0 : vndAmt,
         sell_qty:    isRevenue ? qty : 0,
         sell_unit:   '',
         sell_amt:    isRevenue ? nativeAmt : 0,
+        sell_currency: 'VND',
+        sell_fx_rate:  1,
+        sell_fx_date:  importFxDate,
         vnd_collect: isRevenue ? vndAmt : 0,
         pol_pod_side: ln.pol_pod_side        || 'N/A',
       };
@@ -129,22 +138,41 @@ export function shipmentToDraft(shipment, ce) {
     roe_buying:   s.roe_buying            ?? '',
     roe_selling:  s.roe_debit             ?? '',
     currency:     s.job_currency          || 'USD',
-    lines: (s.pnl_lines || []).map((ln) => ({
-      desc:        ln.description          || '',
-      kind:        ln.subtype              || '',
-      buy_qty:     ln.buying_qty           || 0,
-      buy_unit:    ln.buying_unit          || '',
-      buy_amt:     ln.buying_amount        || 0,
-      vnd_pay:     ln.buying_vnd_pay       || 0,
-      sell_qty:    ln.selling_qty          || 0,
-      sell_unit:   ln.selling_unit         || '',
-      sell_amt:    ln.selling_amount       || 0,
-      vnd_collect: ln.selling_vnd_collect  || 0,
-      pol_pod_side: ln.pol_pod_side        || 'N/A',
-    })),
+    // F-29-01 AC-06: doc date default for legacy fx_date fallback below AND the form's
+    // new-row default — persisted date, not "today", so re-opening an old draft doesn't
+    // silently shift its fx_date forward.
+    transaction_date: s.transaction_date  || '',
+    lines: (s.pnl_lines || []).map((ln) => _lineToDraft(ln, s)),
     // AC-09: back-compat shim — new commission_lines > old CR1 entry > empty
     commission_lines: _resolveCommissionLines(s, ce),
     sales_share_pct_override: s.sales_share_pct_override ?? null,
     publish_state: s.publish_state || 'draft',
+  };
+}
+
+// F-29-01 §4: read-time fallback for pre-migration lines missing the new fields — NOT a
+// persisted backfill (that's F-29-05, MG-01), just keeps old shipments openable without
+// every legacy line instantly tripping the AC-05 save gate.
+function _lineToDraft(ln, s) {
+  const buyCurrency  = ln.buying_currency  || s.job_currency || 'VND';
+  const sellCurrency = ln.selling_currency || s.job_currency || 'VND';
+  return {
+    desc:        ln.description          || '',
+    kind:        ln.subtype              || '',
+    buy_qty:     ln.buying_qty           || 0,
+    buy_unit:    ln.buying_unit          || '',
+    buy_amt:     ln.buying_amount        || 0,
+    buy_currency:  buyCurrency,
+    buy_fx_rate:   ln.buying_fx_rate  || (buyCurrency === 'VND'  ? 1 : (s.roe_buying || '')),
+    buy_fx_date:   ln.buying_fx_date  || '',
+    vnd_pay:     ln.buying_vnd_pay       || 0,
+    sell_qty:    ln.selling_qty          || 0,
+    sell_unit:   ln.selling_unit         || '',
+    sell_amt:    ln.selling_amount       || 0,
+    sell_currency: sellCurrency,
+    sell_fx_rate:  ln.selling_fx_rate || (sellCurrency === 'VND' ? 1 : (s.roe_debit  || '')),
+    sell_fx_date:  ln.selling_fx_date || '',
+    vnd_collect: ln.selling_vnd_collect  || 0,
+    pol_pod_side: ln.pol_pod_side        || 'N/A',
   };
 }

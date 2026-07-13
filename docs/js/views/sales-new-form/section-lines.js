@@ -1,8 +1,10 @@
 // section-lines.js — Section B: split-column P&L table with kind auto-classify + WMA prediction
 import { t, currentLocale } from '../../i18n/index.js';
 import { kindI18nLabel }    from '../../util/kind-i18n.js';
-import { predict, dismissPrediction } from '../../sync/wma-engine.js';
-import { loadKindWmaState, saveKindWmaState } from '../../sync/wma-store.js';
+import { ensureWmaStyle, applyWmaToRow, applyWmaToAllRows, dismissWmaBadge }
+  from './section-lines-wma.js';
+import { computeLineVnd, fxCellsHtml, vndCellHtml, wireLineFx, applyFxDateDefaults }
+  from './pnl-line-fx.js';
 
 // Mirrors Rust PNL_VERTICAL_KIND_MAP — prefix-to-kind for AC-10
 export const PNL_VERTICAL_KIND_MAP_JS = {
@@ -61,7 +63,7 @@ function polPodOpts(selected) {
   ).join('');
 }
 
-export function lineRowHtml(idx, line = {}) {
+export function lineRowHtml(idx, line = {}, headerCurrency) {
   // AC-04/F-15-61: auto-classify when kind absent or not a recognised frontend value
   // Rust LineSubType variants (HandlingCost, SurchargeCost, …) are truthy but not in KIND_LIST
   const effectiveDesc = line.desc || line.description || '';
@@ -86,9 +88,8 @@ export function lineRowHtml(idx, line = {}) {
       <td class="px-1 py-1">
         <input name="buy_amt" type="number" value="${line.buy_amt || ''}" placeholder="0"
           class="w-24 ${CELL_CLS} text-right" /></td>
-      <td class="px-1 py-1">
-        <input name="vnd_pay" type="number" value="${line.vnd_pay || ''}" placeholder="0"
-          class="w-28 ${CELL_CLS} text-right font-medium text-blue-700" /></td>
+      ${fxCellsHtml('buy', line, headerCurrency)}
+      ${vndCellHtml('buy', line)}
       <td class="px-1 py-1">
         <input name="sell_qty" type="number" value="${line.sell_qty || ''}" placeholder="${t('sales_new.ph_qty')}"
           class="w-14 ${CELL_CLS} text-right" /></td>
@@ -98,9 +99,8 @@ export function lineRowHtml(idx, line = {}) {
       <td class="px-1 py-1">
         <input name="sell_amt" type="number" value="${line.sell_amt || ''}" placeholder="0"
           class="w-24 ${CELL_CLS} text-right" /></td>
-      <td class="px-1 py-1">
-        <input name="vnd_collect" type="number" value="${line.vnd_collect || ''}" placeholder="0"
-          class="w-28 ${CELL_CLS} text-right font-medium text-emerald-700" /></td>
+      ${fxCellsHtml('sell', line, headerCurrency)}
+      ${vndCellHtml('sell', line)}
       <td class="px-1 py-1">
         <select name="pol_pod_side" class="w-16 ${CELL_CLS}">
           ${polPodOpts(line.pol_pod_side)}
@@ -124,11 +124,12 @@ function onKindChange(rowEl, newKind) {
 }
 
 export function sectionBHtml(draft = {}) {
-  const lines  = draft.lines || [];
+  const lines          = draft.lines || [];
+  const headerCurrency = draft.currency || '';
   const padded = lines.length >= INIT_ROWS
     ? lines
     : [...lines, ...Array(INIT_ROWS - lines.length).fill({})];
-  const rows = padded.map((l, i) => lineRowHtml(i, l)).join('');
+  const rows = padded.map((l, i) => lineRowHtml(i, l, headerCurrency)).join('');
   return `
     <div id="sec-b-body" class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="flex items-center justify-between mb-3">
@@ -139,7 +140,7 @@ export function sectionBHtml(draft = {}) {
           class="text-xs text-blue-600 hover:text-blue-700">${t('sales_new.col_add_row')}</button>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-xs min-w-[1100px]" id="lines-table">
+        <table class="w-full text-xs min-w-[1500px]" id="lines-table">
           <thead class="bg-slate-50">
             <tr>
               <th class="px-1 py-1.5 text-left text-slate-400 w-6">#</th>
@@ -148,10 +149,16 @@ export function sectionBHtml(draft = {}) {
               <th class="px-1 py-1.5 text-right text-blue-600">${t('sales_new.col_buy_qty')}</th>
               <th class="px-1 py-1.5 text-left text-blue-600">${t('sales_new.col_unit')}</th>
               <th class="px-1 py-1.5 text-right text-blue-600">${t('sales_new.col_buy_amt')}</th>
+              <th class="px-1 py-1.5 text-left text-blue-600">${t('sales_new.col_currency')}</th>
+              <th class="px-1 py-1.5 text-right text-blue-600">${t('sales_new.col_fx_rate')}</th>
+              <th class="px-1 py-1.5 text-left text-blue-600">${t('sales_new.col_fx_date')}</th>
               <th class="px-1 py-1.5 text-right text-blue-700">${t('sales_new.col_vnd_pay')}</th>
               <th class="px-1 py-1.5 text-right text-emerald-600">${t('sales_new.col_sell_qty')}</th>
               <th class="px-1 py-1.5 text-left text-emerald-600">${t('sales_new.col_unit')}</th>
               <th class="px-1 py-1.5 text-right text-emerald-600">${t('sales_new.col_sell_amt')}</th>
+              <th class="px-1 py-1.5 text-left text-emerald-600">${t('sales_new.col_currency')}</th>
+              <th class="px-1 py-1.5 text-right text-emerald-600">${t('sales_new.col_fx_rate')}</th>
+              <th class="px-1 py-1.5 text-left text-emerald-600">${t('sales_new.col_fx_date')}</th>
               <th class="px-1 py-1.5 text-right text-emerald-700">${t('sales_new.col_vnd_collect')}</th>
               <th class="px-1 py-1.5 text-left text-slate-400">POL/POD</th>
               <th class="px-1 py-1.5 w-6"></th>
@@ -163,65 +170,18 @@ export function sectionBHtml(draft = {}) {
     </div>`;
 }
 
-// ── WMA UI helpers ────────────────────────────────────────────────────────────
-
-function _ensureWmaStyle() {
-  if (document.getElementById('wma-style')) return;
-  const s = document.createElement('style');
-  s.id          = 'wma-style';
-  s.textContent = '@keyframes wma-pulse{0%,100%{opacity:1}50%{opacity:.6}}'
-    + '.wma-predicted{animation:wma-pulse .6s ease-in-out;}'
-    + '.wma-badge{cursor:pointer;font-size:10px;margin-left:3px;opacity:.8;vertical-align:middle;}'
-    + '.wma-badge:hover{opacity:1;}';
-  document.head.appendChild(s);
-}
-
-function _injectBadge(kindSel, state) {
-  kindSel.parentElement?.querySelector('.wma-badge')?.remove();
-  const span = document.createElement('span');
-  span.className = 'wma-badge';
-  span.title     = t('wma.badge_title').replace('{n}', state.total_observations);
-  span.textContent = t('wma.badge_label');
-  kindSel.insertAdjacentElement('afterend', span);
-}
-
-async function _applyWmaToRow(row, repId) {
-  const rowIdx  = parseInt(row.dataset.line, 10);
-  const db      = window.__vdg_db;
-  if (!db || !repId) return;
-  const kindSel = row.querySelector('[name=kind]');
-  if (!kindSel || kindSel.dataset.manuallySet === 'true' || kindSel.value) return;
-  const desc    = row.querySelector('[name=desc]')?.value || '';
-  const state   = await loadKindWmaState(db, repId, rowIdx);
-  const top     = predict(state, desc, classifyKind);
-  if (!top) return;
-  kindSel.value        = top;
-  kindSel.classList.add('wma-predicted');
-  row.dataset.wmaPredicted = top;
-  _injectBadge(kindSel, state);
-  const sorted = Object.entries(state.kind_weights).sort((a, b) => b[1] - a[1]);
-  const topW   = (sorted[0]?.[1] ?? 0).toFixed(2);
-  const secW   = (sorted[1]?.[1] ?? 0).toFixed(2);
-  console.log(`[wma] row${rowIdx} → ${top} (w=${topW} vs 2nd=${secW})`); // DEV
-}
-
-async function _applyWmaToAllRows(tbody, repId) {
-  for (const row of Array.from(tbody.querySelectorAll('tr[data-line]'))) {
-    await _applyWmaToRow(row, repId);
-  }
-}
-
 // ── Section wiring ────────────────────────────────────────────────────────────
 
-export function wireLinesSection(root, onChanged, repId) {
+export function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
   const tbody = root.querySelector('#lines-tbody');
   if (!tbody) return;
 
-  _ensureWmaStyle();
+  ensureWmaStyle();
+  wireLineFx(tbody, fxRepo, docDate);
 
   // Mount: fire-and-forget WMA predictions for blank-kind rows
   if (repId) {
-    _applyWmaToAllRows(tbody, repId).catch((err) => {
+    applyWmaToAllRows(tbody, repId, classifyKind).catch((err) => {
       console.warn('[wma] mount predict failed:', err.message); // DEV
     });
   }
@@ -232,8 +192,9 @@ export function wireLinesSection(root, onChanged, repId) {
     tmp.innerHTML = lineRowHtml(idx);
     const newRow = tmp.firstElementChild;
     tbody.appendChild(newRow);
+    applyFxDateDefaults(newRow, docDate);
     if (repId) {
-      _applyWmaToRow(newRow, repId).catch((err) => {
+      applyWmaToRow(newRow, repId, classifyKind).catch((err) => {
         console.warn('[wma] new row predict failed:', err.message); // DEV
       });
     }
@@ -281,9 +242,10 @@ export function wireLinesSection(root, onChanged, repId) {
     tmp.innerHTML = lineRowHtml(newIdx);
     const newRow = tmp.firstElementChild;
     tbody.appendChild(newRow);
+    applyFxDateDefaults(newRow, docDate);
     newRow.querySelector('input,select')?.focus();
     if (repId) {
-      _applyWmaToRow(newRow, repId).catch((err) => {
+      applyWmaToRow(newRow, repId, classifyKind).catch((err) => {
         console.warn('[wma] tab row predict failed:', err.message); // DEV
       });
     }
@@ -291,29 +253,9 @@ export function wireLinesSection(root, onChanged, repId) {
   });
 
   tbody.addEventListener('click', async (e) => {
-    // badge dismiss — undo prediction + aggressive 0.7 penalty
     const badge = e.target.closest('.wma-badge');
     if (badge) {
-      const row = badge.closest('tr[data-line]');
-      if (!row || !repId) return;
-      const rowIdx       = parseInt(row.dataset.line, 10);
-      const predictedKind = row.dataset.wmaPredicted;
-      const kindSel      = row.querySelector('[name=kind]');
-      if (kindSel) {
-        kindSel.value = '';
-        kindSel.classList.remove('wma-predicted');
-      }
-      badge.remove();
-      delete row.dataset.wmaPredicted;
-      if (predictedKind) {
-        const db = window.__vdg_db;
-        if (db) {
-          const state = await loadKindWmaState(db, repId, rowIdx);
-          dismissPrediction(state, predictedKind);
-          await saveKindWmaState(db, repId, rowIdx, state);
-        }
-      }
-      onChanged?.();
+      if (await dismissWmaBadge(badge, repId)) onChanged?.();
       return;
     }
     const btn = e.target.closest('[data-remove]');
@@ -324,19 +266,34 @@ export function wireLinesSection(root, onChanged, repId) {
 }
 
 export function collectLines(root) {
-  return Array.from(root.querySelectorAll('#lines-tbody tr[data-line]')).map((row) => ({
-    desc:         row.querySelector('[name=desc]')?.value          || '',
-    kind:         row.querySelector('[name=kind]')?.value          || '',
-    buy_qty:      parseFloat(row.querySelector('[name=buy_qty]')?.value)      || 0,
-    buy_unit:     row.querySelector('[name=buy_unit]')?.value      || '',
-    buy_amt:      parseFloat(row.querySelector('[name=buy_amt]')?.value)      || 0,
-    vnd_pay:      parseFloat(row.querySelector('[name=vnd_pay]')?.value)      || 0,
-    sell_qty:     parseFloat(row.querySelector('[name=sell_qty]')?.value)     || 0,
-    sell_unit:    row.querySelector('[name=sell_unit]')?.value     || '',
-    sell_amt:     parseFloat(row.querySelector('[name=sell_amt]')?.value)     || 0,
-    vnd_collect:  parseFloat(row.querySelector('[name=vnd_collect]')?.value)  || 0,
-    pol_pod_side: row.querySelector('[name=pol_pod_side]')?.value  || 'N/A',
-  }));
+  return Array.from(root.querySelectorAll('#lines-tbody tr[data-line]')).map((row) => {
+    const buy_amt      = parseFloat(row.querySelector('[name=buy_amt]')?.value)      || 0;
+    const buy_currency  = row.querySelector('[name=buy_currency]')?.value  || '';
+    const buy_fx_rate   = parseFloat(row.querySelector('[name=buy_fx_rate]')?.value)  || 0;
+    const sell_amt      = parseFloat(row.querySelector('[name=sell_amt]')?.value)     || 0;
+    const sell_currency = row.querySelector('[name=sell_currency]')?.value || '';
+    const sell_fx_rate  = parseFloat(row.querySelector('[name=sell_fx_rate]')?.value) || 0;
+    return {
+      desc:         row.querySelector('[name=desc]')?.value          || '',
+      kind:         row.querySelector('[name=kind]')?.value          || '',
+      buy_qty:      parseFloat(row.querySelector('[name=buy_qty]')?.value)      || 0,
+      buy_unit:     row.querySelector('[name=buy_unit]')?.value      || '',
+      buy_amt,
+      buy_currency,
+      buy_fx_rate,
+      buy_fx_date:  row.querySelector('[name=buy_fx_date]')?.value   || '',
+      // AC-02: vnd_amount is DERIVED, not read off the (now-readonly) cell
+      vnd_pay:      computeLineVnd(buy_amt, buy_currency, buy_fx_rate),
+      sell_qty:     parseFloat(row.querySelector('[name=sell_qty]')?.value)     || 0,
+      sell_unit:    row.querySelector('[name=sell_unit]')?.value     || '',
+      sell_amt,
+      sell_currency,
+      sell_fx_rate,
+      sell_fx_date: row.querySelector('[name=sell_fx_date]')?.value  || '',
+      vnd_collect:  computeLineVnd(sell_amt, sell_currency, sell_fx_rate),
+      pol_pod_side: row.querySelector('[name=pol_pod_side]')?.value  || 'N/A',
+    };
+  });
 }
 
 /** sumVndPay — Σ line.vnd_pay */

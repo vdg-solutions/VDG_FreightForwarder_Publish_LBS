@@ -9,11 +9,26 @@ import { renderForm, collectFormState, validateNiForm,
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
 import { runBatchImport } from '../operators/pnl-vertical-batch-import.js';
 import { loadWasm } from '../wasm-loader.js';
+import { activeWorkspaceName } from '../operators/workspace-registry.js';
 
 const ROUTE_SHIPMENTS = '/shipments';  // batch success navigation target (F-15-57)
 
 function showToast(msg, type = 'info') {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message: msg, type } }));
+}
+
+// F-29-01 AC-04: fx-rate pre-fill singleton, mirrors app.js's manager-only fx-auto-fetch wiring
+// but available to any sales rep — the form's per-line fx lookup isn't a manager-only feature.
+let _fxRepoSingleton = null;
+async function _fxRepo() {
+  if (_fxRepoSingleton) return _fxRepoSingleton;
+  const api = window.__vdg_drive_api;
+  if (!api) return null;
+  try {
+    const { FxRateDriveRepo } = await import('../implementations/fx-rate-drive-repo.js');
+    _fxRepoSingleton = new FxRateDriveRepo(api, () => api.findWorkspaceRoot(activeWorkspaceName()));
+    return _fxRepoSingleton;
+  } catch { return null; /* fx pre-fill is optional — form still works without it */ }
 }
 
 // F-15-63: dispatch vdg:shipment-committed so WMA listener can learn from this commit
@@ -111,7 +126,8 @@ export async function render(root, opts = {}) {
   }
 
   const formMount = root.querySelector('#form-mount') || root;
-  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode });
+  const fxRepo    = await _fxRepo();
+  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo });
 
   // NI file drop + save draft: create path only
   if (!isEdit) {

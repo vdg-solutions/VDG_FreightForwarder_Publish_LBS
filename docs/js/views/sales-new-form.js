@@ -16,8 +16,10 @@ const AUTOSAVE_DELAY_MS = 1500;
 
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
-          mode = 'create' } = opts;
+          mode = 'create', fxRepo = null } = opts;
   const isEdit    = mode === 'edit';
+  // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
+  const docDate   = draft?.transaction_date || new Date().toISOString().slice(0, 10);
   const isManager = window.__vdg_current_user?.role === 'Manager';
   const d = draft ? { ...draft } : {};
   if (!d.sales_rep && salesRepId) d.sales_rep = salesRepId;
@@ -57,7 +59,7 @@ export async function renderForm(root, opts = {}) {
   const onChanged = () => _recomputeWaterfall(root, userConfig);
 
   wireHeaderSection(root, onChanged);
-  wireLinesSection(root, onChanged, salesRepId);
+  wireLinesSection(root, onChanged, salesRepId, fxRepo, docDate);
   wireCommissionSection(root, onChanged);
   wireWaterfallSection(root, onChanged);
 
@@ -130,6 +132,21 @@ export function validateNiForm(state) {
   if (!hasLine) {
     errs.push(t('sales_new.validation.no_lines'));
   }
+  // F-29-01 AC-05: amount without currency, or non-VND without fx_rate — hard block per side
+  let lineCurrencyMissing = false;
+  let lineFxMissing       = false;
+  for (const l of state.lines || []) {
+    if (l.buy_amt && !l.buy_currency)   lineCurrencyMissing = true;
+    if (l.sell_amt && !l.sell_currency) lineCurrencyMissing = true;
+    if (l.buy_currency && l.buy_currency !== 'VND' && l.buy_amt && !l.buy_fx_rate) {
+      lineFxMissing = true;
+    }
+    if (l.sell_currency && l.sell_currency !== 'VND' && l.sell_amt && !l.sell_fx_rate) {
+      lineFxMissing = true;
+    }
+  }
+  if (lineCurrencyMissing) errs.push(t('sales_new.validation.line_currency_required'));
+  if (lineFxMissing)       errs.push(t('sales_new.validation.line_fx_required'));
   return errs;
 }
 

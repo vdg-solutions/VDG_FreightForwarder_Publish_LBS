@@ -1,17 +1,20 @@
 // Session-level FX rate cache + lookup helper.
 
-const FX_PAIR_USD_VND = 'USD/VND';
+const VND_CURRENCY = 'VND';
 
 // Map<"YYYY-MM-DD/pair", number|null> — cleared on clearRateCache().
 const SESSION_CACHE = new Map();
 
 /// Async: call repo.getRate(), cache result. Returns rate as Number or null (not found).
-export async function getRateForDate(repo, dateStr) {
-  const key = `${dateStr}/${FX_PAIR_USD_VND}`;
+/// currency default 'USD' keeps the one existing caller (util/vnd-injector.js) unmodified.
+export async function getRateForDate(repo, dateStr, currency = 'USD') {
+  if (currency === VND_CURRENCY) return 1; // self-pair, no lookup
+  const pair = `${currency}/${VND_CURRENCY}`;
+  const key = `${dateStr}/${pair}`;
   if (SESSION_CACHE.has(key)) return SESSION_CACHE.get(key);
   let rate = null;
   try {
-    rate = await repo.getRate(dateStr, FX_PAIR_USD_VND);
+    rate = await repo.getRate(dateStr, pair);
     if (typeof rate !== 'number') rate = null;
   } catch (err) {
     // FxRateNotFound (>31d gap) → null; other errors propagate
