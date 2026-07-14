@@ -136,7 +136,14 @@ async function _onCurrencyChange(row, side, fxRepo) {
   if (rateEl) {
     rateEl.readOnly = locked;
     rateEl.classList.toggle('bg-slate-50', locked);
-    if (locked) { rateEl.value = rate; delete rateEl.dataset.manuallySet; }
+    if (locked) {
+      rateEl.value = rate;
+      delete rateEl.dataset.manuallySet;
+    } else if (rateEl.dataset.manuallySet !== 'true') {
+      // unlocking (VND→foreign): drop the stale locked "1" so a missing master
+      // rate leaves the cell empty, never a phantom 1:1 (D2)
+      rateEl.value = '';
+    }
   }
   _recomputeVndCell(row, side);
   if (!locked) await prefillRowFx(row, side, fxRepo, { overwrite: true });

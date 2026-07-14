@@ -187,6 +187,7 @@
   "nav.masters.local_charges":  "Biểu phí địa phương",
   "nav.masters.units":          "Đơn vị tính",
   "nav.masters.ocean_carriers": "Hãng tàu",
+  "nav.masters.fx_rates":       "Tỷ giá",
   "sales_me.title":             "Khu làm việc của tôi",
   "sales_me.not_authenticated": "Chưa đăng nhập. Tải lại trang để đăng nhập.",
   "sales_me.signed_in_as":      "Đăng nhập:",

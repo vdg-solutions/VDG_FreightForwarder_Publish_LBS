@@ -1,6 +1,6 @@
 // Service Worker — cache-first static, SWR Drive metadata, update notification
 
-const STATIC_CACHE     = 'vdg-static-v2634144';
+const STATIC_CACHE     = 'vdg-static-v9552dcb';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 

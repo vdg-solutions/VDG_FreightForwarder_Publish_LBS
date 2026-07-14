@@ -7,6 +7,7 @@ import { t }                                       from '../../i18n/index.js';
 import { FxRateDriveRepo }                         from '../../implementations/fx-rate-drive-repo.js';
 import { validateRate, addRateEntry, FX_PAIR_DEFAULT } from '../../util/validate-rate.js';
 import { activeWorkspaceName }                     from '../../operators/workspace-registry.js';
+import { clearRateCache }                          from '../../util/fx-lookup.js';
 
 const SOURCE_OPTIONS  = ['Vietcombank', 'SBV', 'Manual'];
 const WORKSPACE_JSON  = 'workspace.json';
@@ -165,6 +166,7 @@ export async function render(root) {
   async function onDelete(entry) {
     try {
       await repo.deleteEntry(entry.date, entry.pair || FX_PAIR_DEFAULT);
+      clearRateCache(); // D3: drop stale lookups so an open PNL form sees the delete
       toast('success', `${t('fx.admin.delete')}: ${entry.date}`);
     } catch (err) {
       toast('error', err.message);
@@ -189,6 +191,7 @@ export async function render(root) {
       try {
         const entryErr = await addRateEntry(repo, date, FX_PAIR_DEFAULT, rate, source, deleteFirst);
         if (entryErr) { errEl.textContent = t(entryErr); return; }
+        clearRateCache(); // D3: drop stale lookups so an open PNL form sees the new rate
         toast('success', t('fx.admin.add'));
         await refresh();
       } catch (err) {

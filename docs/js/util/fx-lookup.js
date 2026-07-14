@@ -14,8 +14,11 @@ export async function getRateForDate(repo, dateStr, currency = 'USD') {
   if (SESSION_CACHE.has(key)) return SESSION_CACHE.get(key);
   let rate = null;
   try {
-    rate = await repo.getRate(dateStr, pair);
-    if (typeof rate !== 'number') rate = null;
+    const entry = await repo.getRate(dateStr, pair);
+    // real repo resolves {date,pair,rate,source} — Rust Decimal serializes rate as a
+    // string; entry?.rate ?? entry also accepts a bare number (existing test doubles)
+    const num = Number(entry?.rate ?? entry);
+    rate = Number.isFinite(num) && num > 0 ? num : null;
   } catch (err) {
     // FxRateNotFound (>31d gap) → null; other errors propagate
     if (!/FxRateNotFound|not found/i.test(err.message)) throw err;

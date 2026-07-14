@@ -187,6 +187,7 @@
   "nav.masters.local_charges":  "Local Charges",
   "nav.masters.units":          "Units of Measure",
   "nav.masters.ocean_carriers": "Ocean Carriers",
+  "nav.masters.fx_rates":       "FX Rates",
   "sales_me.title":             "My Workspace",
   "sales_me.not_authenticated": "Not authenticated. Reload to sign in.",
   "sales_me.signed_in_as":      "Signed in as:",
