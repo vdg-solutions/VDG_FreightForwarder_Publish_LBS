@@ -156,7 +156,10 @@ export function validateNiForm(state) {
     if (l.currency && l.currency !== 'VND' && l.amount_fx && !l.fx_rate) lineFxMissing = true;
   }
   if (lineCurrencyMissing) errs.push(t('sales_new.validation.line_currency_required'));
-  if (lineFxMissing)       errs.push(t('sales_new.validation.line_fx_required'));
+  if (lineFxMissing) {
+    errs.push(t('sales_new.validation.line_fx_required'));
+    errs.push(t('sales_new.validation.line_fx_no_rate_hint'));
+  }
 
   // F-29-04 VR-02: defensive Σvnd invariant — carried per-line VND must match the recomputed sum
   const inv = computeVndInvariant(state);

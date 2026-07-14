@@ -49,12 +49,31 @@ export function applyCommFxDateDefaults(tbody, docDate) {
   });
 }
 
+/**
+ * prefillPanelFx — F-29-10 FR-A mục-C parity: mirrors prefillRowFx (pnl-line-fx.js) for a
+ * commission detail panel. overwrite=false → fill only a BLANK rate (add/mount); overwrite=true
+ * → replace a stale non-manual rate (currency/fx_date change). Never clobbers a user-typed rate.
+ */
+export async function prefillPanelFx(panel, fxRepo, { overwrite = false } = {}) {
+  if (!panel) return;
+  const currencyEl = panel.querySelector('[name=comm_currency]');
+  const rateEl     = panel.querySelector('[name=comm_fx_rate]');
+  const dateEl     = panel.querySelector('[name=comm_fx_date]');
+  if (!fxRepo || !currencyEl || currencyEl.value === VND_CURRENCY) return;
+  if (rateEl?.dataset.manuallySet === 'true') return;
+  if (!overwrite && rateEl?.value !== '') return;
+  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value);
+  if (fetched != null && rateEl && rateEl.dataset.manuallySet !== 'true') {
+    rateEl.value = fetched;
+    _recompute(panel);
+  }
+}
+
 // currency change → lock/unlock fx_rate, pre-fill via fxRepo, recompute via existing path
 async function _onCurrencyChange(panel, fxRepo) {
   if (!panel) return;
   const currencyEl = panel.querySelector('[name=comm_currency]');
   const rateEl     = panel.querySelector('[name=comm_fx_rate]');
-  const dateEl     = panel.querySelector('[name=comm_fx_date]');
   const { rate, locked } = lockFxIfVnd(currencyEl?.value);
   if (rateEl) {
     rateEl.readOnly = locked;
@@ -62,28 +81,12 @@ async function _onCurrencyChange(panel, fxRepo) {
     if (locked) { rateEl.value = rate; delete rateEl.dataset.manuallySet; }
   }
   _recompute(panel);
-  if (!locked && fxRepo && dateEl?.value && rateEl?.dataset.manuallySet !== 'true') {
-    const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl.value);
-    if (fetched != null && rateEl && rateEl.dataset.manuallySet !== 'true') {
-      rateEl.value = fetched;
-      _recompute(panel);
-    }
-  }
+  if (!locked) await prefillPanelFx(panel, fxRepo, { overwrite: true });
 }
 
 // fx_date change → re-run prefill unless the rate was manually overridden
 async function _onFxDateChange(panel, fxRepo) {
-  if (!panel || !fxRepo) return;
-  const currencyEl = panel.querySelector('[name=comm_currency]');
-  const rateEl     = panel.querySelector('[name=comm_fx_rate]');
-  const dateEl     = panel.querySelector('[name=comm_fx_date]');
-  if (!currencyEl || currencyEl.value === VND_CURRENCY) return;
-  if (rateEl?.dataset.manuallySet === 'true') return;
-  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value);
-  if (fetched != null && rateEl) {
-    rateEl.value = fetched;
-    _recompute(panel);
-  }
+  await prefillPanelFx(panel, fxRepo, { overwrite: true });
 }
 
 /** wireCommissionFx — delegated wiring for comm_currency/comm_fx_rate/comm_fx_date, mounted once per tbody */
@@ -91,6 +94,8 @@ export function wireCommissionFx(tbody, fxRepo, docDate) {
   if (!tbody) return;
 
   applyCommFxDateDefaults(tbody, docDate);
+  // AC-02 mục-C parity: mount prefill for blank non-VND panels (persisted/typed rates preserved)
+  tbody.querySelectorAll('[data-comm-panel]').forEach((panel) => prefillPanelFx(panel, fxRepo));
 
   tbody.addEventListener('change', (e) => {
     const panel = e.target.closest('[data-comm-panel]');

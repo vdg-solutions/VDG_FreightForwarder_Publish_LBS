@@ -165,6 +165,7 @@
   "sales_new.validation.override_incomplete": "Override cần nhập số tiền và người nhận",
   "sales_new.validation.line_currency_required": "Mỗi dòng P&L có số tiền phải có tiền tệ",
   "sales_new.validation.line_fx_required": "Mỗi dòng P&L ngoại tệ có số tiền phải có tỷ giá",
+  "sales_new.validation.line_fx_no_rate_hint": "Dòng ngoại tệ chưa có tỷ giá — nhập tỷ giá, hoặc thêm ở màn Tỷ giá (Admin) nếu chưa có",
   "sales_new.warning.currency_mismatch": "{count} dòng khác tiền tệ header",
   "sales_new.validation.vnd_invariant": "Lệch tổng VND: kỳ vọng {expected}, thực tế {actual} (lệch {delta})",
   "sales_new.fx_deviation.title": "Cần xác nhận tỷ giá",

@@ -3,7 +3,7 @@ import { t, currentLocale } from '../../i18n/index.js';
 import { kindI18nLabel }    from '../../util/kind-i18n.js';
 import { ensureWmaStyle, applyWmaToRow, applyWmaToAllRows, dismissWmaBadge }
   from './section-lines-wma.js';
-import { computeLineVnd, fxCellsHtml, vndCellHtml, wireLineFx, applyFxDateDefaults }
+import { computeLineVnd, fxCellsHtml, vndCellHtml, wireLineFx, applyFxDateDefaults, prefillRowFx }
   from './pnl-line-fx.js';
 
 // Mirrors Rust PNL_VERTICAL_KIND_MAP — prefix-to-kind for AC-10
@@ -172,12 +172,21 @@ export function sectionBHtml(draft = {}) {
 
 // ── Section wiring ────────────────────────────────────────────────────────────
 
+// F-29-10 AC-01/AC-02: prefill blank buy/sell fx_rate cells (add-line/Tab/mount), never
+// clobbering a manually-set or persisted rate — see prefillRowFx overwrite guard.
+function _prefillRow(row, fxRepo, onChanged) {
+  if (!row || !fxRepo) return;
+  Promise.all([prefillRowFx(row, 'buy', fxRepo), prefillRowFx(row, 'sell', fxRepo)])
+    .then(() => onChanged?.());
+}
+
 export function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
   const tbody = root.querySelector('#lines-tbody');
   if (!tbody) return;
 
   ensureWmaStyle();
   wireLineFx(tbody, fxRepo, docDate);
+  tbody.querySelectorAll('tr[data-line]').forEach((r) => _prefillRow(r, fxRepo, onChanged));
 
   // Mount: fire-and-forget WMA predictions for blank-kind rows
   if (repId) {
@@ -194,6 +203,7 @@ export function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
     const newRow = tmp.firstElementChild;
     tbody.appendChild(newRow);
     applyFxDateDefaults(newRow, docDate);
+    _prefillRow(newRow, fxRepo, onChanged);
     if (repId) {
       applyWmaToRow(newRow, repId, classifyKind).catch((err) => {
         console.warn('[wma] new row predict failed:', err.message); // DEV
@@ -245,6 +255,7 @@ export function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
     const newRow = tmp.firstElementChild;
     tbody.appendChild(newRow);
     applyFxDateDefaults(newRow, docDate);
+    _prefillRow(newRow, fxRepo, onChanged);
     newRow.querySelector('input,select')?.focus();
     if (repId) {
       applyWmaToRow(newRow, repId, classifyKind).catch((err) => {

@@ -105,12 +105,33 @@ function _recomputeVndCell(row, side) {
   vndEl.value = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value) || '';
 }
 
+/**
+ * prefillRowFx — F-29-10 FR-A: single row-level prefill for one side ('buy'|'sell'), shared
+ * by the change handlers and the add/mount call sites so the lookup logic is not duplicated.
+ * overwrite=false → fill only a BLANK cell (add/mount); overwrite=true → replace a stale
+ * non-manual cell (currency/fx_date change). Never clobbers a user-typed rate.
+ */
+export async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}) {
+  if (!row) return;
+  const currencyEl = row.querySelector(`[name=${side}_currency]`);
+  const rateEl     = row.querySelector(`[name=${side}_fx_rate]`);
+  const dateEl     = row.querySelector(`[name=${side}_fx_date]`);
+  if (!fxRepo || !currencyEl || currencyEl.value === VND_CURRENCY) return;
+  if (rateEl?.dataset.manuallySet === 'true') return;
+  if (!overwrite && rateEl?.value !== '') return;
+  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value);
+  if (fetched != null && rateEl && rateEl.dataset.manuallySet !== 'true') {
+    rateEl.value = fetched;
+    _recomputeVndCell(row, side);
+    row.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
 // currency change → lock/unlock fx_rate, pre-fill via fxRepo, recompute VND cell
 async function _onCurrencyChange(row, side, fxRepo) {
   if (!row) return;
   const currencyEl = row.querySelector(`[name=${side}_currency]`);
   const rateEl     = row.querySelector(`[name=${side}_fx_rate]`);
-  const dateEl     = row.querySelector(`[name=${side}_fx_date]`);
   const { rate, locked } = lockFxIfVnd(currencyEl?.value);
   if (rateEl) {
     rateEl.readOnly = locked;
@@ -118,28 +139,12 @@ async function _onCurrencyChange(row, side, fxRepo) {
     if (locked) { rateEl.value = rate; delete rateEl.dataset.manuallySet; }
   }
   _recomputeVndCell(row, side);
-  if (!locked && fxRepo && dateEl?.value && rateEl?.dataset.manuallySet !== 'true') {
-    const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl.value);
-    if (fetched != null && rateEl && rateEl.dataset.manuallySet !== 'true') {
-      rateEl.value = fetched;
-      _recomputeVndCell(row, side);
-    }
-  }
+  if (!locked) await prefillRowFx(row, side, fxRepo, { overwrite: true });
 }
 
 // fx_date change → re-run prefill unless the rate was manually overridden
 async function _onFxDateChange(row, side, fxRepo) {
-  if (!row || !fxRepo) return;
-  const currencyEl = row.querySelector(`[name=${side}_currency]`);
-  const rateEl     = row.querySelector(`[name=${side}_fx_rate]`);
-  const dateEl     = row.querySelector(`[name=${side}_fx_date]`);
-  if (!currencyEl || currencyEl.value === VND_CURRENCY) return;
-  if (rateEl?.dataset.manuallySet === 'true') return;
-  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value);
-  if (fetched != null && rateEl) {
-    rateEl.value = fetched;
-    _recomputeVndCell(row, side);
-  }
+  await prefillRowFx(row, side, fxRepo, { overwrite: true });
 }
 
 /** wireLineFx — delegated wiring for the 6 new fields, mounted once per tbody */

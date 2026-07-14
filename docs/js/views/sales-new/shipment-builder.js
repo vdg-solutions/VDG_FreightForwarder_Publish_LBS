@@ -80,7 +80,7 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
       kind:          l.kind          || 'Line',
       amount_fx:     l.amount_fx     || 0,
       currency:      l.currency      || 'USD',
-      fx_rate:       l.fx_rate       || 1,
+      fx_rate:       l.fx_rate       || null,
       fx_date:       l.fx_date       || null,
       bank_fee:      l.bank_fee      || 0,
       tncn_pct:      l.tncn_pct      || 0,

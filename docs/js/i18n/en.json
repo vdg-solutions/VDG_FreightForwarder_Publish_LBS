@@ -165,6 +165,7 @@
   "sales_new.validation.override_incomplete": "Override requires amount and recipient",
   "sales_new.validation.line_currency_required": "Every P&L line with an amount must have a currency",
   "sales_new.validation.line_fx_required": "Every non-VND P&L line with an amount must have an FX rate",
+  "sales_new.validation.line_fx_no_rate_hint": "No rate found for this currency — enter a rate, or add one on the FX Rates (Admin) screen",
   "sales_new.warning.currency_mismatch": "{count} line(s) differ from header currency",
   "sales_new.validation.vnd_invariant": "VND total mismatch: expected {expected}, got {actual} (diff {delta})",
   "sales_new.fx_deviation.title": "FX rate needs confirmation",
