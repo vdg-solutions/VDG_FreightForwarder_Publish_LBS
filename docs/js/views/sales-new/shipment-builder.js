@@ -93,6 +93,8 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
       parser_id:      PARSER_ID,
       parser_version: PARSER_VERSION,
       parsed_at:      new Date().toISOString(),
+      // F-29-04 VR-03 AC-06: fx-deviation confirmation audit trail
+      fx_overrides:   state._fx_overrides || [],
     },
   };
 }

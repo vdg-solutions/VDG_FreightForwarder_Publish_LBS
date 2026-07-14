@@ -12,6 +12,7 @@ import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOv
   from './sales-new-form/section-waterfall.js';
 import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
 import { countCurrencyMismatches } from './sales-new-form/pnl-line-fx.js';
+import { computeVndInvariant } from './sales-new-form/pnl-save-validations.js';
 
 const AUTOSAVE_DELAY_MS = 1500;
 
@@ -156,6 +157,13 @@ export function validateNiForm(state) {
   }
   if (lineCurrencyMissing) errs.push(t('sales_new.validation.line_currency_required'));
   if (lineFxMissing)       errs.push(t('sales_new.validation.line_fx_required'));
+
+  // F-29-04 VR-02: defensive Σvnd invariant — carried per-line VND must match the recomputed sum
+  const inv = computeVndInvariant(state);
+  if (!inv.match) {
+    errs.push(t('sales_new.validation.vnd_invariant')
+      .replace('{expected}', inv.expected).replace('{actual}', inv.actual).replace('{delta}', inv.delta));
+  }
   return errs;
 }
 

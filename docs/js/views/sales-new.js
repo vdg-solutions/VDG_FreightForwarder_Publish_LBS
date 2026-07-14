@@ -10,6 +10,7 @@ import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orch
 import { runBatchImport } from '../operators/pnl-vertical-batch-import.js';
 import { loadWasm } from '../wasm-loader.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
+import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
 
 const ROUTE_SHIPMENTS = '/shipments';  // batch success navigation target (F-15-57)
 
@@ -173,6 +174,14 @@ export async function render(root, opts = {}) {
         errEl.classList.remove('hidden');
       }
       return;
+    }
+    // F-29-04 VR-03: hard fx-deviation warn — blocks until explicitly confirmed
+    const flagged = await findFxDeviations(state, fxRepo);
+    if (flagged.length) {
+      const { proceed, overrides } = await confirmFxDeviations(
+        flagged, { confirmedBy: window.__vdg_current_user?.email || 'unknown' });
+      if (!proceed) return;
+      state._fx_overrides = overrides;
     }
     try {
       if (isEdit) {
