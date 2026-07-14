@@ -66,6 +66,20 @@ export function vndCellHtml(side, line = {}) {
       class="w-28 ${RO_CELL_CLS} text-right font-medium ${colorCls}" /></td>`;
 }
 
+/** countCurrencyMismatches — FR-05: count of entered mục B/C currency values that differ from header */
+export function countCurrencyMismatches(lines = [], commissionLines = [], headerCurrency) {
+  if (!headerCurrency) return 0;
+  let count = 0;
+  for (const l of lines) {
+    if (l.buy_currency && l.buy_currency !== headerCurrency) count++;
+    if (l.sell_currency && l.sell_currency !== headerCurrency) count++;
+  }
+  for (const l of commissionLines) {
+    if (l.currency && l.currency !== headerCurrency) count++;
+  }
+  return count;
+}
+
 /** applyFxDateDefaults — AC-06: blank fx_date cells default to the document date */
 export function applyFxDateDefaults(row, docDate) {
   if (!row || !docDate) return;

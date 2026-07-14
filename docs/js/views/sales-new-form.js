@@ -11,6 +11,7 @@ import { sectionCHtml, wireCommissionSection, collectCommission }
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }
   from './sales-new-form/section-waterfall.js';
 import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
+import { countCurrencyMismatches } from './sales-new-form/pnl-line-fx.js';
 
 const AUTOSAVE_DELAY_MS = 1500;
 
@@ -49,6 +50,9 @@ export async function renderForm(root, opts = {}) {
         ${sectionBHtml(d)}
         ${sectionCHtml(d)}
         ${sectionDHtml(d, { isManager })}
+        <div id="ni-currency-warning"
+          class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-4 py-2">
+        </div>
         <div id="ni-form-errors"
           class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2">
         </div>
@@ -192,10 +196,25 @@ function _renderActionBar(publishState) {
     </div>`;
 }
 
+// FR-05: non-blocking heads-up when entered lines' currency differs from the header
+function _renderCurrencyWarning(root, count) {
+  const el = root.querySelector('#ni-currency-warning');
+  if (!el) return;
+  if (count > 0) {
+    el.textContent = t('sales_new.warning.currency_mismatch').replace('{count}', count);
+    el.classList.remove('hidden');
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
 function _recomputeWaterfall(root, userConfig) {
   const lines           = collectLines(root);
   const commissionLines = collectCommission(root);
   const overrides       = collectWaterfallOverrides(root);
+  const headerCurrency  = root.querySelector('[name=currency]')?.value || '';
+
+  _renderCurrencyWarning(root, countCurrencyMismatches(lines, commissionLines, headerCurrency));
 
   const sr  = sumVndCollect(lines);
   const sp  = sumVndPay(lines);

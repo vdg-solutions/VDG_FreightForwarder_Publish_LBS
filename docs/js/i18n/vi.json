@@ -164,6 +164,7 @@
   "sales_new.validation.override_incomplete": "Override cần nhập số tiền và người nhận",
   "sales_new.validation.line_currency_required": "Mỗi dòng P&L có số tiền phải có tiền tệ",
   "sales_new.validation.line_fx_required": "Mỗi dòng P&L ngoại tệ có số tiền phải có tỷ giá",
+  "sales_new.warning.currency_mismatch": "{count} dòng khác tiền tệ header",
   "commission.suggest_promote": "Pattern {pattern}: đã dùng {count} lần. Tạo rule?",
   "commission.override_reason_placeholder": "Lý do override (tuỳ chọn)",
   "commission.create_rule": "Tạo rule",
