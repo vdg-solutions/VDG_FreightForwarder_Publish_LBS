@@ -1,7 +1,7 @@
 // section-commission.js — Section C: HOA HONG parent-detail accordion (F-20-01)
 
 import { t } from '../../i18n/index.js';
-import { commFxCellsHtml, wireCommissionFx } from './section-commission-fx.js';
+import { commFxCellsHtml, wireCommissionFx, applyCommFxDateDefaults } from './section-commission-fx.js';
 
 const DEFAULT_TNCN_PCT = 15;
 // # | Loai | Mo ta | Tong chi | Thuc nhan | toggle | delete
@@ -241,6 +241,7 @@ export function wireCommissionSection(root, onChanged, fxRepo, docDate) {
     const tmp = document.createElement('tbody');
     tmp.innerHTML = commEntryHtml(idx, {}, headerCurrency);
     while (tmp.firstElementChild) tbody.appendChild(tmp.firstElementChild);
+    applyCommFxDateDefaults(tbody, docDate);   // design §3: new row defaults fx_date to doc date
     toggleEntry(tbody, idx, true);   // AC-07: auto-expand new row
     onChanged?.();
   });
@@ -318,8 +319,8 @@ export function collectCommission(root) {
       kind:          parent?.querySelector('[name=comm_kind]')?.value              || '',
       description:   parent?.querySelector('[name=comm_desc]')?.value             || '',
       amount_fx:     parseFloat(panel.querySelector('[name=comm_amount_fx]')?.value) || 0,
-      currency:      panel.querySelector('[name=comm_currency]')?.value             || 'USD',
-      fx_rate:       parseFloat(panel.querySelector('[name=comm_fx_rate]')?.value)   || 1,
+      currency:      panel.querySelector('[name=comm_currency]')?.value             || '',
+      fx_rate:       parseFloat(panel.querySelector('[name=comm_fx_rate]')?.value)   || 0,
       fx_date:       panel.querySelector('[name=comm_fx_date]')?.value              || '',
       bank_fee:      parseFloat(panel.querySelector('[name=comm_bank_fee]')?.value)  || 0,
       tncn_pct:      parseFloat(panel.querySelector('[name=comm_tncn_pct]')?.value)  || 0,
