@@ -183,7 +183,7 @@ export async function computeAndPersistSalesCommission(shipment, pnlLines, repo)
   }
 }
 
-function slugify(str) {
+export function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32);
 }
 

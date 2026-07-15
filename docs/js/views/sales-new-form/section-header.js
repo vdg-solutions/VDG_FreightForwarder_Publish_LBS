@@ -3,6 +3,7 @@
 import { t } from '../../i18n/index.js';
 import { classifyDocument } from '../sales-new/doc-auto-detect.js';
 import { computeChargeableKg } from '../../operators/air-rate-calculator.js';
+import { slugify } from '../../operators/pnl-commit-orchestrator.js';
 import { loadWasm } from '../../wasm-loader.js';
 import { getEmbedding } from '../../cache/semantic-search.js';
 
@@ -243,9 +244,10 @@ export function wireHeaderSection(root, onChanged) {
           createBtn.addEventListener('click', async () => {
               const repo = window.__vdg_repo;
               if (repo) {
-                  const newCust = { name: query, status: 'Draft' };
+                  const id = `CUST-${slugify(query)}`;
+                  const newCust = { id, name: query, status: 'Draft' };
                   try {
-                      await repo.create('customer', newCust);
+                      await repo.put('customers', id, newCust);
                       custInput.value = query;
                       custHidden.value = query;
                       custDropdown.classList.add('hidden');

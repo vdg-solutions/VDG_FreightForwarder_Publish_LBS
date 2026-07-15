@@ -17,22 +17,25 @@
     rel="stylesheet"
   />
 
-  <script>
-    const oldErr = console.error;
-    console.error = function(...args) {
-      if (String(args[0]).includes('[GSI_LOGGER]')) {
+  <script type="module">
+    import { isDevHost } from './js/util/dev-host.js';
+    if (isDevHost(location.hostname, location.protocol)) {
+      const oldErr = console.error;
+      console.error = function(...args) {
+        if (String(args[0]).includes('[GSI_LOGGER]')) {
+          oldErr.apply(console, args);
+          return;
+        }
+        document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:100px;left:50px;background:orange;color:black;z-index:999999;padding:20px;font-size:18px;max-width:800px;overflow:auto;">CONSOLE ERR: ' + String(args[0]) + (args[1] && args[1].stack ? ' ' + args[1].stack : '') + '<br><small>(Click to dismiss)</small></div>');
         oldErr.apply(console, args);
-        return;
-      }
-      document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:100px;left:50px;background:orange;color:black;z-index:999999;padding:20px;font-size:18px;max-width:800px;overflow:auto;">CONSOLE ERR: ' + String(args[0]) + (args[1] && args[1].stack ? ' ' + args[1].stack : '') + '<br><small>(Click to dismiss)</small></div>');
-      oldErr.apply(console, args);
-    };
-    window.addEventListener('error', e => {
-      document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:50px;left:50px;background:red;color:white;z-index:999999;padding:20px;font-size:24px;">' + e.message + '<br><small>(Click to dismiss)</small></div>');
-    });
-    window.addEventListener('unhandledrejection', e => {
-      document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:50px;left:50px;background:red;color:white;z-index:999999;padding:20px;font-size:24px;max-width:800px;overflow:auto;">' + (e.reason && e.reason.stack || e.reason) + '<br><small>(Click to dismiss)</small></div>');
-    });
+      };
+      window.addEventListener('error', e => {
+        document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:50px;left:50px;background:red;color:white;z-index:999999;padding:20px;font-size:24px;">' + e.message + '<br><small>(Click to dismiss)</small></div>');
+      });
+      window.addEventListener('unhandledrejection', e => {
+        document.body.insertAdjacentHTML('afterbegin', '<div onclick="this.remove()" style="cursor:pointer;position:fixed;top:50px;left:50px;background:red;color:white;z-index:999999;padding:20px;font-size:24px;max-width:800px;overflow:auto;">' + (e.reason && e.reason.stack || e.reason) + '<br><small>(Click to dismiss)</small></div>');
+      });
+    }
   </script>
   <!-- Dark mode disabled until the view layer has dark: variants — force light, ignore stale saved pref -->
   <script>document.documentElement.classList.remove('dark');</script>
