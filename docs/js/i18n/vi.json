@@ -287,6 +287,7 @@
   "topbar.sync.tooltip.lastSync.never": "Chưa đồng bộ lần nào",
   "topbar.sync.tooltip.lastError":      "Lỗi gần nhất: {reason}",
   "topbar.sync.tooltip.max_retries_reason": "đã hết số lần thử lại",
+  "topbar.sync.tooltip.reconnect": "Kết nối Google Drive đã hết hạn — bấm để kết nối lại",
   "topbar.sync.toast.schema_drift_drop": "1 mục đồng bộ bị xóa do dữ liệu cũ (schema đã đổi)",
   "topbar.sync.state.healthy":          "tốt",
   "topbar.sync.state.flushing":         "đang đồng bộ",

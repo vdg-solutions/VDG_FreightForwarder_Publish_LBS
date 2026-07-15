@@ -23,7 +23,7 @@ import { tryParamRoute }       from './app-router-ext.js';
 import { loadView }            from './util/view-loader.js';
 import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
 import { checkVersionBanner, initBreakpointListener, initWmaListener } from './app-events.js';
-import { initTokenRefresh } from './auth/token-refresh.js';
+import { initTokenRefresh, initAccessTokenRefresh } from './auth/token-refresh.js';
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
 import { activeWorkspaceName } from './operators/workspace-registry.js';
@@ -291,6 +291,7 @@ async function main() {
   // Step 2: Init OAuth + silent token refresh (F-15-02)
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
   initTokenRefresh();
+  initAccessTokenRefresh();                          // F-29-13: proactive access-token scheduler + reconnect listener
 
   // Load locale before requireAuth so fallback banners render with real text.
   try { await loadLocale('vi'); }

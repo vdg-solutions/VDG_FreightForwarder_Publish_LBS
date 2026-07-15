@@ -33,7 +33,8 @@ export function buildAriaLabel(state, outboxCount, t) {
 }
 
 // AC-03 — 4-state color machine; clock injected via `now`
-export function computeChipState({ pending, retrying, retryStreak, backoff429, offline, signedOut, lastSyncMs, now }) {
+export function computeChipState({ pending, retrying, retryStreak, backoff429, offline, signedOut, lastSyncMs, now, authReconnect }) {
+  if (authReconnect) return 'red';          // F-29-13 AC-05 — genuine reconnect need
   if (offline || signedOut) return 'red';
   if (pending > 0 && lastSyncMs > 0 && (now - lastSyncMs) > SYNC_STUCK_NOTIFY_MS) return 'red';
   if (backoff429) return 'orange';
@@ -66,7 +67,8 @@ export function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNoti
 
 // AC-01 — native tooltip text; pure, no DOM
 // user/online added for red-signedOut and red-offline branch (F-19-19)
-export function buildChipTitle({ state, ago, lastError, t, user, online }) {
+export function buildChipTitle({ state, ago, lastError, t, user, online, authReconnect }) {
+  if (state === 'red' && authReconnect)   return t('topbar.sync.tooltip.reconnect');   // F-29-13 AC-05
   if (state === 'red' && !user)   return t('topbar.sync.tooltip.click_to_signin');
   if (state === 'red' && !online) return t('topbar.sync.tooltip.waiting_network');
   const stateKey  = STATE_TO_LABEL_KEY[state] ?? 'healthy';
@@ -87,14 +89,14 @@ export function buildChipTitle({ state, ago, lastError, t, user, online }) {
 // `html` from lit is passed by the caller so this file needs no CDN import.
 export function renderSyncChip({
   html, state, pending, lastSyncMs, now, online,
-  ariaLabel, labelText, lastError, t, onSyncNow, user,
+  ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect,
 }) {
   const dotClass   = DOT_CLASS[state] ?? DOT_CLASS.green;
   const isFlushing = state === 'yellow';
   const hasPending = pending > 0;
   const pulseClass = hasPending ? 'animate-pulse' : '';
   const ago        = formatLastSyncAgo(lastSyncMs, now);
-  const titleText  = buildChipTitle({ state, ago, lastError, t, user, online });
+  const titleText  = buildChipTitle({ state, ago, lastError, t, user, online, authReconnect });
 
   return html`
     <button type="button"
@@ -108,7 +110,26 @@ export function renderSyncChip({
             aria-busy="${isFlushing ? 'true' : 'false'}"
             title="${titleText}"
             @click="${onSyncNow}">
-      <span class="w-2 h-2 rounded-full ${dotClass} ${pulseClass}" aria-hidden="true"></span>
+      ${authReconnect
+        ? html`<svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+        : html`<span class="w-2 h-2 rounded-full ${dotClass} ${pulseClass}" aria-hidden="true"></span>`}
       <span>${labelText}</span>
     </button>`;
+}
+
+// AC-06 — chip click actions; centralizes the reconnect-click decision (unit-testable)
+export const CHIP_ACTION = { NOOP:'noop', SIGNIN:'signin', WAITING_NETWORK:'waiting_network',
+  FORCE_RETRY:'force_retry', RECONNECT:'reconnect', SYNC_NOW:'sync_now' };
+
+// AC-06 — pure click decision; reconnect wins over signin/offline when authReconnect is set
+export function decideChipAction({ state, user, online, lastError, authReconnect }) {
+  if (state === 'yellow')                     return CHIP_ACTION.NOOP;
+  if (state === 'red' && authReconnect)       return CHIP_ACTION.RECONNECT;
+  if (state === 'red' && !user)               return CHIP_ACTION.SIGNIN;
+  if (state === 'red' && !online)             return CHIP_ACTION.WAITING_NETWORK;
+  if (state === 'orange' && lastError)        return CHIP_ACTION.FORCE_RETRY;
+  return CHIP_ACTION.SYNC_NOW;
 }

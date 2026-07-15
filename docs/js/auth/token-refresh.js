@@ -1,6 +1,8 @@
 // F-15-02 — Silent ID-token re-auth before expiry
+// F-29-13 — proactive access-token scheduler + reconnect UX (independent 2nd timer)
 
 import { parseIdToken, signOut } from './google-oauth.js';
+import { refreshAccessTokenSilently, reconnectDriveInteractive } from './drive-api.js';
 
 const TOKEN_KEY               = 'vdg.auth.id_token';
 const REFRESH_LEAD_MS         = 5 * 60 * 1000;  // prompt 5min before exp
@@ -78,4 +80,44 @@ export function stopTokenRefresh() {
     clearInterval(_checkTimer);
     _checkTimer = null;
   }
+}
+
+// ── F-29-13: proactive access-token scheduler ───────────────────────────────────
+
+const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
+const ACCESS_REFRESH_LEAD_MS   = 5 * 60 * 1000;   // refresh access token 5min before exp
+const ACCESS_CHECK_INTERVAL_MS = 60 * 1000;
+
+let _accessTimer = null;
+
+// AC-01 — pure timing predicate, clock injected (mirrors _check style). Exported for unit test.
+export function accessRefreshDue(expMs, now, leadMs = ACCESS_REFRESH_LEAD_MS) {
+  if (!expMs) return false;              // no access token yet → not due
+  return (expMs - now) < leadMs;         // valid-but-within-lead OR already expired → due
+}
+
+function _accessCheck() {
+  const expMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+  if (!accessRefreshDue(expMs, Date.now())) return;
+  // scheduler fires the silent refresh WITHOUT any Drive call (AC-02). Failure/timeout is
+  // surfaced by the bounded refresh's callers → auth-needs-reconnect; nothing to do here.
+  refreshAccessTokenSilently().catch(() => { /* bounded; reconnect state handled downstream */ });
+}
+
+// AC-06 — interactive reconnect: prompt:'consent' grant clears reconnect state + resumes sync
+async function _onReconnectRequest() {
+  try {
+    await reconnectDriveInteractive();
+    window.dispatchEvent(new CustomEvent('vdg:auth-reconnected'));   // chip → green
+    window.dispatchEvent(new CustomEvent('vdg:sync-now'));           // resume/drain outbox
+  } catch {
+    window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect'));   // stay red, user can retry
+  }
+}
+
+export function initAccessTokenRefresh() {
+  if (_accessTimer) return;
+  window.addEventListener('vdg:auth-reconnect-request', _onReconnectRequest);
+  _accessCheck();                                  // immediate check on boot
+  _accessTimer = setInterval(_accessCheck, ACCESS_CHECK_INTERVAL_MS);
 }

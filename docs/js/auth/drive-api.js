@@ -1,6 +1,6 @@
 // Drive REST client + JSONL codec + workspace constants
 
-import { signOut, clearDriveScopeGrant } from './google-oauth.js';
+import { clearDriveScopeGrant } from './google-oauth.js';
 import { globalOwnerQuery, dedupeGlobalOwnerFolders, moveToParent } from './drive-folder-dedup.js';
 import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 
@@ -21,6 +21,7 @@ const RATE_LIMIT_MAX_ATTEMPTS = 3;
 const ACCESS_TOKEN_KEY        = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY    = 'vdg.auth.access_token_exp';
 const TOKEN_EXPIRY_BUFFER_MS  = 60_000; // refresh 60s before expiry
+const SILENT_REFRESH_TIMEOUT_MS = 10_000;   // AC-03 — GIS prompt:'' can no-op forever; bound it
 
 // single-flight guard — prevents multiple reloads on concurrent 401s
 let _reauthInflight = false;
@@ -54,34 +55,44 @@ export async function getAccessToken() {
 
   // Silent refresh — first-time consent already granted at sign-in
   try {
-    return await _silentRefresh();
+    return await refreshAccessTokenSilently();
   } catch (err) {
-    signOut();                                    // F-15-50 AC-03: full canonical clear
-    window.dispatchEvent(new CustomEvent('vdg:auth-expired'));
+    _dispatchNeedsReconnect();          // was signOut()+vdg:auth-expired — no blind sign-out
     throw err;
   }
 }
 
-function _silentRefresh() {
+function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); }
+
+// AC-03 — consolidated GIS token request, shared by silent + interactive paths. A settled
+// latch races the callback against timeoutMs (0 = unbounded) so a non-settling GIS callback
+// can never hang the caller (kills the banned silent-await).
+function _requestAccessToken(prompt, timeoutMs) {
   return new Promise((resolve, reject) => {
-    if (!window.google?.accounts?.oauth2) {
-      reject(new Error('GIS oauth2 not loaded'));
-      return;
-    }
+    if (!window.google?.accounts?.oauth2) { reject(new Error('GIS oauth2 not loaded')); return; }
+    let settled = false;
+    const timer = timeoutMs
+      ? setTimeout(() => { if (!settled) { settled = true; reject(new Error('silent-refresh-timeout')); } }, timeoutMs)
+      : null;
+    const done = (fn, arg) => { if (!settled) { settled = true; if (timer) clearTimeout(timer); fn(arg); } };
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: window.__vdg_google_client_id || '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com',
       scope:     'https://www.googleapis.com/auth/drive.file',
       callback:  (resp) => {
-        if (resp.error) { reject(new Error(resp.error)); return; }
+        if (resp.error) { done(reject, new Error(resp.error)); return; }
         const expMs = Date.now() + (resp.expires_in || 3600) * 1000;
         localStorage.setItem(ACCESS_TOKEN_KEY,     resp.access_token);
         localStorage.setItem(ACCESS_TOKEN_EXP_KEY, String(expMs));
-        resolve(resp.access_token);
+        done(resolve, resp.access_token);
       },
     });
-    client.requestAccessToken({ prompt: '' }); // always silent — first-time grant at sign-in
+    client.requestAccessToken({ prompt });
   });
 }
+
+function _silentRefresh() { return _requestAccessToken('', SILENT_REFRESH_TIMEOUT_MS); }          // AC-03 bounded
+export function refreshAccessTokenSilently() { return _silentRefresh(); }                          // scheduler + getAccessToken + 401
+export function reconnectDriveInteractive()  { return _requestAccessToken('consent', 0); }         // AC-06 interactive
 
 // ── core fetch wrapper ────────────────────────────────────────────────────────
 
@@ -113,12 +124,19 @@ export async function driveFetch(method, path, body = undefined, attempt = 0) {
   }
 
   if (res.status === 401) {
-    if (!_reauthInflight) {
+    if (attempt === 0 && !_reauthInflight) {
       _reauthInflight = true;
-      signOut();                                  // F-15-50 AC-02: full canonical clear
-      location.reload(); // re-clicks Sign in button for fresh tokens
+      try {
+        await refreshAccessTokenSilently();               // ONE silent refresh
+        return await driveFetch(method, path, body, attempt + 1);   // retry SAME request once
+      } catch (reauthErr) {
+        _dispatchNeedsReconnect();                        // AC-04: reconnect state, no reload
+        throw new DriveApiError(401, 'Drive session expired — reconnect required');
+      } finally {
+        _reauthInflight = false;
+      }
     }
-    throw new DriveApiError(401, 'Session expired — reloading');
+    throw new DriveApiError(401, 'Drive session expired — reconnect required');   // concurrent / already-retried
   }
 
   if (!res.ok) {

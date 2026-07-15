@@ -5,7 +5,7 @@ import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
-import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAriaLabel } from './topbar-sync-chip.js';
+import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION } from './topbar-sync-chip.js';
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
 import { renderAvatar, idbSavePref, badgeLabel } from './topbar-helpers.js';
 
@@ -34,6 +34,7 @@ class VdgTopbar extends LitElement {
     _lastNotifiedStuckEpisode: { type: Number, state: true },
     _breadcrumb:               { type: Object, state: true },
     _managerMode:              { type: String, state: true },
+    _authReconnect:            { type: Boolean, state: true },
   };
 
   createRenderRoot() { return this; }
@@ -48,7 +49,7 @@ class VdgTopbar extends LitElement {
     this._retrying = false; this._retryStreak = 0; this._backoff429 = false;
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
-    this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode();
+    this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     this._onSyncComplete  = (e) => {
@@ -74,6 +75,7 @@ class VdgTopbar extends LitElement {
     this._onQuotaWarn     = () => { this._quotaWarn = true; };
     this._onOnline        = () => { this._online = true;  this._recomputeAndMaybeNotify(); };
     this._onOffline       = () => { this._online = false; this._recomputeAndMaybeNotify(); };
+    this._onNeedsReconnect = () => { this._authReconnect = true; }; this._onReconnected = () => { this._authReconnect = false; };
   }
 
   _computeBreadcrumb() {
@@ -96,6 +98,7 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:sync-error',          this._onSyncError);
     window.addEventListener('online',  this._onOnline);
     window.addEventListener('offline', this._onOffline);
+    window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected);
     document.addEventListener('click', this._onDocClick);
     this._stuckTickId = setInterval(() => this._recomputeAndMaybeNotify(), STUCK_RECHECK_INTERVAL_MS);
     this._computeBreadcrumb();
@@ -117,6 +120,8 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:sync-error',          this._onSyncError);
     window.removeEventListener('online',  this._onOnline);
     window.removeEventListener('offline', this._onOffline);
+    window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
+    window.removeEventListener('vdg:auth-reconnected',     this._onReconnected);
     document.removeEventListener('click', this._onDocClick);
     clearInterval(this._stuckTickId);
   }
@@ -151,6 +156,23 @@ class VdgTopbar extends LitElement {
   _handleModeSelect(mode) {
     localStorage.setItem(MODE_LS_KEY, mode); this._managerMode = mode;
     window.dispatchEvent(new CustomEvent('vdg:mode-change', { detail: { mode } }));
+  }
+
+  // F-29-13 AC-06: chip click routed through the pure decision fn (unit-testable branch)
+  _onChipClick(state) {
+    const user = window.__vdg_auth?.getCurrentUser?.();
+    const action = decideChipAction({ state, user, online: this._online, lastError: this._lastError, authReconnect: this._authReconnect });
+    if (action === CHIP_ACTION.NOOP) return;
+    if (action === CHIP_ACTION.SIGNIN) { window.dispatchEvent(new CustomEvent('vdg:auth-signin-request')); return; }
+    if (action === CHIP_ACTION.WAITING_NETWORK) { window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'warn', message: t('topbar.sync.action.waiting_network') } })); return; }
+    if (action === CHIP_ACTION.RECONNECT) { window.dispatchEvent(new CustomEvent('vdg:auth-reconnect-request')); return; }
+    if (action === CHIP_ACTION.FORCE_RETRY) {
+      // F-19-20: stuck-with-error dead end — force-bypass the outbox cooldown
+      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.sync.action.retrying') } }));
+      window.dispatchEvent(new CustomEvent('vdg:sync-force-retry'));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('vdg:sync-now'));
   }
 
   async _handleFileUpload(e) {
@@ -248,7 +270,7 @@ class VdgTopbar extends LitElement {
     const state = computeChipState({
       pending: this._outboxCount, retrying: this._retrying, retryStreak: this._retryStreak,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
-      lastSyncMs: this._lastSyncMs, now,
+      lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect,
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t);
     const labelText = (state === 'red' && !this._online) ? t('topbar.sync.state.offline') : t('topbar.sync.label');
@@ -276,25 +298,8 @@ class VdgTopbar extends LitElement {
           ${renderSyncChip({
             html, state, pending: this._outboxCount, lastSyncMs: this._lastSyncMs, now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
-            onSyncNow: () => {
-              if (state === 'yellow') return;
-              if (state === 'red' && !user) {
-                window.dispatchEvent(new CustomEvent('vdg:auth-signin-request'));
-                return;
-              }
-              if (state === 'red' && !this._online) {
-                window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'warn', message: t('topbar.sync.action.waiting_network') } }));
-                return;
-              }
-              // F-19-20: stuck-with-error dead end — force-bypass the outbox cooldown
-              // instead of a generic sync-now the failed record's cooldown would swallow.
-              if (state === 'orange' && this._lastError) {
-                window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.sync.action.retrying') } }));
-                window.dispatchEvent(new CustomEvent('vdg:sync-force-retry'));
-                return;
-              }
-              window.dispatchEvent(new CustomEvent('vdg:sync-now'));
-            },
+            authReconnect: this._authReconnect,
+            onSyncNow: () => this._onChipClick(state),
           })}
           ${isManager() && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}
           ${isManager() ? '' : html`
