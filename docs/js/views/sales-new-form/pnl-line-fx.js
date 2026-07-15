@@ -119,9 +119,13 @@ export async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}
   if (!fxRepo || !currencyEl || currencyEl.value === VND_CURRENCY) return;
   if (rateEl?.dataset.manuallySet === 'true') return;
   if (!overwrite && rateEl?.value !== '') return;
+  // D-N1: drop the previous currency/date's rate up front on an overwrite pass — if the
+  // new lookup comes back null the cell ends empty instead of retaining a stale rate
+  // (foreign→foreign switch, or a date change into a no-rate day)
+  if (overwrite && rateEl) rateEl.value = '';
   const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value);
-  if (fetched != null && rateEl && rateEl.dataset.manuallySet !== 'true') {
-    rateEl.value = fetched;
+  if (rateEl && rateEl.dataset.manuallySet !== 'true' && (fetched != null || overwrite)) {
+    if (fetched != null) rateEl.value = fetched;
     _recomputeVndCell(row, side);
     row.dispatchEvent(new Event('input', { bubbles: true }));
   }
