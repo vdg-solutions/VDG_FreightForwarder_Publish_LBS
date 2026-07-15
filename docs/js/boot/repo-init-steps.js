@@ -136,7 +136,6 @@ async function _deferredInit(user, db, driveApi, repo) {
     // Audit log
     const { AuditLog } = await import('../sync/audit-log.js');
     new AuditLog(
-      driveApi,
       () => window.__vdg_auth?.getCurrentUser?.(),
       () => currentSalesRepId(),
     );
@@ -171,7 +170,7 @@ async function _deferredInit(user, db, driveApi, repo) {
 
     const { UserAuditLog } = await import('../sync/user-audit-log.js');
     const userAuditLog = new UserAuditLog(
-      driveApi, () => window.__vdg_auth?.getCurrentUser?.(), findWorkspaceRoot,
+      () => window.__vdg_auth?.getCurrentUser?.(),
     );
     window.__vdg_user_audit_log = userAuditLog;
 

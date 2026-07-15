@@ -1,18 +1,12 @@
-// AuditLog — append-only monthly JSONL shards in Drive
-
-// F-19-23 D-02: standardized to _shared/ prefix used by sibling error-log/dunning-log paths.
-export const AUDIT_LOG_PATH        = '_shared/logs/audit-log';
-const LEGACY_AUDIT_LOG_PATH        = 'shared/audit/transition-log';
-
-// Session ETag cache: month-key → {fileId, etag}
-const _sessionCache = new Map();
+// AuditLog — append-only transition/audit trail. Repo-backed (F-29-08): append() ->
+// repo.put('audit_log', ...), readAll() -> repo.list('audit_log', null), same store both
+// ends — Class-5 (immutable, one authoritative copy). Materialization to Drive jsonl (LOG_KINDS)
+// happens inside wasm-io-adapters.js, out of scope here.
 
 export class AuditLog {
-  constructor(driveApi, getCurrentUser, currentRole) {
-    this._api         = driveApi;
-    this._getUser     = getCurrentUser;
-    this._getRole     = currentRole;
-    this._rootFolderId = null;
+  constructor(getCurrentUser, currentRole) {
+    this._getUser = getCurrentUser;
+    this._getRole = currentRole;
   }
 
   // fire-and-forget — callers do NOT await
@@ -23,17 +17,10 @@ export class AuditLog {
   }
 
   async readAll() {
-    const rootId = await this._ensureAuditFolder();
-    const files  = await this._api.listChildren(rootId);
-    const records = [];
-    for (const f of files) {
-      if (!f.name.endsWith('.jsonl')) continue;
-      const data = await this._api.getFile(f.id);
-      if (!data) continue;
-      const { parseJsonlBundle } = await import('../auth/drive-api.js');
-      records.push(...parseJsonlBundle(data.content));
-    }
-    return records;
+    const repo = window.__vdg_repo;
+    if (!repo) return [];
+    const records = await repo.list('audit_log', null);
+    return records.filter((r) => !r._deleted);
   }
 
   async readFiltered(email) {
@@ -44,11 +31,11 @@ export class AuditLog {
   // ── private ────────────────────────────────────────────────────────────────
 
   async _appendAsync(kind, entityId, op, body) {
-    const now     = new Date();
-    const user    = this._getUser?.() || {};
-    const hash    = await _payloadHash(body);
+    const now      = new Date();
+    const user     = this._getUser?.() || {};
+    const hash     = await _payloadHash(body);
     const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const id      = `AUD-${monthStr}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const id       = `AUD-${monthStr}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
     const record = {
       id,
@@ -62,19 +49,14 @@ export class AuditLog {
     };
 
     const repo = window.__vdg_repo;
-    if (repo) {
-      await repo.put('audit_log', record.id, record);
-    }
+    if (!repo) throw new Error('[audit-log] repo unavailable — audit entry not persisted');
+    await repo.put('audit_log', record.id, record);
   }
 
-  async _ensureAuditFolder() {
-    // No-op. SyncEngine and wasm-io-adapters handle paths now.
-    return this._rootFolderId;
-  }
-
-  async _migrateLegacyShards(wsRoot, newFolderId, { findFolder, listChildren, moveToParent }) {
-    // Migration logic is now obsolete for new entries. 
-    // Wait, let's keep the stub for compatibility if called manually.
+  // F-29-08: legacy shards (shared/audit/transition-log/*.jsonl, F-19-23) are abandoned —
+  // greenfield, no prod data; audit reads/writes are now repo-only. No migration path.
+  _migrateLegacyShards() {
+    console.warn('[audit-log] legacy Drive shards abandoned — audit trail is repo-backed'); // DEV
   }
 }
 
