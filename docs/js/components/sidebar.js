@@ -3,11 +3,15 @@ import { navigate } from '../router.js';
 import { isManager } from '../auth/auth-gate.js';
 import { t } from '../i18n/index.js';
 import { filterSidebarItems, currentUserRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
+import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed,
+         toggleCollapsed, isGroupCollapsed, activeGroupKey } from './sidebar-collapse-state.js';
 
 const DRAWER_BREAKPOINT_PX = 768;
 const V1_BUTTON_COUNT      = 5;   // AC-01/02 invariant
 const V1_GROUP_COUNT       = 3;   // AC-01 invariant
 const LOCALE_CHANGE_EVENT  = 'vdg:locale-changed';
+const CHEVRON_EXPANDED     = '▾';
+const CHEVRON_COLLAPSED    = '▸';
 
 // Active v1 menu — 5 items, labelKey resolved via t() at render time.
 const V1_ITEMS = [
@@ -117,6 +121,7 @@ class VdgSidebar extends LitElement {
     activeRoute: { type: String, state: true },
     _drawerOpen: { type: Boolean, state: true },
     _mobile:     { type: Boolean, state: true },
+    _collapsed:  { state: true },   // Set<string> of collapsed group keys
   };
 
   createRenderRoot() { return this; }
@@ -126,12 +131,19 @@ class VdgSidebar extends LitElement {
     this.activeRoute = location.hash.slice(1) || '/dashboard';
     this._drawerOpen = false;
     this._mobile     = window.innerWidth < DRAWER_BREAKPOINT_PX;
+    this._collapsed  = new Set();
 
     this._onNav           = (e) => { this.activeRoute = e.detail.route; if (this._mobile) this._drawerOpen = false; this.requestUpdate(); };
     this._onBreakpt       = (e) => { this._mobile = e.detail.mobile; if (!this._mobile) this._drawerOpen = false; };
     this._onToggle        = () => { this._drawerOpen = !this._drawerOpen; };
     this._onBackdrop      = () => { this._drawerOpen = false; };
     this._onLocaleChanged = () => this.requestUpdate();
+    this._onGroupToggle   = (key) => {
+      this._collapsed = toggleCollapsed(this._collapsed, key);
+      try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, serializeCollapsed(this._collapsed)); }
+      catch { /* private-mode/quota: keep in-memory state, pref just won't persist */ }
+      this.requestUpdate();
+    };
   }
 
   connectedCallback() {
@@ -140,6 +152,8 @@ class VdgSidebar extends LitElement {
     window.addEventListener('vdg:breakpoint-changed', this._onBreakpt);
     window.addEventListener('vdg:sidebar-toggle',     this._onToggle);
     window.addEventListener(LOCALE_CHANGE_EVENT,      this._onLocaleChanged);
+    try { this._collapsed = parseCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY)); }
+    catch { /* storage disabled: default all-expanded */ this._collapsed = new Set(); }
   }
 
   disconnectedCallback() {
@@ -202,18 +216,24 @@ class VdgSidebar extends LitElement {
       <nav class="flex-1 flex flex-col gap-0.5 overflow-y-auto pb-4">
         ${(() => {
           const visible = filterSidebarItems(V1_ITEMS, this._effectiveRole());
+          const activeGroup = activeGroupKey(visible, this.activeRoute); // AC-04
           let shown = 0;
           return V1_GROUPS.map((g) => {
             const items = visible.filter((i) => i.group === g.key);
             if (items.length === 0) return ''; // skip empty groups (e.g. masters for non-managers)
             const first = shown === 0;
             shown += 1;
+            const collapsed = isGroupCollapsed(this._collapsed, g.key, activeGroup);
             return html`
               <div data-nav-group="${g.key}">
-                <div class="px-4 ${first ? 'pb-2' : 'pt-6 pb-2'} text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  ${t(g.headingKey)}
-                </div>
-                ${items.map((i) => this._renderItem(i))}
+                <button type="button" data-nav-toggle="${g.key}"
+                  class="w-full flex items-center justify-between px-4 ${first ? 'pb-2' : 'pt-6 pb-2'} text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+                  aria-expanded=${collapsed ? 'false' : 'true'}
+                  @click=${() => this._onGroupToggle(g.key)}>
+                  <span>${t(g.headingKey)}</span>
+                  <span aria-hidden="true">${collapsed ? CHEVRON_COLLAPSED : CHEVRON_EXPANDED}</span>
+                </button>
+                ${collapsed ? '' : items.map((i) => this._renderItem(i))}
               </div>
             `;
           });
@@ -221,7 +241,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 3fa9154">v0.1.56</span>
+        <span class="font-mono whitespace-nowrap" title="build e3b8bb0">v0.1.57</span>
       </div>
     `;
   }
