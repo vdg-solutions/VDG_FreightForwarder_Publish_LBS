@@ -3,11 +3,15 @@
 import { isManager } from '../auth/auth-gate.js';
 import { openMergeModal, mergeRecords, repointRefs } from '../operators/manager/merge-orchestrator.js';
 import { showConfirm } from '../helpers/show-confirm.js';
+import { boundedList, renderMasterLoadRetryStatus } from '../util/master-load.js';
 
 const KIND       = 'customers';
 const KIND_PREFIX = 'CUST'; // AC-M2
 
 const COLS = ['name', 'short_code', 'contact_person', 'tel', 'actions'];
+
+const LOAD_ERROR_MSG   = "Couldn't load customers. Please retry.";
+const LOAD_RETRY_LABEL = 'Retry';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -183,13 +187,35 @@ export async function render(root) {
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading…</div>
     </div>`;
 
+  // F-29-14: bounded — a stalled/failed customers read resolves to an actionable retry
+  // instead of hanging the app-shell at "Loading view…". Exactly one terminal state renders.
   async function reload() {
-    items = repo ? await repo.list(KIND, null).catch(() => []) : [];
-    const tbody = root.querySelector('#m-tbody');
-    const emptyEl = root.querySelector('#m-empty');
+    const tbody    = root.querySelector('#m-tbody');
+    const emptyEl  = root.querySelector('#m-empty');
+    const statusEl = root.querySelector('#m-status');
+    if (!repo) {
+      items = [];
+      if (tbody) tbody.innerHTML = '';
+      emptyEl?.classList.add('hidden');
+      if (statusEl) statusEl.textContent = '';
+      updateMergeBtn();
+      return;
+    }
+
+    const listRes = await boundedList(repo, KIND, 'customers:list');
+    if (!listRes.ok) {
+      items = [];
+      if (tbody) tbody.innerHTML = '';
+      emptyEl?.classList.add('hidden');
+      renderMasterLoadRetryStatus(statusEl, LOAD_ERROR_MSG, LOAD_RETRY_LABEL, reload);
+      updateMergeBtn();
+      return;
+    }
+
+    items = listRes.value;
     if (tbody) tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
     if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
-    root.querySelector('#m-status').textContent = '';
+    if (statusEl) statusEl.textContent = '';
     updateMergeBtn();
   }
 
