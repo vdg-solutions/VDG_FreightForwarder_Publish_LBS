@@ -3,6 +3,7 @@ import {
   computeLaneHeatmap, computeMonthlyBars, computeBillingFunnel,
   COMMISSION_PCT,
 } from '../operators/sales-analytics-compute.js';
+import { t } from '../i18n/index.js';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -11,7 +12,8 @@ const KIND_LINE       = 'pnl_line';
 const CHART_BAR_COLOR_REV  = 'rgba(59,130,246,0.7)';
 const CHART_BAR_COLOR_COST = 'rgba(248,113,113,0.7)';
 const DONUT_COLORS    = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#f97316','#6366f1'];
-const PERIODS = ['Today', 'Week', 'Month', 'Quarter', 'Year'];
+const PERIODS = ['today', 'week', 'month', 'quarter', 'year'];
+const ACTIVE_PERIOD_IDX = 2; // 'month'
 
 let _charts = {};
 
@@ -37,11 +39,11 @@ function marginCls(m) { return m >= 0 ? 'text-emerald-600' : 'text-red-500'; }
 
 function renderKpiRow(kpis) {
   const cards = [
-    { label: 'Revenue MTD',       value: fmtNum(kpis.revenue),     tone: 'blue',  icon: 'dollar' },
-    { label: 'Cost MTD',          value: fmtNum(kpis.cost),         tone: 'red',   icon: 'dollar' },
-    { label: 'Margin MTD',        value: fmtNum(kpis.margin),       tone: kpis.margin >= 0 ? 'green' : 'red', icon: 'dollar' },
-    { label: 'Margin %',          value: fmtPct(kpis.marginPct),    tone: 'green', icon: 'dollar' },
-    { label: 'Active Shipments',  value: kpis.activeCount,          tone: 'blue',  icon: 'ship'   },
+    { label: t('revenue_mtd'),                value: fmtNum(kpis.revenue),     tone: 'blue',  icon: 'dollar' },
+    { label: t('cost_mtd'),                   value: fmtNum(kpis.cost),         tone: 'red',   icon: 'dollar' },
+    { label: t('margin_mtd'),                 value: fmtNum(kpis.margin),       tone: kpis.margin >= 0 ? 'green' : 'red', icon: 'dollar' },
+    { label: t('margin_pct'),                 value: fmtPct(kpis.marginPct),    tone: 'green', icon: 'dollar' },
+    { label: t('sales_analytics.kpi.active'), value: kpis.activeCount,          tone: 'blue',  icon: 'ship'   },
   ];
   return cards.map((c) =>
     `<kpi-card label="${c.label}" value="${c.value}" tone="${c.tone}" icon="${c.icon}"></kpi-card>`
@@ -51,7 +53,7 @@ function renderKpiRow(kpis) {
 // ── leaderboard ───────────────────────────────────────────────────────────────
 
 function renderLeaderboard(rows) {
-  if (!rows.length) return '<p class="text-slate-400 text-sm px-4 py-3">No data</p>';
+  if (!rows.length) return `<p class="text-slate-400 text-sm px-4 py-3">${t('sales_analytics.no_data')}</p>`;
   const trs = rows.map((r) => `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-sm">
       <td class="px-3 py-2 font-semibold">${r.sales}</td>
@@ -66,13 +68,13 @@ function renderLeaderboard(rows) {
     <table class="w-full text-xs">
       <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px]">
         <tr>
-          <th class="px-3 py-2 text-left">Sales</th>
-          <th class="px-3 py-2 text-right">Shipments</th>
-          <th class="px-3 py-2 text-right">Revenue</th>
-          <th class="px-3 py-2 text-right">Margin</th>
-          <th class="px-3 py-2 text-right">Margin %</th>
-          <th class="px-3 py-2 text-right">Win %</th>
-          <th class="px-3 py-2 text-right">TTCN (${COMMISSION_PCT * 100}%)</th>
+          <th class="px-3 py-2 text-left">${t('sales_analytics.col.sales')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.col.shipments')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.col.revenue')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.col.margin')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.col.margin_pct')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.col.win_pct')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.col.ttcn')} (${COMMISSION_PCT * 100}%)</th>
         </tr>
       </thead>
       <tbody>${trs}</tbody>
@@ -83,7 +85,7 @@ function renderLeaderboard(rows) {
 
 function renderTopCustomers(rows) {
   const data = rows;
-  if (!data.length) return '<p class="text-slate-400 text-sm px-4 py-3">No data</p>';
+  if (!data.length) return `<p class="text-slate-400 text-sm px-4 py-3">${t('sales_analytics.no_data')}</p>`;
   const trs  = data.slice(0, 10).map((r) => `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-sm">
       <td class="px-3 py-2">${r.customer || r.name}</td>
@@ -94,9 +96,9 @@ function renderTopCustomers(rows) {
     <table class="w-full text-xs">
       <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px]">
         <tr>
-          <th class="px-3 py-2 text-left">Customer</th>
-          <th class="px-3 py-2 text-right">Revenue</th>
-          <th class="px-3 py-2 text-right">Margin</th>
+          <th class="px-3 py-2 text-left">${t('sales_analytics.top.customer')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.top.revenue')}</th>
+          <th class="px-3 py-2 text-right">${t('sales_analytics.top.margin')}</th>
         </tr>
       </thead>
       <tbody>${trs}</tbody>
@@ -106,7 +108,7 @@ function renderTopCustomers(rows) {
 // ── heatmap ───────────────────────────────────────────────────────────────────
 
 function renderHeatmap({ rows, cols, matrix }) {
-  if (!rows.length) return '<p class="text-slate-400 text-sm p-4">No lane data</p>';
+  if (!rows.length) return `<p class="text-slate-400 text-sm p-4">${t('sales_analytics.no_lane_data')}</p>`;
   const allMargins = rows.flatMap((pol) => cols.map((pod) => matrix[pol]?.[pod]?.margin ?? null)).filter((v) => v !== null);
   const maxAbs = Math.max(...allMargins.map(Math.abs), 1);
 
@@ -130,7 +132,7 @@ function renderHeatmap({ rows, cols, matrix }) {
 
 function renderFunnel(funnel) {
   const data  = funnel;
-  if (!data.length) return '<p class="text-slate-400 text-sm p-4">No data</p>';
+  if (!data.length) return `<p class="text-slate-400 text-sm p-4">${t('sales_analytics.no_data')}</p>`;
   const total = data.reduce((a, d) => a + d.count, 0) || 1;
   const colors = ['bg-slate-300','bg-blue-300','bg-blue-500','bg-amber-400','bg-emerald-500'];
   return data.map((d, i) => `
@@ -157,8 +159,8 @@ function renderBarChart(monthly) {
     data: {
       labels,
       datasets: [
-        { label: 'Revenue', data: revenue, backgroundColor: CHART_BAR_COLOR_REV },
-        { label: 'Cost',    data: cost,    backgroundColor: CHART_BAR_COLOR_COST },
+        { label: t('sales_analytics.chart.revenue'), data: revenue, backgroundColor: CHART_BAR_COLOR_REV },
+        { label: t('sales_analytics.chart.cost'),    data: cost,    backgroundColor: CHART_BAR_COLOR_COST },
       ],
     },
     options: {
@@ -187,7 +189,7 @@ function renderDonutChart(leaderboard) {
 
 export async function render(root) {
   destroyCharts();
-  root.innerHTML = `<div class="p-6 flex items-center gap-3 text-slate-500 text-sm"><div class="animate-spin w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full"></div> Loading…</div>`;
+  root.innerHTML = `<div class="p-6 flex items-center gap-3 text-slate-500 text-sm"><div class="animate-spin w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full"></div> ${t('common.loading')}</div>`;
 
   const repo = window.__vdg_repo;
   const [shipments, lines] = await Promise.all([
@@ -206,11 +208,11 @@ export async function render(root) {
     <div class="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-lg font-semibold text-slate-900">Sales Analytics</div>
-          <div class="text-xs text-slate-500 mt-0.5">${shipments.length} shipments · ${lines.length} lines</div>
+          <div class="text-lg font-semibold text-slate-900">${t('sales_analytics.title')}</div>
+          <div class="text-xs text-slate-500 mt-0.5">${t('sales_analytics.subtitle_counts', { shipments: shipments.length, lines: lines.length })}</div>
         </div>
         <div class="flex items-center gap-2">
-          ${PERIODS.map((p, i) => `<button class="px-3 py-1.5 rounded-lg text-xs font-medium ${i===2?'bg-blue-600 text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${p}</button>`).join('')}
+          ${PERIODS.map((p, i) => `<button class="px-3 py-1.5 rounded-lg text-xs font-medium ${i===ACTIVE_PERIOD_IDX?'bg-blue-600 text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${t('sales_analytics.period.' + p)}</button>`).join('')}
         </div>
       </div>
 
@@ -223,14 +225,14 @@ export async function render(root) {
       <div class="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-4">
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-100">
-            <div class="text-sm font-semibold text-slate-900">Per-sales leaderboard</div>
-            <div class="text-xs text-slate-500">TTCN = margin × ${COMMISSION_PCT * 100}%</div>
+            <div class="text-sm font-semibold text-slate-900">${t('sales_analytics.leaderboard')}</div>
+            <div class="text-xs text-slate-500">${t('sales_analytics.ttcn_formula', { pct: COMMISSION_PCT * 100 })}</div>
           </div>
           ${renderLeaderboard(leaderboard)}
         </div>
         <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-100">
-            <div class="text-sm font-semibold text-slate-900">Top 10 customers</div>
+            <div class="text-sm font-semibold text-slate-900">${t('sales_analytics.top10')}</div>
           </div>
           ${renderTopCustomers(topCusts)}
         </div>
@@ -239,11 +241,11 @@ export async function render(root) {
       <!-- Charts row -->
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-xl border border-slate-200 p-5">
-          <div class="text-sm font-semibold text-slate-900 mb-3">Revenue vs Cost (last 12 months)</div>
+          <div class="text-sm font-semibold text-slate-900 mb-3">${t('sales_analytics.rev_vs_cost')}</div>
           <div class="h-56"><canvas id="an-bar-chart"></canvas></div>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 p-5">
-          <div class="text-sm font-semibold text-slate-900 mb-3">Revenue by sales</div>
+          <div class="text-sm font-semibold text-slate-900 mb-3">${t('sales_analytics.rev_by_sales')}</div>
           <div class="h-56"><canvas id="an-donut-chart"></canvas></div>
         </div>
       </div>
@@ -251,11 +253,11 @@ export async function render(root) {
       <!-- Heatmap + Funnel -->
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-xl border border-slate-200 p-5">
-          <div class="text-sm font-semibold text-slate-900 mb-3">Trade-lane margin heatmap (POL × POD)</div>
+          <div class="text-sm font-semibold text-slate-900 mb-3">${t('sales_analytics.heatmap')}</div>
           ${renderHeatmap(heatmap)}
         </div>
         <div class="bg-white rounded-xl border border-slate-200 p-5">
-          <div class="text-sm font-semibold text-slate-900 mb-4">Billing funnel</div>
+          <div class="text-sm font-semibold text-slate-900 mb-4">${t('sales_analytics.funnel')}</div>
           <div class="space-y-3">${renderFunnel(funnel)}</div>
         </div>
       </div>

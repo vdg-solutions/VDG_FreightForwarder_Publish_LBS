@@ -1,12 +1,14 @@
 // user-add-modal.js — Add User modal for the admin Users view (F-24-04).
-// F-24-07 partial fix: SalesRep add provisions the ACL folder (users/{sales_prefix}) before
+// F-24-07 partial fix: SalesRep add provisions the ACL folder (users/{user_prefix}) before
 // granting Drive perms, so assignRole doesn't fail on a folder that hasn't been created yet.
 // F-24-08 D-03: assignRole failure after the user record was upserted rolls back via
 // UserRepo.remove(email) — no orphaned row with zero Drive grants.
+// F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
+// widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
 import { t } from '../../i18n/index.js';
 import {
-  ROLE_VALUES, ROLE_SALES_REP, deriveSalesPrefix, isValidEmail,
+  ROLE_VALUES, ROLE_SALES_REP, deriveUserPrefix, isValidEmail,
 } from '../../operators/manager/users-view-composer.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
 
@@ -49,7 +51,7 @@ export function openAddUserModal({ onAdded } = {}) {
           <select id="add-role" class="mt-1 w-full border rounded px-3 py-1.5 text-xs">
             ${ROLE_VALUES.map((r) => `<option value="${r}">${t(ROLE_LABEL_KEYS[r])}</option>`).join('')}
           </select></label>
-        <label id="add-prefix-wrap" class="block text-xs text-slate-600 hidden">${t('admin.users.column.sales_prefix')}
+        <label id="add-prefix-wrap" class="block text-xs text-slate-600 hidden">${t('admin.users.column.user_prefix')}
           <input id="add-prefix" class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
       </div>
       <div id="add-err" class="text-xs text-red-600 hidden"></div>
@@ -66,7 +68,7 @@ export function openAddUserModal({ onAdded } = {}) {
   let prefixTouched = false;
   prefixInput.addEventListener('input', () => { prefixTouched = true; });
   emailInput.addEventListener('input', () => {
-    if (!prefixTouched) prefixInput.value = deriveSalesPrefix(emailInput.value);
+    if (!prefixTouched) prefixInput.value = deriveUserPrefix(emailInput.value);
   });
 
   overlay.querySelector('#add-role').addEventListener('change', () => togglePrefixField(overlay));
@@ -84,7 +86,7 @@ async function _onSubmit(overlay, onAdded) {
   if (!isValidEmail(email)) return showError(overlay, t('admin.users.error.email_invalid'));
   if (!name) return showError(overlay, t('admin.users.error.name_required'));
 
-  const salesPrefix = role === ROLE_SALES_REP ? (prefixRaw || deriveSalesPrefix(email)) : null;
+  const userPrefix = role === ROLE_SALES_REP ? (prefixRaw || deriveUserPrefix(email)) : null;
   const roleService = getRoleService();
   const driveApi     = getDriveApi();
   const userRepo     = getUserRepo();
@@ -97,21 +99,21 @@ async function _onSubmit(overlay, onAdded) {
     // Record display_name up front so assignRole's own upsert (which defaults display_name to
     // the existing record) reproduces it verbatim instead of overwriting with the email.
     await userRepo.upsert({
-      email, display_name: name, role, sales_prefix: salesPrefix,
+      email, display_name: name, role, user_prefix: userPrefix,
       active: true, created_at: new Date().toISOString(),
     });
 
     try {
       // F-24-07 partial: create the ACL folder first — assignRole's resolvePathToFolderId
-      // throws if users/{sales_prefix} doesn't exist yet for a brand-new SalesRep.
-      if (role === ROLE_SALES_REP && salesPrefix) {
+      // throws if users/{user_prefix} doesn't exist yet for a brand-new SalesRep.
+      if (role === ROLE_SALES_REP && userPrefix) {
         const wsRoot = await driveApi.findWorkspaceRoot(activeWorkspaceName());
         if (!wsRoot) throw new Error('Workspace root not found');
-        await driveApi.getOrCreateFolderPath(wsRoot, `users/${salesPrefix}`);
+        await driveApi.getOrCreateFolderPath(wsRoot, `users/${userPrefix}`);
       }
       // Returns { user, skipped } — skipped = ACL folders drive.file couldn't grant because
       // they hold non-app-created files (appNotAuthorizedToChild). Non-fatal; surfaced below.
-      const assignResult = await roleService.assignRole(email, role, salesPrefix);
+      const assignResult = await roleService.assignRole(email, role, userPrefix);
       assignSkipped = assignResult?.skipped || [];
     } catch (err) {
       // F-24-08 D-03: assignRole failed after the user record was upserted above — soft-delete

@@ -4,6 +4,7 @@ import { isManager } from '../auth/auth-gate.js';
 import { openMergeModal, mergeRecords, repointRefs } from '../operators/manager/merge-orchestrator.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { boundedList, renderMasterLoadRetryStatus } from '../util/master-load.js';
+import { t } from '../i18n/index.js';
 
 const KIND       = 'customers';
 const KIND_PREFIX = 'CUST'; // AC-M2
@@ -31,54 +32,54 @@ function buildModal(entity) {
   return `
     <dialog id="master-modal" class="rounded-xl border border-slate-200 shadow-xl p-0 w-full max-w-md backdrop:bg-black/30">
       <form id="modal-form" method="dialog" class="p-6 space-y-4">
-        <div class="text-base font-semibold text-slate-900 mb-1">${isEdit ? 'Edit Customer' : 'New Customer'}</div>
+        <div class="text-base font-semibold text-slate-900 mb-1">${isEdit ? t('masters_customers.modal.edit') : t('masters_customers.modal.new')}</div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Name <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.name')} <span class="text-red-500">*</span></label>
           <input id="m-name" type="text" value="${escHtml(e.name)}" required
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-name" class="hidden text-xs text-red-600"></span>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Short Code</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.short_code')}</label>
           <input id="m-short_code" type="text" value="${escHtml(e.short_code)}"
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Contact Person</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.contact_person')}</label>
           <input id="m-contact_person" type="text" value="${escHtml(e.contact_person)}"
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Tel</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.tel')}</label>
             <input id="m-tel" type="text" value="${escHtml(e.tel)}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Email</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.email')}</label>
             <input id="m-email" type="email" value="${escHtml(e.email)}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Address</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.address')}</label>
           <input id="m-address" type="text" value="${escHtml(e.address)}"
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Commercial Terms</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.commercial_terms')}</label>
             <select id="m-commercial_terms"
                     class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
               <option value="">— None —</option>
               <option value="NET-30" ${e.commercial_terms === 'NET-30' ? 'selected' : ''}>NET-30</option>
               <option value="NET-45" ${e.commercial_terms === 'NET-45' ? 'selected' : ''}>NET-45</option>
               <option value="NET-60" ${e.commercial_terms === 'NET-60' ? 'selected' : ''}>NET-60</option>
-              <option value="COD"    ${e.commercial_terms === 'COD'    ? 'selected' : ''}>COD</option>
+              <option value="COD"    ${e.commercial_terms === 'COD'    ? 'selected' : ''}>${t('masters_customers.field.cod')}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Dunning override (days)</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.dunning_override')}</label>
             <input id="m-dunning_threshold_days_override" type="number" min="1" max="365"
                    value="${escHtml(e.dunning_threshold_days_override)}"
                    placeholder="Default ladder"
@@ -87,9 +88,9 @@ function buildModal(entity) {
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
           <button type="submit"
-                  class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">Save</button>
+                  class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">${t('common.action.save')}</button>
           <button type="button" id="btn-modal-cancel"
-                  class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+                  class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">${t('common.action.cancel')}</button>
         </div>
       </form>
     </dialog>`;
@@ -135,8 +136,8 @@ function openModal(root, entity, onSave) {
 
 function rowHtml(e, isM) {
   const actions = isM ? `
-    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">Edit</button>
-    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">Delete</button>` : '';
+    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('common.action.edit')}</button>
+    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('common.action.delete')}</button>` : '';
   const checkCell = isM ? `<td class="px-2 py-2"><input type="checkbox" class="row-check" data-id="${e.id}" /></td>` : '';
   return `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
@@ -157,15 +158,15 @@ export async function render(root) {
   let items  = [];
 
   const checkCol = isM ? '<th class="px-2 py-2 w-8"></th>' : '';
-  const actCol   = isM ? '<th class="px-3 py-2 text-left w-28">Actions</th>' : '';
+  const actCol   = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 
   root.innerHTML = `
     <div class="p-6 max-w-[1100px] mx-auto">
       <div class="flex items-center justify-between mb-6">
-        <div class="text-lg font-semibold text-slate-900">Customers</div>
+        <div class="text-lg font-semibold text-slate-900">${t('masters_customers.title')}</div>
         <div class="flex gap-2">
           <button id="btn-merge" class="hidden px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200">Merge into →</button>
-          ${isM ? `<button id="btn-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">+ Add New</button>` : ''}
+          ${isM ? `<button id="btn-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">${t('masters_customers.action.add')}</button>` : ''}
         </div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
@@ -173,16 +174,16 @@ export async function render(root) {
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
               ${checkCol}
-              <th class="px-3 py-2 text-left">Name</th>
-              <th class="px-3 py-2 text-left">Short Code</th>
-              <th class="px-3 py-2 text-left">Contact</th>
-              <th class="px-3 py-2 text-left">Tel</th>
+              <th class="px-3 py-2 text-left">${t('masters_customers.col.name')}</th>
+              <th class="px-3 py-2 text-left">${t('masters_customers.col.short_code')}</th>
+              <th class="px-3 py-2 text-left">${t('masters_customers.col.contact')}</th>
+              <th class="px-3 py-2 text-left">${t('masters_customers.col.tel')}</th>
               ${actCol}
             </tr>
           </thead>
           <tbody id="m-tbody"></tbody>
         </table>
-        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">No customers found.</div>
+        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('masters_customers.empty')}</div>
       </div>
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading…</div>
     </div>`;
@@ -243,7 +244,7 @@ export async function render(root) {
     const delBtn = e.target.closest('.btn-delete');
     if (delBtn) {
       const ok = await showConfirm({
-        title: 'Delete this customer?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true,
+        title: t('masters_customers.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);

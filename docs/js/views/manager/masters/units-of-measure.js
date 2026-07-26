@@ -9,6 +9,7 @@ import { showConfirm } from '../../../helpers/show-confirm.js';
 import { runSeedMigrations } from '../../../cache/seed-migrator.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../util/master-load.js';
 import { genUnitId, validateUnit, checkCodeUnique } from '../../../util/uom-validators.js';
+import { t } from '../../../i18n/index.js';
 
 const KIND     = 'units-of-measure';
 const SEED_URL = 'seed/masters/units-of-measure.jsonl';
@@ -16,8 +17,6 @@ const SEED_URL = 'seed/masters/units-of-measure.jsonl';
 // Exported for AC-03 direct materialization testing (F-28-08).
 export const SEED_MIGRATION = { id: '2026-07-09-units-of-measure-v1', kind: KIND, url: SEED_URL, key: (e) => e.code };
 
-const LOAD_ERROR_MSG   = 'Không tải được dữ liệu.';
-const LOAD_RETRY_LABEL = 'Thử lại';
 const BASE_COL_SPAN    = 5;
 
 function escHtml(s) {
@@ -32,7 +31,11 @@ function norm(s) {
     .toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-const CATEGORY_LABEL = { container: 'Container', billing: 'Cách tính' };
+// Module-const gotcha: t() must not resolve before the locale JSON loads — build the
+// category map as a function, called per render, never as a frozen module const.
+function categoryLabels() {
+  return { container: t('uom.category.container'), billing: t('uom.category.billing') };
+}
 
 // F-28-08: registry-driven writer gate — mirrors app.js/sidebar.js's effectiveRole pattern.
 function canWrite() {
@@ -46,29 +49,29 @@ function buildModal(entity) {
   return `
     <dialog id="uom-modal" class="rounded-xl border border-slate-200 shadow-xl p-0 w-full max-w-lg backdrop:bg-black/30">
       <form id="uom-modal-form" method="dialog" class="p-6 space-y-4">
-        <div class="text-base font-semibold text-slate-900 mb-1">${entity ? 'Sửa đơn vị tính' : 'Thêm đơn vị tính'}</div>
+        <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t('uom.modal.title_edit') : t('uom.modal.title_add')}</div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Mã <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.modal.code')} <span class="text-red-500">*</span></label>
             <input id="m-code" type="text" value="${escHtml(e.code)}" ${entity ? 'readonly' : ''} required
                    class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400 ${entity ? 'bg-slate-50 text-slate-500' : ''}" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Nhóm</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.col.group')}</label>
             <select id="m-category" class="w-full border rounded-lg px-3 py-2 text-sm">
-              ${Object.entries(CATEGORY_LABEL).map(([v, l]) => `<option value="${v}" ${e.category === v ? 'selected' : ''}>${l}</option>`).join('')}
+              ${Object.entries(categoryLabels()).map(([v, l]) => `<option value="${v}" ${e.category === v ? 'selected' : ''}>${l}</option>`).join('')}
             </select>
           </div>
         </div>
         <span id="m-err-code" class="hidden text-xs text-red-600"></span>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Tên (VI) <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.col.name_vi')} <span class="text-red-500">*</span></label>
             <input id="m-label-vi" type="text" value="${escHtml(e.label_vi)}" required
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Tên (EN)</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.col.name_en')}</label>
             <input id="m-label-en" type="text" value="${escHtml(e.label_en)}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
@@ -76,29 +79,29 @@ function buildModal(entity) {
         <span id="m-err-label-vi" class="hidden text-xs text-red-600"></span>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Cỡ (feet)</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.modal.size_ft')}</label>
             <input id="m-size-ft" type="number" min="0" value="${e.size_ft ?? ''}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Loại thiết bị</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.modal.equipment')}</label>
             <input id="m-equip" type="text" value="${escHtml(e.equipment_kind)}" placeholder="dry / reefer / high_cube / open_top / flat_rack / tank"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Cách gọi khác (alias)</label>
-          <input id="m-aliases" type="text" value="${escHtml(aliases)}" placeholder="comma-separated, vd 20DC, cont 20 khô"
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('common.field.aliases')}</label>
+          <input id="m-aliases" type="text" value="${escHtml(aliases)}" placeholder="${t('uom.alias_placeholder')}"
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Mô tả</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('uom.modal.description')}</label>
           <textarea id="m-desc" rows="2"
                     class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">${escHtml(e.description)}</textarea>
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
-          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">Lưu</button>
-          <button type="button" id="btn-uom-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Hủy</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">${t('common.action.save')}</button>
+          <button type="button" id="btn-uom-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">${t('common.action.cancel')}</button>
         </div>
       </form>
     </dialog>`;
@@ -129,12 +132,12 @@ function openModal(root, entity, items, onSave) {
     };
     setErr('#m-err-code', ''); setErr('#m-err-label-vi', '');
 
-    const err = validateUnit(code, labelVi);
-    if (err) { setErr(err.includes('Mã') ? '#m-err-code' : '#m-err-label-vi', err); return; }
+    const errKey = validateUnit(code, labelVi);
+    if (errKey) { setErr(errKey === 'uom.err.code_required' ? '#m-err-code' : '#m-err-label-vi', t(errKey)); return; }
 
     if (!entity) {
-      const dupErr = checkCodeUnique(items, code);
-      if (dupErr) { setErr('#m-err-code', dupErr); return; }
+      const dupKey = checkCodeUnique(items, code);
+      if (dupKey) { setErr('#m-err-code', t('uom.err.code_duplicate', { code })); return; }
     }
 
     const updated = {
@@ -158,15 +161,15 @@ function openModal(root, entity, items, onSave) {
 function rowHtml(u, isEditor) {
   const aliases = (u.aliases || []).slice(0, 6).map((a) => `<span class="inline-block px-1.5 py-0.5 mr-1 mb-1 rounded bg-slate-100 text-slate-600 text-[10px]">${escHtml(a)}</span>`).join('');
   const actions = isEditor ? `
-    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${escHtml(u.id)}">Sửa</button>
-    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${escHtml(u.id)}">Xóa</button>` : '';
+    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${escHtml(u.id)}">${t('common.action.edit')}</button>
+    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${escHtml(u.id)}">${t('common.action.delete')}</button>` : '';
   return `
     <tr class="border-b border-slate-100 hover:bg-slate-50" data-id="${escHtml(u.id)}" data-search="${escHtml(norm([u.code, u.label_vi, u.label_en, ...(u.aliases || [])].join(' ')))}">
       <td class="py-2 px-3 text-xs font-medium text-slate-900">${escHtml(u.label_vi)}</td>
       <td class="py-2 px-3 text-xs text-slate-500">${escHtml(u.label_en)}</td>
-      <td class="py-2 px-3 text-xs"><span class="px-2 py-0.5 rounded ${u.category === 'container' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">${CATEGORY_LABEL[u.category] || u.category}</span></td>
+      <td class="py-2 px-3 text-xs"><span class="px-2 py-0.5 rounded ${u.category === 'container' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}">${categoryLabels()[u.category] || u.category}</span></td>
       <td class="py-2 px-3">${aliases}</td>
-      <td class="py-2 px-3 text-[10px] font-mono text-slate-400" title="Mã chuẩn quốc tế">${escHtml(u.iso6346 || u.unece_code || u.code)}</td>
+      <td class="py-2 px-3 text-[10px] font-mono text-slate-400" title="${t('uom.std_code_title')}">${escHtml(u.iso6346 || u.unece_code || u.code)}</td>
       ${isEditor ? `<td class="py-2 px-3">${actions}</td>` : ''}
     </tr>`;
 }
@@ -184,20 +187,20 @@ export async function render(root) {
   const repo      = window.__vdg_repo;
   const isEditor  = canWrite();
   const colSpan   = BASE_COL_SPAN + (isEditor ? 1 : 0);
-  const headers   = ['Tên (VI)', 'Tên (EN)', 'Nhóm', 'Cách gọi khác (alias)', 'Mã chuẩn'];
-  if (isEditor) headers.push('Thao tác');
+  const headers   = [t('uom.col.name_vi'), t('uom.col.name_en'), t('uom.col.group'), t('common.field.aliases'), t('uom.col.std_code')];
+  if (isEditor) headers.push(t('common.col.actions'));
 
   root.innerHTML = `
     <div class="p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h1 class="text-lg font-semibold text-slate-900">Đơn vị tính</h1>
-          <p class="text-xs text-slate-500">Chuẩn quốc tế ISO 6346 (container) + UN/ECE (cách tính) — tìm theo bất kỳ tên gọi nào.</p>
+          <h1 class="text-lg font-semibold text-slate-900">${t('uom.title')}</h1>
+          <p class="text-xs text-slate-500">${t('uom.subtitle')}</p>
         </div>
         <div class="flex gap-2 items-center">
-          <input id="uom-search" type="search" placeholder="Tìm: 20DC, cont 20 khô, per bill…"
+          <input id="uom-search" type="search" placeholder="${t('uom.search_placeholder')}"
             class="w-64 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-          ${isEditor ? `<button id="btn-uom-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 whitespace-nowrap">+ Thêm</button>` : ''}
+          ${isEditor ? `<button id="btn-uom-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 whitespace-nowrap">${t('common.action.add')}</button>` : ''}
         </div>
       </div>
       <div class="rounded-xl border border-slate-200 overflow-hidden">
@@ -205,25 +208,25 @@ export async function render(root) {
           <thead class="bg-slate-50">
             <tr>${headers.map((h) => `<th class="py-2 px-3 text-xs font-medium text-slate-600">${h}</th>`).join('')}</tr>
           </thead>
-          <tbody id="uom-body"><tr><td colspan="${colSpan}" class="p-4 text-slate-400 text-center text-xs">Đang tải…</td></tr></tbody>
+          <tbody id="uom-body"><tr><td colspan="${colSpan}" class="p-4 text-slate-400 text-center text-xs">${t('common.load.loading')}</td></tr></tbody>
         </table>
       </div>
     </div>`;
 
   const body = root.querySelector('#uom-body');
-  if (!repo) { body.innerHTML = `<tr><td colspan="${colSpan}" class="p-4 text-red-500 text-center text-xs">Chưa sẵn sàng dữ liệu.</td></tr>`; return; }
+  if (!repo) { body.innerHTML = `<tr><td colspan="${colSpan}" class="p-4 text-red-500 text-center text-xs">${t('common.load.not_ready')}</td></tr>`; return; }
 
   let units = [];
 
   async function loadAndRender() {
     const loadRes = await loadUnits(repo);
     if (!loadRes.ok) {
-      renderMasterLoadRetryRow(body, colSpan, LOAD_ERROR_MSG, LOAD_RETRY_LABEL, loadAndRender);
+      renderMasterLoadRetryRow(body, colSpan, t('common.load.error'), t('common.load.retry'), loadAndRender);
       return;
     }
     units = loadRes.value;
     units.sort((a, b) => (a.category || '').localeCompare(b.category || '') || (a.label_vi || '').localeCompare(b.label_vi || ''));
-    body.innerHTML = units.length ? units.map((u) => rowHtml(u, isEditor)).join('') : `<tr><td colspan="${colSpan}" class="p-4 text-slate-400 text-center text-xs">Chưa có đơn vị.</td></tr>`;
+    body.innerHTML = units.length ? units.map((u) => rowHtml(u, isEditor)).join('') : `<tr><td colspan="${colSpan}" class="p-4 text-slate-400 text-center text-xs">${t('uom.empty')}</td></tr>`;
   }
 
   await loadAndRender();
@@ -248,7 +251,7 @@ export async function render(root) {
     const delBtn = ev.target.closest('.btn-delete');
     if (delBtn) {
       const ok = await showConfirm({
-        title: 'Xóa đơn vị tính này?', confirmLabel: 'Xóa', cancelLabel: 'Hủy', destructive: true,
+        title: t('uom.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
       units = units.filter((i) => i.id !== delBtn.dataset.id);

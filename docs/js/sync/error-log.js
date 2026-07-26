@@ -9,6 +9,13 @@ let _getVersion   = null;
 let _sessionCount = 0;
 const _rootFolderId = null;
 
+// F-19-84 AC-04 — while auth is known-dead, skip the repo.put enqueue entirely: breaks the
+// error_log→outbox→failed-write→sync_error→error_log self-feed that pumped ~50 entries on a
+// single expiry event. Set on the reconnect-needed dispatch, cleared on reconnect.
+let _authDead = false;
+window.addEventListener('vdg:auth-needs-reconnect', () => { _authDead = true; });
+window.addEventListener('vdg:auth-reconnected',     () => { _authDead = false; });
+
 // Session ETag cache: month-key → {fileId, etag}
 const _cache = new Map();
 
@@ -38,6 +45,7 @@ export function initErrorLog(driveApi, getCurrentUser, getAppVersion) {
 
 function _capture(kind, msg, stack) {
   if (!_driveApi) return;
+  if (_authDead) return; // F-19-84 AC-04 — no self-feed while auth is dead
   if (_sessionCount >= ERROR_LOG_MAX_PER_SESSION) return;
   _sessionCount++;
   _appendAsync(kind, msg, stack).catch((err) => {

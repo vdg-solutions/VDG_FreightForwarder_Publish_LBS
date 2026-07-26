@@ -1,22 +1,33 @@
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
 import { t } from '../i18n/index.js';
 
-// Optimize for web environment with locally hosted models.
-// Models are downloaded at build time (src/scripts/download-models.mjs) and served from
-// /models/ (dist copies src/frontend/models → output/web/models). MUST allow local models
-// or Transformers.js errors "both local and remote models are disabled".
-// Models load from the Hugging Face CDN (public Xenova models) — the 118MB quantized ONNX exceeds
-// GitHub Pages' 100MB/file limit, so it is NOT bundled. First run fetches + browser-caches it.
-// env.remoteHost defaults to https://huggingface.co (allowed by the CSP in _headers).
-env.allowLocalModels = false;
-env.allowRemoteModels = true;
-env.backends.onnx.wasm.wasmPaths = new URL('wasm/', document.baseURI).href; // serve WASM locally too
-env.useBrowserCache = true;
+// Same CDN + version pin as loadTransformers()'s dynamic import and download-models.mjs's WASM_BASE_URL.
+const ONNX_WASM_CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1/dist/';
 
 let extractor = null;
 let initPromise = null;
+let transformersPromise = null;
 
-async function initPipeline() {
+// Lazy CDN import: keeps this module Node-ESM-loadable (no top-level https: import) while
+// still fetching the real lib in the browser when the feature actually runs. Cached so the
+// jsdelivr fetch happens once, not once per preloadModel()/getEmbedding() call.
+function loadTransformers() {
+    if (!transformersPromise) {
+        transformersPromise = import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1');
+    }
+    return transformersPromise;
+}
+
+// loader param is a test seam (default: real CDN loader) — do not pass it in production call sites.
+export async function initPipeline(loader = loadTransformers) {
+    const { pipeline, env } = await loader();
+
+    // Static GitHub-Pages host bundles no models — load remotely at runtime instead of from a
+    // local /models/ dir that's never populated in the served output.
+    env.allowRemoteModels = true; // fetch models from HuggingFace at runtime
+    env.allowLocalModels = false; // no local /models/ on a static deploy
+    env.backends.onnx.wasm.wasmPaths = ONNX_WASM_CDN; // ONNX wasm backend from the same CDN as loadTransformers()
+    env.useBrowserCache = true; // cache the fetched model in-browser so it's a one-time download per client
+
     const progressCallback = (info) => {
         // Only track the main model file so we don't spam the UI with multiple jobs
         if (!info.file || !info.file.endsWith('.onnx')) return;
@@ -72,7 +83,7 @@ async function initPipeline() {
         } catch (e2) {
             console.error('[SemanticSearch] Completely failed to load any model', e2); // DEV
             extractor = null;
-            
+
             window.dispatchEvent(new CustomEvent('vdg:job-progress', {
                 detail: {
                     id: 'ai-model-download',
@@ -92,12 +103,13 @@ export function preloadModel() {
     }
 }
 
-export async function getEmbedding(text) {
+// reinit param is a test seam (default: real initPipeline) — do not pass it in production call sites.
+export async function getEmbedding(text, reinit = initPipeline) {
     if (!text || text.trim() === '') return null;
-    
+
     // If we haven't even started loading, start it now
     if (!initPromise && !extractor) {
-        initPromise = initPipeline();
+        initPromise = reinit();
     }
     
     // If the model is not ready yet (still downloading), DO NOT BLOCK.

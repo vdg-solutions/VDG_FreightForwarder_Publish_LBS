@@ -15,6 +15,7 @@ const UNKNOWN_FORMAT          = 'Unknown';
 const FORMAT_COMBINED         = 'Combined';
 const MS_PER_SECOND           = 1000;
 const BIFF_NOT_SUPPORTED_ERROR = 'biff open failed';
+const SCHEMA_ZERO_JOBS_ERROR   = 'SCHEMA_FORMAT_ZERO_JOBS';
 
 // Columns shown in shipment preview table
 const PREVIEW_COLS = ['shipment_ref','customer','pol','pod','etd','mode','carrier','buy_total','sell_total','margin'];
@@ -72,16 +73,18 @@ async function _handleLegacyImport(pairs, root) {
   navigate(ROUTE_SHIPMENTS);
 }
 
-async function processFile(file, root) {
+// Exported for the F-19-95 lane test (AC-07) — drives the wasm detect/parse branch matrix
+// directly, the lower-friction seam vs. simulating the upload-zone custom-element indirection.
+export async function processFile(file, root) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const wasm  = await loadWasm();
 
-  setStatus(root, 'Detecting format…');
+  setStatus(root, t('sales_drop.status.detecting'));
   let detect;
   try { detect = wasm ? wasm.detect_pnl_format_wasm(bytes) : null; }
-  catch (e) { setStatus(root, e.message.includes(BIFF_NOT_SUPPORTED_ERROR) ? `<span class="text-amber-600">${t('sales_drop.biff_pending')}</span>` : `<span class="text-red-600">Detect error: ${e.message}</span>`); return; }
+  catch (e) { setStatus(root, e.message.includes(BIFF_NOT_SUPPORTED_ERROR) ? `<span class="text-amber-600">${t('sales_drop.biff_pending')}</span>` : `<span class="text-red-600">${t('sales_drop.status.detect_error', { error: e.message })}</span>`); return; }
   if (!detect) {
-    setStatus(root, '<span class="text-amber-600">WASM not built — run <code class="font-mono">make build-wasm</code></span>');
+    setStatus(root, `<span class="text-amber-600">${t('sales_drop.status.wasm_not_built')}</span>`);
     return;
   }
 
@@ -97,19 +100,21 @@ async function processFile(file, root) {
     try { pairs = wasm.import_legacy_pnl_wasm(bytes); }
     catch (e) {
       if (e.message.includes(BIFF_NOT_SUPPORTED_ERROR)) { setStatus(root, `<span class="text-amber-600">${t('sales_drop.biff_pending')}</span>`); return; }
-      const tag = e.message.includes('SCHEMA_FORMAT_ZERO_JOBS') ? 'Schema error' : 'Parse error';
-      setStatus(root, `<span class="text-red-600">${tag}: ${e.message}</span>`);
+      const statusMsg = e.message.includes(SCHEMA_ZERO_JOBS_ERROR)
+        ? `${t('sales_drop.status.schema_error')}: ${e.message}`
+        : t('sales_drop.status.parse_error', { error: e.message });
+      setStatus(root, `<span class="text-red-600">${statusMsg}</span>`);
       return;
     }
-    if (!pairs?.length) { setStatus(root, '<span class="text-amber-600">No shipments parsed</span>'); return; }
+    if (!pairs?.length) { setStatus(root, `<span class="text-amber-600">${t('sales_drop.status.no_shipments')}</span>`); return; }
     await _handleLegacyImport(pairs, root);
     return;
   }
 
-  setStatus(root, `Parsing ${detect.format} format…`);
+  setStatus(root, t('sales_drop.status.parsing', { fmt: detect.format }));
   let report;
   try { report = wasm.import_pnl_combined_wasm(bytes); }
-  catch (err) { setStatus(root, `<span class="text-red-600">Parse error: ${err.message}</span>`); return; }
+  catch (err) { setStatus(root, `<span class="text-red-600">${t('sales_drop.status.parse_error', { error: err.message })}</span>`); return; }
   _state = { ..._state, detect, report, file, committed: false, summary: null, expandedRow: null };
   setStatus(root, '');
   renderPreview(root);
@@ -123,7 +128,7 @@ async function handleCommit(root) {
   const onProg = (e) => {
     const { done, total } = e.detail || {};
     const secs = ((Date.now() - started) / MS_PER_SECOND).toFixed(0);
-    setStatus(root, `Đang lưu ${done}/${total} · ${secs}s`);
+    setStatus(root, t('sales_drop.status.saving', { done, total, secs }));
   };
   window.addEventListener('vdg:save-progress', onProg);
   try {
@@ -131,11 +136,11 @@ async function handleCommit(root) {
     const total   = summary.created_shipments + summary.created_lines;
     const secs    = ((Date.now() - started) / MS_PER_SECOND).toFixed(0);
     _state = { ..._state, committing: false, committed: true, summary };
-    setStatus(root, `Saved ${total}/${total} in ${secs}s`);
+    setStatus(root, t('sales_drop.status.saved', { done: total, total, secs }));
     renderPreview(root);
   } catch (err) {
     _state.committing = false;
-    setStatus(root, `<span class="text-red-600">Commit failed: ${err.message}</span>`);
+    setStatus(root, `<span class="text-red-600">${t('sales_drop.status.commit_failed', { error: err.message })}</span>`);
   } finally {
     window.removeEventListener('vdg:save-progress', onProg);
   }
@@ -159,7 +164,7 @@ function renderPreview(root) {
     previewEl.innerHTML = `
       ${renderFormatBanner(detect, file.name)}
       <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        Format không nhận diện được — kiểm tra file có phải template chuẩn không, hoặc liên hệ admin.
+        ${t('sales_drop.unknown_format_hint')}
       </div>`;
     return;
   }
@@ -173,9 +178,9 @@ function renderPreview(root) {
     const s = _state.summary;
     previewEl.innerHTML = `
       <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800 space-y-1">
-        <div class="font-semibold text-base">Import hoàn tất</div>
+        <div class="font-semibold text-base">${t('sales_drop.import_complete')}</div>
         <div>Shipments: <strong>${s.created_shipments}</strong> · Lines: <strong>${s.created_lines}</strong></div>
-        <div>New customers: <strong>${s.new_customers}</strong> · New carriers: <strong>${s.new_carriers}</strong></div>
+        <div>${t('sales_drop.summary.new_customers')} <strong>${s.new_customers}</strong> · ${t('sales_drop.summary.new_carriers')} <strong>${s.new_carriers}</strong></div>
       </div>`;
     return;
   }
@@ -184,17 +189,17 @@ function renderPreview(root) {
 
   const tableHeader = `
     <tr class="bg-slate-50 text-slate-600 text-[11px] font-semibold uppercase tracking-wider">
-      <th class="px-3 py-2 text-left">Ref</th>
-      <th class="px-3 py-2 text-left">Customer</th>
-      <th class="px-3 py-2 text-left">POL</th>
-      <th class="px-3 py-2 text-left">POD</th>
-      <th class="px-3 py-2 text-left">ETD</th>
-      <th class="px-3 py-2 text-left">Mode</th>
-      <th class="px-3 py-2 text-left">Carrier</th>
-      <th class="px-3 py-2 text-right">Lines</th>
-      <th class="px-3 py-2 text-right">Buy VND</th>
-      <th class="px-3 py-2 text-right">Sell VND</th>
-      <th class="px-3 py-2 text-right">Margin</th>
+      <th class="px-3 py-2 text-left">${t('sales_drop.col.ref')}</th>
+      <th class="px-3 py-2 text-left">${t('sales_drop.col.customer')}</th>
+      <th class="px-3 py-2 text-left">${t('sales_new.field.pol')}</th>
+      <th class="px-3 py-2 text-left">${t('sales_new.field.pod')}</th>
+      <th class="px-3 py-2 text-left">${t('sales_new.field.etd')}</th>
+      <th class="px-3 py-2 text-left">${t('sales_drop.col.mode')}</th>
+      <th class="px-3 py-2 text-left">${t('sales_drop.col.carrier')}</th>
+      <th class="px-3 py-2 text-right">${t('sales_drop.col.lines')}</th>
+      <th class="px-3 py-2 text-right">${t('sales_drop.col.buy_vnd')}</th>
+      <th class="px-3 py-2 text-right">${t('sales_drop.col.sell_vnd')}</th>
+      <th class="px-3 py-2 text-right">${t('sales_drop.col.margin')}</th>
     </tr>`;
 
   previewEl.innerHTML = `
@@ -214,10 +219,10 @@ function renderPreview(root) {
         <button id="sdrop-confirm" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition
           ${canCommit ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' : 'bg-slate-300 cursor-not-allowed'}"
           ${canCommit ? '' : 'disabled'}>
-          Confirm — Tạo ${shipments.length} Job${shipments.length !== 1 ? 's' : ''}
+          ${t('sales_drop.confirm_create', { n: shipments.length })}
         </button>
-        <a href="#/dashboard" class="text-sm text-slate-500 hover:text-slate-700">Cancel</a>
-        ${errors.length > 0 ? `<span class="text-xs text-red-600">Fix ${errors.length} error(s) trước khi commit</span>` : ''}
+        <a href="#/dashboard" class="text-sm text-slate-500 hover:text-slate-700">${t('common.action.cancel')}</a>
+        ${errors.length > 0 ? `<span class="text-xs text-red-600">${t('sales_drop.fix_before_commit', { n: errors.length })}</span>` : ''}
       </div>
     </div>`;
 
@@ -251,7 +256,7 @@ export async function render(root) {
     <div class="p-6 max-w-[1400px] mx-auto space-y-5">
       <div>
         <div class="text-lg font-semibold text-slate-900">${t('sales_drop.button_label')} <span class="text-slate-400 font-normal text-sm">(1 thao tác)</span></div>
-        <div class="text-xs text-slate-500 mt-0.5">Drag-drop hoặc chọn file .xlsx/.xls → auto-detect → preview → confirm</div>
+        <div class="text-xs text-slate-500 mt-0.5">${t('sales_drop.subtitle')}</div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 p-5">
         <upload-zone accept=".xlsx, .xls"></upload-zone>

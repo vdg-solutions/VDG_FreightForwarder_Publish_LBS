@@ -29,10 +29,14 @@ export async function boundedSeedIfEmpty(repo, kind, seedUrl, items, genId, tag,
     if (!fetchRes.ok) return items;
     const lines = (await fetchRes.text()).trim().split('\n').filter(Boolean);
     const seeded = [];
+    // AC-04: loop-level deadline so a stalled repo.put can't keep the inner loop churning
+    // detached after the outer safeMasterLoad race has already returned at _ms.
+    const _deadline = Date.now() + _ms;
     for (const line of lines) {
+      if (Date.now() >= _deadline) break;
       const entry = JSON.parse(line);
       if (!entry.id) entry.id = genId(entry);
-      const putRes = await safeAwait(repo.put(kind, entry.id, entry), _ms, null, `${tag}:put`);
+      const putRes = await safeAwait(repo.put(kind, entry.id, entry), Math.max(0, _deadline - Date.now()), null, `${tag}:put`);
       if (!putRes.ok) continue; // stalled write — skip row, retry next load
       seeded.push(entry);
     }

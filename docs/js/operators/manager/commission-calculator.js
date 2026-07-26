@@ -1,6 +1,8 @@
 // Aggregation + shaping only. The waterfall FORMULA (TNDN → net → split) lives
 // in WASM (commission_waterfall) — this file sums margins/deductions per rep and
 // delegates the money math. No formula, no magic tax rate here.
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { t } from '../../i18n/index.js';
 
 const COMMISSION_PCT_DEFAULT = 0.70; // default sales share (0..1) when unassigned
 const SPARKLINE_MONTHS       = 6;
@@ -11,7 +13,10 @@ const COMMISSION_RATE_MAX    = 100;
 const CLOSED_STATE           = 'Closed';
 const ADVANCE_TRANSITION     = 'AdvanceTaken';
 
-function getSales(s)   { return s.sales_rep || s.SalesRep || '—'; }
+function getSales(s) {
+  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  return resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
+}
 function getState(s)   { return s.state     || s.State    || ''; }
 function getEtd(s)     { return s.etd       || s.ETD      || ''; }
 function getRef(s)     { return s.shipment_ref || s.ShipmentRef || s.id || ''; }

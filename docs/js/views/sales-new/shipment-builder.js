@@ -1,9 +1,16 @@
 // shipment-builder.js — builds canonical Shipment object from 4-section form state
 // Extracted from submit-orchestrator to enable unit testing without i18n deps (AC-08)
 
+import { resolveShipmentState } from '../../util/shipment-state-resolver.js';
+
 const SOURCE_ORIGIN  = 'form-entry';
 const PARSER_ID      = 'form-v1';
 const PARSER_VERSION = '1';
+
+// F-18-11: brand-new shipment starts here — matches the Rust entity's own default
+// (Shipment::from_command → state: ShipmentState::Created), the most conservative
+// "just captured, not yet booked" reading.
+export const DEFAULT_INITIAL_STATE = 'Created';
 
 /**
  * buildShipment — maps collected form state to the canonical Shipment repo record.
@@ -11,14 +18,24 @@ const PARSER_VERSION = '1';
  * @param {object} state      output of collectFormState()
  * @param {string} ref        generated shipment ref
  * @param {string} salesRepId current user id
+ * @param {object} opts       opts.stateAliasRows — shipment-states registry rows (F-18-11)
  * @returns {object}
+ * @throws {Error} when state.state resolves to no registered canonical code or alias (F-18-11 AC-01/02)
  */
 export function buildShipment(state, ref, salesRepId, opts = {}) {
   const publishState = opts.publishState || 'published';
+
+  // F-18-11: choke point — every shipment write (create/edit/batch) resolves through here.
+  // status:'Open' literal retired (Q4); state is now the sole, real, canonical lifecycle field.
+  const rawState  = state.state ?? DEFAULT_INITIAL_STATE;
+  const resolvedState = resolveShipmentState(rawState, opts.stateAliasRows || []);
+  if (!resolvedState) throw new Error(`Invalid shipment state: ${rawState}`);
+
   return {
     shipment_ref:          ref,
+    quote_id:              state.quote_id || null,   // F-30-01: nullable back-ref to source quotation
     sales_rep_id:          salesRepId || null,
-    status:                'Open',
+    state:                 resolvedState,
     publish_state:         publishState,
     open_date:             new Date().toISOString().slice(0, 10),
     transaction_date:      new Date().toISOString().slice(0, 10),

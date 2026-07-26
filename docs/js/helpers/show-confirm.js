@@ -8,7 +8,9 @@ const DEFAULT_CONFIRM_KEY = 'common.dialog.confirm.default_ok';
 const DEFAULT_CANCEL_KEY  = 'common.dialog.confirm.default_cancel';
 
 /// AC-01: resolves true on confirm click, false on cancel/backdrop/Escape.
-export async function showConfirm({ title, body, confirmLabel, cancelLabel, destructive = false } = {}) {
+/// F-28-12: pass reasonField:true (AC-03 reject-reason) to instead resolve
+/// { confirmed, reason } — opt-in, existing boolean callers are unaffected.
+export async function showConfirm({ title, body, confirmLabel, cancelLabel, destructive = false, reasonField = false, reasonLabel } = {}) {
   return new Promise((resolve) => {
     mountConfirmDialog({
       title,
@@ -16,6 +18,8 @@ export async function showConfirm({ title, body, confirmLabel, cancelLabel, dest
       confirmLabel: confirmLabel ?? t(DEFAULT_CONFIRM_KEY),
       cancelLabel:  cancelLabel  ?? t(DEFAULT_CANCEL_KEY),
       destructive,
+      reasonField,
+      reasonLabel: reasonLabel ?? title,
     }, resolve);
   });
 }

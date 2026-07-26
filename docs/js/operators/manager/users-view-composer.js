@@ -11,9 +11,9 @@ const STATUS_FILTER_ACTIVE   = 'active';
 const STATUS_FILTER_INACTIVE = 'inactive';
 const EMAIL_REGEX            = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/// AC-03: Add User modal auto-fills sales_prefix from the email local-part (mirrors
+/// AC-03: Add User modal auto-fills user_prefix from the email local-part (mirrors
 /// auth-gate.js::emailPrefix — kept local here so this module stays zero-dependency/pure).
-export function deriveSalesPrefix(email) {
+export function deriveUserPrefix(email) {
   return (email || '').split('@')[0].toLowerCase();
 }
 

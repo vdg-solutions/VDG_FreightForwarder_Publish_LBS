@@ -1,10 +1,9 @@
-// RoleAssignmentService — cascades role-drive-acl.json grants via Drive putPermission (F-24-03).
-// Pattern: ledger-reconciler.js / onboarding-orchestrator.js (DI over injected driveApi, no
-// direct implementations/* import). UserDriveRepo (F-24-02) and the ACL seed (F-24-01) are
-// both consumed through their existing contracts, not reimplemented here.
+// RoleAssignmentService — cascades protection-table grants via Drive putPermission (F-24-03,
+// F-27-01). Pattern: ledger-reconciler.js / onboarding-orchestrator.js (DI over injected
+// driveApi, no direct implementations/* import). UserDriveRepo (F-24-02) is consumed through
+// its existing contract; the grant list now comes from the WASM permission_resolve_grants
+// bridge (protection_table.rs) instead of fetching role-drive-acl.json.
 
-const ACL_SEED_URL      = 'js/data/permissions/role-drive-acl.json';
-const SALES_PREFIX_TOKEN = '{sales_prefix}';
 const WILDCARD_PATH      = '*';
 const WILDCARD_SUFFIX    = '/*';
 const ACCESS_WRITE       = 'write';
@@ -13,10 +12,6 @@ const DRIVE_ROLE_READER  = 'reader';
 const ROLE_MANAGER       = 'Manager';
 const DRIVE_FOLDER_MIME     = 'application/vnd.google-apps.folder';
 const REASON_NOT_AUTH_CHILD = 'appNotAuthorizedToChild'; // drive.file scope limit (see _isNotAuthorizedToChild)
-
-// ACL entries resolve to folders only (F-17-03: the license.jwt file-type entry is gone —
-// there is no Drive-hosted licence file left to ACL).
-const ACL_TYPE_FOLDER = 'folder';
 
 const AUDIT_KIND    = 'role_assignment';
 const AUDIT_ASSIGN  = 'assign';
@@ -33,37 +28,38 @@ const DRIVE_OP_REVOKE        = 'revoke';
 const DRIVE_OP_RESULT_OK     = 'ok';
 
 export class RoleAssignmentService {
-  constructor(driveApi, userRepo, findWorkspaceRootFn, auditLog = null, userAuditLog = null) {
+  constructor(driveApi, userRepo, findWorkspaceRootFn, auditLog = null, userAuditLog = null, wasm = null) {
     this._api         = driveApi;
     this._userRepo     = userRepo;
     this._findRoot      = findWorkspaceRootFn;
     this._auditLog      = auditLog;
     this._userAuditLog  = userAuditLog;
-    this._aclSeed       = null;
+    this._wasm          = wasm;
   }
 
-  /// F-24-01 seed lookup + {sales_prefix} substitution, mirrors permission.rs::resolve_acl.
-  async resolveAcl(role, salesPrefix = null) {
-    const seed = await this._loadAclSeed();
-    return _resolveAclEntries(seed, role, salesPrefix);
+  /// F-27-01: grant list resolved via the WASM permission_resolve_grants bridge
+  /// (protection_table.rs), replacing the role-drive-acl.json fetch.
+  async resolveAcl(role, userPrefix = null) {
+    const wasm = this._wasm || window.__vdg_wasm;
+    return wasm.permission_resolve_grants(role, userPrefix);
   }
 
   /// AC-01/AC-02/AC-04: grant every ACL folder for `role`, rollback on partial failure,
   /// upsert the user record last (only once the Drive side is fully consistent).
-  async assignRole(email, role, salesPrefix = null) {
-    const acl    = await this.resolveAcl(role, salesPrefix);
+  async assignRole(email, role, userPrefix = null) {
+    const acl    = await this.resolveAcl(role, userPrefix);
     const rootId = await this._requireRoot();
 
     const { granted, skipped } = await this._grantAll(rootId, email, acl);
 
     const existing = await this._userRepo.get(email);
-    const result   = await this._userRepo.upsert(_buildUserRecord(existing, email, role, salesPrefix));
-    this._auditLog?.append(AUDIT_KIND, email, AUDIT_ASSIGN, { role, sales_prefix: salesPrefix, granted: granted.length, skipped: skipped.length });
+    const result   = await this._userRepo.upsert(_buildUserRecord(existing, email, role, userPrefix));
+    this._auditLog?.append(AUDIT_KIND, email, AUDIT_ASSIGN, { role, user_prefix: userPrefix, granted: granted.length, skipped: skipped.length });
     this._userAuditLog?.write(
       USER_AUDIT_ASSIGN_ROLE,
       email,
-      existing ? { role: existing.role, sales_prefix: existing.sales_prefix } : { role: null },
-      { role, sales_prefix: salesPrefix },
+      existing ? { role: existing.role, user_prefix: existing.user_prefix } : { role: null },
+      { role, user_prefix: userPrefix },
       _driveOpsFromAcl(acl),
     );
     return { user: result, skipped };
@@ -71,18 +67,18 @@ export class RoleAssignmentService {
 
   /// AC-01/AC-02/AC-05 (F-24-08): diff old vs new ACL — revoke what's no longer granted, grant
   /// what's new, leave untouched entries alone. Takes the full `user` record so the OLD ACL is
-  /// always resolved from the user's ACTUAL prior role + sales_prefix, never from a caller-passed
-  /// value that may already be the new one (F-24-08 D-02: a bare oldRole+salesPrefix pair let
-  /// callers pass the NEW prefix for both sides, silently losing the old ACL's {sales_prefix}
+  /// always resolved from the user's ACTUAL prior role + user_prefix, never from a caller-passed
+  /// value that may already be the new one (F-24-08 D-02: a bare oldRole+userPrefix pair let
+  /// callers pass the NEW prefix for both sides, silently losing the old ACL's {user_prefix}
   /// substitution). Guards the last-manager lockout before any Drive call.
-  async changeRole(user, newRole, newSalesPrefix = null) {
-    const { email, role: oldRole, sales_prefix: oldSalesPrefix } = user;
+  async changeRole(user, newRole, newUserPrefix = null) {
+    const { email, role: oldRole, user_prefix: oldUserPrefix } = user;
     if (oldRole === ROLE_MANAGER && newRole !== ROLE_MANAGER) {
       await this._assertNotLastManager(email);
     }
 
-    const oldAcl = await this.resolveAcl(oldRole, oldSalesPrefix);
-    const newAcl = await this.resolveAcl(newRole, newSalesPrefix);
+    const oldAcl = await this.resolveAcl(oldRole, oldUserPrefix);
+    const newAcl = await this.resolveAcl(newRole, newUserPrefix);
     const rootId = await this._requireRoot();
 
     const toRevoke = oldAcl.filter((o) => !_aclHas(newAcl, o));
@@ -92,46 +88,38 @@ export class RoleAssignmentService {
     const { skipped } = await this._grantAll(rootId, email, toGrant);
 
     const existing = await this._userRepo.get(email);
-    await this._userRepo.upsert(_buildUserRecord(existing, email, newRole, newSalesPrefix));
-    this._auditLog?.append(AUDIT_KIND, email, AUDIT_CHANGE, { oldRole, newRole, sales_prefix: newSalesPrefix });
+    await this._userRepo.upsert(_buildUserRecord(existing, email, newRole, newUserPrefix));
+    this._auditLog?.append(AUDIT_KIND, email, AUDIT_CHANGE, { oldRole, newRole, user_prefix: newUserPrefix });
     this._userAuditLog?.write(
       USER_AUDIT_CHANGE_ROLE,
       email,
-      { role: oldRole, sales_prefix: oldSalesPrefix },
-      { role: newRole, sales_prefix: newSalesPrefix },
+      { role: oldRole, user_prefix: oldUserPrefix },
+      { role: newRole, user_prefix: newUserPrefix },
       [..._driveOpsFromAcl(toRevoke, DRIVE_OP_REVOKE), ..._driveOpsFromAcl(toGrant)],
     );
     return { skipped };
   }
 
   /// AC-06: revoke every ACL folder for `role`, then soft-delete the user record.
-  async revokeRole(email, role, salesPrefix = null) {
+  async revokeRole(email, role, userPrefix = null) {
     if (role === ROLE_MANAGER) await this._assertNotLastManager(email);
 
-    const acl    = await this.resolveAcl(role, salesPrefix);
+    const acl    = await this.resolveAcl(role, userPrefix);
     const rootId = await this._requireRoot();
     for (const entry of acl) await this._revokeEntry(rootId, email, entry);
 
     await this._userRepo.remove(email);
-    this._auditLog?.append(AUDIT_KIND, email, AUDIT_REVOKE, { role, sales_prefix: salesPrefix });
+    this._auditLog?.append(AUDIT_KIND, email, AUDIT_REVOKE, { role, user_prefix: userPrefix });
     this._userAuditLog?.write(
       USER_AUDIT_REVOKE_ROLE,
       email,
-      { role, sales_prefix: salesPrefix },
+      { role, user_prefix: userPrefix },
       { active: false },
       _driveOpsFromAcl(acl, DRIVE_OP_REVOKE),
     );
   }
 
   // ── private ──────────────────────────────────────────────────────────────
-
-  async _loadAclSeed() {
-    if (this._aclSeed) return this._aclSeed;
-    const res = await fetch(ACL_SEED_URL);
-    if (!res.ok) throw new Error(`Failed to load role-drive-acl seed: ${res.status}`);
-    this._aclSeed = await res.json();
-    return this._aclSeed;
-  }
 
   async _requireRoot() {
     const rootId = await this._findRoot();
@@ -242,17 +230,8 @@ function _isNotAuthorizedToChild(err) {
   return err?.status === 403 && String(err?.message || '').includes(REASON_NOT_AUTH_CHILD);
 }
 
-function _resolveAclEntries(seed, role, salesPrefix) {
-  const prefix = salesPrefix || '';
-  return (seed[role] || []).map((e) => ({
-    path:   e.path.split(SALES_PREFIX_TOKEN).join(prefix),
-    access: e.access,
-    type:   e.type ?? ACL_TYPE_FOLDER,
-  }));
-}
-
 function _aclHas(acl, entry) {
-  return acl.some((e) => e.path === entry.path && e.access === entry.access && e.type === entry.type);
+  return acl.some((e) => e.path === entry.path && e.access === entry.access);
 }
 
 /// F-24-06: shapes ACL entries into user-audit-log.jsonl drive_ops records. Grant vs revoke
@@ -282,17 +261,17 @@ async function resolvePathToFolderId(driveApi, rootId, path) {
 }
 
 // F-24-08 D-02: both call sites (assignRole/changeRole) always pass an explicit resolved
-// salesPrefix (string or null) — never omit it — so an explicit null here means "this role has
-// no sales prefix" and must be written as-is, not silently backfilled from the stale existing
+// userPrefix (string or null) — never omit it — so an explicit null here means "this role has
+// no fork prefix" and must be written as-is, not silently backfilled from the stale existing
 // record (that backfill previously kept an old SalesRep prefix alive after demoting to a role
 // that shouldn't carry one).
-function _buildUserRecord(existing, email, role, salesPrefix) {
+function _buildUserRecord(existing, email, role, userPrefix) {
   return {
     email,
     display_name: existing?.display_name || email,
     role,
-    sales_prefix: salesPrefix,
-    created_at:   existing?.created_at || new Date().toISOString(),
-    active:       true,
+    user_prefix: userPrefix,
+    created_at:  existing?.created_at || new Date().toISOString(),
+    active:      true,
   };
 }

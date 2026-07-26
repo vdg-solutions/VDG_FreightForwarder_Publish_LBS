@@ -7,6 +7,7 @@ import {
 import { isManager }  from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { t } from '../../i18n/index.js';
 
 const SHEETJS_CDN      = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
 const MONTH_COUNT_BACK = 12;
@@ -51,11 +52,11 @@ function renderChecklist(root, results) {
   tbody.innerHTML = results.map((r) => `
     <tr class="border-t border-slate-100">
       <td class="px-4 py-2 text-base">${_checkIcon(r.severity, r.failCount)}</td>
-      <td class="px-4 py-2 text-sm text-slate-700">${r.label}</td>
+      <td class="px-4 py-2 text-sm text-slate-700">${t('close_period.check.' + r.id)}</td>
       <td class="px-4 py-2 text-sm font-mono ${_checkClass(r.severity, r.failCount)}">${r.failCount}</td>
       <td class="px-4 py-2">
         ${r.failCount > 0 ? `<button data-view-check="${r.id}"
-          class="text-xs text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500">View</button>` : ''}
+          class="text-xs text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500">${t('close_period.action.view')}</button>` : ''}
       </td>
     </tr>`).join('');
 
@@ -87,9 +88,9 @@ function renderLockBanner(root, period) {
   if (lock.locked) {
     banner.className = 'mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-center justify-between';
     banner.innerHTML = `
-      <span>🔒 Period <strong>${period}</strong> is locked — closed by ${lock.record.closed_by}</span>
+      <span>🔒 ${t('close_period.banner.locked', { p: period, u: lock.record.closed_by })}</span>
       <button id="btn-reopen" class="ml-4 px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 focus-visible:ring-2 focus-visible:ring-blue-500"
-              aria-label="Reopen period">Reopen</button>`;
+              aria-label="${t('close_period.action.reopen')}">${t('close_period.action.reopen')}</button>`;
   } else {
     banner.className = 'hidden';
     banner.innerHTML = '';
@@ -150,14 +151,14 @@ export async function render(root) {
     <div class="p-6 space-y-5 max-w-[860px] mx-auto">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div class="text-base font-semibold text-slate-900">Period Close</div>
-          <div class="text-xs text-slate-500">Financial lock · admin only</div>
+          <div class="text-base font-semibold text-slate-900">${t('close_period.title')}</div>
+          <div class="text-xs text-slate-500">${t('close_period.subtitle')}</div>
         </div>
         <div class="flex gap-2">
           <button id="btn-export"
             class="px-3 py-1.5 text-xs rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 btn-export
                    focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Export locked report">Export locked report</button>
+            aria-label="${t('close_period.action.export')}">${t('close_period.action.export')}</button>
         </div>
       </div>
 
@@ -165,52 +166,52 @@ export async function render(root) {
 
       <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-slate-700" for="period-select">Period</label>
+          <label class="text-sm font-medium text-slate-700" for="period-select">${t('close_period.label.period')}</label>
           <select id="period-select"
             class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Select period">
+            aria-label="${t('close_period.label.period')}">
           </select>
           <button id="btn-run-checks"
             class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 text-white hover:bg-slate-900 focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Run pre-close checks">Run pre-close checks</button>
+            aria-label="${t('close_period.action.run_checks')}">${t('close_period.action.run_checks')}</button>
         </div>
 
         <table class="w-full text-sm" role="grid">
           <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase">
             <tr>
               <th class="px-4 py-2 text-left w-8" scope="col"></th>
-              <th class="px-4 py-2 text-left" scope="col">Check</th>
-              <th class="px-4 py-2 text-left w-24" scope="col">Failing</th>
+              <th class="px-4 py-2 text-left" scope="col">${t('close_period.col.check')}</th>
+              <th class="px-4 py-2 text-left w-24" scope="col">${t('close_period.col.failing')}</th>
               <th class="px-4 py-2 w-16" scope="col"></th>
             </tr>
           </thead>
           <tbody id="check-tbody">
-            <tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs">Run checks to begin</td></tr>
+            <tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-xs">${t('close_period.empty')}</td></tr>
           </tbody>
         </table>
 
         <div class="flex items-center gap-3">
           <button id="btn-proceed" disabled
             class="px-4 py-2 text-sm rounded-lg bg-slate-200 text-slate-400 cursor-not-allowed"
-            aria-label="Proceed to close">Proceed to close</button>
-          <span class="text-xs text-slate-400">All warn-level checks must pass</span>
+            aria-label="${t('close_period.action.proceed')}">${t('close_period.action.proceed')}</button>
+          <span class="text-xs text-slate-400">${t('close_period.hint.must_pass')}</span>
         </div>
       </div>
 
       <!-- Reopen form (hidden) -->
       <div id="reopen-form" class="hidden bg-white rounded-xl border border-slate-200 p-5 space-y-3">
-        <div class="text-sm font-medium text-slate-800">Reason for reopening</div>
+        <div class="text-sm font-medium text-slate-800">${t('close_period.reopen.title')}</div>
         <textarea id="reopen-reason" rows="3" maxlength="${REASON_MAX_CHARS}"
-          placeholder="Required — describe the business reason"
+          placeholder="${t('close_period.reopen.placeholder')}"
           class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          aria-label="Reopen reason"></textarea>
+          aria-label="${t('close_period.reopen.title')}"></textarea>
         <div class="flex gap-2">
           <button id="btn-confirm-reopen"
             class="px-4 py-2 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Confirm reopen">Confirm reopen</button>
+            aria-label="${t('close_period.reopen.confirm')}">${t('close_period.reopen.confirm')}</button>
           <button id="btn-cancel-reopen"
             class="px-4 py-2 text-xs rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Cancel">Cancel</button>
+            aria-label="${t('close_period.reopen.cancel')}">${t('close_period.reopen.cancel')}</button>
         </div>
       </div>
     </div>`;
@@ -231,16 +232,16 @@ export async function render(root) {
   root.querySelector('#btn-run-checks').addEventListener('click', async () => {
     if (!repo || !_selectedPeriod) return;
     const btn = root.querySelector('#btn-run-checks');
-    btn.textContent = 'Running…';
+    btn.textContent = t('close_period.status.running');
     btn.disabled    = true;
     try {
       _checkResults = await runPreCloseChecks(repo, _selectedPeriod);
       renderChecklist(root, _checkResults);
     } catch (err) {
       console.error('[period-close] checks failed:', err); // DEV
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: 'Check failed: ' + err.message } }));
+      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: t('close_period.toast.check_failed') + ': ' + err.message } }));
     } finally {
-      btn.textContent = 'Run pre-close checks';
+      btn.textContent = t('close_period.action.run_checks');
       btn.disabled    = false;
     }
   });
@@ -249,10 +250,10 @@ export async function render(root) {
   root.querySelector('#btn-proceed').addEventListener('click', async () => {
     if (!_selectedPeriod || !_canProceed(_checkResults)) return;
     const ok = await showConfirm({
-      title: `Close period ${_selectedPeriod}?`,
-      body:  'This will lock all shipments.',
-      confirmLabel: 'Close period',
-      cancelLabel:  'Cancel',
+      title: t('close_period.confirm.title', { p: _selectedPeriod }),
+      body:  t('close_period.confirm.body'),
+      confirmLabel: t('close_period.confirm.ok'),
+      cancelLabel:  t('close_period.confirm.cancel'),
       destructive:  true,
     });
     if (!ok) return;
@@ -261,7 +262,7 @@ export async function render(root) {
       _closedPeriods.add(_selectedPeriod);
       renderPeriodSelect(root, months, _closedPeriods);
       renderLockBanner(root, _selectedPeriod);
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: `Period ${_selectedPeriod} closed` } }));
+      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t('close_period.toast.closed', { p: _selectedPeriod }) } }));
     } catch (err) {
       console.error('[period-close] close failed:', err); // DEV
       window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: err.message } }));
@@ -287,7 +288,7 @@ export async function render(root) {
         renderPeriodSelect(root, months, _closedPeriods);
         renderLockBanner(root, _selectedPeriod);
         root.querySelector('#reopen-form').classList.add('hidden');
-        window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: `Period ${_selectedPeriod} reopened` } }));
+        window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('close_period.toast.reopened', { p: _selectedPeriod }) } }));
       }).catch((err) => {
         console.error('[period-close] reopen failed:', err); // DEV
         window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: err.message } }));

@@ -3,6 +3,12 @@
 import { clearDriveScopeGrant } from './google-oauth.js';
 import { globalOwnerQuery, dedupeGlobalOwnerFolders, moveToParent } from './drive-folder-dedup.js';
 import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
+import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive, sharedSilentRefresh, silentBootstrapToken } from './access-token.js';
+
+// F-19-72: token lifecycle moved to access-token.js (350-line cap) — re-exported here so
+// existing importers (token-refresh.js, f-29-13-bounded-silent-refresh.test.mjs) keep resolving.
+// F-19-84: sharedSilentRefresh + silentBootstrapToken re-exported the same way.
+export { refreshAccessTokenSilently, reconnectDriveInteractive, sharedSilentRefresh, silentBootstrapToken };
 
 // F-24-14: globalOwnerQuery re-exported so boot can re-count owner-owned folders after
 // findWorkspaceRoot resolves, to detect duplicates the F-24-13 auto-heal couldn't safely delete.
@@ -11,17 +17,13 @@ export { moveToParent, globalOwnerQuery };
 // F-17-03: findWorkspaceRoot/listChildFolder/renameFolder/WORKSPACE_NAME moved to
 // workspace-root.js (350-line cap) — re-exported here so `driveApi.findWorkspaceRoot`
 // keeps resolving for every existing caller.
-export { findWorkspaceRoot, listChildFolder, renameFolder, WORKSPACE_NAME } from './workspace-root.js';
+export { findWorkspaceRoot, findSharedSubfolder, listChildFolder, renameFolder, WORKSPACE_NAME } from './workspace-root.js';
 
 const DRIVE_API_BASE          = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE       = 'https://www.googleapis.com/upload/drive/v3';
 const FOLDER_MIME             = 'application/vnd.google-apps.folder';
 const RATE_LIMIT_BASE_MS      = 1_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
-const ACCESS_TOKEN_KEY        = 'vdg.auth.access_token';
-const ACCESS_TOKEN_EXP_KEY    = 'vdg.auth.access_token_exp';
-const TOKEN_EXPIRY_BUFFER_MS  = 60_000; // refresh 60s before expiry
-const SILENT_REFRESH_TIMEOUT_MS = 10_000;   // AC-03 — GIS prompt:'' can no-op forever; bound it
 
 // single-flight guard — prevents multiple reloads on concurrent 401s
 let _reauthInflight = false;
@@ -45,54 +47,6 @@ export class ConcurrencyError extends Error {
     this.attempts = attempts;
   }
 }
-
-// ── token management ──────────────────────────────────────────────────────────
-
-export async function getAccessToken() {
-  const exp   = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  if (token && Date.now() + TOKEN_EXPIRY_BUFFER_MS < exp) return token;
-
-  // Silent refresh — first-time consent already granted at sign-in
-  try {
-    return await refreshAccessTokenSilently();
-  } catch (err) {
-    _dispatchNeedsReconnect();          // was signOut()+vdg:auth-expired — no blind sign-out
-    throw err;
-  }
-}
-
-function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); }
-
-// AC-03 — consolidated GIS token request, shared by silent + interactive paths. A settled
-// latch races the callback against timeoutMs (0 = unbounded) so a non-settling GIS callback
-// can never hang the caller (kills the banned silent-await).
-function _requestAccessToken(prompt, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    if (!window.google?.accounts?.oauth2) { reject(new Error('GIS oauth2 not loaded')); return; }
-    let settled = false;
-    const timer = timeoutMs
-      ? setTimeout(() => { if (!settled) { settled = true; reject(new Error('silent-refresh-timeout')); } }, timeoutMs)
-      : null;
-    const done = (fn, arg) => { if (!settled) { settled = true; if (timer) clearTimeout(timer); fn(arg); } };
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: window.__vdg_google_client_id || '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com',
-      scope:     'https://www.googleapis.com/auth/drive.file',
-      callback:  (resp) => {
-        if (resp.error) { done(reject, new Error(resp.error)); return; }
-        const expMs = Date.now() + (resp.expires_in || 3600) * 1000;
-        localStorage.setItem(ACCESS_TOKEN_KEY,     resp.access_token);
-        localStorage.setItem(ACCESS_TOKEN_EXP_KEY, String(expMs));
-        done(resolve, resp.access_token);
-      },
-    });
-    client.requestAccessToken({ prompt });
-  });
-}
-
-function _silentRefresh() { return _requestAccessToken('', SILENT_REFRESH_TIMEOUT_MS); }          // AC-03 bounded
-export function refreshAccessTokenSilently() { return _silentRefresh(); }                          // scheduler + getAccessToken + 401
-export function reconnectDriveInteractive()  { return _requestAccessToken('consent', 0); }         // AC-06 interactive
 
 // ── core fetch wrapper ────────────────────────────────────────────────────────
 
@@ -229,8 +183,8 @@ async function _dedupeSameNameFolders(all, fallback) {
   return sorted[0];
 }
 
-// F-24-07 partial: some ACL paths (e.g. users/{sales_prefix}) don't exist yet the first time a
-// SalesRep is added — create every missing segment under parentId so assignRole's folder lookup
+// F-24-07 partial: some ACL paths (e.g. users/{user_prefix}) don't exist yet the first time a
+// user is added — create every missing segment under parentId so assignRole's folder lookup
 // (resolvePathToFolderId) doesn't throw "ACL path not found".
 export async function getOrCreateFolderPath(parentId, path) {
   let current = parentId;

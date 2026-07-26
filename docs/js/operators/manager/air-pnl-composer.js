@@ -1,5 +1,8 @@
 // Air P&L composer — chargeable-weight basis (F-16-07)
-// Pure, no I/O. Mirrors pnl-composer.js pattern for sea.
+// Pure, no I/O (sole exception: the sales-rep sentinel branch below reads
+// window.__vdg_current_user to resolve a persisted role token, F-19-66). Mirrors pnl-composer.js.
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { t } from '../../i18n/index.js';
 
 const ZERO_GUARD = 0; // sentinel: div-by-zero fallback
 
@@ -31,7 +34,10 @@ function getPeriod(s)       {
   const d = new Date(etd);
   return d.toLocaleString('default', { year: 'numeric', month: 'short' });
 }
-function getSales(s)     { return s.sales_rep || s.SalesRep || '—'; }
+function getSales(s) {
+  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  return resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
+}
 function getCustomer(s)  { return s.customer  || s.Customer || '—'; }
 
 function dimValue(s, dim) {

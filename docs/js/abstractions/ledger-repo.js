@@ -9,7 +9,7 @@ export class LedgerRepo {
   /** @returns {Promise<object[]>} */
   async listLegs(year, acc_code, dateFrom, dateTo) { throw new Error('abstract'); }
 
-  /** @returns {Promise<object[]>} */
+  /** F-19-78: each returned leg carries its account_code (additive). @returns {Promise<object[]>} */
   async listAllLegsInEntry(entry_id) { throw new Error('abstract'); }
 
   /** @returns {Promise<{debit_sum: number, credit_sum: number, balance: number}>} */
@@ -29,4 +29,21 @@ export class LedgerRepo {
 
   /** @returns {Promise<void>} F-23-03: record entry_ids written for this dedup key */
   async recordPosted(postedIndex, entry_ids) { throw new Error('abstract'); }
+
+  /** F-29-24: overwrite a persisted leg in place, keyed on (entry_id, leg_idx). Repost-only —
+   *  never invents a leg: throws if no persisted leg matches (entry_id, leg_idx). Same (year,
+   *  acc_code, leg) shape as appendLeg for symmetry; single-leg granularity (not a whole-file
+   *  rewrite) keeps the write's blast radius identical to a normal post.
+   *  @returns {Promise<{etag: string}>} */
+  async replaceLeg(year, acc_code, leg) { throw new Error('abstract'); }
+
+  /** F-29-24: append one repost-run record to repost-log.jsonl (reconciliation-log.jsonl
+   *  precedent, AC-03). Always appends — no dedup, one row per run including zero-op runs.
+   *  @returns {Promise<{etag: string}>} */
+  async appendRepostRecord(record) { throw new Error('abstract'); }
+
+  /** F-29-24: most recent repost-log record by run_at, or null if none yet (manager review /
+   *  panel status line, mirrors getLastReconciliation()).
+   *  @returns {Promise<object|null>} */
+  async getLastRepost() { throw new Error('abstract'); }
 }

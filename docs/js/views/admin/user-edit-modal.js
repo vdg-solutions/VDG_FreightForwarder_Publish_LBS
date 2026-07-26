@@ -1,9 +1,11 @@
 // user-edit-modal.js — Edit User modal for the admin Users view (F-24-04).
 // Role change cascades Drive ACL via RoleAssignmentService.changeRole; a display_name-only
 // edit is a plain repo upsert (backlog: "Change display_name (upsert only)").
+// F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
+// widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
 import { t } from '../../i18n/index.js';
-import { ROLE_VALUES, ROLE_SALES_REP, deriveSalesPrefix } from '../../operators/manager/users-view-composer.js';
+import { ROLE_VALUES, ROLE_SALES_REP, deriveUserPrefix } from '../../operators/manager/users-view-composer.js';
 
 const ROLE_LABEL_KEYS = {
   Manager:    'admin.users.role.manager',
@@ -42,8 +44,8 @@ export function openEditUserModal(user, { onSaved } = {}) {
           <select id="edit-role" class="mt-1 w-full border rounded px-3 py-1.5 text-xs">
             ${ROLE_VALUES.map((r) => `<option value="${r}" ${r === user.role ? 'selected' : ''}>${t(ROLE_LABEL_KEYS[r])}</option>`).join('')}
           </select></label>
-        <label id="edit-prefix-wrap" class="block text-xs text-slate-600 ${user.role === ROLE_SALES_REP ? '' : 'hidden'}">${t('admin.users.column.sales_prefix')}
-          <input id="edit-prefix" value="${user.sales_prefix || ''}"
+        <label id="edit-prefix-wrap" class="block text-xs text-slate-600 ${user.role === ROLE_SALES_REP ? '' : 'hidden'}">${t('admin.users.column.user_prefix')}
+          <input id="edit-prefix" value="${user.user_prefix || ''}"
                  class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
       </div>
       <div id="edit-err" class="text-xs text-red-600 hidden"></div>
@@ -64,7 +66,7 @@ async function _onSubmit(overlay, user, onSaved) {
   const newName   = overlay.querySelector('#edit-name').value.trim();
   const newRole   = overlay.querySelector('#edit-role').value;
   const prefixRaw = overlay.querySelector('#edit-prefix').value.trim();
-  const newPrefix = newRole === ROLE_SALES_REP ? (prefixRaw || deriveSalesPrefix(user.email)) : null;
+  const newPrefix = newRole === ROLE_SALES_REP ? (prefixRaw || deriveUserPrefix(user.email)) : null;
 
   if (!newName) return showError(overlay, t('admin.users.error.name_required'));
 
@@ -72,7 +74,7 @@ async function _onSubmit(overlay, user, onSaved) {
   const userRepo     = getUserRepo();
   if (!roleService || !userRepo) return showError(overlay, 'Workspace not ready');
 
-  const roleChanged = newRole !== user.role || newPrefix !== (user.sales_prefix || null);
+  const roleChanged = newRole !== user.role || newPrefix !== (user.user_prefix || null);
   const nameChanged = newName !== (user.display_name || '');
 
   const submitBtn = overlay.querySelector('#edit-submit');
@@ -87,7 +89,7 @@ async function _onSubmit(overlay, user, onSaved) {
     }
     if (nameChanged) {
       await userRepo.upsert({
-        email: user.email, display_name: newName, role: newRole, sales_prefix: newPrefix,
+        email: user.email, display_name: newName, role: newRole, user_prefix: newPrefix,
         active: true, created_at: user.created_at,
       });
     }

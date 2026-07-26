@@ -3,10 +3,16 @@
 
 import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
-import { t } from '../i18n/index.js';
+import { t, currentLocale } from '../i18n/index.js';
 import { safeAwait } from '../util/safe-await.js';
+import { resolveShipmentState } from '../util/shipment-state-resolver.js';
+import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
+import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
+import { statusBadgeLabel } from '../util/status-i18n.js';
 
 const LOAD_TIMEOUT_MS = 12000;
+const CLOSED_LIKE_STATES = ['Closed', 'Delivered'];
+const MONTH_YEAR_FMT = { month: 'long', year: 'numeric' };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,7 +79,7 @@ function shipmentRowHtml(s) {
       <td class="px-3 py-2">${s.customer || '—'}</td>
       <td class="px-3 py-2 font-mono">${s.pol || '—'} → ${s.pod || '—'}</td>
       <td class="px-3 py-2">${s.etd || '—'}</td>
-      <td class="px-3 py-2"><span class="${stateCls}">${s.state || s.status || '—'}</span></td>
+      <td class="px-3 py-2"><span class="${stateCls}">${statusBadgeLabel('shipment', s.state) || '—'}</span></td>
       <td class="px-3 py-2 text-right font-semibold ${posCls}">${fmtVnd(margin)}</td>
       <td class="px-3 py-2">
         <a href="${budgetHref}" class="text-xs text-slate-500 hover:text-blue-600" title="${t('sales_me.grid.print_budget')}">⎙</a>
@@ -111,9 +117,7 @@ function commissionHtml(stats) {
   const net    = gross - stats.advances;
   const netCls = net >= 0 ? 'text-emerald-700' : 'text-red-600';
   const now    = new Date();
-  const mo     = String(now.getMonth() + 1).padStart(2, '0');
-  const year   = now.getFullYear();
-  const monthStr = `(Tháng ${mo}/${year})`;
+  const monthStr = `(${new Intl.DateTimeFormat(currentLocale(), MONTH_YEAR_FMT).format(now)})`;
   return `
     <div class="bg-white rounded-xl border border-slate-200 p-5">
       <div class="text-sm font-semibold text-slate-900 mb-3">${t('sales_me.commission.title').replace('(MTD)', monthStr)}</div>
@@ -147,12 +151,19 @@ async function loadMyData(salesId) {
   const repo = window.__vdg_repo;
   if (!repo) return EMPTY_DATA;
 
-  const [allShipments, allLines, allCashFlows, allCommEntries] = await Promise.all([
+  const [allShipments, allLines, allCashFlows, allCommEntries, aliasRows] = await Promise.all([
     repo.list('shipment', (s) => (s.sales_rep || '').toLowerCase() === salesId.toLowerCase()),
     repo.list('pnl_line').catch(() => []),
     repo.list('cash_flow_entry').catch(() => []),
     repo.list('commission_entry').catch(() => []),
+    ensureShipmentStateAliases(repo), // DEFECT-1: seed-on-first-read (sales rep never opens master view)
   ]);
+
+  // F-18-11: resolve once, at the source — same class of bug as the Shipments grid's
+  // pre-fix status-badge (raw string badge + raw state-or-status KPI filter read).
+  for (const s of allShipments) {
+    s.state = resolveShipmentState(s.state || s.status, aliasRows) || UNKNOWN_STATE;
+  }
 
   const mtd = allShipments.filter(mtdFilter);
   const mtdRefs = new Set(mtd.map(s => s.shipment_ref || s.ref));
@@ -253,9 +264,8 @@ async function populateView(root, salesId, user) {
   }
 
   const { all, pending, stats } = data;
-  const activeShipments = all.filter((s) =>
-    !['Closed', 'Delivered'].includes(s.state || s.status || '')
-  );
+  // F-18-11: `all` shipments already carry a resolved canonical `state` (set in loadMyData).
+  const activeShipments = all.filter((s) => !CLOSED_LIKE_STATES.includes(s.state));
 
   const emptyActive = `${t('sales_me.empty_active')} <a href="#/sales/me/pnl/new" class="text-blue-500 hover:underline">${t('sales_me.quick_add')}</a>`;
 

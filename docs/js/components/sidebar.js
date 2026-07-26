@@ -39,9 +39,13 @@ const V1_ITEMS = [
   { group: 'masters',   route: '/masters/units-of-measure', labelKey: 'nav.masters.units',         icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   // E-26 F-26-04: ocean-carrier master, reachable from Danh mục like local-charges/units
   { group: 'masters',   route: '/masters/ocean-carriers',   labelKey: 'nav.masters.ocean_carriers', icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // F-28-15: ocean-tariff priced kind, carrier-joined view — writers mirror ocean-carriers
+  { group: 'masters',   route: '/masters/ocean-tariff',     labelKey: 'nav.masters.ocean_tariff',   icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   // F-29-10: FX admin was route-only (no sidebar entry), so the AC-04 no-rate hint
   // pointed nowhere — mirrors the units/ocean-carriers Danh mục entries, Manager-only.
   { group: 'masters',   route: '/manager/fx-rates',         labelKey: 'nav.masters.fx_rates',       icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  // F-18-11: alias-editor only (writers manager-only, Q3) — no browse value for SalesRep.
+  { group: 'masters',   route: '/masters/shipment-states',  labelKey: 'nav.masters.shipment_states', icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER] },
 ];
 
 const V1_GROUPS = [
@@ -241,7 +245,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 102704e">v0.1.58</span>
+        <span class="font-mono whitespace-nowrap" title="build 332d73e">v0.1.59</span>
       </div>
     `;
   }

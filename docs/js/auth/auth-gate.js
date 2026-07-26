@@ -5,13 +5,14 @@
 //   - probe folder users/<email-prefix>/ → 200 OK = that sales rep
 //   - none → not provisioned (admin must invite)
 
-import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant } from './google-oauth.js';
-import { findWorkspaceRoot, listChildFolder, DriveApiError } from './drive-api.js';
+import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, hydrateSessionFromToken } from './google-oauth.js';
+import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError, silentBootstrapToken } from './drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
+import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
 
-const MANAGER_ID            = '__MANAGER__';
+const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
 const NOT_PROVISIONED_ID    = 'NOT_PROVISIONED';
 const ADMIN_FOLDER_NAME     = 'admin';
@@ -79,36 +80,46 @@ async function _probeInner(user) {
     return NOT_PROVISIONED_ID;
   }
 
+  const prefix = emailPrefix(user.email);
+
+  // Manager path (root-first, UNCHANGED): only a root OWNER resolves a rootId + admin/ child.
+  // A null rootId no longer short-circuits — an employee never owns the root, so fall through.
   const rootId = await findWorkspaceRoot(wsName);
-  if (!rootId) {
-    _resolvedRole = NOT_PROVISIONED_ID;
-    return NOT_PROVISIONED_ID;
+  if (rootId) {
+    // Probe admin/ first
+    try {
+      const adminFolder = await listChildFolder(rootId, ADMIN_FOLDER_NAME);
+      if (adminFolder) {
+        _resolvedRole = MANAGER_ID;
+        writeCachedRole(user.email, MANAGER_ID);
+        return MANAGER_ID;
+      }
+    } catch (_) { /* probe missed — fall through to users/ check */ }
+
+    // Probe users/<email-prefix>/
+    try {
+      const usersRoot = await listChildFolder(rootId, USERS_FOLDER_NAME);
+      if (usersRoot) {
+        const userFolder = await listChildFolder(usersRoot.id, prefix);
+        if (userFolder) {
+          const role = prefix.toUpperCase();
+          _resolvedRole = role;
+          writeCachedRole(user.email, role);
+          return role;
+        }
+      }
+    } catch (_) { /* probe missed — fall through to NOT_PROVISIONED */ }
   }
 
-  // Probe admin/ first
-  try {
-    const adminFolder = await listChildFolder(rootId, ADMIN_FOLDER_NAME);
-    if (adminFolder) {
-      _resolvedRole = MANAGER_ID;
-      writeCachedRole(user.email, MANAGER_ID);
-      return MANAGER_ID;
-    }
-  } catch (_) { /* probe missed — fall through to users/ check */ }
-
-  // Probe users/<email-prefix>/
-  const prefix = emailPrefix(user.email);
-  try {
-    const usersRoot = await listChildFolder(rootId, USERS_FOLDER_NAME);
-    if (usersRoot) {
-      const userFolder = await listChildFolder(usersRoot.id, prefix);
-      if (userFolder) {
-        const role = prefix.toUpperCase();
-        _resolvedRole = role;
-        writeCachedRole(user.email, role);
-        return role;
-      }
-    }
-  } catch (_) { /* probe missed — fall through to NOT_PROVISIONED */ }
+  // Employee path (subfolder-first): users/{prefix} fork is shared directly to them (F-27-01),
+  // visible via sharedWithMe without the root. Decoupled — resolves even when rootId is null.
+  const subfolderId = await findSharedSubfolder(prefix);
+  if (subfolderId) {
+    const role = prefix.toUpperCase();
+    _resolvedRole = role;
+    writeCachedRole(user.email, role);
+    return role;
+  }
 
   _resolvedRole = NOT_PROVISIONED_ID;
   writeCachedRole(user.email, NOT_PROVISIONED_ID);
@@ -140,19 +151,36 @@ export function clearRoleCache() {
 
 let _loginMounted = false;
 
+// F-19-01: safeAwait guard — detectRoleViaDrive has internal 5s race; outer 8s catches stalls
+async function _detectRoleOrThrow(user, tag) {
+  const roleResult = await safeAwait(detectRoleViaDrive(user), AUTH_DETECT_ROLE_TIMEOUT_MS, null, tag);
+  if (!roleResult.ok) throw roleResult.error;
+}
+
 export async function requireAuth(onSignedIn) {
   const user = getCurrentUser();
   if (user) {
-    // F-19-01: safeAwait guard — detectRoleViaDrive has internal 5s race; outer 8s catches stalls
-    const roleResult = await safeAwait(
-      detectRoleViaDrive(user),
-      AUTH_DETECT_ROLE_TIMEOUT_MS,
-      null,
-      'auth-gate:requireAuth',
-    );
-    if (!roleResult.ok) throw roleResult.error;
+    await _detectRoleOrThrow(user, 'auth-gate:requireAuth');
     await onSignedIn(user);
     return;
+  }
+
+  // F-19-84 AC-05 — id_token missing/expired but the underlying Google session may still be
+  // live: attempt a bounded silent bootstrap (re-mint id_token + userinfo, same hydrate as
+  // sign-in/reconnect) before dumping to login. Gated on the existing access_token_exp marker
+  // so a first-time visitor never triggers a GIS call.
+  if (wasPreviouslySignedIn()) {
+    try {
+      const resp  = await silentBootstrapToken();
+      const boot  = await hydrateSessionFromToken(resp);
+      if (boot) {
+        await _detectRoleOrThrow(boot, 'auth-gate:requireAuth-bootstrap');
+        await onSignedIn(boot);
+        return;
+      }
+    } catch {
+      // live Google session gone/revoked — fall through to login, same as today
+    }
   }
 
   // No user — defensive clear of any orphan auth/role keys (F-15-50 AC-05).
@@ -163,13 +191,7 @@ export async function requireAuth(onSignedIn) {
   if (!_loginMounted) {
     _loginMounted = true;
     await mountLoginScreen(async (u) => {
-      const roleResult = await safeAwait(
-        detectRoleViaDrive(u),
-        AUTH_DETECT_ROLE_TIMEOUT_MS,
-        null,
-        'auth-gate:loginCb',
-      );
-      if (!roleResult.ok) throw roleResult.error;
+      await _detectRoleOrThrow(u, 'auth-gate:loginCb');
       onSignedIn(u);
     });
   }
@@ -197,13 +219,7 @@ window.addEventListener('vdg:auth-signin-request', () => {
   if (_loginMounted) return;
   _loginMounted = true;
   mountLoginScreen(async (u) => {
-    const roleResult = await safeAwait(
-      detectRoleViaDrive(u),
-      AUTH_DETECT_ROLE_TIMEOUT_MS,
-      null,
-      'auth-gate:signin-request',
-    );
-    if (!roleResult.ok) throw roleResult.error;
+    await _detectRoleOrThrow(u, 'auth-gate:signin-request');
     location.reload();
   });
 });

@@ -2,6 +2,8 @@
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { DIM_OPTIONS } from '../operators/manager/pnl-composer.js';
+import { t } from '../i18n/index.js';
+import { dimLabel } from '../util/pnl-dim-i18n.js';
 
 const DEFAULT_DIMS = ['period', 'sales_rep'];
 
@@ -18,7 +20,10 @@ function fmtPct(n) { return `${Number(n || 0).toFixed(1)}%`; }
 function deltaArrow(curr, prev) {
   if (prev == null || prev === 0) return '—';
   const delta = ((curr - prev) / Math.abs(prev)) * 100;
-  if (delta > 0) return `<span class="text-emerald-600">▲ +${delta.toFixed(1)}%</span>`;
+  const isPositive = delta > 0;
+  if (isPositive) {
+    return `<span class="text-emerald-600">▲ +${delta.toFixed(1)}%</span>`;
+  }
   return `<span class="text-red-500">▼ ${delta.toFixed(1)}%</span>`;
 }
 
@@ -77,21 +82,21 @@ class VdgPivotTable extends LitElement {
   _renderDimSelectors() {
     return html`
       <div class="flex items-center gap-3 mb-3">
-        <label class="text-xs text-slate-500">Group by</label>
+        <label class="text-xs text-slate-500">${t('pivot.group_by')}</label>
         <select
           class="text-xs border border-slate-200 rounded px-2 py-1"
           @change="${(e) => { this._dim0 = e.target.value; this._emitDimChange(); }}"
         >
           ${DIM_OPTIONS.map((d) => html`
-            <option value="${d}" ?selected="${d === this._dim0}">${d.replace('_', ' ')}</option>`)}
+            <option value="${d}" ?selected="${d === this._dim0}">${dimLabel(d)}</option>`)}
         </select>
-        <label class="text-xs text-slate-500">then by</label>
+        <label class="text-xs text-slate-500">${t('pivot.then_by')}</label>
         <select
           class="text-xs border border-slate-200 rounded px-2 py-1"
           @change="${(e) => { this._dim1 = e.target.value; this._emitDimChange(); }}"
         >
           ${DIM_OPTIONS.map((d) => html`
-            <option value="${d}" ?selected="${d === this._dim1}">${d.replace('_', ' ')}</option>`)}
+            <option value="${d}" ?selected="${d === this._dim1}">${dimLabel(d)}</option>`)}
         </select>
       </div>`;
   }
@@ -99,19 +104,19 @@ class VdgPivotTable extends LitElement {
   _renderHeaderRow() {
     return html`
       <tr class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider">
-        <th class="px-3 py-2 text-left sticky left-0 bg-slate-50">${this._dim0}</th>
-        <th class="px-3 py-2 text-left">${this._dim1}</th>
+        <th class="px-3 py-2 text-left sticky left-0 bg-slate-50">${dimLabel(this._dim0)}</th>
+        <th class="px-3 py-2 text-left">${dimLabel(this._dim1)}</th>
         <th class="px-3 py-2 text-right cursor-pointer hover:text-blue-600"
-            @click="${() => {}}">Revenue</th>
-        <th class="px-3 py-2 text-right">Cost</th>
+            @click="${() => {}}">${t('revenue')}</th>
+        <th class="px-3 py-2 text-right">${t('cost')}</th>
         <th class="px-3 py-2 text-right cursor-pointer hover:text-blue-600"
-            >Margin</th>
-        <th class="px-3 py-2 text-right">Margin %</th>
-        <th class="px-3 py-2 text-right"># Ships</th>
-        <th class="px-3 py-2 text-right">Avg Margin</th>
+            >${t('margin')}</th>
+        <th class="px-3 py-2 text-right">${t('margin_pct')}</th>
+        <th class="px-3 py-2 text-right">${t('pivot.ships_count')}</th>
+        <th class="px-3 py-2 text-right">${t('pivot.avg_margin')}</th>
         ${this.showComparison ? html`
-          <th class="px-3 py-2 text-right text-slate-400">Prev Period</th>
-          <th class="px-3 py-2 text-right text-slate-400">YoY</th>` : ''}
+          <th class="px-3 py-2 text-right text-slate-400">${t('pivot.prev_period')}</th>
+          <th class="px-3 py-2 text-right text-slate-400">${t('pivot.yoy')}</th>` : ''}
       </tr>`;
   }
 
@@ -120,7 +125,8 @@ class VdgPivotTable extends LitElement {
     for (const [g0, subMap] of groups) {
       let first = true;
       for (const [g1, row] of subMap) {
-        const marginCls = row.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
+        const marginCls     = row.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
+        const shipmentCount = row.shipment_count;
         trs.push(html`
           <tr class="border-t border-slate-100 hover:bg-blue-50 transition text-xs">
             ${first ? html`
@@ -133,7 +139,7 @@ class VdgPivotTable extends LitElement {
             <td class="px-3 py-2 text-right font-mono ${marginCls} cursor-pointer"
                 @click="${() => this._cellClick(row, 'margin_vnd')}">${fmtVnd(row.margin_vnd)}</td>
             <td class="px-3 py-2 text-right ${marginCls}">${fmtPct(row.margin_pct)}</td>
-            <td class="px-3 py-2 text-right">${row.shipment_count}</td>
+            <td class="px-3 py-2 text-right">${shipmentCount}</td>
             <td class="px-3 py-2 text-right font-mono">${fmtVnd(row.avg_margin)}</td>
             ${this.showComparison ? html`
               <td class="px-3 py-2 text-right text-[11px]">
@@ -161,17 +167,18 @@ class VdgPivotTable extends LitElement {
       },
       { revenue_vnd: 0, cost_vnd: 0, margin_vnd: 0, shipment_count: 0 },
     );
-    const pct = totals.revenue_vnd > 0
+    const pct           = totals.revenue_vnd > 0
       ? (totals.margin_vnd / totals.revenue_vnd) * 100 : 0;
-    const cls = totals.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
+    const cls           = totals.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
+    const shipmentTotal = totals.shipment_count;
     return html`
       <tr class="border-t-2 border-slate-300 bg-slate-50 text-xs font-semibold">
-        <td class="px-3 py-2 sticky left-0 bg-slate-50" colspan="2">Grand Total</td>
+        <td class="px-3 py-2 sticky left-0 bg-slate-50" colspan="2">${t('pivot.grand_total')}</td>
         <td class="px-3 py-2 text-right font-mono">${fmtVnd(totals.revenue_vnd)}</td>
         <td class="px-3 py-2 text-right font-mono">${fmtVnd(totals.cost_vnd)}</td>
         <td class="px-3 py-2 text-right font-mono ${cls}">${fmtVnd(totals.margin_vnd)}</td>
         <td class="px-3 py-2 text-right ${cls}">${fmtPct(pct)}</td>
-        <td class="px-3 py-2 text-right">${totals.shipment_count}</td>
+        <td class="px-3 py-2 text-right">${shipmentTotal}</td>
         <td></td>
         ${this.showComparison ? html`<td></td><td></td>` : ''}
       </tr>`;
@@ -192,7 +199,7 @@ class VdgPivotTable extends LitElement {
           </table>
         </div>
         ${!this.rows.length ? html`
-          <div class="text-center text-slate-400 text-sm py-10">No data for selected period</div>` : ''}
+          <div class="text-center text-slate-400 text-sm py-10">${t('pivot.no_data')}</div>` : ''}
       </div>`;
   }
 }

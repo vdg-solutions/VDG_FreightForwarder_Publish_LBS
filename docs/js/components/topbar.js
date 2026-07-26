@@ -141,7 +141,7 @@ class VdgTopbar extends LitElement {
   }
 
   _handleSignOut() { window.__vdg_auth?.signOut?.(); location.reload(); }
-  _handleSkipWaiting() { navigator.serviceWorker?.controller?.postMessage({ type: 'SKIP_WAITING' }); window.location.reload(); }
+  _handleReloadForUpdate() { window.location.reload(); } // SW skipWaiting()s on install — no waiting worker to message
   _dismissSwBanner() { sessionStorage.setItem(SW_DISMISS_KEY, '1'); this._swUpdate = false; }
   _handleBellClick() {
     window.dispatchEvent(new CustomEvent('vdg:open-notif-drawer'));
@@ -181,7 +181,7 @@ class VdgTopbar extends LitElement {
     const repo = window.__vdg_repo;
     if (!repo) return;
     
-    window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: 'Đang xử lý dữ liệu, vui lòng chờ...' } }));
+    window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.import.processing') } }));
     try {
       const text = await file.text();
       const data = JSON.parse(text);
@@ -192,14 +192,14 @@ class VdgTopbar extends LitElement {
         await repo.save('shipment', item);
         count++;
         if (count % 500 === 0) {
-          window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: `Đã nhập ${count}/${data.length} lô hàng...` } }));
+          window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.import.progress', { count, total: data.length }) } }));
         }
       }
       
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: `Đã nhập thành công ${count} lô hàng.` } }));
+      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t('topbar.import.success', { count }) } }));
       setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: 'Lỗi khi nhập dữ liệu: ' + err.message } }));
+      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: t('topbar.import.error', { error: err.message }) } }));
     }
     e.target.value = ''; // Reset input
     this._menuOpen = false;
@@ -232,7 +232,7 @@ class VdgTopbar extends LitElement {
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          Nhập dữ liệu (JSON)
+          ${t('topbar.import.menu')}
         </button>
         <input type="file" id="data-upload" accept=".json" class="hidden" @change="${this._handleFileUpload}">
 
@@ -254,7 +254,7 @@ class VdgTopbar extends LitElement {
       <div class="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-xs flex items-center justify-between px-4 py-2">
         <span>${t('topbar.sw_update_body')}</span>
         <div class="flex gap-2">
-          <button @click="${this._handleSkipWaiting}"
+          <button @click="${this._handleReloadForUpdate}"
                   class="px-3 py-1 bg-white text-blue-700 rounded font-medium hover:bg-blue-50">${t('topbar.sw_update_action')}</button>
           <button @click="${this._dismissSwBanner}" class="px-2 py-1 text-blue-100 hover:text-white">✕</button>
         </div>
@@ -280,7 +280,7 @@ class VdgTopbar extends LitElement {
       <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
         <div class="flex items-center gap-3">
           ${this._mobile ? html`
-            <button @click="${() => this._handleHamburger()}" aria-label="Open menu"
+            <button @click="${() => this._handleHamburger()}" aria-label="${t('topbar.aria.open_menu')}"
                     class="w-11 h-11 border-0 box-border flex items-center justify-center rounded-md text-slate-600 hover:bg-slate-100">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
@@ -294,7 +294,7 @@ class VdgTopbar extends LitElement {
         </div>
 
         <div class="flex items-center gap-2">
-          ${this._quotaWarn ? html`<a href="https://one.google.com/storage" target="_blank" rel="noreferrer" class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1 px-2.5 rounded-md text-[11px] font-medium text-red-700 hover:bg-red-50 ring-1 ring-red-200" title="Drive storage > 80%">⚠ Drive quota</a>` : ''}
+          ${this._quotaWarn ? html`<a href="https://one.google.com/storage" target="_blank" rel="noreferrer" class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1 px-2.5 rounded-md text-[11px] font-medium text-red-700 hover:bg-red-50 ring-1 ring-red-200" title="${t('topbar.quota.title')}">⚠ ${t('topbar.quota.label')}</a>` : ''}
           ${renderSyncChip({
             html, state, pending: this._outboxCount, lastSyncMs: this._lastSyncMs, now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
@@ -323,8 +323,8 @@ class VdgTopbar extends LitElement {
               </button>`)}
           </div>
           <button @click="${() => this._handleBellClick()}"
-                  title="${this._notifCount} notification${this._notifCount !== 1 ? 's' : ''}"
-                  aria-label="Notifications — ${this._notifCount} unread"
+                  title="${t('topbar.aria.notif_title', { n: this._notifCount })}"
+                  aria-label="${t('topbar.aria.notif_label', { n: this._notifCount })}"
                   class="relative w-9 h-9 py-0 border-0 box-border rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">
@@ -337,7 +337,7 @@ class VdgTopbar extends LitElement {
           <div class="relative flex items-center h-9 pl-3 ml-1 border-l border-slate-200">
             <button @click="${() => { this._menuOpen = !this._menuOpen; }}"
                     class="flex items-center justify-center h-9 w-9 border-0 box-border rounded-full overflow-hidden hover:ring-2 hover:ring-slate-200 transition focus-visible:ring-2 focus-visible:ring-blue-500"
-                    aria-label="User menu">
+                    aria-label="${t('topbar.aria.user_menu')}">
               ${renderAvatar(user)}
             </button>
             ${this._renderUserMenu(user, salesId)}

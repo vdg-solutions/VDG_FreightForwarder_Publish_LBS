@@ -3,6 +3,7 @@
 import { currentSalesRepId } from '../auth/auth-gate.js';
 import { saveDraft } from '../operators/quote-orchestrator.js';
 import { navigate } from '../router.js';
+import { t } from '../i18n/index.js';
 
 const DEFAULT_VALIDITY_DAYS  = 7;
 const OVERRIDE_THRESHOLD_PCT = 0.15;
@@ -66,7 +67,7 @@ function renderLinesTable(root) {
   tbody.innerHTML = _lines.map((l, i) => `
     <tr data-idx="${i}">
       <td class="px-2 py-1">
-        <input type="text" value="${escHtml(l.description)}" placeholder="Description"
+        <input type="text" value="${escHtml(l.description)}" placeholder="${t('quote_new.ph.description')}"
                class="w-full border rounded px-2 py-1 text-xs" data-field="description" data-idx="${i}" />
       </td>
       <td class="px-2 py-1">
@@ -106,56 +107,56 @@ function renderLinesTable(root) {
 // ── form scaffold ─────────────────────────────────────────────────────────────
 
 function formHtml(presetSales) {
-  const ctOptions = CONTAINER_TYPES.map((t) => `<option value="${t}">${t}</option>`).join('');
+  const ctOptions = CONTAINER_TYPES.map((ct) => `<option value="${ct}">${ct}</option>`).join('');
   return `
     <div class="p-6 max-w-3xl mx-auto">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <div class="text-lg font-semibold text-slate-900">New Quotation</div>
-          <div class="text-xs text-slate-500 mt-0.5">Draft saved immediately — send when ready</div>
+          <div class="text-lg font-semibold text-slate-900">${t('quote_new.title')}</div>
+          <div class="text-xs text-slate-500 mt-0.5">${t('quote_new.subtitle')}</div>
         </div>
-        <a href="#/sales/quote" class="text-sm text-slate-500 hover:text-slate-700">← Back to list</a>
+        <a href="#/sales/quote" class="text-sm text-slate-500 hover:text-slate-700">${t('quote_new.back')}</a>
       </div>
       <div id="override-banner" class="hidden mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        Override &gt;15% — requires manager approval before sending
+        ${t('quote_new.override_banner')}
       </div>
       <form id="quote-form" class="bg-white rounded-xl border border-slate-200 p-6 space-y-4" novalidate>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Customer <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('quote_new.field.customer')} <span class="text-red-500">*</span></label>
             <div class="relative">
-              <input id="f-customer" type="text" autocomplete="off" placeholder="Customer name"
+              <input id="f-customer" type="text" autocomplete="off" placeholder="${t('quote_new.ph.customer')}"
                      class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <span id="err-customer" class="field-err hidden text-xs text-red-600"></span>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Carrier</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('quote_new.field.carrier')}</label>
             <div class="relative">
-              <input id="f-carrier" type="text" autocomplete="off" placeholder="Carrier name (optional)"
+              <input id="f-carrier" type="text" autocomplete="off" placeholder="${t('quote_new.ph.carrier')}"
                      class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">POL <span class="text-red-500">*</span></label>
-            <input id="f-pol" type="text" placeholder="Port of Loading"
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('sales_new.field.pol')} <span class="text-red-500">*</span></label>
+            <input id="f-pol" type="text" placeholder="${t('quote_new.ph.pol')}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             <span id="err-pol" class="field-err hidden text-xs text-red-600"></span>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">POD <span class="text-red-500">*</span></label>
-            <input id="f-pod" type="text" placeholder="Port of Discharge"
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('sales_new.field.pod')} <span class="text-red-500">*</span></label>
+            <input id="f-pod" type="text" placeholder="${t('quote_new.ph.pod')}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             <span id="err-pod" class="field-err hidden text-xs text-red-600"></span>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Container Type <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('quote_new.field.container_type')} <span class="text-red-500">*</span></label>
             <select id="f-container" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
               ${ctOptions}
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Validity (days) <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('quote_new.field.validity')} <span class="text-red-500">*</span></label>
             <input id="f-validity" type="number" value="${DEFAULT_VALIDITY_DAYS}" min="1" max="365"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             <span id="err-validity" class="field-err hidden text-xs text-red-600"></span>
@@ -164,18 +165,18 @@ function formHtml(presetSales) {
 
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="block text-xs font-medium text-slate-700">Rate Lines <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700">${t('quote_new.field.rate_lines')} <span class="text-red-500">*</span></label>
             <button type="button" id="btn-add-line"
-                    class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Line</button>
+                    class="text-xs text-blue-600 hover:text-blue-800 font-medium">${t('quote_new.add_line')}</button>
           </div>
           <span id="err-lines" class="field-err hidden text-xs text-red-600 block mb-1"></span>
           <div class="rounded-lg border border-slate-200 overflow-x-auto">
             <table class="w-full text-xs">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-2 py-1.5 text-left text-slate-500 font-medium">Description</th>
-                  <th class="px-2 py-1.5 text-left text-slate-500 font-medium w-28">Amount</th>
-                  <th class="px-2 py-1.5 text-left text-slate-500 font-medium w-20">Currency</th>
+                  <th class="px-2 py-1.5 text-left text-slate-500 font-medium">${t('quote_new.col.description')}</th>
+                  <th class="px-2 py-1.5 text-left text-slate-500 font-medium w-28">${t('quote_new.col.amount')}</th>
+                  <th class="px-2 py-1.5 text-left text-slate-500 font-medium w-20">${t('quote_new.col.currency')}</th>
                   <th class="w-8"></th>
                 </tr>
               </thead>
@@ -185,16 +186,16 @@ function formHtml(presetSales) {
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Notes</label>
-          <textarea id="f-notes" rows="2" placeholder="Optional notes for this quotation"
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('quote_new.field.notes')}</label>
+          <textarea id="f-notes" rows="2" placeholder="${t('quote_new.ph.notes')}"
                     class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
         </div>
 
         <div class="flex items-center gap-3 pt-2 border-t border-slate-100">
           <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">
-            Save Draft
+            ${t('quote_new.save_draft')}
           </button>
-          <a href="#/sales/quote" class="text-sm text-slate-500 hover:text-slate-700">Cancel</a>
+          <a href="#/sales/quote" class="text-sm text-slate-500 hover:text-slate-700">${t('common.action.cancel')}</a>
           <span id="form-status" class="text-xs text-slate-500 ml-auto"></span>
         </div>
       </form>
@@ -207,7 +208,7 @@ export async function render(root) {
   _lines = [{ description: '', amount: '', currency: 'VND' }];
   const salesId = currentSalesRepId();
   if (!salesId) {
-    root.innerHTML = `<div class="p-6 text-red-600 text-sm">Not authenticated.</div>`;
+    root.innerHTML = `<div class="p-6 text-red-600 text-sm">${t('sales_me.not_authenticated')}</div>`;
     return;
   }
 
@@ -243,16 +244,16 @@ export async function render(root) {
     const notes     = root.querySelector('#f-notes').value.trim();
 
     let ok = true;
-    if (!customer) { showError(root, 'customer', 'Customer is required'); ok = false; }
-    if (!pol)      { showError(root, 'pol',      'POL is required');      ok = false; }
-    if (!pod)      { showError(root, 'pod',      'POD is required');      ok = false; }
-    if (!validity || Number(validity) < 1) { showError(root, 'validity', 'Validity must be ≥ 1 day'); ok = false; }
+    if (!customer) { showError(root, 'customer', t('quote_new.val.customer')); ok = false; }
+    if (!pol)      { showError(root, 'pol',      t('quote_new.val.pol'));      ok = false; }
+    if (!pod)      { showError(root, 'pod',      t('quote_new.val.pod'));      ok = false; }
+    if (!validity || Number(validity) < 1) { showError(root, 'validity', t('quote_new.val.validity')); ok = false; }
     const validLines = _lines.filter((l) => l.description && Number(l.amount) > 0);
-    if (!validLines.length) { showError(root, 'lines', 'At least one rate line required'); ok = false; }
+    if (!validLines.length) { showError(root, 'lines', t('quote_new.val.lines')); ok = false; }
     if (!ok) return;
 
     const statusEl = root.querySelector('#form-status');
-    if (statusEl) statusEl.textContent = 'Saving…';
+    if (statusEl) statusEl.textContent = t('quote_new.status.saving');
 
     try {
       const { id, pending_manager_approval } = await saveDraft(repo, salesId, {
@@ -262,11 +263,11 @@ export async function render(root) {
 
       if (pending_manager_approval) {
         root.querySelector('#override-banner')?.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = 'Saved — pending approval';
+        if (statusEl) statusEl.textContent = t('quote_new.status.saved_pending');
       }
       setTimeout(() => navigate('/sales/quote'), pending_manager_approval ? 2000 : 400);
     } catch (err) {
-      if (statusEl) statusEl.textContent = `Error: ${err.message}`;
+      if (statusEl) statusEl.textContent = t('quote_new.status.error', { error: err.message });
     }
   });
 }

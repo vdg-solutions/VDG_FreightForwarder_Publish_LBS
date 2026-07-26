@@ -38,15 +38,15 @@ function actionCell(q, displayState, isM) {
   if (displayState === 'Draft') {
     const blocked = q.pending_manager_approval && !isM;
     if (blocked) {
-      return `<span class="text-xs text-slate-400" title="Pending manager approval">⏳ Pending approval</span>`;
+      return `<span class="text-xs text-slate-400" title="${t('quote_list.pending_title')}">${t('quote_list.pending_chip')}</span>`;
     }
-    return `<button class="btn-send text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700" data-id="${q.id}">Send to Customer</button>`;
+    return `<button class="btn-send text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700" data-id="${q.id}">${t('quote_list.action.send')}</button>`;
   }
   if (displayState === 'Sent') {
-    return `<button class="btn-accept text-xs px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700" data-id="${q.id}">Mark Accepted</button>`;
+    return `<button class="btn-accept text-xs px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700" data-id="${q.id}">${t('quote_list.action.accept')}</button>`;
   }
   if (displayState === 'Accepted') {
-    return `<button class="btn-convert text-xs px-2 py-1 rounded bg-purple-600 text-white hover:bg-purple-700" data-id="${q.id}">Convert to Shipment</button>`;
+    return `<button class="btn-convert text-xs px-2 py-1 rounded bg-purple-600 text-white hover:bg-purple-700" data-id="${q.id}">${t('quote_list.action.convert')}</button>`;
   }
   return '—';
 }
@@ -121,7 +121,7 @@ async function handleActions(e, root, repo) {
     const existing = await checkAlreadyConverted(repo, id);
     const cell = root.querySelector(`tr[data-qid="${id}"] .converted-cell`);
     if (existing) {
-      cell.innerHTML = `<span class="text-xs text-slate-500">Already converted → <a href="#/shipments" class="text-blue-600 hover:underline">${existing.shipment_ref || existing.id}</a></span>`;
+      cell.innerHTML = `<span class="text-xs text-slate-500">${t('quote_list.already_converted')} <a href="#/shipments" class="text-blue-600 hover:underline">${existing.shipment_ref || existing.id}</a></span>`;
     } else {
       const q = quote;
       const qs = new URLSearchParams({ quote_id: id, customer: q.customer || '', pol: q.pol || '', pod: q.pod || '', container: q.container_type || '' });
@@ -141,37 +141,37 @@ export async function render(root) {
   root.innerHTML = `
     <div class="p-6 max-w-[1200px] mx-auto">
       <div class="flex items-center justify-between mb-6">
-        <div class="text-lg font-semibold text-slate-900">Quotations</div>
+        <div class="text-lg font-semibold text-slate-900">${t('quote_list.title')}</div>
         <a href="#/sales/quote/new"
            class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
-          + New Quote
+          ${t('quote_list.new')}
         </a>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
         <table class="w-full min-w-[700px]">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">Quote ID</th>
-              <th class="px-3 py-2 text-left">Customer</th>
-              <th class="px-3 py-2 text-left">Route</th>
-              <th class="px-3 py-2 text-left">Container</th>
-              <th class="px-3 py-2 text-left">State</th>
-              <th class="px-3 py-2 text-left">Valid Until</th>
-              <th class="px-3 py-2 text-left">Actions</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.id')}</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.customer')}</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.route')}</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.container')}</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.state')}</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.valid_until')}</th>
+              <th class="px-3 py-2 text-left">${t('quote_list.col.actions')}</th>
             </tr>
           </thead>
           <tbody id="qt-tbody"></tbody>
         </table>
         <div id="qt-empty" class="hidden text-center text-xs text-slate-400 py-8">
-          No quotations yet. <a href="#/sales/quote/new" class="text-blue-500 hover:underline">Create one →</a>
+          ${t('quote_list.empty')} <a href="#/sales/quote/new" class="text-blue-500 hover:underline">${t('quote_list.create_one')}</a>
         </div>
       </div>
-      <div id="qt-loading" class="text-xs text-slate-400 mt-2">Loading…</div>
+      <div id="qt-loading" class="text-xs text-slate-400 mt-2">${t('common.loading')}</div>
     </div>`;
 
   const repo = window.__vdg_repo;
   if (!repo) {
-    root.querySelector('#qt-loading').textContent = 'Repo not available.';
+    root.querySelector('#qt-loading').textContent = t('quote_list.no_repo');
     return;
   }
 
@@ -182,5 +182,10 @@ export async function render(root) {
 
   root.querySelector('#qt-tbody')?.addEventListener('click', (e) => handleActions(e, root, repo));
 
-  window.addEventListener('vdg:locale-changed', () => render(root));
+  // Re-resolve #view-root at fire time — freshViewRoot() (F-19-16) detaches the captured
+  // `root` node on navigation, so re-rendering into it is a silent no-op.
+  window.addEventListener('vdg:locale-changed', () => {
+    const liveRoot = document.getElementById('view-root');
+    if (liveRoot) render(liveRoot);
+  });
 }

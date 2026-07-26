@@ -8,11 +8,21 @@ import {
   SPARKLINE_MONTHS, KIND_SHIPMENT, KIND_PNL_LINE,
 } from '../../operators/manager/commission-calculator.js';
 import { compose as composeRules } from '../../operators/manager/commission-composer.js';
+import { t }                        from '../../i18n/index.js';
+import { agGridLocaleText }         from '../../i18n/ag-grid-locale.js';
 
 const DEFAULT_PERIOD_MODE    = 'month';
 const KIND_COMMISSION_RULES  = 'commission_rules';
 const CSV_COLS               = 'Sales Rep,Margin,TNDN 20%,Com KH/Line,Net,Sales %,Sales Share,LBS Share,Advances,Net Payable,Status';
 const TOAST_AUTODISMISS_MS   = 5_000;
+const DRILL_TABS             = ['shipments', 'pipeline', 'top_customers', 'commission_history'];
+// Pipeline stage values are the real shipment.state contract — never rename these; the i18n
+// label suffix is the same token lowercased (Lead -> mgr_sales.stage.lead).
+const PIPELINE_STAGES        = ['Lead', 'Quote', 'Won', 'Closed'];
+const PERIOD_MODES           = ['month', 'quarter', 'year'];
+const COMMISSION_STATUS_SETTLED = 'Settled';
+const DRILL_SHIPMENT_COLS    = ['ref', 'lane', 'etd', 'state'];
+const PREVIEW_TABLE_COLS     = ['sales', 'margin', 'tndn', 'com_kh_line', 'net', 'sales_pct', 'sales_share', 'lbs_share', 'net_payable', 'status'];
 
 let _shipments  = [];
 let _pnlLines   = [];
@@ -29,23 +39,25 @@ function fmtNum(n) { return Number(n ?? 0).toLocaleString('vi-VN'); }
 
 function currentPeriodKey() { return buildPeriodKey(_periodMode, _periodDate); }
 
-function buildGridCols() {
+// Exported for the F-19-95 lane test (AC-10) — the pure render helpers, not private auth
+// state, are the lower-friction seam (design.md D6); isManager() gating stays in render().
+export function buildGridCols() {
   return [
-    { field: 'sales',           headerName: 'Sales Rep',    flex: 1 },
-    { field: 'shipments',       headerName: 'Shipments',    width: 90 },
-    { field: 'margin',          headerName: 'Margin (VND)', width: 130,
+    { field: 'sales',           headerName: t('mgr_sales.col.sales_rep'),    flex: 1 },
+    { field: 'shipments',       headerName: t('mgr_sales.col.shipments'),    width: 90 },
+    { field: 'margin',          headerName: t('mgr_sales.col.margin'), width: 130,
       valueFormatter: ({ value }) => fmtNum(value) },
-    { field: 'tndn',            headerName: 'TNDN 20%',     width: 110,
+    { field: 'tndn',            headerName: t('mgr_sales.col.tndn'),     width: 110,
       valueFormatter: ({ value }) => fmtNum(value) },
-    { field: 'salesSharePct',   headerName: 'Sales %',      width: 80,
+    { field: 'salesSharePct',   headerName: t('mgr_sales.col.sales_pct'),      width: 80,
       valueFormatter: ({ value }) => `${(value || 0).toFixed(0)}%` },
-    { field: 'commission',      headerName: 'Sales Share',  width: 120,
+    { field: 'commission',      headerName: t('mgr_sales.col.sales_share'),  width: 120,
       valueFormatter: ({ value }) => fmtNum(value) },
-    { field: 'lbsShare',        headerName: 'LBS Share',    width: 110,
+    { field: 'lbsShare',        headerName: t('mgr_sales.col.lbs_share'),    width: 110,
       valueFormatter: ({ value }) => fmtNum(value) },
-    { field: 'netPayable',      headerName: 'Net Payable',  width: 120,
+    { field: 'netPayable',      headerName: t('mgr_sales.col.net_payable'),  width: 120,
       valueFormatter: ({ value }) => fmtNum(value) },
-    { field: 'sparkline',       headerName: 'Trend (6M)',   width: 110,
+    { field: 'sparkline',       headerName: t('mgr_sales.col.trend'),   width: 110,
       cellRenderer: (p) => {
         const el = document.createElement('vdg-sparkline');
         el.values = p.value || [];
@@ -54,7 +66,7 @@ function buildGridCols() {
     { headerName: '', width: 100, cellRenderer: (p) => {
         const btn = document.createElement('button');
         btn.className   = 'px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100';
-        btn.textContent = 'Drill →';
+        btn.textContent = t('mgr_sales.drill');
         btn.onclick     = () => {
           _drillId = p.data.salesId;
           const url = new URL(location.href);
@@ -83,18 +95,21 @@ function mountGrid(container, rows) {
     columnDefs:  buildGridCols(),
     rowData:     rows,
     defaultColDef: { sortable: true, resizable: true },
+    localeText: agGridLocaleText(),
   };
   const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
   _gridApi = grid.gridOptions?.api || opts.api;
 }
 
-function renderPreviewTable(container, rows, periodKey) {
+export function renderPreviewTable(container, rows, periodKey) {
   if (!rows.length) {
-    container.innerHTML = '<div class="text-xs text-slate-400 p-4">No closed shipments in period.</div>';
+    container.innerHTML = `<div class="text-xs text-slate-400 p-4">${t('mgr_sales.no_closed')}</div>`;
     return;
   }
-  const rowHtml = rows.map((r) => `
-    <tr class="${r.status === 'Settled' ? 'opacity-60' : ''}">
+  const rowHtml = rows.map((r) => {
+    const rowCls = r.status === COMMISSION_STATUS_SETTLED ? 'opacity-60' : '';
+    return `
+    <tr class="${rowCls}">
       <td class="py-2 px-3 text-xs">${r.salesName}</td>
       <td class="py-2 px-3 text-xs text-right">${fmtNum(r.margin)}</td>
       <td class="py-2 px-3 text-xs text-right text-red-600">${fmtNum(r.tndn)}</td>
@@ -104,13 +119,15 @@ function renderPreviewTable(container, rows, periodKey) {
       <td class="py-2 px-3 text-xs text-right text-green-700">${fmtNum(r.commission)}</td>
       <td class="py-2 px-3 text-xs text-right text-slate-500">${fmtNum(r.lbsShare)}</td>
       <td class="py-2 px-3 text-xs text-right">${fmtNum(r.netPayable)}</td>
-      <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100">${r.status}</span></td>
-    </tr>`).join('');
+      <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-xs bg-slate-100">${t('commission.status.' + r.status)}</span></td>
+    </tr>`;
+  }).join('');
+  const headerRow = PREVIEW_TABLE_COLS
+    .map((h) => `<th class="py-2 px-3 font-medium text-slate-600 whitespace-nowrap">${t('mgr_sales.pcol.' + h)}</th>`).join('');
   container.innerHTML = `
     <table class="w-full text-left border-collapse text-xs">
       <thead class="bg-slate-50">
-        <tr>${['Sales','Margin','TNDN 20%','Com KH/Line','Net','Sales %','Sales Share','LBS Share','Net Payable','Status']
-          .map((h) => `<th class="py-2 px-3 font-medium text-slate-600 whitespace-nowrap">${h}</th>`).join('')}</tr>
+        <tr>${headerRow}</tr>
       </thead>
       <tbody>${rowHtml}</tbody>
     </table>`;
@@ -123,11 +140,11 @@ async function renderDrillPanel(root) {
   const ships     = _shipments.filter((s) => (s.sales_rep || s.SalesRep) === _drillId);
   panel.innerHTML = `
     <div class="p-4 space-y-3">
-      <div class="font-semibold text-slate-900">${salesName} · Period: ${currentPeriodKey()} · ${ships.length} shipments</div>
+      <div class="font-semibold text-slate-900">${salesName} · ${t('mgr_sales.period_label')} ${currentPeriodKey()} · ${t('mgr_sales.ships_count', { n: ships.length })}</div>
       <div class="flex gap-2 border-b border-slate-200">
-        ${['Shipments','Pipeline','Top Customers','Commission History']
-          .map((t, i) => `<button data-drill-tab="${i}"
-            class="px-4 py-2 text-xs font-medium ${i === 0 ? 'text-blue-700 border-b-2 border-blue-600' : 'text-slate-500'}">${t}</button>`).join('')}
+        ${DRILL_TABS
+          .map((tab, i) => `<button data-drill-tab="${i}"
+            class="px-4 py-2 text-xs font-medium ${i === 0 ? 'text-blue-700 border-b-2 border-blue-600' : 'text-slate-500'}">${t('mgr_sales.tab.' + tab)}</button>`).join('')}
       </div>
       <div id="drill-tab-content"></div>
     </div>`;
@@ -145,25 +162,26 @@ async function renderDrillPanel(root) {
   renderDrillTab(panel.querySelector('#drill-tab-content'), 0, ships);
 }
 
-function renderDrillTab(container, idx, ships) {
+export function renderDrillTab(container, idx, ships) {
   if (!container) return;
   if (idx === 0) {
     const rows = ships.map((s) => `<tr>
       <td class="py-1 px-2 text-xs">${s.shipment_ref || s.id}</td>
       <td class="py-1 px-2 text-xs">${(s.pol || '?')}→${(s.pod || '?')}</td>
       <td class="py-1 px-2 text-xs">${s.etd || '—'}</td>
-      <td class="py-1 px-2 text-xs">${s.state || '—'}</td>
+      <td class="py-1 px-2 text-xs">${s.state ? t('shipment.status.' + s.state) : '—'}</td>
     </tr>`).join('');
+    const headerRow = DRILL_SHIPMENT_COLS.map((h) => `<th class="py-1 px-2 text-left text-slate-600">${t('mgr_sales.dcol.' + h)}</th>`).join('');
+    const noShipsRow = `<tr><td colspan="4" class="p-3 text-slate-400">${t('mgr_sales.no_ships')}</td></tr>`;
     container.innerHTML = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-50">
-      <tr>${['Ref','Lane','ETD','State'].map((h) => `<th class="py-1 px-2 text-left text-slate-600">${h}</th>`).join('')}</tr>
-      </thead><tbody>${rows || '<tr><td colspan="4" class="p-3 text-slate-400">No shipments.</td></tr>'}</tbody></table>`;
+      <tr>${headerRow}</tr>
+      </thead><tbody>${rows || noShipsRow}</tbody></table>`;
   } else if (idx === 1) {
-    const stages = ['Lead','Quote','Won','Closed'];
-    const counts = stages.map((st) => ships.filter((s) => (s.state || s.State || '') === st).length);
+    const counts = PIPELINE_STAGES.map((st) => ships.filter((s) => (s.state || s.State || '') === st).length);
     const maxC   = Math.max(...counts, 1);
-    container.innerHTML = `<div class="space-y-2 p-2">${stages.map((st, i) => `
+    container.innerHTML = `<div class="space-y-2 p-2">${PIPELINE_STAGES.map((st, i) => `
       <div class="flex items-center gap-2 text-xs">
-        <span class="w-20 text-slate-500">${st}</span>
+        <span class="w-20 text-slate-500">${t('mgr_sales.stage.' + st.toLowerCase())}</span>
         <div class="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
           <div class="h-4 bg-blue-500 rounded-full" style="width:${(counts[i]/maxC*100).toFixed(0)}%"></div>
         </div>
@@ -177,10 +195,10 @@ function renderDrillTab(container, idx, ships) {
     }
     const top5 = Object.entries(custMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
     container.innerHTML = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-50">
-      <tr><th class="py-1 px-2 text-left text-slate-600">Customer</th><th class="py-1 px-2 text-right text-slate-600">Revenue (VND)</th></tr>
+      <tr><th class="py-1 px-2 text-left text-slate-600">${t('mgr_sales.dcol.customer')}</th><th class="py-1 px-2 text-right text-slate-600">${t('mgr_sales.dcol.revenue')}</th></tr>
       </thead><tbody>${top5.map(([c, v]) => `<tr><td class="py-1 px-2">${c}</td><td class="py-1 px-2 text-right">${fmtNum(v)}</td></tr>`).join('')}</tbody></table>`;
   } else {
-    container.innerHTML = '<div class="text-xs text-slate-400 p-3">No commission history available.</div>';
+    container.innerHTML = `<div class="text-xs text-slate-400 p-3">${t('mgr_sales.no_commission')}</div>`;
   }
 }
 
@@ -220,25 +238,25 @@ export async function render(root) {
     <div class="p-6 space-y-5 max-w-[1600px] mx-auto" data-mgr-sales="1">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="flex gap-2">
-          ${['month','quarter','year'].map((m) => `
+          ${PERIOD_MODES.map((m) => `
             <button data-period-mode="${m}"
-              class="px-3 py-1.5 text-xs rounded-lg ${m === _periodMode ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">${m.charAt(0).toUpperCase()+m.slice(1)}</button>`).join('')}
+              class="px-3 py-1.5 text-xs rounded-lg ${m === _periodMode ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">${t('mgr_sales.mode.' + m)}</button>`).join('')}
         </div>
-        <button id="btn-export" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Export CSV</button>
+        <button id="btn-export" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">${t('mgr_sales.export_csv')}</button>
       </div>
 
       <div id="leaderboard-grid"></div>
 
       <div id="commission-preview" class="bg-white rounded-xl border border-slate-200">
         <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <div class="text-sm font-semibold text-slate-900">Commission Preview — ${currentPeriodKey()}</div>
-          <button id="btn-calc" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">Calculate</button>
+          <div class="text-sm font-semibold text-slate-900">${t('mgr_sales.preview_title', { k: currentPeriodKey() })}</div>
+          <button id="btn-calc" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t('mgr_sales.calculate')}</button>
         </div>
         <div id="preview-table" class="p-4"></div>
         <div class="px-5 pb-4">
           <button id="btn-settle-link" disabled
             class="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40">
-            Approve &amp; Settle →
+            ${t('mgr_sales.approve_settle')}
           </button>
         </div>
       </div>

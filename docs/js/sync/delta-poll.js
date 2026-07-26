@@ -3,6 +3,7 @@
 import { idbGet, idbPut, META_SYNC_KEY, STORE_ENTITIES, STORE_META } from '../cache/idb-cache.js';
 import { parseJsonlBundle } from '../auth/drive-api.js';
 import { checkDriveQuota } from './drive-quota.js';
+import { reconcileKeepLocal, pendingOutboxKeys } from './tombstone-reconcile.js';
 
 const DELTA_POLL_MS       = 30_000;
 const BACKOFF_STEPS_MS    = [30_000, 60_000, 120_000];
@@ -174,8 +175,15 @@ export class DeltaPoller {
       : null;
     const kind = parentMeta?.name || 'unknown';
 
+    // F-19-80 AC-05 — read the outbox once per bundle so a pending put/delete for (kind,id)
+    // (or a local delete tombstone) is never overwritten by this re-pull.
+    const pending = await pendingOutboxKeys(this._db);
+
     for (const entity of incoming) {
       if (!entity.id) continue;
+      const local      = await idbGet(this._db, STORE_ENTITIES, [kind, entity.id]);
+      const hasPending = pending.has(`${kind}:${entity.id}`);
+      if (reconcileKeepLocal(local, entity, hasPending)) continue;
       await idbPut(this._db, STORE_ENTITIES, { ...entity, kind });
       window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind, id: entity.id } }));
     }

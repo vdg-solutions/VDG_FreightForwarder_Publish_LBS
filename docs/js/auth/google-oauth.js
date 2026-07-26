@@ -93,12 +93,56 @@ export function hasDriveScopeGrant() { return localStorage.getItem(DRIVE_SCOPE_K
 
 export function clearDriveScopeGrant() { localStorage.removeItem(DRIVE_SCOPE_KEY); } // AC-05
 
+// F-19-84 AC-05 — prior sign-in leaves an access-token exp behind (survives id_token expiry,
+// only cleared by an explicit signOut()). Reused as the "was previously signed in" marker —
+// no new localStorage key.
+export function wasPreviouslySignedIn() { return localStorage.getItem(ACCESS_TOKEN_EXP_KEY) != null; }
+
+// Single source of the unsigned header.payload. format consumed by parseIdToken. UTF-8 safe.
+function _encodeSyntheticIdToken(payload) {
+  const header = btoa(JSON.stringify({ alg: 'none' }));
+  const body   = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return `${header}.${body}.`;
+}
+
+// Extend the synthetic id-token session to a new expiry (the fresh access-token exp) WITHOUT
+// changing identity — silent renewal keeps the same user, just a later exp. No-op if no id-token.
+export function restampIdTokenExp(accessExpMs) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return false;
+  const payload = parseIdToken(token);
+  if (!payload) return false;
+  payload.exp = Math.floor(accessExpMs / 1000);          // pin to new access-token exp
+  localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken(payload));
+  _currentUser = null;                                   // force rebuild; email/sub unchanged
+  return true;
+}
+
 // Shared token/expiry write for both the sign-in callback and the re-consent flow below.
 function _persistAccessToken(resp) {
   const expMs = Date.now() + (resp.expires_in || DEFAULT_TOKEN_TTL_SEC) * 1000;
   localStorage.setItem(ACCESS_TOKEN_KEY,     resp.access_token);
   localStorage.setItem(ACCESS_TOKEN_EXP_KEY, String(expMs));
+  restampIdTokenExp(expMs);   // keep synthetic session in step with the access token (no-op pre-sign-in)
   return expMs;
+}
+
+// F-19-84 — full hydrate from a fresh OAuth2 token response. Shared by sign-in, reconnect
+// (AC-03) and silent boot (AC-05) — one hydrate path, no parallel implementation (RULE #5).
+// Persists token+exp, sets/clears the drive-scope flag from the REAL grant, re-mints the
+// synthetic id_token from userinfo. Returns the rebuilt user (or null if the mint failed).
+export async function hydrateSessionFromToken(resp) {
+  const expMs  = _persistAccessToken(resp);
+  const expSec = Math.floor(expMs / 1000);
+  if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
+  else clearDriveScopeGrant(); // scope declined at consent — never record a grant
+  const info = await fetch(USERINFO_URL, { headers: { Authorization: 'Bearer ' + resp.access_token } })
+    .then((r) => r.json());
+  localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken({
+    email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
+  }));
+  _currentUser = null; // force rebuild from the freshly-minted token
+  return getCurrentUser();
 }
 
 // AC-08 re-consent trigger for the drive-access gate button. Requests DRIVE_SCOPE alone
@@ -177,26 +221,10 @@ export function renderSignInButton(container) {
           window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: resp.error }));
           return;
         }
-        const expMs  = _persistAccessToken(resp);
-        const expSec = Math.floor(expMs / 1000);
-        if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
-        else clearDriveScopeGrant(); // AC-01: scope declined at consent — never record a grant
-        // Fetch userinfo — OAuth2 token client doesn't return an ID token
-        fetch(USERINFO_URL, { headers: { 'Authorization': 'Bearer ' + resp.access_token } })
-          .then((r) => r.json())
-          .then((info) => {
-            // Synthesize JWT-like payload for parseIdToken consumers (UTF-8 safe)
-            const header  = btoa(JSON.stringify({ alg: 'none' }));
-            const payload = btoa(unescape(encodeURIComponent(JSON.stringify({
-              email:   info.email,
-              name:    info.name,
-              picture: info.picture,
-              sub:     info.sub,
-              exp:     expSec,
-            }))));
-            localStorage.setItem(TOKEN_KEY, `${header}.${payload}.`);
-            location.reload();
-          })
+        // F-19-84: sign-in routes through the same hydrate as reconnect/silent-boot — no
+        // parallel path (RULE #5).
+        hydrateSessionFromToken(resp)
+          .then(() => location.reload())
           .catch((err) => {
             window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: err.message }));
           });

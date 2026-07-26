@@ -39,6 +39,7 @@ export function computeChipState({ pending, retrying, retryStreak, backoff429, o
   if (pending > 0 && lastSyncMs > 0 && (now - lastSyncMs) > SYNC_STUCK_NOTIFY_MS) return 'red';
   if (backoff429) return 'orange';
   if (retrying) return retryStreak >= SYNC_RETRY_PROMOTE_THRESHOLD ? 'orange' : 'yellow';
+  if (pending > 0 && lastSyncMs === 0) return 'yellow'; // F-19-80 D-B — never-synced baseline with pending backlog must not be green
   return 'green';
 }
 

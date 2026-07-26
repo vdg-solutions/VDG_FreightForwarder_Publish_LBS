@@ -15,6 +15,8 @@ import { APP_VERSION } from '../version.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { LicenseGate, prefsLicenseStore } from '../operators/license-gate.js';
 import { runFirstRunProvision, runLicenseGate } from './license-boot-gate.js';
+import { globalizeBridgeExports } from '../wasm-loader.js';
+import { rehydrateFsmStates } from '../operators/fsm-ingest.js';
 
 const IDB_OP_TIMEOUT_MS  = 8000;
 const META_STORE         = 'meta';
@@ -30,6 +32,10 @@ const STEP_WORKSPACE_CHK = 'first-run-provision';
 const STEP_BUILD_REPO    = 'build-repo-stack';
 const STEP_LICENSE_GATE  = 'license-gate';
 const STEP_BOOT_APP      = 'bootApp';
+
+// F-28-12: registry tier:'priced' refs wired one PricedRefRepo per ref (§2 anchor).
+// F-28-15: ocean-tariff joins the list — no other change, the loop below is kind-agnostic.
+const PRICED_REFS = ['local-charges', 'air-rates', 'ocean-tariff'];
 
 // ── Critical Path ─────────────────────────────────────────────────────────────
 // Returns { db } — poller/auditLog are started in background.
@@ -63,6 +69,12 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   const wasmMod = await import(new URL('pkg/vdg_freight.js', document.baseURI).href);
   await wasmMod.default();
   window.__vdg_wasm = wasmMod;
+  // Root fix (F-28-12 D-1): this boot path skipped wasm-loader.js's export-globalization
+  // loop, leaving window.permission_can_merge / window.proposal_reject etc. undefined for
+  // the whole manager session even though window.__vdg_wasm.<name> resolved fine — the
+  // governance panel reads the window global and misclassified every Manager as
+  // non-maintainer. Reuse the loader's own list + loop (single source), don't duplicate it.
+  globalizeBridgeExports(wasmMod);
   window.dispatchEvent(new Event('vdg:wasm-ready'));
 
   // 4. NOT_PROVISIONED → first-run manager provisioning, then reload into the ordinary licence
@@ -87,12 +99,16 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   window.__vdg_repo      = repo;
   window.__vdg_drive_api = driveApi;
 
+  // F-19-88 AC-04/05: rehydrate the WASM FSM map from the repo (reload + pre-existing
+  // rollback orphans) — non-fatal bound so a large shipment list never hangs boot.
+  await safeAwait(rehydrateFsmStates(repo), IDB_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
+
   // 6. Initial user identity (no network, instant)
   const initialRole = isManager() ? 'Manager' : (currentSalesRepId() || 'ReadOnly');
   window.__vdg_current_user = {
-    email:        user.email,
-    role:         initialRole,
-    sales_prefix: isManager() ? null : currentSalesRepId(),
+    email:       user.email,
+    role:        initialRole,
+    user_prefix: isManager() ? null : currentSalesRepId(),
   };
 
   // 7. License gate — enforced for EVERY role, no branch (AC-01..07).
@@ -133,6 +149,12 @@ async function _deferredInit(user, db, driveApi, repo) {
     const poller = new DeltaPoller(driveApi, db);
     poller.start();
 
+    // Outbox drain scheduler (F-19-80 AC-01/03/09) — wires vdg:sync-now / vdg:sync-force-retry
+    // / online / a bounded backoff interval to repo.drain_outbox(); without this the manual
+    // "Đồng bộ" click and post-reconnect resume dispatched into the void.
+    const { startOutboxDrainScheduler } = await import('../sync/outbox-drain-scheduler.js');
+    startOutboxDrainScheduler({ getRepo: () => repo });
+
     // Audit log
     const { AuditLog } = await import('../sync/audit-log.js');
     new AuditLog(
@@ -168,6 +190,22 @@ async function _deferredInit(user, db, driveApi, repo) {
     const ledgerRepo = new LedgerDriveRepo(driveApi, findWorkspaceRoot);
     window.__vdg_ledger_repo = ledgerRepo;
 
+    // Priced-ref governance repos (F-28-12) — one PricedRefRepo per priced-tier master,
+    // mirroring the LedgerDriveRepo closure above. Views call propose/listPending/merge/
+    // reject only — never re-implement the FSM or write state.json directly.
+    const { PricedRefRepo } = await import('../implementations/priced-ref-repo.js');
+    window.__vdg_priced_repos = {};
+    for (const refName of PRICED_REFS) {
+      window.__vdg_priced_repos[refName] = new PricedRefRepo(driveApi, findWorkspaceRoot, refName);
+    }
+
+    // Priced-ref boot migration (F-28-14(d)): materialize each priced master bundle into its
+    // governance ref once so the two stores stop diverging (F-28-12 D-2). Fire-and-forget:
+    // bounded internally by safeAwait, idempotency keyed off the shared state.json — never blocks boot.
+    const { migratePricedRefs } = await import('../cache/priced-ref-migrator.js');
+    migratePricedRefs(repo, window.__vdg_priced_repos)
+      .catch((err) => console.warn('[VDG] priced-ref migration error:', err.message)); // DEV
+
     const { UserAuditLog } = await import('../sync/user-audit-log.js');
     const userAuditLog = new UserAuditLog(
       () => window.__vdg_auth?.getCurrentUser?.(),
@@ -185,8 +223,8 @@ async function _deferredInit(user, db, driveApi, repo) {
 
     // Resolve actual user role (async, updates window.__vdg_current_user)
     userRepo.get(user.email).then((record) => {
-      window.__vdg_current_user.role         = resolveUserRole(record);
-      window.__vdg_current_user.sales_prefix = record?.sales_prefix ?? null;
+      window.__vdg_current_user.role        = resolveUserRole(record);
+      window.__vdg_current_user.user_prefix = record?.user_prefix ?? null;
     }).catch(() => {});
 
     // Manager-specific background tasks

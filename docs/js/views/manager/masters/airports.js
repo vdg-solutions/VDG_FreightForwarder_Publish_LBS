@@ -26,37 +26,37 @@ function buildModal(entity) {
       <form id="modal-form" method="dialog" class="p-6 space-y-4">
         <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t('masters.airports.edit_title') : t('masters.airports.add_button')}</div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">IATA Code <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('airports.field.iata')} <span class="text-red-500">*</span></label>
           <input id="m-iata" type="text" maxlength="3" value="${escHtml(e.iata_code)}" required
                  class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-iata" class="hidden text-xs text-red-600"></span>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">ICAO Code</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('airports.field.icao')}</label>
           <input id="m-icao" type="text" maxlength="4" value="${escHtml(e.icao_code)}"
                  class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-icao" class="hidden text-xs text-red-600"></span>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Name <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('airports.field.name')} <span class="text-red-500">*</span></label>
           <input id="m-name" type="text" value="${escHtml(e.name)}" required
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">City <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('airports.field.city')} <span class="text-red-500">*</span></label>
             <input id="m-city" type="text" value="${escHtml(e.city)}" required
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Country <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('airports.field.country')} <span class="text-red-500">*</span></label>
             <input id="m-country" type="text" maxlength="2" value="${escHtml(e.country)}" required
                    class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
-          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">Save</button>
-          <button type="button" id="btn-modal-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">${t('common.action.save')}</button>
+          <button type="button" id="btn-modal-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">${t('common.action.cancel')}</button>
         </div>
       </form>
     </dialog>`;
@@ -103,8 +103,8 @@ function openModal(root, entity, items, onSave) {
 
 function rowHtml(e, isM) {
   const actions = isM ? `
-    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">Edit</button>
-    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">Delete</button>` : '';
+    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('common.action.edit')}</button>
+    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('common.action.delete')}</button>` : '';
   return `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
       <td class="px-3 py-2 font-mono">${escHtml(e.iata_code)}</td>
@@ -119,7 +119,7 @@ function rowHtml(e, isM) {
 export async function render(root) {
   const isM  = isManager();
   const repo = window.__vdg_repo;
-  const actCol = isM ? '<th class="px-3 py-2 text-left w-28">Actions</th>' : '';
+  const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 
   root.innerHTML = `
     <div class="p-6 max-w-[1100px] mx-auto">
@@ -131,17 +131,17 @@ export async function render(root) {
         <table class="w-full">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">IATA</th>
-              <th class="px-3 py-2 text-left">ICAO</th>
-              <th class="px-3 py-2 text-left">Name</th>
-              <th class="px-3 py-2 text-left">City</th>
-              <th class="px-3 py-2 text-left">Country</th>
+              <th class="px-3 py-2 text-left">${t('airports.col.iata')}</th>
+              <th class="px-3 py-2 text-left">${t('airports.col.icao')}</th>
+              <th class="px-3 py-2 text-left">${t('airports.col.name')}</th>
+              <th class="px-3 py-2 text-left">${t('airports.col.city')}</th>
+              <th class="px-3 py-2 text-left">${t('airports.col.country')}</th>
               ${actCol}
             </tr>
           </thead>
           <tbody id="m-tbody"></tbody>
         </table>
-        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">No airports found.</div>
+        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('airports.empty')}</div>
       </div>
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading...</div>
     </div>`;
@@ -185,7 +185,7 @@ export async function render(root) {
     const delBtn = ev.target.closest('.btn-delete');
     if (delBtn) {
       const ok = await showConfirm({
-        title: 'Delete this airport?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true,
+        title: t('airports.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);

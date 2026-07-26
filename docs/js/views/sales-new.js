@@ -11,8 +11,14 @@ import { runBatchImport } from '../operators/pnl-vertical-batch-import.js';
 import { loadWasm } from '../wasm-loader.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
+import { safeMasterLoad } from '../util/master-load.js';
 
 const ROUTE_SHIPMENTS = '/shipments';  // batch success navigation target (F-15-57)
+
+// F-19-29: personalization reads (userConfig + commission override) are optional — bound them
+// under RENDER_MOUNT_TIMEOUT_MS (8s) so a slow Drive fallback still leaves headroom for the
+// synchronous form render that follows, instead of racing mountView's own ceiling.
+const PERSONALIZATION_LOAD_TIMEOUT_MS = 5000;
 
 function showToast(msg, type = 'info') {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message: msg, type } }));
@@ -49,7 +55,7 @@ function _dispatchCommitted(formMount, repId) {
 // opts.editRef — existing shipment ref on /sales/edit/:ref
 // opts.mode    — 'edit' | 'create' (default 'create')
 export async function render(root, opts = {}) {
-  const { editRef = null, mode = 'create', salesId = 'me' } = opts;
+  const { editRef = null, mode = 'create', salesId = 'me', quotePrefill = null } = opts;
   const isEdit = mode === 'edit' && !!editRef;
   // salesId 'me' (self-service) resolves to the signed-in rep; an explicit id = on-behalf.
   const salesRepId = (salesId && salesId !== 'me') ? salesId : (currentSalesRepId() || '');
@@ -59,22 +65,32 @@ export async function render(root, opts = {}) {
   let userConfig = null;
   let draft      = null;
 
-  try {
-    if (repo) {
-      customers = await repo.list('customers');
-    }
-  } catch { /* repo not ready — empty list is acceptable */ }
-
-  try {
-    if (repo && salesRepId) {
-      userConfig = await repo.get('user', `user:${salesRepId}`).catch(() => null);
+  // F-19-29: customers list + personalization reads raced concurrently under one bound —
+  // a slow/cold Drive fallback degrades to customers=[]/userConfig=null (both already
+  // tolerated downstream in sales-new-form.js) instead of hanging render() past mountView's
+  // outer RENDER_MOUNT_TIMEOUT_MS ceiling.
+  if (repo) {
+    const loadRes = await safeMasterLoad(async () => {
+      const [customerList, rawUserConfig, assignment] = await Promise.all([
+        repo.list('customers').catch(() => []),
+        salesRepId ? repo.get('user', `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
+        salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
+      ]);
       // Resolve manager-assigned sales_pct → inject into userConfig
-      const assignment = await repo.get('commission_rules', salesRepId).catch(() => null);
+      let resolvedUserConfig = rawUserConfig;
       if (assignment?.sales_pct != null) {
-        userConfig = { ...(userConfig || {}), sales_share_pct: Number(assignment.sales_pct) };
+        resolvedUserConfig = { ...(rawUserConfig || {}), sales_share_pct: Number(assignment.sales_pct) };
       }
+      return { customerList, userConfig: resolvedUserConfig };
+    }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
+
+    if (loadRes.ok) {
+      customers  = loadRes.value.customerList;
+      userConfig = loadRes.value.userConfig;
     }
-  } catch { /* non-critical */ }
+    // !loadRes.ok (timeout or thrown): customers=[], userConfig=null — both already-tolerated
+    // defaults downstream (sales-new-form.js:20,30 — no contract change).
+  }
 
   if (isEdit) {
     // AC-01: hydrate from persisted records
@@ -90,7 +106,7 @@ export async function render(root, opts = {}) {
     root.innerHTML = `
       <div class="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200
                   text-amber-800 rounded-lg px-4 py-2 mx-6 mt-4 font-medium">
-        <span>Editing shipment</span>
+        <span>${t('sales_new.edit_banner')}</span>
         <span class="font-mono">${editRef}</span>
       </div>
       <div id="form-mount"></div>`;
@@ -103,6 +119,15 @@ export async function render(root, opts = {}) {
       catch { /* malformed — fall through to loadDraft */ }
     }
 
+    if (!draft && quotePrefill) {
+      draft = {
+        quote_id: quotePrefill.quote_id,
+        customer: quotePrefill.customer,
+        pol:      quotePrefill.pol,
+        pod:      quotePrefill.pod,
+        volume:   quotePrefill.container,   // shipment-builder maps volume → container_spec
+      };
+    }
     if (!draft) draft = await loadDraft();
 
     if (draft) {

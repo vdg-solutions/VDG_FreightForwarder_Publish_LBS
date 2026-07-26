@@ -13,6 +13,7 @@ export class WasmEntityRepo {
     free(): void;
     [Symbol.dispose](): void;
     delete(kind: string, id: string): Promise<any>;
+    drain_outbox(): Promise<any>;
     get(kind: string, id: string): Promise<any>;
     list(kind: string): Promise<any>;
     constructor(io: any);
@@ -27,6 +28,10 @@ export function __wasm_init(): void;
  */
 export function air_calc_result(actual: number, l: number, w: number, h: number, breaks_json: string): any;
 
+/**
+ * Applies a lifecycle event to the entity's stored state via the real
+ * ShipmentFsm, persists the new state, and appends a transition record.
+ */
 export function apply_fsm_event(entity_id: string, event: string): any;
 
 export function billing_ledger_drain_writes(): any;
@@ -103,10 +108,10 @@ export function fx_rate_get(date_str: string, pair: string): any;
 export function fx_rate_ingest_month(ym: string, content: string): void;
 
 /**
- * Validate entry, queue Drive write, invalidate month cache.
+ * Validate entry, enforce accountant-only write gate, queue Drive write.
  * Returns `[{path, line}]` — JS appends each line to Drive.
  */
-export function fx_rate_prepare_append(entry_json: string): any;
+export function fx_rate_prepare_append(entry_json: string, role: string): any;
 
 export function get_entity_state(entity_id: string): any;
 
@@ -149,7 +154,46 @@ export function is_period_closed(entity_kind: string, entity_etd_ms: bigint, clo
  */
 export function license_status(license_str: string, current_unix_ts: bigint): any;
 
+export function permission_can_merge(role: string, ref_name: string): boolean;
+
+export function permission_can_pull(role: string, ref_name: string): boolean;
+
+export function permission_can_push(role: string, ref_name: string): boolean;
+
+export function permission_can_push_own_fork(role: string): boolean;
+
+/**
+ * Returns Vec<PermissionEntry> as JSON (`[{path, access}]`) — role-assignment-service.js's
+ * resolveAcl() consumes this directly, replacing the role-drive-acl.json fetch.
+ */
+export function permission_resolve_grants(role: string, user_prefix?: string | null): any;
+
+/**
+ * AC-05: `PricedRefRepo.resolveOnDate` calls this with every `PricedRecord`
+ * body for the ref; a gap date returns the nearest-earlier row because Rust
+ * says so, never a JS-computed guess.
+ */
+export function priced_ref_resolve_on_date(records_json: string, key: string, date_str: string): any;
+
 export function process_excel_file(bytes: Uint8Array): any;
+
+/**
+ * AC-02, AC-03, AC-04, AC-07: applies + closes on maintainer success; a
+ * non-maintainer or stale-base attempt throws — the caller never sees a
+ * `MergeResultDto` for a denied merge.
+ */
+export function proposal_merge(proposal_json: string, ref_state_json: string, actor_role: string): any;
+
+/**
+ * AC-01, AC-06, AC-07: propose returns a Pending ProposalDto to JS. Requires
+ * only read access on `target_ref` — never maintainer rights.
+ */
+export function proposal_propose(input_json: string, author_role: string): any;
+
+/**
+ * R-3, AC-07: a maintainer may decline a Pending proposal without merging.
+ */
+export function proposal_reject(proposal_json: string, actor_role: string, reason: string): any;
 
 /**
  * Returns canonical sales-rep provisioning spec as JSON.
@@ -161,6 +205,13 @@ export function provision_sales_rep(email: string, role: string): any;
  * Drive folder creation stays JS-side; WASM owns the schema.
  */
 export function provision_workspace(workspace_name: string): any;
+
+/**
+ * Registers a shipment into the FSM state map — register-if-absent (AC-09
+ * idempotency lives here, not in every JS caller). No-op if the entity
+ * already has a stored state.
+ */
+export function register_entity(entity_id: string, state: string): void;
 
 export function validate_airport_iata(s: string): boolean;
 
@@ -183,6 +234,8 @@ export function verify_license(license_str: string, current_unix_ts: bigint): an
 export function wasm_build_entries_from_commission(commission_json: string, chart_json: string, rules_json: string): any;
 
 export function wasm_build_entries_from_shipment(shipment_json: string, chart_json: string, rules_json: string): any;
+
+export function wasm_build_reversal_entry(legs_json: string, chart_json: string, actor_id: string): any;
 
 export function wasm_compute_sales_analytics(shipments_json: string, lines_json: string): any;
 
@@ -216,7 +269,7 @@ export interface InitOutput {
     readonly drain_events: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly fx_rate_prepare_append: (a: number, b: number, c: number) => void;
+    readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
@@ -227,9 +280,19 @@ export interface InitOutput {
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
     readonly license_status: (a: number, b: number, c: bigint) => number;
+    readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly permission_can_push_own_fork: (a: number, b: number, c: number) => void;
+    readonly permission_resolve_grants: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly priced_ref_resolve_on_date: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly process_excel_file: (a: number, b: number, c: number) => void;
+    readonly proposal_merge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly proposal_propose: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly provision_sales_rep: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly provision_workspace: (a: number, b: number, c: number) => void;
+    readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly validate_airport_iata: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
     readonly validate_carrier_iata: (a: number, b: number) => number;
@@ -241,14 +304,16 @@ export interface InitOutput {
     readonly verify_license: (a: number, b: number, c: bigint) => number;
     readonly wasm_build_entries_from_commission: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasm_build_entries_from_shipment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly wasm_build_reversal_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasm_compute_sales_analytics: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_drain_outbox: (a: number) => number;
     readonly wasmentityrepo_get: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly __wasm_bindgen_func_elem_6448: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_6461: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6857: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6870: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

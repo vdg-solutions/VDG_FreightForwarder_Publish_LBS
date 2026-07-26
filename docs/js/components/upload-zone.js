@@ -1,4 +1,5 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
+import { t } from '../i18n/index.js';
 
 const MOBILE_BREAKPOINT_PX = 768; // F-14-16
 
@@ -58,7 +59,7 @@ class VdgUploadZone extends LitElement {
       return html`
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
           <div class="text-sm font-medium text-slate-700 mb-3">
-            ${this.file ? this.file.name : 'Choose file to import'}
+            ${this.file ? this.file.name : t('upload_zone.choose_file')}
           </div>
           <label class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm rounded-lg cursor-pointer">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -66,11 +67,11 @@ class VdgUploadZone extends LitElement {
               <polyline points="17 8 12 3 7 8"/>
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            Browse file
+            ${t('upload_zone.browse')}
             <input type="file" accept="${this.accept}" class="hidden" @change=${(e) => this._onPicker(e)} />
           </label>
           ${this.file ? html`
-            <div class="mt-2 text-xs text-slate-500">${(this.file.size / 1024).toFixed(1)} KB · ready</div>` : ''}
+            <div class="mt-2 text-xs text-slate-500">${t('upload_zone.ready_mobile', { kb: (this.file.size / 1024).toFixed(1) })}</div>` : ''}
         </div>`;
     }
 
@@ -93,12 +94,12 @@ class VdgUploadZone extends LitElement {
           </svg>
         </div>
         <div class="mt-4 text-sm font-medium text-slate-800">
-          ${this.file ? this.file.name : 'Drop .xlsx file or click to browse'}
+          ${this.file ? this.file.name : t('upload_zone.drop_hint')}
         </div>
         <div class="mt-1 text-xs text-slate-500">
           ${this.file
-            ? `${(this.file.size / 1024).toFixed(1)} KB · ready for WASM validation`
-            : 'Bytes passed to Rust WASM — no upload to server'}
+            ? t('upload_zone.ready', { kb: (this.file.size / 1024).toFixed(1) })
+            : t('upload_zone.local_note')}
         </div>
       </label>`;
   }

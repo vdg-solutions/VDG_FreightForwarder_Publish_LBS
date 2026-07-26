@@ -6,6 +6,7 @@ import { niDtoToDraft } from '../views/sales-new-form/pnl-vertical-autofill.js';
 import { buildShipment } from '../views/sales-new/shipment-builder.js';
 import { genShipmentRef, nextSeq, directionFromMode } from './shipment-ref-gen.js';
 import { postShipment, postCommission } from './ledger-poster.js';
+import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
 
 const DEFAULT_DIRECTION      = 'EX';  // when draft.mode unset (mirrors shipment-ref-gen.js default)
 const CE_KEY_PREFIX          = 'CE';  // matches submit-orchestrator.js
@@ -30,13 +31,19 @@ function _validateBatchPair(draft) {
   return errs;
 }
 
-// pair → { draft, shipment, errors: string[] }; shipment is null when errors non-empty
-function _pairToStaged(pair, salesRepId) {
+// pair → { draft, shipment, errors: string[] }; shipment is null when errors non-empty.
+// F-18-11: buildShipment now throws on an unresolvable state — wrapped here so the caller's
+// existing halt-before-commit errors[] shape stays intact, no new error channel.
+function _pairToStaged(pair, salesRepId, aliasRows) {
   const draft  = niDtoToDraft(pair);
   const errors = _validateBatchPair(draft);
   if (errors.length) return { draft, shipment: null, errors };
-  const shipment = buildShipment(draft, '', salesRepId);
-  return { draft, shipment, errors: [] };
+  try {
+    const shipment = buildShipment(draft, '', salesRepId, { stateAliasRows: aliasRows });
+    return { draft, shipment, errors: [] };
+  } catch (err) {
+    return { draft, shipment: null, errors: [err.message] };
+  }
 }
 
 // staged → { ref }; writes shipment + commission_entry rows, mirrors submitForm body.
@@ -76,10 +83,14 @@ async function _persistStaged(staged, repo, salesRepId, dateMs, ledgerRepo) {
  * @returns {{ ok: true, refs: string[] } | { ok: false, pairIndex: number, reason: string }}
  */
 export async function runBatchImport(pairs, repo, salesRepId, ledgerRepo = _defaultLedgerRepo()) {
+  // F-18-11: seed-if-unseeded + one list reused across the whole batch (DEFECT-1) — avoids N
+  // repo round-trips and ensures a fresh-session batch import of legacy 'Open' data resolves.
+  const aliasRows = await ensureShipmentStateAliases(repo);
+
   const staged = [];
   for (let i = 0; i < pairs.length; i++) {
     let result;
-    try { result = _pairToStaged(pairs[i], salesRepId); }
+    try { result = _pairToStaged(pairs[i], salesRepId, aliasRows); }
     catch (err) { return { ok: false, pairIndex: i + 1, reason: err.message }; }
     if (result.errors.length) {
       return { ok: false, pairIndex: i + 1, reason: result.errors.map((k) => t(k)).join(', ') };

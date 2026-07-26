@@ -1,5 +1,7 @@
 // F-12-08 — NI-style "PROFIT-LOSS BUDGET" per-shipment print form
 import '../components/print-button.js';
+import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';
+import { t } from '../i18n/index.js';
 
 const COMPANY_NAME    = 'VDG FREIGHT SERVICES CO., LTD';
 const COMPANY_ADDRESS = '123 Nguyen Hue, District 1, Ho Chi Minh City, Vietnam';
@@ -40,6 +42,8 @@ function headerBlock(s) {
     </tr>`;
 
   const today = new Date().toISOString().slice(0, 10);
+  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  const salesRep = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
   return `
     <div class="grid grid-cols-2 gap-x-8 mb-6">
       <table>
@@ -47,7 +51,7 @@ function headerBlock(s) {
           ${row('JOB FILE NO',    fmt(s.job_file_no))}
           ${row('MBL',           fmt(s.mbl_no))}
           ${row('HBL',           fmt(s.hbl_no))}
-          ${row('SALES REP',     fmt(s.sales_rep))}
+          ${row('SALES REP',     fmt(salesRep))}
           ${row('PREPARING DATE',fmt(s.prep_date || today))}
           ${row('SHIPPER',       fmt(s.shipper))}
           ${row('CONSIGNEE',     fmt(s.consignee))}

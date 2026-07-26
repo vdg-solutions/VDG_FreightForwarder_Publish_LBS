@@ -6,12 +6,26 @@ import {
   groupChartByType, filterLegs, computeRunningBalances, buildLedgerCSV,
 } from '../../operators/manager/ledger-composer.js';
 import { runAndRecord } from '../../operators/manager/ledger-reconciler.js';
-import { jumpToUnbalancedEntry } from './ledger-unbalanced-modal.js';
+import { currentUserRole, ROLE_MANAGER } from '../../operators/manager/route-guard.js';
+import { mountRepostPanel } from './ledger-repost-panel.js';
+import { refreshReverseControl, renderReversalBadge, bindLegRowInteractions } from './ledger-reverse-control.js';
+import { renderUnbalancedList } from './ledger-viewer-unbalanced.js';
+import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../util/master-load.js';
+import { isViewSuperseded } from '../../util/view-root.js';
 
 const TYPE_LABEL_KEYS = {
   Asset: 'ledger.type.asset', Liability: 'ledger.type.liability',
   Revenue: 'ledger.type.revenue', Expense: 'ledger.type.expense',
 };
+
+const CHART_TAG      = 'ledger:chart';
+const RECON_TAG      = 'ledger:recon';
+const LEGS_TAG       = 'ledger:legs';
+const BALANCE_TAG    = 'ledger:balance';
+const REPOST_TAG     = 'ledger:repost-panel';
+// F-19-75: below RENDER_MOUNT_TIMEOUT_MS (8000ms) so a stalled initial load's inline retry
+// paints before mount-view.js's outer mount-timeout fallback can fire.
+const VIEW_DATA_LOAD_BUDGET_MS = 6_000;
 
 function getLedgerRepo() { return window.__vdg_ledger_repo; }
 
@@ -29,6 +43,7 @@ let _selectedAccount = null;
 let _rawLegs          = [];
 let _filter           = defaultFilter();
 let _lastReconciliation = null; // F-23-06: latest reconciliation-log.jsonl record, or null
+let _selectedEntryId = null, _selectedLeg = null; // F-19-78: selected posted entry_id + its leg
 
 function accountName(account) {
   return currentLocale() === 'vi' ? account.name_vi : account.name_en;
@@ -75,7 +90,11 @@ function shellHtml() {
       </div>
       <div id="reconcile-unbalanced-list" class="mb-4"></div>
 
-      <div id="closing-balance-banner" class="text-xs text-slate-500 mb-3"></div>
+      ${currentUserRole() === ROLE_MANAGER ? '<div id="repost-panel-root" class="mb-4"></div>' : ''}
+
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-2">
+        <div id="closing-balance-banner" class="text-xs text-slate-500"></div>
+        ${currentUserRole() === ROLE_MANAGER ? '<div id="reverse-control-root"></div>' : ''}</div>
 
       <div class="flex gap-4">
         <div id="chart-tree" class="w-64 shrink-0 border border-slate-200 rounded-lg p-2 h-[560px] overflow-y-auto"></div>
@@ -115,14 +134,15 @@ function renderLegsTable(root) {
 
   if (!rows.length) {
     panel.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">${t('ledger.empty_legs')}</div>`;
+    updateReverseControl(root);
     return;
   }
 
   const trs = rows.map((r) => `
-    <tr class="border-t border-slate-100 text-xs">
+    <tr data-entry-id="${r.entry_id}" class="border-t border-slate-100 text-xs cursor-pointer ${r.entry_id === _selectedEntryId ? 'bg-blue-50' : 'hover:bg-slate-50'}">
       <td class="px-3 py-1.5">${r.date}</td>
       <td class="px-3 py-1.5 font-mono">${r.entry_id}</td>
-      <td class="px-3 py-1.5">${r.desc ?? ''}</td>
+      <td class="px-3 py-1.5">${r.desc ?? ''}${renderReversalBadge(r)}</td>
       <td class="px-3 py-1.5 text-right font-mono">${fmtAmount(r.debit)}</td>
       <td class="px-3 py-1.5 text-right font-mono">${fmtAmount(r.credit)}</td>
       <td class="px-3 py-1.5">${r.party ?? '—'}</td>
@@ -137,13 +157,13 @@ function renderLegsTable(root) {
     <table class="w-full">
       <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase sticky top-0">
         <tr>
-          <th class="px-3 py-1.5 text-left">Date</th>
-          <th class="px-3 py-1.5 text-left">Entry</th>
-          <th class="px-3 py-1.5 text-left">Desc</th>
-          <th class="px-3 py-1.5 text-right">Debit</th>
-          <th class="px-3 py-1.5 text-right">Credit</th>
-          <th class="px-3 py-1.5 text-left">Party</th>
-          <th class="px-3 py-1.5 text-left">Source</th>
+          <th class="px-3 py-1.5 text-left">${t('ledger.column.date')}</th>
+          <th class="px-3 py-1.5 text-left">${t('ledger.column.entry')}</th>
+          <th class="px-3 py-1.5 text-left">${t('ledger.column.desc')}</th>
+          <th class="px-3 py-1.5 text-right">${t('ledger.column.debit')}</th>
+          <th class="px-3 py-1.5 text-right">${t('ledger.column.credit')}</th>
+          <th class="px-3 py-1.5 text-left">${t('ledger.column.party')}</th>
+          <th class="px-3 py-1.5 text-left">${t('ledger.column.source')}</th>
           <th class="px-3 py-1.5 text-right">${t('ledger.column.balance')}</th>
         </tr>
       </thead>
@@ -152,11 +172,30 @@ function renderLegsTable(root) {
 
   panel.querySelectorAll('[data-source-id]').forEach((btn) => {
     if (!btn.dataset.sourceId) return;
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       window.dispatchEvent(new CustomEvent('vdg:open-detail', {
         detail: { kind: btn.dataset.sourceType, id: btn.dataset.sourceId },
       }));
     });
+  });
+
+  // AC-07: row click selects the posted entry the Reverse control targets.
+  bindLegRowInteractions(panel, rows, {
+    onSelectRow: (entryId, leg) => { _selectedEntryId = entryId; _selectedLeg = leg; renderLegsTable(root); },
+  });
+
+  updateReverseControl(root);
+}
+
+function updateReverseControl(root) {
+  refreshReverseControl(root, {
+    selectedEntryId: _selectedEntryId, selectedLeg: _selectedLeg,
+    actorId:         window.__vdg_current_user?.email, ledgerRepo: getLedgerRepo(),
+    onDone: () => {
+      _selectedEntryId = null; _selectedLeg = null;
+      if (_selectedAccount) selectAccount(root, _selectedAccount);
+    },
   });
 }
 
@@ -164,16 +203,29 @@ async function refreshBalanceBanner(repo, account) {
   const banner = document.getElementById('closing-balance-banner');
   if (!banner) return;
   if (!repo) { banner.textContent = ''; return; }
-  const { balance } = await repo.getBalance(account.code, _filter.dateTo);
-  banner.textContent = `${t('ledger.closing_balance')}: ${fmtAmount(balance)}`;
+  const balRes = await safeMasterLoad(() => repo.getBalance(account.code, _filter.dateTo), BALANCE_TAG);
+  banner.textContent = balRes.ok ? `${t('ledger.closing_balance')}: ${fmtAmount(balRes.value.balance)}` : '';
 }
 
+// F-19-75 AC-06: single account-year file is one bounded Drive read; a stall paints an
+// inline retry in #legs-panel that re-runs this same call, instead of hanging the render.
 async function selectAccount(root, account) {
   _selectedAccount = account;
+  _selectedEntryId = null; _selectedLeg = null; // F-19-78: prior selection belonged to the previous account
   renderChartTree(root);
-  const repo = getLedgerRepo();
+  const repo  = getLedgerRepo();
+  const panel = root.querySelector('#legs-panel');
+  if (!repo) { _rawLegs = []; renderLegsTable(root); return; }
+
   const year = Number(_filter.dateFrom.slice(0, 4));
-  _rawLegs = repo ? await repo.listLegs(year, account.code, _filter.dateFrom, _filter.dateTo) : [];
+  const legsRes = await safeMasterLoad(
+    () => repo.listLegs(year, account.code, _filter.dateFrom, _filter.dateTo), LEGS_TAG,
+  );
+  if (!legsRes.ok) {
+    renderMasterLoadRetryStatus(panel, t('masters.load_error'), t('retry'), () => selectAccount(root, account));
+    return;
+  }
+  _rawLegs = legsRes.value;
   await refreshBalanceBanner(repo, account);
   renderLegsTable(root);
 }
@@ -208,45 +260,6 @@ function renderReconcileStatus(root) {
         .replace('{n}', String(rec.unbalanced_ids?.length ?? 0));
 }
 
-async function renderUnbalancedList(root) {
-  const list = root.querySelector('#reconcile-unbalanced-list');
-  if (!list) return;
-  const ids = _lastReconciliation?.unbalanced_ids ?? [];
-  if (!ids.length) { list.innerHTML = ''; return; }
-
-  const repo = getLedgerRepo();
-  const entryDetails = [];
-  if (repo) {
-    for (const entryId of ids) {
-      const legs = await repo.listAllLegsInEntry(entryId);
-      const desc = legs.find(l => l.desc)?.desc || '';
-      entryDetails.push({ entryId, desc, legs });
-    }
-  } else {
-    ids.forEach(entryId => entryDetails.push({ entryId, desc: '', legs: [] }));
-  }
-
-  list.innerHTML = `
-    <div class="border border-amber-200 bg-amber-50 rounded-lg p-2 flex flex-col gap-1">
-      ${entryDetails.map(({ entryId, desc }) => `
-        <button data-unbalanced-entry="${entryId}"
-          class="w-full text-left px-3 py-2 text-xs font-mono text-amber-900 bg-amber-100 hover:bg-amber-200 rounded flex justify-between items-center group transition-colors">
-          <div class="flex flex-col gap-0.5">
-            <span class="font-bold">${entryId}</span>
-            ${desc ? `<span class="font-sans text-amber-700/80">${desc}</span>` : ''}
-          </div>
-          <svg class="w-4 h-4 opacity-50 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-        </button>`).join('')}
-    </div>`;
-
-  list.querySelectorAll('[data-unbalanced-entry]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const detail = entryDetails.find(d => d.entryId === btn.dataset.unbalancedEntry);
-      if (detail) jumpToUnbalancedEntry(detail.entryId, detail.legs);
-    });
-  });
-}
-
 // AC-07: manual trigger — disables the button while running, surfaces errors instead of a
 // stale/false "balanced" status (AC-09).
 async function runReconciliationNow(root) {
@@ -260,7 +273,7 @@ async function runReconciliationNow(root) {
   try {
     _lastReconciliation = await runAndRecord(repo);
     renderReconcileStatus(root);
-    renderUnbalancedList(root);
+    renderUnbalancedList(root, repo, _lastReconciliation?.unbalanced_ids ?? []);
   } catch (err) {
     if (status) status.textContent = t('ledger.reconcile.error');
     console.error('[ledger-viewer] reconcile failed:', err); // DEV
@@ -281,20 +294,56 @@ function exportCsv() {
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 }
 
+// F-19-75: paint-shell-first + bounded initial load, mirrors masters-customers.js/air-rates.js.
+async function loadInitial(root, repo) {
+  if (!repo) { _accounts = []; _lastReconciliation = null; renderChartTree(root); return; }
+  if (isViewSuperseded(root)) return;
+
+  const [chartRes, reconRes] = await Promise.all([
+    safeMasterLoad(() => repo.chartOfAccounts(), CHART_TAG, VIEW_DATA_LOAD_BUDGET_MS),
+    safeMasterLoad(() => repo.getLastReconciliation(), RECON_TAG, VIEW_DATA_LOAD_BUDGET_MS),
+  ]);
+  if (isViewSuperseded(root)) return;
+
+  if (!chartRes.ok) { // chart is essential — no account tree without it
+    const tree = root.querySelector('#chart-tree');
+    renderMasterLoadRetryStatus(tree, t('masters.load_error'), t('retry'), () => loadInitial(root, repo));
+    return;
+  }
+  _accounts           = chartRes.value;
+  _lastReconciliation = reconRes.ok ? reconRes.value : null; // reconciliation optional
+  renderChartTree(root);
+  renderReconcileStatus(root);
+  renderUnbalancedList(root, repo, _lastReconciliation?.unbalanced_ids ?? []);
+}
+
 export async function render(root) {
   // F-24-09: route-guard (F-24-05) is the authoritative gate for /accounting/*, not this view.
   const repo = getLedgerRepo();
-  _accounts            = repo ? await repo.chartOfAccounts() : [];
-  _selectedAccount     = null;
-  _rawLegs             = [];
-  _filter              = defaultFilter();
-  _lastReconciliation  = repo ? await repo.getLastReconciliation() : null;
 
+  _selectedAccount    = null;
+  _rawLegs            = [];
+  _filter             = defaultFilter();
+  _lastReconciliation = null;
+  _selectedEntryId    = null; _selectedLeg = null;
+
+  // Paint shell first — before any Drive await — so a stalled load degrades to an inline
+  // retry inside the painted shell instead of a pre-paint blank (AC-08).
   root.innerHTML = shellHtml();
-  renderChartTree(root);
   bindFilterInputs(root);
-  renderReconcileStatus(root);
-  renderUnbalancedList(root);
   root.querySelector('#btn-export-csv').addEventListener('click', exportCsv);
   root.querySelector('#btn-reconcile-now').addEventListener('click', () => runReconciliationNow(root));
+
+  await loadInitial(root, repo);
+
+  // F-29-24: manager-only repost trigger — never boot-wired, only mounted here on demand.
+  // route-guard.js's role check, not auth-gate.js's legacy inline gate (F-24-09 AC-01: this
+  // view must not reintroduce the check route-guard.js already superseded).
+  if (currentUserRole() === ROLE_MANAGER) {
+    const entityRepo = window.__vdg_repo;
+    if (entityRepo) {
+      const panelRoot = root.querySelector('#repost-panel-root');
+      await safeMasterLoad(() => mountRepostPanel(panelRoot, { ledgerRepo: repo, entityRepo }), REPOST_TAG);
+    }
+  }
 }

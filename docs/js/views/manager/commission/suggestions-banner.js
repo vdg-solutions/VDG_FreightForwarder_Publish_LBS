@@ -39,7 +39,7 @@ function bannerHtml(gk, pattern, count, priority) {
       data-gk="${gk}">
       <span class="text-xs text-blue-800">${msg}</span>
       <div class="flex items-center gap-2 shrink-0">
-        <label class="text-[10px] text-slate-500">Priority</label>
+        <label class="text-[10px] text-slate-500">${t('commission.suggest.priority')}</label>
         <input type="number" class="banner-priority w-12 border border-slate-200 rounded px-1 py-0.5 text-xs"
           value="${priority}" min="0" max="999" />
         <button type="button" class="banner-promote

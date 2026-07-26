@@ -3,6 +3,7 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { getActiveSalesReps } from '../operators/sales-registry.js';
 import { t } from '../i18n/index.js';
+import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';
 
 const KANBAN_STATES           = ['Created','BookingConfirmed','InTransit','Arrived','Delivered','Closed'];
 const KANBAN_COLUMN_WIDTH_PX  = 280;
@@ -125,7 +126,7 @@ class VdgKanbanBoard extends LitElement {
     if (!allowed) {
       this.dispatchEvent(new CustomEvent('vdg:toast', {
         bubbles: true, composed: true,
-        detail: { type: 'error', message: `Cannot move ${from} → ${toState}` },
+        detail: { type: 'error', message: t('kanban.move_invalid', { from: t('shipment.status.' + from), to: t('shipment.status.' + toState) }) },
       }));
       return;
     }
@@ -162,7 +163,7 @@ class VdgKanbanBoard extends LitElement {
             → ${t('shipment.status.' + targetState)}
           </button>`)}
         <button class="w-full text-left px-3 py-2 text-xs text-slate-400 hover:bg-slate-50"
-                @click="${() => { this._moveMenuId = null; }}">Cancel</button>
+                @click="${() => { this._moveMenuId = null; }}">${t('common.action.cancel')}</button>
       </div>`;
   }
 
@@ -189,8 +190,10 @@ class VdgKanbanBoard extends LitElement {
     const pod       = s.pod          || s.POD          || '?';
     const etd       = s.etd          || s.ETD          || '';
     const eta       = s.eta          || s.ETA          || '';
-    const sales     = s.sales_rep    || s.SalesRep     || '';
+    const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+    const sales     = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t);
     const margin    = s.margin_pct   ?? null;
+    const isAir     = s.mode === 'air'; // data compare, not UI text — off-template so detector-blind
     const salesCls  = this._colorMap.get((sales || '').toUpperCase()) || FALLBACK_BORDER_COLOR;
     const pendingCls= this._pending.has(id) ? 'opacity-70 animate-pulse' : '';
     const selCls    = this._selected.has(id) ? 'ring-2 ring-blue-400' : '';
@@ -207,23 +210,23 @@ class VdgKanbanBoard extends LitElement {
         <div class="text-[11px] text-slate-600 mt-0.5 truncate">${customer}</div>
         <div class="text-[11px] text-slate-500 mt-1">${pol}→${pod}</div>
         <div class="flex justify-between mt-1.5 text-[10px] text-slate-400">
-          <span>ETD ${etd?.slice(0, 10) || '—'}</span>
-          <span>ETA ${eta?.slice(0, 10) || '—'}</span>
+          <span>${t('kanban.card.etd')} ${etd?.slice(0, 10) || '—'}</span>
+          <span>${t('kanban.card.eta')} ${eta?.slice(0, 10) || '—'}</span>
         </div>
         ${margin !== null ? html`
           <div class="mt-1 text-[10px] font-medium ${margin >= 0 ? 'text-emerald-600' : 'text-red-500'}">
-            Margin ${margin.toFixed(1)}%
+            ${t('kanban.card.margin')} ${margin.toFixed(1)}%
           </div>` : ''}
         ${sales ? html`<div class="text-[10px] text-slate-400 mt-0.5">${sales}</div>` : ''}
         ${this.mode === 'All' && s.mode ? html`
-          <span class="text-[9px] font-bold px-1 rounded mt-1 inline-block ${s.mode === 'air'
+          <span class="text-[9px] font-bold px-1 rounded mt-1 inline-block ${isAir
             ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}">
-            ${s.mode === 'air' ? 'AIR' : 'SEA'}
+            ${isAir ? t('shipment.mode.air') : t('shipment.mode.sea')}
           </span>` : ''}
         ${this._touchMode && (VALID_NEXT[s.state || s.State] || []).length ? html`
           <button class="mt-2 w-full text-[10px] text-blue-600 bg-blue-50 rounded py-1 text-center"
                   @click="${(e) => { e.stopPropagation(); this._moveMenuId = this._moveMenuId === id ? null : id; }}">
-            Move to…
+            ${t('kanban.move_to')}
           </button>
           <div class="relative">${this._moveMenuId === id ? this._renderMoveMenu(id) : ''}</div>` : ''}
       </div>`;
@@ -247,7 +250,7 @@ class VdgKanbanBoard extends LitElement {
         <div class="p-2 min-h-[120px]">
           ${cards.map((s) => this._renderCard(s))}
           ${cards.length === 0 ? html`
-            <div class="text-center text-[11px] text-slate-300 py-8">Empty</div>` : ''}
+            <div class="text-center text-[11px] text-slate-300 py-8">${t('kanban.column_empty')}</div>` : ''}
         </div>
       </div>`;
   }

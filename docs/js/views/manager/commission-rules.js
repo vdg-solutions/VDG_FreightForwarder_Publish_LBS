@@ -1,6 +1,7 @@
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate } from '../../router.js';
 import { bulkPut } from '../../cache/bulk-orchestrator.js';
+import { t } from '../../i18n/index.js';
 
 const KIND_COMMISSION_RULES = 'commission_rules';
 const KIND_USERS            = 'users';
@@ -29,11 +30,11 @@ async function loadData() {
 
 function buildGridCols() {
   return [
-    { field: 'email',  headerName: 'Email',  flex: 1, minWidth: 200 },
-    { field: 'name',   headerName: 'Tên',    flex: 1, minWidth: 140 },
-    { field: 'role',   headerName: 'Role',   width: 110 },
+    { field: 'email',  headerName: t('commission_rules.col.email'), flex: 1, minWidth: 200 },
+    { field: 'name',   headerName: t('commission_rules.col.name'), flex: 1, minWidth: 140 },
+    { field: 'role',   headerName: t('commission_rules.col.role'), width: 110 },
     {
-      headerName: 'Sales % (0–100)',
+      headerName: t('commission_rules.col.sales_pct'),
       field: 'salesPct',
       width: 150,
       cellRenderer: (p) => {
@@ -46,18 +47,18 @@ function buildGridCols() {
         input.max   = '100';
         input.step  = '1';
         input.value = p.value ?? '';
-        input.placeholder = `${DEFAULT_SALES_PCT} (mặc định)`;
+        input.placeholder = t('commission_rules.default_suffix', { n: DEFAULT_SALES_PCT });
         input.className = 'w-24 border border-slate-300 rounded px-2 py-1 text-xs text-right focus:ring focus:ring-blue-200 outline-none';
 
         const lbsLabel = document.createElement('span');
         lbsLabel.className = 'text-xs text-slate-400 whitespace-nowrap';
         lbsLabel.textContent = p.value != null
-          ? `LBS ${100 - Number(p.value)}%`
-          : `LBS ${100 - DEFAULT_SALES_PCT}%`;
+          ? t('commission_rules.lbs_share', { n: 100 - Number(p.value) })
+          : t('commission_rules.lbs_share', { n: 100 - DEFAULT_SALES_PCT });
 
         input.addEventListener('input', (e) => {
           const val = Math.min(Math.max(Number(e.target.value), 0), 100);
-          lbsLabel.textContent = `LBS ${100 - val}%`;
+          lbsLabel.textContent = t('commission_rules.lbs_share', { n: 100 - val });
           p.data.salesPct = e.target.value === '' ? null : val;
           p.data.dirty    = true;
           const btn = document.getElementById('btn-save-rules');
@@ -80,7 +81,7 @@ function renderGrid(container) {
 
   container.innerHTML = '<div class="ag-theme-quartz" style="height: 480px;"></div>';
   if (!window.agGrid) {
-    container.innerHTML = '<div class="p-4 text-xs text-slate-400">ag-Grid chưa sẵn sàng. Tải lại trang.</div>';
+    container.innerHTML = `<div class="p-4 text-xs text-slate-400">${t('commission_rules.ag_grid_unavailable')}</div>`;
     return;
   }
 
@@ -123,23 +124,23 @@ export async function render(root) {
     <div class="p-6 space-y-5 max-w-[900px] mx-auto">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-xl font-bold text-slate-900">Thiết lập hoa hồng Sales</h1>
+          <h1 class="text-xl font-bold text-slate-900">${t('commission_rules.title')}</h1>
           <p class="text-sm text-slate-500 mt-1">
-            Set % Sales Share cho từng người. LBS Share = 100% − Sales%.
+            ${t('commission_rules.subtitle')}
           </p>
         </div>
         <button id="btn-save-rules" disabled
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 text-sm font-medium transition-colors">
-          Lưu thay đổi
+          ${t('commission_rules.save')}
         </button>
       </div>
 
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
-        <div class="font-semibold">Công thức waterfall:</div>
-        <div>① TNDN = Lợi nhuận × 20%</div>
-        <div>② Net = Lợi nhuận − TNDN − Com Line − Com Khách</div>
-        <div>③ Sales Share = Net × Sales% &nbsp;|&nbsp; LBS Share = Net × (100% − Sales%)</div>
-        <div class="pt-1 text-blue-600">Mặc định nếu chưa set: Sales = ${DEFAULT_SALES_PCT}%, LBS = ${100 - DEFAULT_SALES_PCT}%</div>
+        <div class="font-semibold">${t('commission_rules.waterfall.title')}</div>
+        <div>${t('commission_rules.waterfall.line1')}</div>
+        <div>${t('commission_rules.waterfall.line2')}</div>
+        <div>${t('commission_rules.waterfall.line3')}</div>
+        <div class="pt-1 text-blue-600">${t('commission_rules.waterfall.default_note', { sales: DEFAULT_SALES_PCT, lbs: 100 - DEFAULT_SALES_PCT })}</div>
       </div>
 
       <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -175,7 +176,7 @@ export async function render(root) {
     const btn    = document.getElementById('btn-save-rules');
     const status = root.querySelector('#save-status');
     if (btn) btn.disabled = true;
-    if (status) status.textContent = 'Đang lưu…';
+    if (status) status.textContent = t('commission_rules.saving');
 
     const entities = dirtyRows.map((r) => ({
       id:         r.id,
@@ -187,14 +188,14 @@ export async function render(root) {
     try {
       await bulkPut(repo, KIND_COMMISSION_RULES, entities);
       window.dispatchEvent(new CustomEvent('vdg:toast', {
-        detail: { type: 'success', message: `Đã lưu ${entities.length} quy tắc hoa hồng` },
+        detail: { type: 'success', message: t('commission_rules.saved', { n: entities.length }) },
       }));
-      if (status) status.textContent = `Đã lưu lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+      if (status) status.textContent = t('commission_rules.saved_at', { time: new Date().toLocaleTimeString('vi-VN') });
       dirtyRows.forEach((r) => { r.dirty = false; });
       await loadData();
     } catch (e) {
       window.dispatchEvent(new CustomEvent('vdg:toast', {
-        detail: { type: 'error', message: 'Lỗi khi lưu: ' + e.message },
+        detail: { type: 'error', message: t('commission_rules.save_error', { msg: e.message }) },
       }));
       if (btn) btn.disabled = false;
     }

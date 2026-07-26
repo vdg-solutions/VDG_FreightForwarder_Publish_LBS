@@ -3,6 +3,8 @@
 import { t } from '../../i18n/index.js';
 import { genShipmentRef, nextSeq } from '../../operators/shipment-ref-gen.js';
 import { buildShipment } from './shipment-builder.js';
+import { ensureShipmentStateAliases } from '../../util/shipment-state-aliases.js';
+import { registerFsmEntity } from '../../operators/fsm-ingest.js';
 
 const WARN_PNL_LINES_MISSING = 'pnl_lines_empty';
 // AC-08: max number of CE keys to attempt deletion during commission overwrite
@@ -82,6 +84,12 @@ async function _deletePnlLines(repo, ref) {
   for (let i = 1; i <= MAX_PL_CLEANUP; i++) await repo.delete('pnl_line', `${ref}-L${i}`);
 }
 
+// F-18-11: seed-if-unseeded + load once per call — resolver input for buildShipment's state
+// constraint (DEFECT-1: shared seed-on-first-read helper, idempotent).
+async function _loadStateAliasRows(repo) {
+  return ensureShipmentStateAliases(repo);
+}
+
 // validate → buildShipment → repo.put → commission_entries → post ledger → return
 // { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every repo.put this
 // call made (compensating delete, not a real transaction — pm-decisions.md Q3).
@@ -94,9 +102,11 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   const seq = await nextSeq(repo, dir, Date.now());
   const ref = genShipmentRef(dir, Date.now(), seq);
 
-  const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft' });
+  const stateAliasRows = await _loadStateAliasRows(repo);
+  const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows });
   shipment._ledger_version = INITIAL_LEDGER_VERSION;
   await repo.put('shipment', ref, shipment);
+  await registerFsmEntity(ref, shipment.state); // F-19-88 AC-01: make it a first-class FSM entity
 
   const warnings = [];
   if (!shipment.pnl_lines || shipment.pnl_lines.length === 0) {
@@ -149,10 +159,17 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
 
   const publish = opts.publish !== false;
 
-  const prior   = await repo.get('shipment', ref).catch(() => null);
-  const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft' });
+  const prior = await repo.get('shipment', ref).catch(() => null);
+  const stateAliasRows = await _loadStateAliasRows(repo);
+  // F-18-11 AC-02: a re-save that carries no explicit state change must never regress the
+  // prior resolved canonical state back to the create-time default — read prior.state BEFORE
+  // rebuilding via buildShipment. An explicit edit-time state change (once the UI grows one)
+  // still wins since state.state is checked first.
+  const stateInput = { ...state, state: state.state ?? prior?.state };
+  const shipment = buildShipment(stateInput, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows });
   shipment._ledger_version = (prior?._ledger_version || 0) + 1;
   await repo.put('shipment', ref, shipment);
+  await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state
 
   // Commission overwrite: delete existing CE records then write new set (PM-locked strategy).
   for (let i = 1; i <= MAX_CE_CLEANUP; i++) {

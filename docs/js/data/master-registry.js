@@ -27,7 +27,12 @@ export const MASTER_REGISTRY = {
   'uld-types':        { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/uld-types.jsonl`,         tier: 'reference' },
   'air-rates':        { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/air-rates.jsonl`,         tier: 'priced'    },
   'ocean-carriers':   { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/ocean-carriers.jsonl`,    tier: 'reference' },
+  // F-28-15: capstone slice (e) — priced ocean-tariff kind, area co-lands in protection_table.rs.
+  'ocean-tariff':     { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/ocean-tariff.jsonl`,      tier: 'priced'    },
   user_audit_log:     { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
   'local-charges':    { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/local-charges.jsonl`,     tier: 'priced'    },
   'units-of-measure': { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/units-of-measure.jsonl`,  tier: 'reference' },
+  // F-18-11: alias-only registry over the 6 Rust-FSM-backed ShipmentState canonical values.
+  // Manager may edit aliases/labels on the 6 seeded rows only — never add/remove a row.
+  'shipment-states':  { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/shipment-states.jsonl`,   tier: 'reference' },
 };

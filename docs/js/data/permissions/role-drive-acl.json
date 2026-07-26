@@ -3,7 +3,7 @@
     { "path": "*", "access": "write" }
   ],
   "SalesRep": [
-    { "path": "users/{sales_prefix}", "access": "write" },
+    { "path": "users/{user_prefix}", "access": "write" },
     { "path": "_shared/customers", "access": "read" },
     { "path": "_shared/fx-rates", "access": "read" }
   ],

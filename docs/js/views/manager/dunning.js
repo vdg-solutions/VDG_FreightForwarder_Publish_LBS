@@ -6,6 +6,8 @@ import { pickTemplate, mergeFields } from '../../operators/manager/dunning-ladde
 import { classifyOverdue }           from '../../operators/manager/dunning-ladder.js';
 import { appendDunning }             from '../../sync/dunning-log.js';
 import { showConfirm }               from '../../helpers/show-confirm.js';
+import { t }                         from '../../i18n/index.js';
+import { agGridLocaleText }          from '../../i18n/ag-grid-locale.js';
 
 const KIND_BILLING   = 'billing';
 const KIND_CUSTOMERS = 'customers';
@@ -92,14 +94,15 @@ function mountGrid(container, rows) {
 
   const colDefs = [
     { headerName: '', width: 44, checkboxSelection: true, headerCheckboxSelection: true },
-    { field: 'customer_name',      headerName: 'Customer',        flex: 1 },
-    { field: 'stage',              headerName: 'Stage',           width: 110,
-      cellStyle: (p) => ({ color: stageCls(p.value), fontWeight: '600' }) },
-    { field: 'days_overdue',       headerName: 'Days Overdue',    width: 120, sort: 'desc' },
-    { field: 'total_outstanding',  headerName: 'Outstanding VND', width: 150,
+    { field: 'customer_name',      headerName: t('dunning.col.customer'),      flex: 1 },
+    { field: 'stage',              headerName: t('dunning.col.stage'),         width: 110,
+      cellStyle: (p) => ({ color: stageCls(p.value), fontWeight: '600' }),
+      valueFormatter: ({ value }) => t('sales_overdue.stage.' + value) },
+    { field: 'days_overdue',       headerName: t('dunning.col.days_overdue'),  width: 120, sort: 'desc' },
+    { field: 'total_outstanding',  headerName: t('dunning.col.outstanding'),   width: 150,
       valueFormatter: ({ value }) => fmtVnd(value) },
-    { field: 'invoice_count',      headerName: '# Invoices',      width: 100 },
-    { field: 'email',              headerName: 'Email',           width: 180 },
+    { field: 'invoice_count',      headerName: t('dunning.col.invoices'),      width: 100 },
+    { field: 'email',              headerName: t('dunning.col.email'),         width: 180 },
   ];
 
   const opts = {
@@ -112,6 +115,7 @@ function mountGrid(container, rows) {
       const bulkBtn = container.closest('.dunning-root')?.querySelector('#btn-bulk-send');
       if (bulkBtn) bulkBtn.disabled = _selectedIds.size === 0;
     },
+    localeText: agGridLocaleText(),
   };
   const g = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
   _grid = g.gridOptions?.api || opts.api;
@@ -151,38 +155,38 @@ export async function render(root) {
   root.innerHTML = `
     <div class="dunning-root p-6 max-w-[1400px] mx-auto">
       <div class="flex items-center justify-between mb-4">
-        <div class="text-lg font-semibold text-slate-900">AR Dunning Pipeline</div>
+        <div class="text-lg font-semibold text-slate-900">${t('dunning.title')}</div>
         <div class="flex gap-2">
           <select id="sel-locale" class="border rounded-lg px-3 py-1.5 text-xs">
-            <option value="vi">VI</option>
-            <option value="en">EN</option>
+            <option value="vi">${t('dunning.locale.vi')}</option>
+            <option value="en">${t('dunning.locale.en')}</option>
           </select>
           <button id="btn-bulk-send" disabled
                   class="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40">
-            Send bulk (selected)
+            ${t('dunning.action.bulk_send')}
           </button>
           <a href="#/manager/dunning-templates"
              class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
-            Templates
+            ${t('dunning.link.templates')}
           </a>
           <button id="btn-refresh"
                   class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
-            Refresh
+            ${t('dunning.action.refresh')}
           </button>
         </div>
       </div>
       <div id="dunning-grid-container"></div>
-      <div id="dunning-status" class="text-xs text-slate-400 mt-2">Loading…</div>
+      <div id="dunning-status" class="text-xs text-slate-400 mt-2">${t('dunning.status.loading')}</div>
     </div>`;
 
   let rows = [];
 
   async function reload() {
-    root.querySelector('#dunning-status').textContent = 'Loading…';
+    root.querySelector('#dunning-status').textContent = t('dunning.status.loading');
     const data = await loadData();
     rows = data.rows;
     mountGrid(root.querySelector('#dunning-grid-container'), rows);
-    root.querySelector('#dunning-status').textContent = `${rows.length} overdue customers`;
+    root.querySelector('#dunning-status').textContent = t('dunning.status.count', { n: rows.length });
   }
 
   await reload();
@@ -194,15 +198,15 @@ export async function render(root) {
     const selected = rows.filter((r) => _selectedIds.has(r.customer_id));
     if (!selected.length) return;
     const ok = await showConfirm({
-      title: `Send reminder to ${selected.length} customers?`,
-      body:  `Reminder emails go out immediately using the ${locale.toUpperCase()} template.`,
-      confirmLabel: 'Send',
-      cancelLabel:  'Cancel',
+      title: t('dunning.confirm.title', { n: selected.length }),
+      body:  t('dunning.confirm.body', { L: locale.toUpperCase() }),
+      confirmLabel: t('dunning.confirm.ok'),
+      cancelLabel:  t('dunning.confirm.cancel'),
     });
     if (!ok) return;
     for (const row of selected) sendReminder(row, locale);
     window.dispatchEvent(new CustomEvent('vdg:toast', {
-      detail: { type: 'success', message: `Reminders sent for ${selected.length} customers` },
+      detail: { type: 'success', message: t('dunning.toast.sent', { n: selected.length }) },
     }));
   });
 }

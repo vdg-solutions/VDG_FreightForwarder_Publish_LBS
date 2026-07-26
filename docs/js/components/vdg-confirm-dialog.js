@@ -14,12 +14,19 @@ function escapeHtml(value) {
 
 /// AC-02/AC-03: pure markup builder — destructive flips confirm button to btn-danger; caller
 /// is responsible for template substitution (e.g. `{email}`) before passing title/body in.
-export function buildConfirmDialogHtml({ title, body, confirmLabel, cancelLabel, destructive = false }) {
+/// F-28-12: reasonField adds a text input (AC-03 reject-reason) — additive, opt-in only.
+export function buildConfirmDialogHtml({ title, body, confirmLabel, cancelLabel, destructive = false, reasonField = false, reasonLabel = '' }) {
   const confirmClass = destructive ? BTN_DANGER_CLASS : BTN_PRIMARY_CLASS;
+  const reasonHtml = reasonField ? `
+      <div class="space-y-1">
+        <label class="text-xs text-slate-600" for="vdg-confirm-reason">${escapeHtml(reasonLabel)}</label>
+        <textarea id="vdg-confirm-reason" rows="2" class="w-full border border-slate-200 rounded-md px-2 py-1.5 text-xs"></textarea>
+      </div>` : '';
   return `
     <div class="bg-white rounded-xl shadow-xl p-6 w-96 space-y-4" role="alertdialog" aria-modal="true">
       <div class="text-sm font-semibold text-slate-800">${escapeHtml(title)}</div>
       <div class="text-xs text-slate-600 whitespace-pre-line">${escapeHtml(body)}</div>
+      ${reasonHtml}
       <div class="flex gap-2 justify-end">
         <button id="vdg-confirm-cancel" class="${BTN_CANCEL_CLASS}">${escapeHtml(cancelLabel)}</button>
         <button id="vdg-confirm-ok" class="${confirmClass}">${escapeHtml(confirmLabel)}</button>
@@ -29,12 +36,16 @@ export function buildConfirmDialogHtml({ title, body, confirmLabel, cancelLabel,
 
 /// AC-01: mounts overlay on doc.body, wires cancel/confirm/backdrop/Escape -> onResolve(bool).
 /// `doc` is injectable so unit tests can pass a fake document without a real DOM.
+/// F-28-12: when options.reasonField is set, resolves { confirmed, reason } instead of a
+/// plain boolean — opt-in, so every existing boolean-consumer call site is unaffected.
 export function mountConfirmDialog(options, onResolve, doc = document) {
   const overlay = doc.createElement('div');
   overlay.className = 'vdg-confirm-dialog fixed inset-0 z-[60] bg-black/40 flex items-center justify-center';
   overlay.innerHTML = buildConfirmDialogHtml(options);
 
-  const close = (result) => {
+  const close = (confirmed) => {
+    const reasonEl = options.reasonField ? overlay.querySelector('#vdg-confirm-reason') : null;
+    const result = options.reasonField ? { confirmed, reason: confirmed ? (reasonEl?.value ?? '') : '' } : confirmed;
     overlay.remove();
     doc.removeEventListener('keydown', onKeydown);
     onResolve(result);

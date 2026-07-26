@@ -39,40 +39,8 @@
   </script>
   <!-- Dark mode disabled until the view layer has dark: variants — force light, ignore stale saved pref -->
   <script>document.documentElement.classList.remove('dark');</script>
-  <!-- Tailwind Play CDN: runtime JIT build — SRI not applicable (hash changes per config/usage) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            fsm: {
-              created: '#94a3b8',
-              booked: '#3b82f6',
-              transit: '#eab308',
-              arrived: '#22c55e',
-              delivered: '#14b8a6',
-              closed: '#1f2937',
-              draft: '#94a3b8',
-              issued: '#22c55e',
-              cancelled: '#ef4444',
-              billed: '#3b82f6',
-              paid: '#22c55e',
-              raised: '#f97316',
-              escalated: '#dc2626',
-            },
-          },
-        },
-      },
-    };
-  </script>
 
-  <link rel="stylesheet" href="css/styles.css" onerror="this.remove()" />
+  <link rel="stylesheet" href="css/styles.css" />
 
   <!-- AG Grid community 31.3.2 — pinned, SRI-protected -->
   <link
@@ -123,9 +91,6 @@
       color: #0f172a;
       -webkit-font-smoothing: antialiased;
     }
-    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
-    .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
     .ag-theme-quartz { --ag-font-family: 'Inter', sans-serif; --ag-font-size: 13px; }
     /* F-15-19 AC-5 — kill UA button border/padding leakage in topbar (Chromium loses to UA in some builds) */
     header button { padding: 0; border: 0; box-sizing: border-box; min-height: 0; }
@@ -146,16 +111,9 @@
     </div>
   </div>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register(new URL('js/sw.js', document.baseURI).href).catch(function(err) {
-        console.warn('[SW] registration failed:', err);
-      });
-      navigator.serviceWorker.addEventListener('message', function(e) {
-        if (e.data && e.data.type === 'VDG_SW_UPDATE_AVAILABLE')
-          window.dispatchEvent(new CustomEvent('vdg:sw-update-available'));
-      });
-    }
+  <script type="module">
+    import { registerServiceWorker } from './js/sw-register.js';
+    registerServiceWorker();
   </script>
   <script type="module" src="js/app.js"></script>
 </body>

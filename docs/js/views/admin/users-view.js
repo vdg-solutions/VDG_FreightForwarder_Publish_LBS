@@ -75,7 +75,7 @@ async function _onDeactivate(root, user) {
   if (!roleService) { toast('error', 'Workspace not ready'); return; }
 
   try {
-    await roleService.revokeRole(user.email, user.role, user.sales_prefix);
+    await roleService.revokeRole(user.email, user.role, user.user_prefix);
     toast('success', t('admin.users.toast.deactivated').replace('{email}', user.email));
     await _reload(root);
   } catch (err) {

@@ -4,6 +4,7 @@ import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { DUNNING_DEFAULT_TEMPLATES, DUNNING_LADDER_DAYS } from '../../operators/manager/dunning-constants.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { t } from '../../i18n/index.js';
 
 const KIND      = 'dunning_templates';
 const STAGES    = Object.keys(DUNNING_LADDER_DAYS); // reminder_1,reminder_2,escalate,legal,blacklist
@@ -52,37 +53,37 @@ function buildModal(entity) {
   return `
     <dialog id="tmpl-modal" class="rounded-xl border border-slate-200 shadow-xl p-0 w-full max-w-lg backdrop:bg-black/30">
       <form id="tmpl-form" method="dialog" class="p-6 space-y-4">
-        <div class="text-base font-semibold text-slate-900">${entity ? 'Edit Template' : 'New Template'}</div>
+        <div class="text-base font-semibold text-slate-900">${entity ? t('dunning_tmpl.modal.edit') : t('dunning_tmpl.modal.new')}</div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Stage <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('dunning_tmpl.field.stage')} <span class="text-red-500">*</span></label>
             <select id="t-stage" class="w-full border rounded-lg px-3 py-2 text-sm">
-              ${STAGES.map((s) => `<option value="${s}" ${e.stage === s ? 'selected' : ''}>${s}</option>`).join('')}
+              ${STAGES.map((s) => `<option value="${s}" ${e.stage === s ? 'selected' : ''}>${t('sales_overdue.stage.' + s)}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Locale</label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('dunning_tmpl.field.locale')}</label>
             <select id="t-locale" class="w-full border rounded-lg px-3 py-2 text-sm">
               ${LOCALES.map((l) => `<option value="${l}" ${e.locale === l ? 'selected' : ''}>${l.toUpperCase()}</option>`).join('')}
             </select>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Subject <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('dunning_tmpl.field.subject')} <span class="text-red-500">*</span></label>
           <input id="t-subject" type="text" value="${escHtml(e.subject)}" required
                  class="w-full border rounded-lg px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Body</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('dunning_tmpl.field.body')}</label>
           <textarea id="t-body" rows="6"
                     class="w-full border rounded-lg px-3 py-2 text-sm font-mono resize-y">${escHtml(e.body)}</textarea>
           <p class="text-[10px] text-slate-400 mt-1">
-            Placeholders: {customer_name}, {total_outstanding}, {days_overdue}, {invoice_list}
+            ${t('dunning_tmpl.hint.placeholders')}
           </p>
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
-          <button type="submit" class="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">Save</button>
-          <button type="button" id="btn-tmpl-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">${t('dunning_tmpl.modal.save')}</button>
+          <button type="button" id="btn-tmpl-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">${t('dunning_tmpl.modal.cancel')}</button>
         </div>
       </form>
     </dialog>`;
@@ -116,12 +117,12 @@ function openModal(root, entity, onSave) {
 function rowHtml(e) {
   return `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
-      <td class="px-3 py-2 font-mono">${escHtml(e.stage)}</td>
+      <td class="px-3 py-2 font-mono">${t('sales_overdue.stage.' + e.stage)}</td>
       <td class="px-3 py-2 uppercase">${escHtml(e.locale)}</td>
       <td class="px-3 py-2">${escHtml(e.subject)}</td>
       <td class="px-3 py-2">
-        <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">Edit</button>
-        <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">Delete</button>
+        <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('dunning_tmpl.action.edit')}</button>
+        <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('dunning_tmpl.action.delete')}</button>
       </td>
     </tr>`;
 }
@@ -137,26 +138,26 @@ export async function render(root) {
   root.innerHTML = `
     <div class="p-6 max-w-[1000px] mx-auto">
       <div class="flex items-center justify-between mb-6">
-        <div class="text-lg font-semibold text-slate-900">Dunning Templates</div>
+        <div class="text-lg font-semibold text-slate-900">${t('dunning_tmpl.title')}</div>
         <button id="btn-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">
-          + New Template
+          ${t('dunning_tmpl.action.new')}
         </button>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
         <table class="w-full">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">Stage</th>
-              <th class="px-3 py-2 text-left">Locale</th>
-              <th class="px-3 py-2 text-left">Subject</th>
-              <th class="px-3 py-2 text-left w-28">Actions</th>
+              <th class="px-3 py-2 text-left">${t('dunning_tmpl.col.stage')}</th>
+              <th class="px-3 py-2 text-left">${t('dunning_tmpl.col.locale')}</th>
+              <th class="px-3 py-2 text-left">${t('dunning_tmpl.col.subject')}</th>
+              <th class="px-3 py-2 text-left w-28">${t('dunning_tmpl.col.actions')}</th>
             </tr>
           </thead>
           <tbody id="tmpl-tbody"></tbody>
         </table>
-        <div id="tmpl-empty" class="hidden text-center text-xs text-slate-400 py-8">No templates. Seed defaults first.</div>
+        <div id="tmpl-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('dunning_tmpl.empty')}</div>
       </div>
-      <div id="tmpl-status" class="text-xs text-slate-400 mt-2">Loading…</div>
+      <div id="tmpl-status" class="text-xs text-slate-400 mt-2">${t('dunning_tmpl.status.loading')}</div>
     </div>`;
 
   async function reload() {
@@ -186,10 +187,10 @@ export async function render(root) {
     const delBtn = e.target.closest('.btn-delete');
     if (delBtn) {
       const ok = await showConfirm({
-        title: 'Delete this template?',
-        body:  'This cannot be undone.',
-        confirmLabel: 'Delete',
-        cancelLabel:  'Cancel',
+        title: t('dunning_tmpl.confirm.title'),
+        body:  t('dunning_tmpl.confirm.body'),
+        confirmLabel: t('dunning_tmpl.confirm.ok'),
+        cancelLabel:  t('dunning_tmpl.confirm.cancel'),
         destructive:  true,
       });
       if (!ok) return;

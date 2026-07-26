@@ -24,13 +24,20 @@ const MIGRATION_KIND = '_seed_migrations';
 export async function runSeedMigrations(repo, migrations, _ms = SAFE_AWAIT_DEFAULT_MS) {
   // F-20-01: repo.list/get/put on a freshly provisioned workspace can hang (Drive
   // folder not yet ready) — bound every repo call so this always settles.
-  const listRes = await safeAwait(repo.list(MIGRATION_KIND, null), _ms, null, 'seed-migrator:list');
-  const done = new Set((listRes.ok ? listRes.value : []).map((m) => m.id));
+  //
+  // F-19-30: was a single bulk repo.list(MIGRATION_KIND) building the whole "already applied"
+  // set up front. list() is stale-while-revalidate (local snapshot now, Drive refresh in the
+  // background) and, on ANY safeAwait timeout of that one call, failed OPEN — empty done-set,
+  // every migration reseeded in full. Under load that's a vicious cycle (storm -> timeout ->
+  // reseed -> more storm). A per-migration repo.get is cheaper (single key, no is_master_kind
+  // month-loop _seed_migrations was otherwise falling into) and durable (get() blocks on a real
+  // Drive fetch when the local copy is missing/stale; list() never does).
   const applied = [];
   const skipped = [];
 
   for (const mig of migrations) {
-    if (done.has(mig.id)) { skipped.push(mig.id); continue; }
+    const markRes = await safeAwait(repo.get(MIGRATION_KIND, mig.id), _ms, null, 'seed-migrator:mark-check');
+    if (markRes.ok && markRes.value) { skipped.push(mig.id); continue; }
     try {
       const res = await fetch(mig.url);
       if (!res.ok) { skipped.push(mig.id); continue; }

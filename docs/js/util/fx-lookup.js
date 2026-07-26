@@ -6,7 +6,7 @@ const VND_CURRENCY = 'VND';
 const SESSION_CACHE = new Map();
 
 /// Async: call repo.getRate(), cache result. Returns rate as Number or null (not found).
-/// currency default 'USD' keeps the one existing caller (util/vnd-injector.js) unmodified.
+/// currency default 'USD' for legacy callers that omit the pair.
 export async function getRateForDate(repo, dateStr, currency = 'USD') {
   if (currency === VND_CURRENCY) return 1; // self-pair, no lookup
   const pair = `${currency}/${VND_CURRENCY}`;

@@ -8,6 +8,8 @@ import {
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { idbGet, idbPut } from '../../cache/idb-cache.js';
+import { t } from '../../i18n/index.js';
+import { agGridLocaleText } from '../../i18n/ag-grid-locale.js';
 
 const MAX_CREDIT_ALERTS   = 3;
 const PREFS_META_KEY      = 'preferences';
@@ -29,6 +31,12 @@ let _onEntity;
 
 function getRepo() { return window.__vdg_repo; }
 
+function tabBtnClass(active) {
+  return `px-4 py-2 text-sm font-medium rounded-tl-lg rounded-tr-lg ${active
+    ? 'bg-white border border-b-0 border-slate-200 text-blue-700'
+    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`;
+}
+
 function utilizationCls(pct) {
   if (pct >= CREDIT_UTILIZATION_EXCEEDED_PCT) return 'text-red-600 font-bold';
   if (pct >= CREDIT_UTILIZATION_WARN_PCT)     return 'text-amber-600 font-semibold';
@@ -37,20 +45,20 @@ function utilizationCls(pct) {
 
 function arGridCols() {
   return [
-    { field: 'customer',          headerName: 'Customer',       flex: 1    },
-    { field: 'current_vnd',       headerName: `Current (≤${AR_CURRENT_DAYS}d)`, width: 130,
+    { field: 'customer',          headerName: t('cash_flow.ar.col.customer'),       flex: 1    },
+    { field: 'current_vnd',       headerName: t('cash_flow.ar.col.current', { d: AR_CURRENT_DAYS }), width: 130,
       valueFormatter: ({ value }) => value ? value.toLocaleString() : '0' },
-    { field: 'bucket_31_60',      headerName: `31–${AR_BUCKET_31_60}d`, width: 110,
+    { field: 'bucket_31_60',      headerName: t('cash_flow.ar.col.bucket_31_60', { n: AR_BUCKET_31_60 }), width: 110,
       valueFormatter: ({ value }) => value ? value.toLocaleString() : '0' },
-    { field: 'bucket_61_90',      headerName: `61–${AR_BUCKET_61_90}d`, width: 110,
+    { field: 'bucket_61_90',      headerName: t('cash_flow.ar.col.bucket_61_90', { n: AR_BUCKET_61_90 }), width: 110,
       valueFormatter: ({ value }) => value ? value.toLocaleString() : '0' },
-    { field: 'bucket_91_plus',    headerName: '91+d',           width: 90,
+    { field: 'bucket_91_plus',    headerName: t('cash_flow.ar.col.bucket_91'),  width: 90,
       valueFormatter: ({ value }) => value ? value.toLocaleString() : '0' },
-    { field: 'total_outstanding', headerName: 'Total',          width: 120,
+    { field: 'total_outstanding', headerName: t('cash_flow.ar.col.total'),      width: 120,
       valueFormatter: ({ value }) => value ? value.toLocaleString() : '0', sort: 'desc' },
-    { field: 'avg_dso',           headerName: 'Avg DSO',        width: 90  },
-    { field: 'credit_limit',      headerName: 'Credit Limit',   width: 110 },
-    { field: 'utilization_pct',   headerName: 'Util %',         width: 80,
+    { field: 'avg_dso',           headerName: t('cash_flow.ar.col.dso'),        width: 90  },
+    { field: 'credit_limit',      headerName: t('cash_flow.ar.col.credit_limit'), width: 110 },
+    { field: 'utilization_pct',   headerName: t('cash_flow.ar.col.util'),       width: 80,
       cellStyle: ({ value }) => {
         if (value >= CREDIT_UTILIZATION_EXCEEDED_PCT) return { color: '#dc2626', fontWeight: 'bold' };
         if (value >= CREDIT_UTILIZATION_WARN_PCT)     return { color: '#d97706', fontWeight: '600' };
@@ -75,6 +83,7 @@ function mountArGrid(container, rows) {
     rowClassRules: rowClassRules(),
     defaultColDef: { sortable: true, resizable: true },
     onRowClicked:  (e) => showRowActions(container, e.data),
+    localeText:    agGridLocaleText(),
   };
   const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
   _arGrid = grid.gridOptions?.api || opts.api;
@@ -86,15 +95,16 @@ function mountApGrid(container, rows) {
   if (!window.agGrid) return;
   const opts = {
     columnDefs: [
-      { field: 'carrier',           headerName: 'Carrier',         flex: 1 },
-      { field: 'shipment_count',    headerName: '# Jobs',          width: 90 },
-      { field: 'total_payable_vnd', headerName: 'Total Payable',   width: 130, sort: 'desc',
+      { field: 'carrier',           headerName: t('cash_flow.ap.col.carrier'),       flex: 1 },
+      { field: 'shipment_count',    headerName: t('cash_flow.ap.col.jobs'),          width: 90 },
+      { field: 'total_payable_vnd', headerName: t('cash_flow.ap.col.total_payable'), width: 130, sort: 'desc',
         valueFormatter: ({ value }) => value ? value.toLocaleString() : '0' },
-      { field: 'avg_per_job',       headerName: 'Avg/Job',         width: 110 },
-      { field: 'oldest_outstanding',headerName: 'Oldest',          width: 110 },
+      { field: 'avg_per_job',       headerName: t('cash_flow.ap.col.avg_per_job'),   width: 110 },
+      { field: 'oldest_outstanding',headerName: t('cash_flow.ap.col.oldest'),        width: 110 },
     ],
     rowData: rows,
     defaultColDef: { sortable: true, resizable: true },
+    localeText: agGridLocaleText(),
   };
   const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
   _apGrid = grid.gridOptions?.api || opts.api;
@@ -109,16 +119,16 @@ function showRowActions(container, row) {
   div.className = 'row-actions mt-2 p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-wrap gap-2';
   div.innerHTML = `
     <button data-action="email" class="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100">
-      Send reminder
+      ${t('cash_flow.action.send_reminder')}
     </button>
     <button data-action="followup" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200">
-      Mark followed-up
+      ${t('cash_flow.action.followup')}
     </button>
     <button data-action="note" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200">
-      Add note
+      ${t('cash_flow.action.add_note')}
     </button>
     <button data-action="print" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200">
-      Generate statement
+      ${t('cash_flow.action.statement')}
     </button>`;
 
   div.addEventListener('click', async (e) => {
@@ -126,7 +136,10 @@ function showRowActions(container, row) {
     if (!action) return;
     const repo = getRepo();
     if (action === 'email') {
-      const subj = encodeURIComponent(`Payment reminder — ${row.customer} · Outstanding: ${(row.total_outstanding || 0).toLocaleString()}VND`);
+      const subj = encodeURIComponent(t('cash_flow.mail.subject', {
+        customer: row.customer,
+        amount: (row.total_outstanding || 0).toLocaleString(),
+      }));
       window.location.href = `mailto:?subject=${subj}`;
     } else if (action === 'followup' && repo) {
       const bEntry = _billing.find((b) => (b.customer || b.Customer) === row.customer);
@@ -137,10 +150,10 @@ function showRowActions(container, row) {
           followed_up_by: window.__vdg_auth?.getCurrentUser?.()?.email || 'manager',
         });
       }
-      e.target.textContent = '✓ Marked';
+      e.target.textContent = t('cash_flow.status.marked');
     } else if (action === 'note') {
       const ta = document.createElement('textarea');
-      ta.placeholder = 'Note…';
+      ta.placeholder = t('cash_flow.placeholder.note');
       ta.className   = 'w-full text-xs border border-slate-200 rounded p-2 mt-2 resize-none';
       ta.rows        = 2;
       div.appendChild(ta);
@@ -172,15 +185,15 @@ function renderTimeline(root, timeline) {
     data: {
       labels: timeline.weeks,
       datasets: [
-        { label: 'Actuals',  data: timeline.actuals,  backgroundColor: CHART_ACTUAL_COLOR },
-        { label: 'Forecast', data: timeline.forecast, backgroundColor: CHART_FORECAST_COLOR,
+        { label: t('cash_flow.chart.actuals'),  data: timeline.actuals,  backgroundColor: CHART_ACTUAL_COLOR },
+        { label: t('cash_flow.chart.forecast'), data: timeline.forecast, backgroundColor: CHART_FORECAST_COLOR,
           borderDash: [5, 5] },
       ],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top' },
-        title: { display: true, text: 'Receivable Timeline (4-week forecast)' } },
+        title: { display: true, text: t('cash_flow.chart.title') } },
       scales: { x: { stacked: true }, y: { stacked: true } },
     },
   });
@@ -196,8 +209,8 @@ async function showCreditAlert(root, customerName, newState) {
   const div = document.createElement('div');
   div.className = 'credit-alert flex items-center justify-between bg-red-600 text-white px-4 py-2 text-xs';
   div.innerHTML = `
-    <span>Credit alert: <strong>${customerName}</strong> → ${newState}
-      <a href="#" class="ml-2 underline" data-goto-ar>View AR</a>
+    <span>${t('cash_flow.alert.credit')} <strong>${customerName}</strong> → ${newState}
+      <a href="#" class="ml-2 underline" data-goto-ar>${t('cash_flow.alert.view_ar')}</a>
     </span>
     <button class="ml-4 text-red-100 hover:text-white" data-dismiss>✕</button>`;
 
@@ -248,15 +261,11 @@ export async function render(root) {
       <div id="credit-alerts" class="rounded-lg overflow-hidden"></div>
 
       <div class="flex gap-1">
-        <button data-tab="AR"
-          class="px-4 py-2 text-sm font-medium rounded-tl-lg rounded-tr-lg
-                 ${_tab === 'AR' ? 'bg-white border border-b-0 border-slate-200 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-          Receivables (AR)
+        <button data-tab="AR" class="${tabBtnClass(_tab === 'AR')}">
+          ${t('cash_flow.tab.ar')}
         </button>
-        <button data-tab="AP"
-          class="px-4 py-2 text-sm font-medium rounded-tl-lg rounded-tr-lg
-                 ${_tab === 'AP' ? 'bg-white border border-b-0 border-slate-200 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-          Payables (AP)
+        <button data-tab="AP" class="${tabBtnClass(_tab === 'AP')}">
+          ${t('cash_flow.tab.ap')}
         </button>
       </div>
 
@@ -282,10 +291,7 @@ export async function render(root) {
     if (!tabBtn) return;
     _tab = tabBtn.dataset.tab;
     root.querySelectorAll('[data-tab]').forEach((b) => {
-      const active = b.dataset.tab === _tab;
-      b.className = `px-4 py-2 text-sm font-medium rounded-tl-lg rounded-tr-lg ${active
-        ? 'bg-white border border-b-0 border-slate-200 text-blue-700'
-        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`;
+      b.className = tabBtnClass(b.dataset.tab === _tab);
     });
     root.querySelector('#ar-section').classList.toggle('hidden', _tab !== 'AR');
     root.querySelector('#ap-section').classList.toggle('hidden', _tab !== 'AP');

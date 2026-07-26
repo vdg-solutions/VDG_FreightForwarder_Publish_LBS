@@ -3,7 +3,6 @@
 
 import { initGoogleSignIn, renderSignInButton } from '../auth/google-oauth.js';
 
-const ACCEPTED_DOMAIN_HINT    = '@vdg.example';
 const SESSION_EXPIRED_MESSAGE = 'Session expired — please sign in again';
 
 // ── HTML skeleton ─────────────────────────────────────────────────────────────
@@ -28,7 +27,6 @@ function loginHtml() {
         <!-- Tagline -->
         <div class="text-center">
           <div class="text-sm font-medium text-slate-700">Sign in to continue</div>
-          <div class="text-xs text-slate-400 mt-1">Use your ${ACCEPTED_DOMAIN_HINT} account</div>
         </div>
 
         <!-- GIS button target -->
@@ -40,7 +38,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           Identity verified by Google · Data stays local
-          <div class="mt-1 font-mono text-slate-400">v0.1.58</div>
+          <div class="mt-1 font-mono text-slate-400">v0.1.59</div>
         </div>
       </div>
     </div>`;

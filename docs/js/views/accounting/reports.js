@@ -1,7 +1,7 @@
 // Financial Reports — Trial Balance + P&L + Balance Sheet (F-23-05)
 // 3-tab accountant view: same data-tab pattern as manager/cash-flow.js.
 
-import { t, fmtNumber }     from '../../i18n/index.js';
+import { t, fmtNumber, currentLocale } from '../../i18n/index.js';
 import {
   trialBalance, pnl, pnlMonthlyBreakdown, balanceSheet,
 } from '../../operators/manager/ledger-aggregator.js';
@@ -42,6 +42,9 @@ async function loadYearLegs(year) {
 }
 
 function fmtAmt(n) { return fmtNumber(n ?? 0); }
+
+// AC-04: chart-of-accounts carries name_en/name_vi at parity — pick the field for the active locale.
+function accountName(a) { return (currentLocale() === 'en' ? a?.name_en : a?.name_vi) ?? ''; }
 
 function tabButtons() {
   return TABS.map(({ key, labelKey }) => `
@@ -87,7 +90,7 @@ async function renderTrialBalance(container) {
     return `
       <tr class="border-t border-slate-100 text-xs">
         <td class="px-3 py-1.5 font-mono">${r.acc_code}</td>
-        <td class="px-3 py-1.5">${account?.name_vi ?? ''}</td>
+        <td class="px-3 py-1.5">${accountName(account)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.opening)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.dr)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.cr)}</td>
@@ -105,8 +108,8 @@ async function renderTrialBalance(container) {
       <table class="w-full">
         <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase">
           <tr>
-            <th class="px-3 py-1.5 text-left">Code</th>
-            <th class="px-3 py-1.5 text-left">Name</th>
+            <th class="px-3 py-1.5 text-left">${t('reports.column.code')}</th>
+            <th class="px-3 py-1.5 text-left">${t('reports.column.name')}</th>
             <th class="px-3 py-1.5 text-right">${t('reports.column.opening')}</th>
             <th class="px-3 py-1.5 text-right">${t('reports.column.debit')}</th>
             <th class="px-3 py-1.5 text-right">${t('reports.column.credit')}</th>
@@ -212,7 +215,7 @@ async function renderBalanceSheet(container) {
     return `
       <tr class="border-t border-slate-100 text-xs">
         <td class="px-3 py-1.5 font-mono">${r.acc}</td>
-        <td class="px-3 py-1.5">${account?.name_vi ?? ''}</td>
+        <td class="px-3 py-1.5">${accountName(account)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.amt)}</td>
       </tr>`;
   }).join('');

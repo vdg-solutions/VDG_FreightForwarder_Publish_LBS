@@ -6,6 +6,8 @@ import { computeChargeableKg } from '../../operators/air-rate-calculator.js';
 import { slugify } from '../../operators/pnl-commit-orchestrator.js';
 import { loadWasm } from '../../wasm-loader.js';
 import { getEmbedding } from '../../cache/semantic-search.js';
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { getCurrentUser } from '../../auth/google-oauth.js';
 
 const CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 const PRODUCT_OPTIONS  = ['FCL EXPORT', 'IMPORT FCL', 'AIR', 'LCL'];
@@ -86,6 +88,7 @@ export function sectionAHtml(draft = {}, customers = []) {
       <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
         ${t('sales_new.section.header')}
       </div>
+      <input type="hidden" name="quote_id" value="${d.quote_id || ''}" />
       <div class="grid grid-cols-3 gap-3">
         ${fld(t('sales_new.mode_selector.title'),
           selFld('mode', MODE_OPTIONS, mode))}
@@ -110,7 +113,7 @@ export function sectionAHtml(draft = {}, customers = []) {
         <div>
           <label class="block text-[10px] text-slate-500 mb-0.5">${t('sales_new.field.sales_rep')}</label>
           <div class="flex gap-1">
-            <input type="text" name="sales_rep" value="${d.sales_rep || ''}"
+            <input type="text" name="sales_rep" value="${resolveSalesRepLabel(d.sales_rep, getCurrentUser(), t)}"
               class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs" />
             <span id="doc-type-badge"
               class="hidden text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 self-center">

@@ -55,6 +55,9 @@ export function niDtoToDraft(pair) {
 
   return {
     _autofilled: true,
+    // F-18-11: carry the legacy state/status through — buildShipment's choke point resolves
+    // it (or defaults to DEFAULT_INITIAL_STATE when absent), same as the single-pair path.
+    state:     s.state || s.status || undefined,
     mbl:       mblDoc?.number        || '',
     hbl:       hblDoc?.number        || '',
     customer:  _str(s.customer),
@@ -125,6 +128,7 @@ export function niDtoToDraft(pair) {
 export function shipmentToDraft(shipment, ce) {
   const s = shipment || {};
   return {
+    quote_id:     s.quote_id              ?? null,
     mbl:          s.mbl                   || '',
     hbl:          s.hbl                   || '',
     job_file_no:  s.job_file_no           || '',

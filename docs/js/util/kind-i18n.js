@@ -12,5 +12,8 @@ const KIND_EMPTY = '—';
  */
 export function kindI18nLabel(kind, locale) {
   if (!kind || kind === KIND_EMPTY) return '';
-  return t(`pnl.kind.${kind}`);
+  const key = `pnl.kind.${kind}`;
+  const label = t(key);
+  // t() echoes the key back on a miss; fall back to the raw kind token, never the pnl.kind. key
+  return label === key ? kind : label;
 }

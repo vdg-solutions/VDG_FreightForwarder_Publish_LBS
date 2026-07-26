@@ -8,6 +8,7 @@ import {
   DriveApiError, ConcurrencyError,
 } from '../auth/drive-api.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
+import { appendRepostRecord as _appendRepostRecordImpl, getLastRepost as _getLastRepostImpl } from './ledger-drive-repo-repost-log.js';
 
 const LEDGER_BASE_PATH              = '_shared/ledger';
 const BY_ACCOUNT_DIR                = 'by-account';
@@ -32,6 +33,7 @@ export class LedgerDriveRepo extends LedgerRepo {
     this._postingRulesCache = null;      // PostingRulesSeed
     this._postedIndexFile   = null;      // { id, etag } for posted-index.jsonl
     this._reconciliationLogFile = null;  // { id, etag } for reconciliation-log.jsonl
+    this._repostLogFile     = null;      // { id, etag } for repost-log.jsonl (F-29-24)
   }
 
   /// Append one leg; idempotent on (entry_id, leg_idx), etag-CAS retry on 412.
@@ -92,6 +94,23 @@ export class LedgerDriveRepo extends LedgerRepo {
     return items.reduce((latest, r) => (!latest || r.run_at > latest.run_at ? r : latest), null);
   }
 
+  /// F-29-24 AC-01/AC-02: overwrite a persisted leg in place, keyed on (entry_id, leg_idx).
+  /// Repost-only — never invents/appends a leg; throws when no persisted leg matches.
+  async replaceLeg(year, acc_code, leg) {
+    return this._replaceJsonlLine({
+      loadBundle:      async () => this._toItemsBundle(await this._loadAccountBundle(year, acc_code)),
+      findIdx:         (legs) => legs.findIndex((l) => l.entry_id === leg.entry_id && l.leg_idx === leg.leg_idx),
+      invalidateCache: () => this._fileCache.delete(this._fileKey(year, acc_code)),
+      cacheSet:        (result) => this._fileCache.set(this._fileKey(year, acc_code), { id: result.id, etag: result.etag }),
+    }, leg);
+  }
+
+  /// F-29-24 AC-03: append one repost-run record to repost-log.jsonl.
+  async appendRepostRecord(record) { return _appendRepostRecordImpl(this, record); }
+
+  /// F-29-24: most recent repost-log record by run_at, or null if none yet.
+  async getLastRepost() { return _getLastRepostImpl(this); }
+
   /// Legs for one account-year file, optionally filtered by inclusive date range.
   async listLegs(year, acc_code, dateFrom, dateTo) {
     const legs = await this._readAccountFile(year, acc_code);
@@ -100,6 +119,8 @@ export class LedgerDriveRepo extends LedgerRepo {
   }
 
   /// Cross-account scan for one entry_id, bounded to the current fiscal year (Phase-1).
+  /// F-19-78: each returned leg carries its account_code (additive) — the reversal builder
+  /// needs it to re-route the contra leg back to the same account.
   async listAllLegsInEntry(entry_id) {
     const year   = new Date().getFullYear();
     const chart  = await this._loadChart();
@@ -107,7 +128,7 @@ export class LedgerDriveRepo extends LedgerRepo {
     for (const acc_code of Object.keys(chart)) {
       const legs = await this._readAccountFile(year, acc_code);
       for (const leg of legs) {
-        if (leg.entry_id === entry_id) result.push(leg);
+        if (leg.entry_id === entry_id) result.push({ ...leg, account_code: acc_code });
       }
     }
     return result;
@@ -172,6 +193,39 @@ export class LedgerDriveRepo extends LedgerRepo {
         invalidateCache(); // stale etag — reload + retry
         await this._sleep(LEDGER_APPEND_BACKOFF_BASE_MS * 2 ** attempt);
         return this._appendJsonlLine({ loadBundle, findDup, invalidateCache, cacheSet }, record, attempt + 1);
+      }
+      throw err;
+    }
+  }
+
+  /// F-29-24: etag-CAS overwrite — mirrors _appendJsonlLine's retry loop but looks up
+  /// idx = findIdx(items) instead of a dup-check, throws when idx === -1 (never invents/
+  /// appends a leg — the diff step only calls replaceLeg for legs it already found persisted),
+  /// and overwrites items[idx] preserving its file-order seq instead of pushing.
+  async _replaceJsonlLine({ loadBundle, findIdx, invalidateCache, cacheSet }, record, attempt = 0) {
+    if (attempt >= LEDGER_APPEND_MAX_ATTEMPTS) {
+      throw new ConcurrencyError('ledger', 'replace', LEDGER_APPEND_MAX_ATTEMPTS);
+    }
+
+    const { items, fileId, etag, folderId, fileName } = await loadBundle();
+    const idx = findIdx(items);
+    if (idx === -1) {
+      throw new Error(`replaceLeg: no persisted leg matches entry_id=${record.entry_id} leg_idx=${record.leg_idx}`);
+    }
+    items[idx] = { ...record, seq: items[idx].seq };
+
+    try {
+      const content    = serializeJsonlBundle(items);
+      const uploadId   = fileId ?? folderId;
+      const uploadEtag = fileId ? etag : null;
+      const result     = await this._api.uploadFile(uploadId, fileName, content, uploadEtag, { isUpdate: Boolean(fileId) });
+      cacheSet(result);
+      return { etag: result.etag };
+    } catch (err) {
+      if (err instanceof DriveApiError && err.status === 412) {
+        invalidateCache(); // stale etag — reload + retry
+        await this._sleep(LEDGER_APPEND_BACKOFF_BASE_MS * 2 ** attempt);
+        return this._replaceJsonlLine({ loadBundle, findIdx, invalidateCache, cacheSet }, record, attempt + 1);
       }
       throw err;
     }

@@ -1,5 +1,6 @@
 // sales-drop-preview.js — combined-format preview table renderers.
 // Extracted from sales-drop.js to keep it under the 350-line cap (F-15-57, R-B).
+import { t } from '../i18n/index.js';
 
 function fmt(v) {
   if (v == null || v === '') return '—';
@@ -51,7 +52,7 @@ export function renderShipmentRow(s, lines, idx) {
 }
 
 export function renderLinesSubTable(lines) {
-  if (!lines || !lines.length) return '<p class="text-xs text-slate-400 px-3 py-2">No lines</p>';
+  if (!lines || !lines.length) return `<p class="text-xs text-slate-400 px-3 py-2">${t('sales_drop.preview.no_lines')}</p>`;
   const rows = lines.map((l) => `
     <tr class="border-t border-slate-100">
       <td class="px-3 py-1.5 text-xs">${l.line_no ?? l.LineNo ?? '—'}</td>
@@ -64,10 +65,10 @@ export function renderLinesSubTable(lines) {
     <thead class="bg-slate-100 text-slate-600">
       <tr>
         <th class="px-3 py-1 text-left">#</th>
-        <th class="px-3 py-1 text-left">Description</th>
-        <th class="px-3 py-1 text-left">Kind</th>
-        <th class="px-3 py-1 text-right">Buy VND</th>
-        <th class="px-3 py-1 text-right">Sell VND</th>
+        <th class="px-3 py-1 text-left">${t('sales_drop.preview.col.description')}</th>
+        <th class="px-3 py-1 text-left">${t('sales_drop.preview.col.kind')}</th>
+        <th class="px-3 py-1 text-right">${t('sales_drop.preview.col.buy_vnd')}</th>
+        <th class="px-3 py-1 text-right">${t('sales_drop.preview.col.sell_vnd')}</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -82,12 +83,12 @@ export function renderRightPanel(report, detect) {
   return `
     <div class="space-y-4">
       <div class="rounded-lg border border-red-200 bg-red-50 p-3">
-        <div class="text-xs font-semibold text-red-700 mb-1">Errors (${errors.length})</div>
-        ${errors.length ? `<ul class="list-disc pl-4 space-y-0.5">${errList}</ul>` : '<p class="text-xs text-red-400">None</p>'}
+        <div class="text-xs font-semibold text-red-700 mb-1">${t('sales_drop.preview.errors', { n: errors.length })}</div>
+        ${errors.length ? `<ul class="list-disc pl-4 space-y-0.5">${errList}</ul>` : `<p class="text-xs text-red-400">${t('sales_drop.preview.none')}</p>`}
       </div>
       <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
-        <div class="text-xs font-semibold text-amber-700 mb-1">Warnings (${warnings.length})</div>
-        ${warnings.length ? `<ul class="list-disc pl-4 space-y-0.5">${warnList}</ul>` : '<p class="text-xs text-amber-400">None</p>'}
+        <div class="text-xs font-semibold text-amber-700 mb-1">${t('sales_drop.preview.warnings', { n: warnings.length })}</div>
+        ${warnings.length ? `<ul class="list-disc pl-4 space-y-0.5">${warnList}</ul>` : `<p class="text-xs text-amber-400">${t('sales_drop.preview.none')}</p>`}
       </div>
     </div>`;
 }

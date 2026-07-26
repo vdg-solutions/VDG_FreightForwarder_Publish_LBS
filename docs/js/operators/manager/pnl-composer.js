@@ -1,4 +1,7 @@
-// Operator — P&L pivot computation. Pure, no I/O.
+// Operator — P&L pivot computation. Pure, no I/O (sole exception: the sales-rep sentinel
+// branch below reads window.__vdg_current_user to resolve a persisted role token, F-19-66).
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { t } from '../../i18n/index.js';
 
 const BASE_CURRENCY        = 'VND';
 const PNL_DEFAULT_ROW_DIMS = ['period', 'sales_rep'];
@@ -18,7 +21,10 @@ function groupBy(arr, keyFn) {
 }
 
 function getRef(s)    { return s.shipment_ref || s.ShipmentRef || ''; }
-function getSales(s)  { return s.sales_rep    || s.SalesRep    || '—'; }
+function getSales(s)  {
+  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  return resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
+}
 function getCustomer(s) { return s.customer   || s.Customer    || '—'; }
 function getLane(s)   { return `${s.pol || s.POL || '?'}→${s.pod || s.POD || '?'}`; }
 function getCarrier(s){ return s.carrier      || s.Carrier     || '—'; }
@@ -42,14 +48,19 @@ function dimValue(shipment, dim) {
   }
 }
 
+// shared predicate — buildRows groups by dimValue, the drill filters by the same
+// resolver so the two can never drift apart again (walks every key in rowDims,
+// no hardcoded allowlist)
+function dimsMatch(shipment, rowDims) {
+  return Object.entries(rowDims).every(([dim, val]) => dimValue(shipment, dim) === val);
+}
+
 function getBuy(line)  { return Number(line.buying_vnd_pay      ?? line.BuyingVNDPay      ?? 0); }
 function getSell(line) { return Number(line.selling_vnd_collect  ?? line.SellingVNDCollect ?? 0); }
 
 function linesFor(lines, ref) {
   return lines.filter((l) => (l.shipment_ref || l.ShipmentRef) === ref);
 }
-
-function roe(entity) { return Number(entity.roe_selling ?? 1); }
 
 // ── period window ─────────────────────────────────────────────────────────────
 
@@ -105,11 +116,10 @@ function buildRows(shipments, pnlLines, dims) {
 
     let revenue_vnd = 0, cost_vnd = 0;
     for (const s of group) {
-      const r = roe(s);
       const lines = linesFor(pnlLines, getRef(s));
       for (const l of lines) {
-        revenue_vnd += getSell(l) * r;
-        cost_vnd    += getBuy(l)  * r;
+        revenue_vnd += getSell(l);
+        cost_vnd    += getBuy(l);
       }
     }
 
@@ -177,7 +187,9 @@ export function compose({ shipments, pnlLines, period, dims = PNL_DEFAULT_ROW_DI
     ? (grandTotals.margin_vnd / grandTotals.revenue_vnd) * 100
     : 0;
 
-  return { rows, grandTotals };
+  // period-bounded set buildRows grouped into rows — exposed so the drill panel
+  // filters the same set the pivot counted, instead of the raw unbounded list
+  return { rows, grandTotals, groupedShipments: curr };
 }
 
 /**
@@ -205,4 +217,4 @@ export function composeBuySellBreakdown(pnlLines, refs) {
   return result.sort((a, b) => b.sell_vnd - a.sell_vnd);
 }
 
-export { BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS, DIM_OPTIONS, groupBy };
+export { BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS, DIM_OPTIONS, groupBy, dimValue, dimsMatch };

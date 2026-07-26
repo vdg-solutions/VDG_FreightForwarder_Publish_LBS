@@ -160,7 +160,7 @@ export function sectionBHtml(draft = {}) {
               <th class="px-1 py-1.5 text-right text-emerald-600">${t('sales_new.col_fx_rate')}</th>
               <th class="px-1 py-1.5 text-left text-emerald-600">${t('sales_new.col_fx_date')}</th>
               <th class="px-1 py-1.5 text-right text-emerald-700">${t('sales_new.col_vnd_collect')}</th>
-              <th class="px-1 py-1.5 text-left text-slate-400">POL/POD</th>
+              <th class="px-1 py-1.5 text-left text-slate-400">${t('sales_new.col_pol_pod')}</th>
               <th class="px-1 py-1.5 w-6"></th>
             </tr>
           </thead>

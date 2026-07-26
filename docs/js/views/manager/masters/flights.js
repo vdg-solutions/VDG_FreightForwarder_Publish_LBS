@@ -26,39 +26,39 @@ function buildModal(entity) {
       <form id="modal-form" method="dialog" class="p-6 space-y-4">
         <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t('masters.flights.edit_title') : t('masters.flights.add_button')}</div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Flight No. <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.flight_no')} <span class="text-red-500">*</span></label>
           <input id="m-flight_no" type="text" maxlength="6" value="${escHtml(e.flight_no)}" required placeholder="e.g. VN422"
                  class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-fn" class="hidden text-xs text-red-600"></span>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Carrier IATA <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.carrier_iata')} <span class="text-red-500">*</span></label>
           <input id="m-carrier" type="text" maxlength="2" value="${escHtml(e.carrier_iata_code)}" required placeholder="e.g. VN"
                  class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-carrier" class="hidden text-xs text-red-600"></span>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Origin IATA <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.origin_iata')} <span class="text-red-500">*</span></label>
             <input id="m-origin" type="text" maxlength="3" value="${escHtml(e.origin_iata)}" required placeholder="e.g. SGN"
                    class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
             <span id="m-err-origin" class="hidden text-xs text-red-600"></span>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Dest IATA <span class="text-red-500">*</span></label>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.dest_iata')} <span class="text-red-500">*</span></label>
             <input id="m-dest" type="text" maxlength="3" value="${escHtml(e.dest_iata)}" required placeholder="e.g. HAN"
                    class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
             <span id="m-err-dest" class="hidden text-xs text-red-600"></span>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Schedule (HH:MM)</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.schedule')}</label>
           <input id="m-schedule" type="time" value="${escHtml(e.schedule)}"
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
-          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">Save</button>
-          <button type="button" id="btn-modal-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">${t('common.action.save')}</button>
+          <button type="button" id="btn-modal-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">${t('common.action.cancel')}</button>
         </div>
       </form>
     </dialog>`;
@@ -111,8 +111,8 @@ function openModal(root, entity, onSave) {
 
 function rowHtml(e, isM) {
   const actions = isM ? `
-    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">Edit</button>
-    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">Delete</button>` : '';
+    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('common.action.edit')}</button>
+    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('common.action.delete')}</button>` : '';
   return `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
       <td class="px-3 py-2 font-mono">${escHtml(e.flight_no)}</td>
@@ -127,7 +127,7 @@ function rowHtml(e, isM) {
 export async function render(root) {
   const isM  = isManager();
   const repo = window.__vdg_repo;
-  const actCol = isM ? '<th class="px-3 py-2 text-left w-28">Actions</th>' : '';
+  const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 
   root.innerHTML = `
     <div class="p-6 max-w-[1100px] mx-auto">
@@ -139,17 +139,17 @@ export async function render(root) {
         <table class="w-full">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">Flight No.</th>
-              <th class="px-3 py-2 text-left">Carrier</th>
-              <th class="px-3 py-2 text-left">Origin</th>
-              <th class="px-3 py-2 text-left">Destination</th>
-              <th class="px-3 py-2 text-left">Schedule</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.flight_no')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.carrier')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.origin')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.destination')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.schedule')}</th>
               ${actCol}
             </tr>
           </thead>
           <tbody id="m-tbody"></tbody>
         </table>
-        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">No flights found.</div>
+        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('flights.empty')}</div>
       </div>
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading...</div>
     </div>`;
@@ -193,7 +193,7 @@ export async function render(root) {
     const delBtn = ev.target.closest('.btn-delete');
     if (delBtn) {
       const ok = await showConfirm({
-        title: 'Delete this flight?', confirmLabel: 'Delete', cancelLabel: 'Cancel', destructive: true,
+        title: t('flights.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);

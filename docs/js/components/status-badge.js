@@ -1,4 +1,5 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
+import { statusBadgeLabel } from '../util/status-i18n.js';
 
 const SHIPMENT_COLOR = {
   Created: ['bg-slate-100', 'text-slate-700'],
@@ -7,6 +8,7 @@ const SHIPMENT_COLOR = {
   Arrived: ['bg-emerald-100', 'text-emerald-700'],
   Delivered: ['bg-teal-100', 'text-teal-700'],
   Closed: ['bg-slate-800', 'text-white'],
+  Cancelled: ['bg-red-100', 'text-red-700'],
 };
 
 const DOCUMENT_COLOR = {
@@ -60,7 +62,7 @@ class VdgStatusBadge extends LitElement {
     return html`
       <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium tracking-tight ${bg} ${fg}">
         <span class="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-70"></span>
-        ${this.state}
+        ${statusBadgeLabel(this.fsm, this.state)}
       </span>
     `;
   }

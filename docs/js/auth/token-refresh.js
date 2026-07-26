@@ -1,14 +1,24 @@
 // F-15-02 — Silent ID-token re-auth before expiry
 // F-29-13 — proactive access-token scheduler + reconnect UX (independent 2nd timer)
+// F-19-84 — no blind signOut anywhere in this scheduler: a failed silent refresh is ALWAYS a
+// reconnect intent (mirrors access-token.js:getAccessToken), never a session purge.
 
-import { parseIdToken, signOut } from './google-oauth.js';
-import { refreshAccessTokenSilently, reconnectDriveInteractive } from './drive-api.js';
+import { parseIdToken, restampIdTokenExp, hydrateSessionFromToken } from './google-oauth.js';
+import { sharedSilentRefresh, reconnectDriveInteractive } from './drive-api.js';
+import { detectRoleViaDrive } from './auth-gate.js';
 
 const TOKEN_KEY               = 'vdg.auth.id_token';
 const REFRESH_LEAD_MS         = 5 * 60 * 1000;  // prompt 5min before exp
 const REFRESH_CHECK_INTERVAL_MS = 60 * 1000;    // check every 60s
 
 let _checkTimer = null;
+
+// AC-07 — pure decision, guards the AC-02 regression at the unit level: a failed silent
+// refresh is ALWAYS a reconnect intent, never sign-out/clear-keys.
+export const REFRESH_FAILURE_ACTION = Object.freeze({ RECONNECT: 'needs-reconnect' });
+export function refreshFailureAction() { return REFRESH_FAILURE_ACTION.RECONNECT; }
+
+function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); }
 
 // ── internal ──────────────────────────────────────────────────────────────────
 
@@ -27,42 +37,27 @@ function _remainingMs() {
 }
 
 function _silentPrompt() {
-  if (!window.google?.accounts?.id) return;
-  try {
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        // One Tap suppressed — session likely revoked or user opted out
-        signOut();                                // F-15-50 AC-04: clear before banner
-        window.dispatchEvent(new CustomEvent('vdg:session-expired'));
-      }
+  sharedSilentRefresh()                                           // oauth2 prompt:'' — NOT accounts.id
+    .then(() => {
+      const accessExpMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+      restampIdTokenExp(accessExpMs);                             // extend id-token to new access exp
+    })
+    .catch(() => {
+      // AC-02/AC-07: a real failure is a reconnect intent — never a blind purge.
+      if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
     });
-  } catch {
-    /* accounts.id not initialized (OAuth2-only flow) — treat as expired */
-    signOut();                                    // F-15-50 AC-04: clear before banner
-    window.dispatchEvent(new CustomEvent('vdg:session-expired'));
-  }
 }
 
 function _check() {
   const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) {
-    // Never signed in (or cleanly signed out) — silent, no banner
-    return;
-  }
+  if (!token) return;                       // never signed in / clean signout — silent, no banner
   const expMs = _getExpMs();
-  if (expMs == null) {
-    // Token present but unparseable — corrupt, treat as expired
-    signOut();                                    // F-15-50 AC-04: clear before banner
-    window.dispatchEvent(new CustomEvent('vdg:session-expired'));
+  if (expMs == null) {                      // present but unparseable — corrupt token, same recovery path
+    if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
     return;
   }
   const remaining = expMs - Date.now();
-  if (remaining < 0) {
-    signOut();                                    // F-15-50 AC-04: clear before banner
-    window.dispatchEvent(new CustomEvent('vdg:session-expired'));
-    return;
-  }
-  if (remaining < REFRESH_LEAD_MS) {
+  if (remaining < REFRESH_LEAD_MS) {        // within lead OR already past exp → renew silently
     _silentPrompt();
   }
 }
@@ -99,17 +94,28 @@ export function accessRefreshDue(expMs, now, leadMs = ACCESS_REFRESH_LEAD_MS) {
 function _accessCheck() {
   const expMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
   if (!accessRefreshDue(expMs, Date.now())) return;
-  // scheduler fires the silent refresh WITHOUT any Drive call (AC-02). Failure/timeout is
-  // surfaced by the bounded refresh's callers → auth-needs-reconnect; nothing to do here.
-  refreshAccessTokenSilently().catch(() => { /* bounded; reconnect state handled downstream */ });
+  // AC-01: routed through the shared single-flight so a near-simultaneous id-token scheduler
+  // tick shares this same refresh instead of firing a second GIS request.
+  sharedSilentRefresh()
+    .then(() => {
+      const newExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+      restampIdTokenExp(newExp);            // keep synthetic id-token session in lockstep
+    })
+    .catch(() => {
+      // AC-02/AC-07: a real failure is a reconnect intent — never a blind purge.
+      if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+    });
 }
 
-// AC-06 — interactive reconnect: prompt:'consent' grant clears reconnect state + resumes sync
+// AC-03/AC-06 — interactive reconnect: prompt:'consent' grant re-hydrates the FULL session
+// (token + scope + identity + role), the same hydrate as sign-in — not just the access token.
 async function _onReconnectRequest() {
   try {
-    await reconnectDriveInteractive();
-    window.dispatchEvent(new CustomEvent('vdg:auth-reconnected'));   // chip → green
-    window.dispatchEvent(new CustomEvent('vdg:sync-now'));           // resume/drain outbox
+    const resp = await reconnectDriveInteractive();            // full resp (scope + token)
+    const user = await hydrateSessionFromToken(resp);          // re-mint id_token + scope flag
+    if (user) await detectRoleViaDrive(user, { force: true }); // re-resolve currentSalesRepId
+    window.dispatchEvent(new CustomEvent('vdg:auth-reconnected'));   // chip → green (clears auth-dead, resumes drain)
+    window.dispatchEvent(new CustomEvent('vdg:sync-now'));           // drain outbox AFTER reconnected
   } catch {
     window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect'));   // stay red, user can retry
   }
@@ -120,4 +126,12 @@ export function initAccessTokenRefresh() {
   window.addEventListener('vdg:auth-reconnect-request', _onReconnectRequest);
   _accessCheck();                                  // immediate check on boot
   _accessTimer = setInterval(_accessCheck, ACCESS_CHECK_INTERVAL_MS);
+}
+
+export function stopAccessTokenRefresh() {
+  if (_accessTimer) {
+    clearInterval(_accessTimer);
+    _accessTimer = null;
+  }
+  window.removeEventListener('vdg:auth-reconnect-request', _onReconnectRequest);
 }

@@ -4,10 +4,11 @@
 const DEFAULT_LEDGER_VERSION = 1;
 const SOURCE_SHIPMENT   = 'shipment';
 const SOURCE_COMMISSION = 'commission';
+const SOURCE_REVERSAL   = 'reversal';
 
 function getWasm() {
   const wasm = window.__vdg_wasm;
-  if (!wasm || !wasm.wasm_build_entries_from_shipment || !wasm.wasm_build_entries_from_commission) {
+  if (!wasm || !wasm.wasm_build_entries_from_shipment || !wasm.wasm_build_entries_from_commission || !wasm.wasm_build_reversal_entry) {
     throw new Error('WASM module not loaded or ledger_poster functions not found');
   }
   return wasm;
@@ -43,6 +44,38 @@ export function validateEntries(entries, chartOfAccounts) {
   // WASM validates entries internally during build, so this is a no-op
   // to maintain backward compatibility with JS callers that expect to call it.
   return;
+}
+
+/**
+ * buildReversalEntry — thin bridge to the Rust reversal builder. Zero swap/negation
+ * arithmetic here: originalLegs (each carrying account_code — see listAllLegsInEntry) go
+ * straight to WASM, which returns the balanced contra JournalEntry.
+ */
+export function buildReversalEntry(originalLegs, chartOfAccounts, actorId) {
+  const wasm = getWasm();
+  return wasm.wasm_build_reversal_entry(
+    JSON.stringify(originalLegs),
+    JSON.stringify(chartOfAccounts),
+    actorId
+  );
+}
+
+/**
+ * postReversal — reads the original entry's legs, builds+validates the contra-entry via WASM,
+ * then appends it through the same postJournalEntries I/O phase (append-only + dedup on
+ * `reversal:<entryId>`). Three idempotency guards (design.md §6): the dedup key here, the
+ * deterministic reversal entry_id (appendLeg no-ops on repeat), and the reversal-of-a-reversal
+ * check below.
+ */
+export async function postReversal(entryId, actorId, ledgerRepo) {
+  if (!ledgerRepo) throw new Error('ledger-poster: ledgerRepo not available');
+  const legs = await ledgerRepo.listAllLegsInEntry(entryId);
+  if (!legs.length) return { posted: false, entryIds: [] }; // AC-09: nothing to reverse
+  if (legs[0].source?.type === SOURCE_REVERSAL) return { posted: false, entryIds: [] }; // AC-06: cannot reverse a reversal
+
+  const chart = await ledgerRepo.chartOfAccounts();
+  const entry = buildReversalEntry(legs, chart, actorId);
+  return postJournalEntries([entry], ledgerRepo, `${SOURCE_REVERSAL}:${entryId}`);
 }
 
 /**

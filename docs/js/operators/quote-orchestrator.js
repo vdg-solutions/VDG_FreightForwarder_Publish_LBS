@@ -120,6 +120,6 @@ export async function markAccepted(repo, quote) {
 // ── convert guard ─────────────────────────────────────────────────────────────
 
 export async function checkAlreadyConverted(repo, quoteId) {
-  const shipments = await repo.list(KIND_SHIPMENT, (s) => s.quote_ref === quoteId).catch(() => []);
+  const shipments = await repo.list(KIND_SHIPMENT, (s) => s.quote_id === quoteId).catch(() => []);
   return shipments[0] || null;
 }

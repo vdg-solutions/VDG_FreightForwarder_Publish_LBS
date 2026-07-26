@@ -2,6 +2,7 @@
 
 import { EntityRepo } from '../abstractions/entity-repo.js';
 import { OUTBOX_INDEX_KIND_ID_OP, idbUpsertOutboxRecord, dedupeOutboxStore, purgeStaleFailedOutboxRows } from './outbox-dedupe.js';
+import { emitOutboxChanged } from './outbox-count.js';
 
 const IDB_DB_NAME         = 'vdg-workspace';
 const IDB_DB_VERSION      = 6;  // v6: ensure entities indexes exist
@@ -320,7 +321,7 @@ export class CachedEntityRepo extends EntityRepo {
       const meta = await idbGet(this._db, STORE_META, META_SYNC_KEY) || { key: META_SYNC_KEY };
       await idbPut(this._db, STORE_META, { ...meta, [`last_full_pull_ms_${entityKind}`]: Date.now() });
       window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: entityKind, id } }));
-      window.dispatchEvent(new CustomEvent('vdg:outbox-changed'));
+      await emitOutboxChanged(this._db);
     } else {
       await this._drive.put(entityKind, id, body);
     }
@@ -329,13 +330,15 @@ export class CachedEntityRepo extends EntityRepo {
 
   async delete(kind, id) {
     this._lru?.evict(kind, id);
-    const soft      = { kind, id, _deleted: true, _deleted_at: new Date().toISOString() };
+    // F-19-80 unifyDeletedAt: epoch-ms number, matching the Rust delete path (sync_engine.rs/
+    // wasm_repo.rs) — an ISO string here made the reconcile timestamp compare non-comparable.
+    const soft      = { kind, id, _deleted: true, _deleted_at: Date.now() };
     const outboxRec = { kind, id, op: 'delete', body: soft, queued_at: Date.now() };
 
     if (this._db) {
       await idbPutWithOutbox(this._db, soft, outboxRec);
       window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind, id } }));
-      window.dispatchEvent(new CustomEvent('vdg:outbox-changed'));
+      await emitOutboxChanged(this._db);
     } else {
       await this._drive.delete(kind, id);
     }

@@ -62,7 +62,7 @@ export class UserDriveRepo extends UserRepoPort {
     this._userAuditLog?.write(
       USER_AUDIT_DEACTIVATE_USER,
       email,
-      { role: existing.role, sales_prefix: existing.sales_prefix },
+      { role: existing.role, user_prefix: existing.user_prefix },
       { active: false },
       [],
     );
@@ -77,7 +77,7 @@ export class UserDriveRepo extends UserRepoPort {
       email:        currentUser.email,
       display_name: currentUser.name || currentUser.email,
       role:         SEED_ROLE_MANAGER,
-      sales_prefix: null,
+      user_prefix:  null,
       created_at:   new Date().toISOString(),
       active:       true,
     });
@@ -107,7 +107,7 @@ export class UserDriveRepo extends UserRepoPort {
       const result     = await this._api.uploadFile(uploadId, USERS_FILE_NAME, content, uploadEtag, { isUpdate: Boolean(fileId) });
       this._file = { id: result.id, etag: result.etag };
       if (!existing) {
-        this._userAuditLog?.write(USER_AUDIT_ADD_USER, user.email, null, { role: user.role, sales_prefix: user.sales_prefix }, []);
+        this._userAuditLog?.write(USER_AUDIT_ADD_USER, user.email, null, { role: user.role, user_prefix: user.user_prefix }, []);
       }
       return { etag: result.etag, noop: false };
     } catch (err) {

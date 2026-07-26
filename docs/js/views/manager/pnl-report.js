@@ -1,14 +1,15 @@
 // Manager P&L Report — F-14-04 / F-16-07
 
 import '../../components/pivot-table.js';
-import { compose, composeBuySellBreakdown, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../operators/manager/pnl-composer.js';
+import { compose, composeBuySellBreakdown, dimsMatch, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../operators/manager/pnl-composer.js';
 import { composeAir, AIR_DEFAULT_DIMS }     from '../../operators/manager/air-pnl-composer.js';
 import { isManager }                        from '../../auth/auth-gate.js';
 import { navigate }                         from '../../router.js';
-import { FxRateDriveRepo }                  from '../../implementations/fx-rate-drive-repo.js';
-import { injectVndColumn }                  from '../../util/vnd-injector.js';
 import { t }                                from '../../i18n/index.js';
-import { activeWorkspaceName }              from '../../operators/workspace-registry.js';
+import { kindI18nLabel }                     from '../../util/kind-i18n.js';
+import { formatDrillDimDesc }                 from '../../util/pnl-dim-i18n.js';
+import { resolveSalesRepLabel }               from '../../util/sales-rep-i18n.js';
+import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
 
 const PERIODS = ['MTD', 'QTD', 'YTD', 'Last12M'];
 const SHEETJS_CDN = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
@@ -24,28 +25,34 @@ let _pivotRows       = [];
 let _grandTotals     = {};
 let _allShipments    = [];
 let _allPnlLines     = [];
+// the exact shipment set the active composer grouped into _pivotRows — drill
+// filters this, not the raw _allShipments, so it reconciles with the pivot cell
+let _groupedShipments = [];
 let _dims            = [...PNL_DEFAULT_ROW_DIMS];
 let _airDims         = [...AIR_DEFAULT_DIMS];
 let _sheetJsLoaded   = false;
 let _onPivotClick;
 let _onPivotDims;
+let _onLocale;
 
 function getRepo() { return window.__vdg_repo; }
-
-let _fxRepo = null;
-function getFxRepo() {
-  if (!_fxRepo) {
-    const api = window.__vdg_drive_api;
-    if (!api) return null;
-    _fxRepo = new FxRateDriveRepo(api, () => api.findWorkspaceRoot(activeWorkspaceName()));
-  }
-  return _fxRepo;
-}
 
 function fmtNum(n) {
   if (!n && n !== 0) return '—';
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   return n.toLocaleString();
+}
+
+// Drill-grid column headers via t() — pure, no DOM/agGrid dep so it's unit-reachable.
+export function buildDrillColumnDefs() {
+  return [
+    { field: 'shipment_ref', headerName: t('pnl.drill.col.ref'),   width: 120 },
+    { field: 'customer',     headerName: t('customer'),            flex: 1    },
+    { field: 'state',        headerName: t('state'),               width: 130 },
+    { field: 'etd',          headerName: t('pnl.drill.col.etd'),   width: 100 },
+    { field: 'margin_pct',   headerName: t('margin_pct'),          width: 90  },
+    { field: 'sales_rep',    headerName: t('pnl.drill.col.sales'), width: 100 },
+  ];
 }
 
 async function recompose() {
@@ -55,6 +62,9 @@ async function recompose() {
     });
     _pivotRows   = rows;
     _grandTotals = grandTotals;
+    // air-mode drill parity is F-19-43 — composeAir doesn't report its grouped set
+    // yet, keep the pre-fix (unbounded) source so air behavior is unchanged here
+    _groupedShipments = _allShipments;
     return { rows, grandTotals };
   }
 
@@ -67,7 +77,7 @@ async function recompose() {
     ? ['mode', ..._dims]
     : _dims;
 
-  const { rows, grandTotals } = compose({
+  const { rows, grandTotals, groupedShipments } = compose({
     shipments: seaShipments, pnlLines: _allPnlLines, period: _period, dims: activeDims,
   });
 
@@ -80,45 +90,34 @@ async function recompose() {
 
   _pivotRows   = rows;
   _grandTotals = grandTotals;
+  _groupedShipments = groupedShipments;
   return { rows, grandTotals };
 }
 
 async function renderDrillPanel(container, rowDims) {
   const refFn = (s) => s.shipment_ref || s.ShipmentRef || s.id;
-  const matchesDims = (s) => Object.entries(rowDims).every(([d, v]) => {
-    if (d === 'sales_rep') return (s.sales_rep || s.SalesRep || '—') === v;
-    if (d === 'customer')  return (s.customer  || s.Customer  || '—') === v;
-    return true;
-  });
 
-  const filtered = _allShipments.filter(matchesDims);
+  // filter the exact set the pivot grouped this cell from, via the same dim
+  // resolver buildRows used to bucket it — reconciles drill count with cell count
+  const filtered = _groupedShipments.filter((s) => dimsMatch(s, rowDims));
   const refs     = filtered.map(refFn);
-  const dimDesc  = Object.entries(rowDims).map(([k, v]) => `${k}:${v}`).join(' · ');
+  const dimDesc  = formatDrillDimDesc(rowDims);
 
-  // pnl_lines belonging to the filtered shipment set
-  const filteredShipIds = new Set(filtered.map((s) => s.id));
-  const filteredLines   = _allPnlLines.filter((l) => filteredShipIds.has(l.shipment_id));
+  // pnl_lines belonging to the filtered shipment set (match by shipment_ref — no shipment_id on the line)
+  const refSet        = new Set(refs);
+  const filteredLines = _allPnlLines.filter((l) => refSet.has(l.shipment_ref || l.ShipmentRef));
 
   const breakdown = composeBuySellBreakdown(_allPnlLines, refs);
   const bsTrs = breakdown.map((r) => `
     <tr class="border-t border-slate-100 text-xs">
-      <td class="px-3 py-1.5">${r.kind}</td>
+      <td class="px-3 py-1.5">${kindI18nLabel(r.kind)}</td>
       <td class="px-3 py-1.5 text-right font-mono">${fmtNum(r.buy_vnd)}</td>
       <td class="px-3 py-1.5 text-right font-mono">${fmtNum(r.sell_vnd)}</td>
       <td class="px-3 py-1.5 text-right font-mono ${r.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500'}">${fmtNum(r.margin_vnd)}</td>
       <td class="px-3 py-1.5 text-right">${r.margin_pct.toFixed(1)}%</td>
     </tr>`).join('');
 
-  const lineTrs = filteredLines.map((l) => `
-    <tr data-line-id="${l.id}" class="border-t border-slate-100 text-xs">
-      <td class="px-3 py-1.5">${l.kind ?? '—'}</td>
-      <td class="px-3 py-1.5 font-mono text-right">${
-        l.currency === 'USD'
-          ? `${Number(l.buy_amt ?? l.sell_amt ?? 0).toLocaleString()} USD`
-          : `${Math.round(Number(l.buy_amt ?? l.sell_amt ?? 0)).toLocaleString('vi-VN')} VND`
-      }</td>
-      <td class="px-3 py-1.5">${l.currency ?? 'VND'}</td>
-    </tr>`).join('');
+  const lineTrs = drillLinesRowsHtml(filteredLines);
 
   const gridRows = filtered.map((s) => ({
     id:           s.id,
@@ -128,59 +127,46 @@ async function renderDrillPanel(container, rowDims) {
     state:        s.state || s.State || '—',
     etd:          s.etd || '—',
     margin_pct:   s.margin_pct != null ? `${Number(s.margin_pct).toFixed(1)}%` : '—',
-    sales_rep:    s.sales_rep || s.SalesRep || '—',
+    sales_rep:    resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', window.__vdg_current_user, t) || '—',
   }));
 
   container.innerHTML = `
     <div class="border border-slate-200 rounded-xl p-4 bg-white">
       <div class="text-sm font-semibold text-slate-800 mb-2">
-        ${dimDesc} · ${filtered.length} shipments
+        ${dimDesc} · ${filtered.length} ${t('shipments')}
       </div>
       <div id="drill-grid" class="ag-theme-quartz" style="height:280px"></div>
       <details class="mt-4">
         <summary class="text-xs font-medium text-slate-700 cursor-pointer select-none">
-          Buy/Sell Breakdown (${BASE_CURRENCY})
+          ${t('pnl.drill.buy_sell_breakdown', { currency: BASE_CURRENCY })}
         </summary>
         <table class="w-full mt-2 text-xs">
           <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase">
             <tr>
-              <th class="px-3 py-1.5 text-left">Kind</th>
-              <th class="px-3 py-1.5 text-right">Buy</th>
-              <th class="px-3 py-1.5 text-right">Sell</th>
-              <th class="px-3 py-1.5 text-right">Margin</th>
-              <th class="px-3 py-1.5 text-right">Margin %</th>
+              <th class="px-3 py-1.5 text-left">${t('pnl.drill.kind')}</th>
+              <th class="px-3 py-1.5 text-right">${t('pnl.drill.buy')}</th>
+              <th class="px-3 py-1.5 text-right">${t('pnl.drill.sell')}</th>
+              <th class="px-3 py-1.5 text-right">${t('margin')}</th>
+              <th class="px-3 py-1.5 text-right">${t('margin_pct')}</th>
             </tr>
           </thead>
-          <tbody>${bsTrs || '<tr><td colspan="5" class="px-3 py-2 text-slate-400">No line data</td></tr>'}</tbody>
+          <tbody>${bsTrs || `<tr><td colspan="5" class="px-3 py-2 text-slate-400">${t('pnl.drill.no_line_data')}</td></tr>`}</tbody>
         </table>
       </details>
       <details class="mt-4" id="drill-lines-detail">
         <summary class="text-xs font-medium text-slate-700 cursor-pointer select-none">
-          Cost lines (${filteredLines.length})
+          ${t('pnl.drill.cost_lines', { n: filteredLines.length })}
         </summary>
         <table class="w-full mt-2 text-xs" id="drill-lines-table">
-          <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase">
-            <tr>
-              <th class="px-3 py-1.5 text-left">Kind</th>
-              <th class="px-3 py-1.5 text-right">Amount</th>
-              <th class="px-3 py-1.5">Ccy</th>
-            </tr>
-          </thead>
-          <tbody>${lineTrs || '<tr><td colspan="3" class="px-3 py-2 text-slate-400">No lines</td></tr>'}</tbody>
+          ${drillLinesHeadHtml()}
+          <tbody>${lineTrs || `<tr><td colspan="9" class="px-3 py-2 text-slate-400">${t('pnl.drill.no_lines')}</td></tr>`}</tbody>
         </table>
       </details>
     </div>`;
 
   if (window.agGrid) {
     new agGrid.Grid(container.querySelector('#drill-grid'), {
-      columnDefs: [
-        { field: 'shipment_ref', headerName: 'Ref',       width: 120 },
-        { field: 'customer',     headerName: 'Customer',   flex: 1    },
-        { field: 'state',        headerName: 'State',      width: 130 },
-        { field: 'etd',          headerName: 'ETD',        width: 100 },
-        { field: 'margin_pct',   headerName: 'Margin %',   width: 90  },
-        { field: 'sales_rep',    headerName: 'Sales',      width: 100 },
-      ],
+      columnDefs: buildDrillColumnDefs(),
       rowData: gridRows,
       rowHeight: 32,
       onRowClicked: (ev) => {
@@ -190,13 +176,6 @@ async function renderDrillPanel(container, rowDims) {
       },
     });
   }
-  // AC-08: inject VND column into lines table (non-blocking, N/A on missing rate)
-  injectVndColumn(
-    container.querySelector('#drill-lines-table'),
-    filteredLines,
-    filtered,
-    getFxRepo(),
-  ).catch((err) => console.warn('[pnl] vnd inject failed:', err.message)); // DEV
 }
 
 async function loadSheetJs() {
@@ -248,6 +227,7 @@ export async function render(root) {
 
   if (_onPivotClick) window.removeEventListener('vdg:pivot-cell-click', _onPivotClick);
   if (_onPivotDims)  window.removeEventListener('vdg:pivot-dims-changed', _onPivotDims);
+  if (_onLocale)     window.removeEventListener('vdg:locale-changed', _onLocale);
 
   const repo = getRepo();
   if (repo) {
@@ -282,11 +262,11 @@ export async function render(root) {
         <div class="flex gap-2">
           <button id="btn-compare"
             class="px-3 py-1.5 text-xs rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
-            ${_showComparison ? '✓ Comparing' : 'Compare'}
+            ${t(_showComparison ? 'comparing_check' : 'compare')}
           </button>
           <button id="btn-export-xl"
             class="px-3 py-1.5 text-xs rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
-            Export Excel
+            ${t('export_excel')}
           </button>
         </div>
       </div>
@@ -309,7 +289,6 @@ export async function render(root) {
   }
 
   await refreshPivot();
-  // AC-08: VND column is injected per-drill-panel click (renderDrillPanel handles it)
 
   root.addEventListener('click', async (e) => {
     const pBtn = e.target.closest('[data-period]');
@@ -329,7 +308,7 @@ export async function render(root) {
 
   root.querySelector('#btn-compare').addEventListener('click', async () => {
     _showComparison = !_showComparison;
-    root.querySelector('#btn-compare').textContent = _showComparison ? '✓ Comparing' : 'Compare';
+    root.querySelector('#btn-compare').textContent = t(_showComparison ? 'comparing_check' : 'compare');
     await refreshPivot();
   });
 
@@ -344,4 +323,12 @@ export async function render(root) {
 
   window.addEventListener('vdg:pivot-cell-click',    _onPivotClick);
   window.addEventListener('vdg:pivot-dims-changed',  _onPivotDims);
+
+  // Re-resolve #view-root at fire time — freshViewRoot() (F-19-16) detaches the captured
+  // `root` node on navigation, so re-rendering into it is a silent no-op.
+  _onLocale = () => {
+    const liveRoot = document.getElementById('view-root');
+    if (liveRoot) render(liveRoot);
+  };
+  window.addEventListener('vdg:locale-changed', _onLocale);
 }

@@ -2,6 +2,7 @@
 import { classifyOverdue } from '../operators/manager/dunning-ladder.js';
 import { pickTemplate, mergeFields } from '../operators/manager/dunning-ladder.js';
 import { appendDunning } from '../sync/dunning-log.js';
+import { t } from '../i18n/index.js';
 
 function fmtVnd(n) {
   if (!n && n !== 0) return '—';
@@ -53,7 +54,7 @@ export async function overdueFollowupsHtml(salesId) {
   const rowsHtml = rows.map((r) => `
     <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs">
       <td class="px-3 py-2">${r.name}</td>
-      <td class="px-3 py-2 font-mono text-amber-700">${r.stage}</td>
+      <td class="px-3 py-2 font-mono text-amber-700">${t('sales_overdue.stage.' + r.stage)}</td>
       <td class="px-3 py-2">${r.maxDays}d</td>
       <td class="px-3 py-2">${fmtVnd(r.total)} VND</td>
       <td class="px-3 py-2">
@@ -61,7 +62,7 @@ export async function overdueFollowupsHtml(salesId) {
                 data-send-reminder="${r.cid}"
                 data-email="${r.email}"
                 data-stage="${r.stage}">
-          Send reminder
+          ${t('sales_overdue.send')}
         </button>
       </td>
     </tr>`).join('');
@@ -69,17 +70,17 @@ export async function overdueFollowupsHtml(salesId) {
   return `
     <div class="bg-white rounded-xl border border-amber-200 p-5 mt-4">
       <div class="text-sm font-semibold text-amber-700 mb-3">
-        Overdue Follow-ups
-        <span class="ml-2 text-xs font-normal text-amber-500">${rows.length} customers need action</span>
+        ${t('sales_overdue.title')}
+        <span class="ml-2 text-xs font-normal text-amber-500">${t('sales_overdue.count', { n: rows.length })}</span>
       </div>
       <div class="overflow-x-auto rounded-lg border border-slate-200">
         <table class="w-full min-w-[520px]">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">Customer</th>
-              <th class="px-3 py-2 text-left">Stage</th>
-              <th class="px-3 py-2 text-left">Days</th>
-              <th class="px-3 py-2 text-left">Outstanding</th>
+              <th class="px-3 py-2 text-left">${t('sales_overdue.col.customer')}</th>
+              <th class="px-3 py-2 text-left">${t('sales_overdue.col.stage')}</th>
+              <th class="px-3 py-2 text-left">${t('sales_overdue.col.days')}</th>
+              <th class="px-3 py-2 text-left">${t('sales_overdue.col.outstanding')}</th>
               <th class="px-3 py-2 w-28"></th>
             </tr>
           </thead>

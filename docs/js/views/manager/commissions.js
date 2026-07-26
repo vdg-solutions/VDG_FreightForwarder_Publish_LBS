@@ -13,6 +13,7 @@ import {
 import { compose as composeRules } from '../../operators/manager/commission-composer.js';
 import { bulkPut }            from '../../cache/bulk-orchestrator.js';
 import { PREF_LOCKED_PERIODS_KEY } from '../../cache/period-lock-ui.js';
+import { safeMasterLoad }     from '../../util/master-load.js';
 
 const PAYOUT_KIND          = 'commission_payout';
 const KIND_COMMISSION_RULES = 'commission_rules';
@@ -28,6 +29,7 @@ let _prefs       = {};
 let _periodMode  = DEFAULT_PERIOD_MODE;
 const _periodDate  = new Date();
 let _onEntity;
+let _loadInFlight = false; // AC-06: guards entity-changed re-entry during a bounded load
 
 function getRepo()      { return window.__vdg_repo; }
 function currentUser()  { return window.__vdg_auth?.getCurrentUser?.()?.email || 'manager'; }
@@ -51,7 +53,7 @@ function renderTable(root, rows) {
       : `<span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">${t('commission.status.Pending')}</span>`;
     const printBtn = settled
       ? `<button class="px-2 py-1 text-xs bg-slate-100 rounded hover:bg-slate-200 btn-print-slip"
-           data-sales="${r.salesId}" title="Print slip">Print slip</button>` : '';
+           data-sales="${r.salesId}" title="${t('commission.settle.print_slip')}">${t('commission.settle.print_slip')}</button>` : '';
     return `<tr class="${cls}">
       <td class="py-2 px-3 text-xs">${r.salesName}</td>
       <td class="py-2 px-3 text-xs text-right">${fmtNum(r.margin)}</td>
@@ -68,13 +70,19 @@ function renderTable(root, rows) {
     </tr>`;
   }).join('');
 
+  const thead = [
+    t('commission.settle.col.sales'), t('commission.settle.col.margin'), t('commission.settle.col.tndn'),
+    t('commission.settle.col.com_deductions'), t('commission.settle.col.net'), t('commission.settle.col.sales_pct'),
+    t('commission.settle.col.sales_share'), t('commission.settle.col.lbs_share'), t('commission.settle.col.advances'),
+    t('commission.settle.col.net_payable'), t('commission.settle.col.status'), '',
+  ];
   table.innerHTML = `
     <table class="w-full text-left border-collapse">
       <thead class="bg-slate-50">
-        <tr>${['Sales','Margin (VND)','TNDN 20%','Com KH/Line','Net (VND)','Sales %','Sales Share','LBS Share','Advances','Net Payable','Status','']
+        <tr>${thead
           .map((h) => `<th class="py-2 px-3 text-xs font-medium text-slate-600 whitespace-nowrap">${h}</th>`).join('')}</tr>
       </thead>
-      <tbody>${rowHtml || '<tr><td colspan="12" class="p-4 text-slate-400 text-center text-xs">No data for period.</td></tr>'}</tbody>
+      <tbody>${rowHtml || `<tr><td colspan="12" class="p-4 text-slate-400 text-center text-xs">${t('commission.settle.no_data')}</td></tr>`}</tbody>
     </table>`;
 
   const hasUnsettled = rows.some((r) => !isSettled(r.salesId, key));
@@ -95,20 +103,31 @@ function renderTable(root, rows) {
   return rows;
 }
 
+// AC-06: bounded like every other master load (F-20-01) — a stalled Drive read on an
+// auth-expired session must settle to an error/retry state within the ceiling, never hang.
+// Returns true on success (module globals updated), false on timeout/failure (globals untouched).
 async function loadData() {
   const repo = getRepo();
-  if (!repo) return;
-  [_shipments, _pnlLines, _payouts] = await Promise.all([
-    repo.list(KIND_SHIPMENT, null),
-    repo.list(KIND_PNL_LINE, null),
-    repo.list(PAYOUT_KIND, null),
-  ]);
-  const composed = await composeRules(repo);
-  _rules = composed.rules;
-  try {
-    const prefList = await repo.list('meta-pref', null);
-    _prefs = prefList?.find((p) => p.id === PREFS_META_KEY) || {};
-  } catch { _prefs = {}; }
+  if (!repo) return true;
+  _loadInFlight = true;
+  const res = await safeMasterLoad(async () => {
+    const [shipments, pnlLines, payouts] = await Promise.all([
+      repo.list(KIND_SHIPMENT, null),
+      repo.list(KIND_PNL_LINE, null),
+      repo.list(PAYOUT_KIND, null),
+    ]);
+    const composed = await composeRules(repo);
+    let prefs = {};
+    try {
+      const prefList = await repo.list('meta-pref', null);
+      prefs = prefList?.find((p) => p.id === PREFS_META_KEY) || {};
+    } catch { /* meta-pref absent on a fresh workspace — defaults to {} */ }
+    return { shipments, pnlLines, payouts, rules: composed.rules, prefs };
+  }, 'commissions:load');
+  _loadInFlight = false;
+  if (!res.ok) return false;
+  ({ shipments: _shipments, pnlLines: _pnlLines, payouts: _payouts, rules: _rules, prefs: _prefs } = res.value);
+  return true;
 }
 
 export async function render(root) {
@@ -122,26 +141,35 @@ export async function render(root) {
     else _periodMode = 'month';
   }
 
-  await loadData();
+  const loaded = await loadData();
+  if (!loaded) {
+    root.innerHTML = `
+      <div class="p-6 max-w-[1400px] mx-auto">
+        <div class="text-xs text-red-500 mb-2">${t('masters.load_error')}</div>
+        <button id="commission-retry" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700">${t('retry')}</button>
+      </div>`;
+    root.querySelector('#commission-retry')?.addEventListener('click', () => render(root));
+    return;
+  }
 
   root.innerHTML = `
     <div class="p-6 space-y-5 max-w-[1400px] mx-auto">
       <div id="commission-suggest-banner"></div>
       <div class="flex items-center gap-4 flex-wrap">
-        <label class="text-xs font-medium text-slate-600">Period:</label>
+        <label class="text-xs font-medium text-slate-600">${t('commission.settle.period_label')}</label>
         <select id="period-select" class="border rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-          <option value="month" ${_periodMode === 'month' ? 'selected' : ''}>Month</option>
-          <option value="quarter" ${_periodMode === 'quarter' ? 'selected' : ''}>Quarter</option>
+          <option value="month" ${_periodMode === 'month' ? 'selected' : ''}>${t('commission.settle.period.month')}</option>
+          <option value="quarter" ${_periodMode === 'quarter' ? 'selected' : ''}>${t('commission.settle.period.quarter')}</option>
         </select>
         <span id="period-label" class="text-xs text-slate-500">${currentPeriodKey()}</span>
       </div>
 
       <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <div class="text-sm font-semibold text-slate-900">Commission Preview</div>
+          <div class="text-sm font-semibold text-slate-900">${t('commission.settle.preview')}</div>
           <button id="btn-settle"
             class="px-4 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40"
-            disabled>Settle period</button>
+            disabled>${t('commission.settle.action')}</button>
         </div>
         <div id="commission-table" class="overflow-x-auto"></div>
       </div>
@@ -164,10 +192,10 @@ export async function render(root) {
     const unsettled   = currentRows.filter((r) => !isSettled(r.salesId, key));
     if (!unsettled.length) return;
     const ok = await showConfirm({
-      title: `Settle commissions for ${key}?`,
-      body:  `Settle commissions for ${unsettled.length} sales rep(s). This locks the period for sales edits.`,
-      confirmLabel: 'Settle',
-      cancelLabel:  'Cancel',
+      title: t('commission.settle.confirm.title', { key }),
+      body:  t('commission.settle.confirm.body', { n: unsettled.length }),
+      confirmLabel: t('commission.settle.confirm.ok'),
+      cancelLabel:  t('common.action.cancel'),
       destructive:  true,
     });
     if (!ok) return;
@@ -204,7 +232,7 @@ export async function render(root) {
     }
 
     window.dispatchEvent(new CustomEvent('vdg:toast', {
-      detail: { type: 'success', message: `Period ${key} settled for ${entities.length} rep(s).`, duration: TOAST_AUTODISMISS_MS },
+      detail: { type: 'success', message: t('commission.settle.toast_success', { key, n: entities.length }), duration: TOAST_AUTODISMISS_MS },
     }));
     renderTable(root, currentRows);
   });
@@ -212,9 +240,11 @@ export async function render(root) {
   _onEntity = async (e) => {
     // View navigated away → drop the leaked window listener instead of touching a stale root.
     if (!root.isConnected) { window.removeEventListener('vdg:entity-changed', _onEntity); return; }
+    if (_loadInFlight) return; // AC-06: a bounded load is already running — delta-poll tick can't re-enter
     const kind = e.detail?.kind;
     if (kind !== KIND_SHIPMENT && kind !== PAYOUT_KIND && kind !== KIND_COMMISSION_RULES) return;
-    await loadData();
+    const ok = await loadData();
+    if (!ok) return; // stalled Drive read — keep showing the last-known-good rows
     currentRows = computeCommissions(_shipments, _pnlLines, _rules, [], currentPeriodKey());
     renderTable(root, currentRows);
   };

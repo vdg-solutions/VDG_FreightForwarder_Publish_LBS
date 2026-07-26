@@ -21,12 +21,13 @@ import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT, DRIVE_ERROR_KIND_FILE_PERMISSION }
 import { loadLocale, t } from './i18n/index.js';
 import { tryParamRoute }       from './app-router-ext.js';
 import { loadView }            from './util/view-loader.js';
+import { mountView }           from './util/mount-view.js';
+import { freshViewRoot }       from './util/view-root.js';
 import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
 import { checkVersionBanner, initBreakpointListener, initWmaListener } from './app-events.js';
 import { initTokenRefresh, initAccessTokenRefresh } from './auth/token-refresh.js';
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
-import { activeWorkspaceName } from './operators/workspace-registry.js';
 import { renderRepoInitTimeoutBanner } from './boot/repo-init-fallback.js';
 import './sync/job-tracker.js'; // Start background job tracker
 
@@ -53,10 +54,10 @@ const QUOTE_EDIT_RE   = /^\/sales\/quote\/([^/]+)\/edit$/;
 
 const DEFAULT_ROUTE = '/dashboard';
 
+// F-19-16: acquire a FRESH #view-root per navigation (latest-wins). A superseded render still
+// holds its now-detached old element, so its late innerHTML write lands on an orphan node.
 function _viewRoot() {
-  const el = document.getElementById('view-root');
-  el.innerHTML = '';
-  return el;
+  return freshViewRoot();
 }
 
 async function renderView(route) {
@@ -70,7 +71,7 @@ async function renderView(route) {
     const root = _viewRoot();
     const mod  = await loadView(() => import('./views/document-print.js'), root, route);
     if (!mod) return;
-    await mod.render(root, printMatch[1]); return;
+    await mountView(() => mod.render(root, printMatch[1]), root, route); return;
   }
 
   const noteMatch = NOTE_ROUTE_RE.exec(route);
@@ -78,7 +79,7 @@ async function renderView(route) {
     const root = _viewRoot();
     const mod  = await loadView(() => import('./views/note-print.js'), root, route);
     if (!mod) return;
-    await mod.render(root, noteMatch[1], noteMatch[2]); return;
+    await mountView(() => mod.render(root, noteMatch[1], noteMatch[2]), root, route); return;
   }
 
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
@@ -86,7 +87,7 @@ async function renderView(route) {
     const root = _viewRoot();
     const mod  = await loadView(() => import('./views/shipment-budget-print.js'), root, route);
     if (!mod) return;
-    await mod.render(root, budgetMatch[1]); return;
+    await mountView(() => mod.render(root, budgetMatch[1]), root, route); return;
   }
 
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
@@ -94,7 +95,7 @@ async function renderView(route) {
     const root = _viewRoot();
     const mod  = await loadView(() => import('./views/sales-quote-new.js'), root, route);
     if (!mod) return;
-    await mod.render(root, quoteEditMatch[1]); return;
+    await mountView(() => mod.render(root, quoteEditMatch[1]), root, route); return;
   }
 
   if (await tryParamRoute(route)) return;
@@ -104,7 +105,7 @@ async function renderView(route) {
   const root     = _viewRoot();
   const mod      = await loadView(VIEWS[path], root, path);
   if (!mod) return;
-  await mod.render(root);
+  await mountView(() => mod.render(root), root, path);
 }
 
 window.addEventListener('vdg:navigate', (e) => renderView(e.detail.route));
@@ -211,35 +212,8 @@ export function bootApp(user, db) {
     console.log('[VDG] WASM version:', window.__vdg_wasm.vdg_version()); // DEV
   }
 
-  // F-15-38: FX auto-fetch (manager-only, async non-blocking)
-  if (isManager()) {
-    (async () => {
-      try {
-        const { FxRateDriveRepo } = await import('./implementations/fx-rate-drive-repo.js');
-        const { initFxAutoFetch } = await import('./boot/fx-auto-fetcher-init.js');
-        const api = window.__vdg_drive_api;
-        if (!api) return;
-        const fxRepo = new FxRateDriveRepo(api, () => api.findWorkspaceRoot(activeWorkspaceName()));
-        // Pre-load workspace settings so first tick uses real fx_source
-        let wsSettings = { fx_source: 'Manual' };
-        try {
-          const root = await api.findWorkspaceRoot(activeWorkspaceName());
-          if (root) {
-            const shared = await api.findFolder(root, '_shared');
-            if (shared) {
-              const q   = `name='workspace.json' and '${shared.id}' in parents and trashed=false`;
-              const res = await api.driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive`);
-              const f   = res?.files?.[0];
-              if (f) { const d = await api.getFile(f.id); if (d?.content) wsSettings = JSON.parse(d.content); }
-            }
-          }
-        } catch { /* use Manual default */ }
-        window.__vdg_workspace_settings = wsSettings;
-        initFxAutoFetch(fxRepo, () => window.__vdg_workspace_settings ?? { fx_source: 'Manual' });
-        window.__vdg_fx_auto_fetcher_init = initFxAutoFetch;
-      } catch (e) { console.warn('[fx-auto-fetch] boot init failed:', e.message); } // DEV
-    })();
-  }
+  // F-29-11: runtime FX auto-fetch retired — rates are build-time seeded plus
+  // accountant manual entry through the write-gated path. No boot fetch.
 
   // Debug refresh-role button hidden behind ?debug=1
   if (new URLSearchParams(location.search).get('debug') === '1') {
@@ -269,26 +243,8 @@ export function bootApp(user, db) {
 }
 
 async function main() {
-  // Step 1: Register Service Worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/js/sw.js', { scope: '/' }).catch(console.warn); // DEV
-    navigator.serviceWorker.addEventListener('message', (e) => {
-      if (e.data?.type === 'VDG_SW_UPDATE_AVAILABLE')
-        window.dispatchEvent(new CustomEvent('vdg:sw-update-available'));
-    });
-    // Auto-reload once when a newly-deployed SW takes control — only if a controller already
-    // existed (skip on first-ever load so we don't reload a fresh visit). Guarded against loops.
-    if (navigator.serviceWorker.controller) {
-      let _reloading = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (_reloading) return;
-        _reloading = true;
-        location.reload();
-      });
-    }
-  }
-
-  // Step 2: Init OAuth + silent token refresh (F-15-02)
+  // SW registration lives solely in sw-register.js (invoked from index.html).
+  // Init OAuth + silent token refresh (F-15-02)
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
   initTokenRefresh();
   initAccessTokenRefresh();                          // F-29-13: proactive access-token scheduler + reconnect listener

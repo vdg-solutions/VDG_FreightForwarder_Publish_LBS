@@ -87,6 +87,7 @@ export async function renderForm(root, opts = {}) {
 export function collectFormState(root) {
   const g = (name) => root.querySelector(`[name=${name}]`)?.value || '';
   return {
+    quote_id:         g('quote_id') || null,
     mode:             g('mode') || 'SEA',
     mbl:              g('mbl'),
     hbl:              g('hbl'),

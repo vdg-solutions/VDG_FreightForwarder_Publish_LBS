@@ -48,7 +48,15 @@ export async function findWorkspaceRoot(name) {
   if (winner) return winner.id;
 
   // AC-01/AC-03: not owned by the signed-in user — check whether it was shared instead.
-  // Read-only: pick a folder id straight off the list, never dedupe/move/delete (F-24-20).
+  return await findSharedSubfolder(name);
+}
+
+// F-27-04: resolve a folder shared directly TO the signed-in user by exact name, with no
+// root/parent dependency. An employee's users/{prefix} fork is granted to them individually
+// (F-27-01 resolve_grants), so it surfaces via sharedWithMe even though the root never does.
+// Read-only: pick an id off the list, never dedupe/move/delete (mirrors findWorkspaceRoot).
+export async function findSharedSubfolder(name) {
+  if (!name) return null;
   const shared = await sharedWorkspaceQuery(name);
   if (shared.length === 0) return null;
   const sorted = shared.slice().sort((a, b) => a.id.localeCompare(b.id));

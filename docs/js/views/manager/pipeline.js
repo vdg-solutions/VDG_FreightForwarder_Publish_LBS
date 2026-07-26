@@ -6,6 +6,8 @@ import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { t } from '../../i18n/index.js';
 
 const SEA_KANBAN_STATES = ['Created','BookingConfirmed','InTransit','Arrived','Delivered','Closed'];
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
@@ -79,13 +81,14 @@ function enrichShipments(list) {
 
 function mountGrid(container, filtered) {
   if (_gridApi) { try { _gridApi.destroy(); } catch { /* ignore */ } _gridApi = null; }
+  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
   const rowData = filtered.map((s) => ({
     ...s,
     shipment_ref: s.shipment_ref || s.ShipmentRef || s.id,
     customer:     s.customer     || s.Customer     || '—',
     lane:         `${s.pol || s.POL || '?'}→${s.pod || s.POD || '?'}`,
     state:        s.state        || s.State        || '—',
-    sales_rep:    s.sales_rep    || s.SalesRep     || '—',
+    sales_rep:    resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—',
   }));
 
   container.innerHTML = '<div class="ag-theme-quartz" style="height:500px"></div>';

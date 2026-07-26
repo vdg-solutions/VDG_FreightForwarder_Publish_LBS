@@ -53,6 +53,8 @@ export const VIEWS = {
   '/masters/airline-carriers':   () => import('./views/manager/masters/airline-carriers.js'),
   // E-26 F-26-04
   '/masters/ocean-carriers':     () => import('./views/manager/masters/ocean-carriers.js'),
+  // E-20 F-28-15
+  '/masters/ocean-tariff':       () => import('./views/manager/masters/ocean-tariff.js'),
   // E-16 F-16-04
   '/masters/uld-types':          () => import('./views/manager/masters/uld-types.js'),
   '/manager/manifest':           () => import('./views/manager/manifest.js'),
@@ -61,6 +63,8 @@ export const VIEWS = {
   // E-25 / E-26 — sea-freight local charge masters
   '/masters/units-of-measure':   () => import('./views/manager/masters/units-of-measure.js'),
   '/masters/local-charges':      () => import('./views/manager/masters/local-charges.js'),
+  // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
+  '/masters/shipment-states':    () => import('./views/manager/masters/shipment-states.js'),
   '/quotes/air-calc':            () => import('./views/quotes/air-calc.js'),
   // E-16 F-16-09
   '/manager/air-invoice':        () => import('./views/manager/air-invoice.js'),

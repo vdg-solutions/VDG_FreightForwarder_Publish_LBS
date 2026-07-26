@@ -1,5 +1,6 @@
 // commission-tab.js — per-shipment commission entries with override audit
 
+import { t } from '../i18n/index.js';
 
 const KIND_COMMISSION_ENTRY = 'commission_entry';
 
@@ -12,17 +13,17 @@ function overrideAuditHtml(entry) {
   const reason = entry.remark    || '—';
   return `
     <div class="col-span-3 mt-1 text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1">
-      Override · by <strong>${by}</strong> · reason: ${reason}
+      ${t('commission.tab.override_audit', { by, reason })}
     </div>`;
 }
 
 function rowHtml(entry) {
   const isOverride = entry.source === 'Override';
   const badge = isOverride
-    ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-700 font-medium">Override</span>`
-    : `<span class="px-1.5 py-0.5 rounded text-[9px] bg-slate-100 text-slate-500">Rule</span>`;
+    ? `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-700 font-medium">${t('commission.tab.source.override')}</span>`
+    : `<span class="px-1.5 py-0.5 rounded text-[9px] bg-slate-100 text-slate-500">${t('commission.tab.source.rule')}</span>`;
   const ruleInfo = entry.rule_applied
-    ? `<span class="text-[10px] text-slate-400">Rule: ${entry.rule_applied}</span>`
+    ? `<span class="text-[10px] text-slate-400">${t('commission.tab.rule_applied', { rule: entry.rule_applied })}</span>`
     : '';
 
   return `
@@ -49,24 +50,24 @@ function rowHtml(entry) {
  */
 export async function renderCommissionTab(root, shipmentRef, repo) {
   if (!root) return;
-  root.innerHTML = `<p class="text-xs text-slate-400">Loading…</p>`;
+  root.innerHTML = `<p class="text-xs text-slate-400">${t('common.load.loading')}</p>`;
 
   let entries = [];
   try {
     const all = await repo.list(KIND_COMMISSION_ENTRY, null);
     entries = (all || []).filter((e) => e.shipment_ref === shipmentRef);
   } catch (err) {
-    root.innerHTML = `<p class="text-xs text-red-500">Failed to load commission entries.</p>`;
+    root.innerHTML = `<p class="text-xs text-red-500">${t('commission.tab.load_error')}</p>`;
     console.error('[commission-tab] list failed:', err); // DEV
     return;
   }
 
   if (!entries.length) {
-    root.innerHTML = `<p class="text-xs text-slate-400">No commission entries for this shipment.</p>`;
+    root.innerHTML = `<p class="text-xs text-slate-400">${t('commission.tab.empty')}</p>`;
     return;
   }
 
   root.innerHTML = `
-    <div class="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">Commission</div>
+    <div class="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">${t('commission.tab.title')}</div>
     <div>${entries.map(rowHtml).join('')}</div>`;
 }

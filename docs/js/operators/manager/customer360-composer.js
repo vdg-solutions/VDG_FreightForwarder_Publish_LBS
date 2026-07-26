@@ -1,4 +1,8 @@
 // Pure compute — Customer 360 aggregation + health score. No DOM, no I/O.
+// Sole exception: the sales-rep branch below reads window.__vdg_current_user
+// to resolve a persisted role token (F-19-66 idiom, mirrors pnl-composer.js).
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { t } from '../../i18n/index.js';
 
 const HEALTH_DEDUCT_DISPUTE    = 15;
 const HEALTH_DEDUCT_OVERDUE_91 = 20;
@@ -120,8 +124,11 @@ export function compose(customerId, customers, shipments, billing, exceptions) {
   const lifetimeRevenue = custShipments.reduce((sum, s) => sum + Number(s.selling_vnd ?? 0), 0);
   const outstanding     = custBilling.reduce((sum, b) => sum + getAmount(b), 0);
 
-  const salesRep = customer.sales_rep || customer.SalesRep
-    || custShipments[0]?.sales_rep || custShipments[0]?.SalesRep || '—';
+  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  const salesRep = resolveSalesRepLabel(
+    customer.sales_rep || customer.SalesRep
+    || custShipments[0]?.sales_rep || custShipments[0]?.SalesRep || '',
+    currentUser, t) || '—';
 
   const allDates = [
     ...custShipments.map((s) => getUpdated(s)),
