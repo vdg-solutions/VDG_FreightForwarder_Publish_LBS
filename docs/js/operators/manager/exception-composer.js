@@ -1,5 +1,7 @@
 // Pure compute — exception sorting, trends, MTTR, per-sales rate. No DOM, no I/O.
 
+import { t } from '../../i18n/index.js';
+
 const SEVERITY_ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 const SLA_HOURS_CRITICAL = 4;
 const SLA_HOURS_HIGH     = 24;
@@ -73,31 +75,33 @@ export function computeTrends(exceptions) {
     weekStarts.push(now - i * MS_PER_WEEK);
   }
 
+  const otherLabel = t('exception.type.other');
+
   // Count volume per type
   const typeVolume = {};
   for (const e of exceptions) {
-    const t = e.type || 'Other';
-    typeVolume[t] = (typeVolume[t] || 0) + 1;
+    const typ = e.type || otherLabel;
+    typeVolume[typ] = (typeVolume[typ] || 0) + 1;
   }
   const topTypes = Object.entries(typeVolume)
     .sort((a, b) => b[1] - a[1])
     .slice(0, TREND_MAX_TYPES)
-    .map(([t]) => t);
+    .map(([typ]) => typ);
 
   const typeSet = new Set(topTypes);
-  const labels = weekStarts.map((t) => {
-    const d = new Date(t);
-    return `W${TREND_WEEKS - weekStarts.indexOf(t)} (${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })})`;
+  const labels = weekStarts.map((wStart) => {
+    const d = new Date(wStart);
+    return `W${TREND_WEEKS - weekStarts.indexOf(wStart)} (${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })})`;
   });
 
-  const datasets = [...topTypes, 'Other'].map((label) => ({
+  const datasets = [...topTypes, otherLabel].map((label) => ({
     label,
     data: weekStarts.map((wStart, i) => {
       const wEnd = wStart + MS_PER_WEEK;
       return exceptions.filter((e) => {
-        const t   = new Date(e.raised_at || e.created_at || 0).getTime();
-        const typ = typeSet.has(e.type || '') ? (e.type || 'Other') : 'Other';
-        return t >= wStart && t < wEnd && typ === label;
+        const raisedAt = new Date(e.raised_at || e.created_at || 0).getTime();
+        const typ = typeSet.has(e.type || '') ? (e.type || otherLabel) : otherLabel;
+        return raisedAt >= wStart && raisedAt < wEnd && typ === label;
       }).length;
     }),
   }));
@@ -112,7 +116,7 @@ export function computeMttr(exceptions) {
   const typeMap = new Map();
   for (const e of exceptions) {
     if (!e.resolved_at && !e.closed_at) continue;
-    const type     = e.type || 'Unknown';
+    const type     = e.type || t('exception.type.unknown');
     const start    = new Date(e.raised_at || e.created_at || 0).getTime();
     const end      = new Date(e.resolved_at || e.closed_at).getTime();
     const hours    = (end - start) / MS_PER_HOUR;

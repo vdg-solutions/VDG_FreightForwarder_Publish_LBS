@@ -5,6 +5,7 @@ import { APPROVAL_SLA_HOURS } from '../../components/approval-card.js';
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { t }         from '../../i18n/index.js';
 
 const TOAST_AUTODISMISS_MS = 5_000;
 const KIND_APPROVAL        = 'approval_request';
@@ -89,7 +90,7 @@ function renderCards(root, items) {
 
   const filtered = applyFilter(items);
   list.innerHTML = filtered.length === 0
-    ? '<div class="text-center text-slate-400 text-sm py-12">No pending approvals</div>'
+    ? `<div class="text-center text-slate-400 text-sm py-12">${t('approvals.empty')}</div>`
     : '';
 
   for (const item of filtered) {
@@ -120,7 +121,7 @@ function updateBulkBar(root) {
   if (!bar) return;
   bar.classList.toggle('hidden', _selectedIds.size === 0);
   const cntEl = bar.querySelector('#bulk-count');
-  if (cntEl) cntEl.textContent = `${_selectedIds.size} selected`;
+  if (cntEl) cntEl.textContent = t('approvals.bulk_selected', { n: _selectedIds.size });
 }
 
 export async function render(root) {
@@ -134,10 +135,10 @@ export async function render(root) {
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="flex gap-2 flex-wrap">
           <button data-filt="all"
-            class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white">All</button>
+            class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white">${t('manager.mode.all')}</button>
           <button data-filt="urgent"
             class="px-3 py-1 rounded-full text-xs bg-slate-100 text-slate-600 hover:bg-slate-200">
-            Urgent (SLA overdue)
+            ${t('approvals.filter.urgent')}
           </button>
         </div>
         <div id="bulk-approve-bar"
@@ -145,7 +146,7 @@ export async function render(root) {
           <span id="bulk-count" class="text-xs font-medium"></span>
           <button id="btn-bulk-approve"
             class="px-3 py-1 text-xs bg-emerald-600 rounded hover:bg-emerald-700">
-            Bulk approve
+            ${t('approvals.bulk_approve')}
           </button>
         </div>
       </div>
@@ -172,10 +173,10 @@ export async function render(root) {
     const n = _selectedIds.size;
     if (!n) return;
     const ok = await showConfirm({
-      title: 'Confirm bulk approval',
-      body:  `Approve ${n} item${n > 1 ? 's' : ''}? This cannot be undone.`,
-      confirmLabel: 'Approve',
-      cancelLabel:  'Cancel',
+      title: t('approvals.confirm.bulk_title'),
+      body:  `${t('approvals.confirm.bulk_body', { n })} ${t('dunning_tmpl.confirm.body')}`,
+      confirmLabel: t('approvals.action.approve'),
+      cancelLabel:  t('common.action.cancel'),
     });
     if (!ok) return;
     const ids = [..._selectedIds];
@@ -202,7 +203,7 @@ export async function render(root) {
     _items = await loadItems();
     renderCards(root, _items);
     window.dispatchEvent(new CustomEvent('vdg:toast', {
-      detail: { type: 'info', message: 'New approval request received', duration: TOAST_AUTODISMISS_MS },
+      detail: { type: 'info', message: t('approvals.toast.new_request'), duration: TOAST_AUTODISMISS_MS },
     }));
   };
 

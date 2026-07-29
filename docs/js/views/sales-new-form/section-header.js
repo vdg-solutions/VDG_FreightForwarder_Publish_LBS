@@ -10,8 +10,11 @@ import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
 import { getCurrentUser } from '../../auth/google-oauth.js';
 
 const CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
+// contract values (VALID_PRODUCTS in pnl_combined_row_mapper/shipment.rs) — value= stays raw, only the label translates
 const PRODUCT_OPTIONS  = ['FCL EXPORT', 'IMPORT FCL', 'AIR', 'LCL'];
 const MODE_OPTIONS     = ['SEA', 'AIR'];
+const PRODUCT_LABEL_KEYS = { 'FCL EXPORT': 'sales_new.product_option.fcl_export', 'IMPORT FCL': 'sales_new.product_option.import_fcl', AIR: 'sales_new.product_option.air', LCL: 'sales_new.product_option.lcl' };
+const MODE_LABEL_KEYS    = { SEA: 'sales_new.mode_selector.sea', AIR: 'sales_new.mode_selector.air' };
 
 function fld(label, inner) {
   return `
@@ -51,16 +54,16 @@ function dateInp(name, val) {
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs" />`;
 }
 
-function optHtml(options, selected) {
+function optHtml(options, selected, labelKeys) {
   return options.map((o) =>
-    `<option value="${o}"${o === selected ? ' selected' : ''}>${o}</option>`
+    `<option value="${o}"${o === selected ? ' selected' : ''}>${labelKeys ? t(labelKeys[o] || o) : o}</option>`
   ).join('');
 }
 
-function selFld(name, options, selected) {
+function selFld(name, options, selected, labelKeys) {
   return `<select name="${name}"
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs">
-    <option value="">—</option>${optHtml(options, selected)}
+    <option value="">—</option>${optHtml(options, selected, labelKeys)}
   </select>`;
 }
 
@@ -91,10 +94,10 @@ export function sectionAHtml(draft = {}, customers = []) {
       <input type="hidden" name="quote_id" value="${d.quote_id || ''}" />
       <div class="grid grid-cols-3 gap-3">
         ${fld(t('sales_new.mode_selector.title'),
-          selFld('mode', MODE_OPTIONS, mode))}
+          selFld('mode', MODE_OPTIONS, mode, MODE_LABEL_KEYS))}
         ${fld(t('sales_new.field.mbl'),      txt('mbl', d.mbl))}
         ${fld(t('sales_new.field.hbl'),      txt('hbl', d.hbl))}
-        ${fld(t('sales_new.field.product'),  selFld('product', PRODUCT_OPTIONS, d.product))}
+        ${fld(t('sales_new.field.product'),  selFld('product', PRODUCT_OPTIONS, d.product, PRODUCT_LABEL_KEYS))}
         ${fld(t('sales_new.field.customer'), custSel(customers, d.customer, d._autofilled))}
         ${fld(t('sales_new.field.shipper'),   txt('shipper',  d.shipper))}
         ${fld(t('sales_new.field.consignee'), txt('consignee', d.consignee))}
@@ -226,7 +229,7 @@ export function wireHeaderSection(root, onChanged) {
           results.forEach(r => {
               const div = document.createElement('div');
               div.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b border-slate-100';
-              const scoreHtml = r.score !== undefined ? `<span class="text-[9px] text-slate-400">Score: ${(r.score).toFixed(2)}</span>` : '';
+              const scoreHtml = r.score !== undefined ? `<span class="text-[9px] text-slate-400">${t('common.score_label')} ${(r.score).toFixed(2)}</span>` : '';
               div.innerHTML = `<span class="font-medium">${r.name}</span>${scoreHtml}`;
               div.addEventListener('click', () => {
                   custInput.value = r.name;

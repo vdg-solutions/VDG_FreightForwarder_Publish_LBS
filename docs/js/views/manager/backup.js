@@ -2,8 +2,7 @@
 
 import { isManager }       from '../../auth/auth-gate.js';
 import { exportWorkspace } from '../../operators/backup-exporter.js';
-
-const NOT_MANAGER_MSG = 'Manager access required';
+import { t }               from '../../i18n/index.js';
 
 function getRepo()     { return window.__vdg_repo; }
 function getDriveApi() { return window.__vdg_drive_api; }
@@ -14,17 +13,17 @@ function _html() {
   return `
     <div class="p-6 max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 class="text-xl font-semibold text-slate-900">Backup &amp; Disaster Recovery</h1>
-        <p class="text-sm text-slate-500 mt-1">Export all workspace JSONL bundles as a single zip file for offline backup.</p>
+        <h1 class="text-xl font-semibold text-slate-900">${t('backup.title')}</h1>
+        <p class="text-sm text-slate-500 mt-1">${t('backup.subtitle')}</p>
       </div>
 
       <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        <div class="text-sm font-medium text-slate-700">Export Workspace</div>
-        <p class="text-xs text-slate-500">Downloads a zip containing every JSONL bundle currently stored in your Drive workspace folder (masters + all user monthly bundles).</p>
+        <div class="text-sm font-medium text-slate-700">${t('backup.export_workspace.heading')}</div>
+        <p class="text-xs text-slate-500">${t('backup.export_workspace.desc')}</p>
 
         <div id="backup-progress" class="hidden space-y-2">
           <div class="flex items-center justify-between text-xs text-slate-600">
-            <span id="backup-label">Preparing…</span>
+            <span id="backup-label">${t('backup.progress.preparing')}</span>
             <span id="backup-pct">0%</span>
           </div>
           <div class="w-full bg-slate-100 rounded-full h-2">
@@ -37,16 +36,16 @@ function _html() {
 
         <button id="btn-export"
                 class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition disabled:opacity-50">
-          Export Workspace Zip
+          ${t('backup.export_workspace.button')}
         </button>
       </div>
 
       <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 space-y-1">
-        <div class="font-semibold">Restore procedure</div>
-        <p>If the workspace folder is accidentally deleted, it remains in <strong>Drive Trash</strong> for 30 days.
-          Go to <a href="https://drive.google.com/drive/trash" target="_blank" rel="noreferrer"
-                   class="underline">drive.google.com/drive/trash</a> and restore the <code>LBS</code> folder.
-          See <code>docs/operations/disaster-recovery.md</code> for the full restore script procedure.</p>
+        <div class="font-semibold">${t('backup.restore.title')}</div>
+        <p>${t('backup.restore.body_1')} <strong>${t('backup.restore.drive_trash')}</strong> ${t('backup.restore.body_2')}
+          <a href="https://drive.google.com/drive/trash" target="_blank" rel="noreferrer"
+                   class="underline">drive.google.com/drive/trash</a> ${t('backup.restore.body_3')} <code>LBS</code> folder.
+          ${t('backup.restore.body_4')} <code>docs/operations/disaster-recovery.md</code> ${t('backup.restore.body_5')}</p>
       </div>
     </div>`;
 }
@@ -55,7 +54,7 @@ function _html() {
 
 export async function render(root) {
   if (!isManager()) {
-    root.innerHTML = `<div class="p-8 text-sm text-slate-500">${NOT_MANAGER_MSG}</div>`;
+    root.innerHTML = `<div class="p-8 text-sm text-slate-500">${t('nav.access.denied')}</div>`;
     return;
   }
 
@@ -73,7 +72,7 @@ export async function render(root) {
     const repo     = getRepo();
     const driveApi = getDriveApi();
     if (!repo || !driveApi) {
-      errorEl.textContent = 'Drive not initialized.';
+      errorEl.textContent = t('backup.error.drive_not_initialized');
       errorEl.classList.remove('hidden');
       return;
     }
@@ -90,11 +89,11 @@ export async function render(root) {
         labelEl.textContent = label;
       });
       progressEl.classList.add('hidden');
-      resultEl.textContent = `Downloaded: ${filename}`;
+      resultEl.textContent = t('backup.result.downloaded', { filename });
       resultEl.classList.remove('hidden');
     } catch (err) {
       progressEl.classList.add('hidden');
-      errorEl.textContent = `Export failed: ${err?.message ?? err}`;
+      errorEl.textContent = t('backup.error.export_failed', { msg: err?.message ?? err });
       errorEl.classList.remove('hidden');
     } finally {
       btnExport.disabled = false;

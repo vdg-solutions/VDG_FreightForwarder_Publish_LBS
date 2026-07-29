@@ -124,7 +124,7 @@ function buildCarrierSection(carrierIata, group, invList) {
     <div class="mb-6">
       <div class="text-sm font-semibold text-slate-700 mb-2 px-1">
         ${escHtml(carrierIata)} — ${escHtml(group.name)}
-        <span class="ml-2 text-xs text-slate-400">${group.rows.length} invoice(s)</span>
+        <span class="ml-2 text-xs text-slate-400">${t('air_invoice.count_invoices', { n: group.rows.length })}</span>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
         <table class="w-full">
@@ -132,7 +132,7 @@ function buildCarrierSection(carrierIata, group, invList) {
             <tr>
               <th class="px-3 py-2 text-left">${t('air_invoice.col.hawb')}</th>
               <th class="px-3 py-2 text-left">${t('air_invoice.col.flight')}</th>
-              <th class="px-3 py-2 text-left">Route</th>
+              <th class="px-3 py-2 text-left">${t('air_invoice.col.route')}</th>
               <th class="px-3 py-2 text-right">${t('air_invoice.col.weight')}</th>
               <th class="px-3 py-2 text-right">${t('air_invoice.col.freight')}</th>
               <th class="px-3 py-2 text-left">${t('air_invoice.col.cass_code')}</th>

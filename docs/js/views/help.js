@@ -1,6 +1,7 @@
 // F-12-12 — In-app help / onboarding docs
 
 import { isManager } from '../auth/auth-gate.js';
+import { t } from '../i18n/index.js';
 
 const DOC_ADMIN = '/docs/onboarding/in-app-admin.md';
 const DOC_SALES = '/docs/onboarding/in-app-sales.md';
@@ -84,23 +85,23 @@ export async function render(root) {
 
   root.innerHTML = `
     <div class="p-6 max-w-3xl mx-auto">
-      <div class="text-lg font-semibold text-slate-900 mb-4">Help &amp; Getting Started</div>
+      <div class="text-lg font-semibold text-slate-900 mb-4">${t('help.page_title')}</div>
 
       <div class="flex gap-1 border-b border-slate-200 mb-6">
         <button id="tab-admin"
                 class="tab-btn px-4 py-2 text-sm font-medium border-b-2 transition
                        ${activeTab === 'admin' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}">
-          Admin Guide
+          ${t('help.tab.admin')}
         </button>
         <button id="tab-sales"
                 class="tab-btn px-4 py-2 text-sm font-medium border-b-2 transition
                        ${activeTab === 'sales' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}">
-          Sales Quickstart
+          ${t('help.tab.sales')}
         </button>
       </div>
 
       <div id="doc-content" class="bg-white rounded-xl border border-slate-200 p-6 min-h-[300px]">
-        <div class="text-xs text-slate-400">Loading…</div>
+        <div class="text-xs text-slate-400">${t('loading')}</div>
       </div>
     </div>`;
 
@@ -127,7 +128,7 @@ export async function render(root) {
     }
 
     if (!_cache[tab]) {
-      contentEl.innerHTML = '<div class="text-xs text-slate-400">Loading…</div>';
+      contentEl.innerHTML = `<div class="text-xs text-slate-400">${t('loading')}</div>`;
       const md = await fetchDoc(url);
       _cache[tab] = mdToHtml(md);
     }

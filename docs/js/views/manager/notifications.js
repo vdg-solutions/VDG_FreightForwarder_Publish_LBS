@@ -6,13 +6,12 @@ import {
 import { isManager }  from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
 import { idbGet, idbPut } from '../../cache/idb-cache.js';
+import { t } from '../../i18n/index.js';
 
 const NOTIF_DRAWER_WIDTH_PX = 380;
 const NOTIF_STORE           = 'notifications';
 const PREFS_META_KEY        = 'preferences';
-
-const EMPTY_STATE_COPY = { notifications: { heading: 'No notifications', cta: null } };
-
+const NOTIF_TYPE_KEY_PREFIX = 'notifications.type.'; // 1:1 with NOTIFICATION_TYPES tokens (F-31-02)
 const NOTIF_ICON_MAP = {
   approval_request:          '📋',
   exception_escalated:       '🚨',
@@ -82,7 +81,7 @@ function _itemHtml(n) {
   const icon = NOTIF_ICON_MAP[n.type] || '🔔';
   const ts   = n.created_at ? new Date(n.created_at).toLocaleString() : '';
   const dot  = !n.read && !n.dismissed
-    ? '<span class="w-2 h-2 rounded-full bg-blue-500 shrink-0" aria-label="Unread"></span>'
+    ? `<span class="w-2 h-2 rounded-full bg-blue-500 shrink-0" aria-label="${t('notifications.aria.unread')}"></span>`
     : '<span class="w-2 h-2 shrink-0"></span>';
   return `
     <div class="flex items-start gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 group"
@@ -95,17 +94,18 @@ function _itemHtml(n) {
       ${dot}
       <button class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-700 text-sm ml-1
                      focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-blue-500"
-              data-dismiss="${n.id}" aria-label="Dismiss notification">✕</button>
+              data-dismiss="${n.id}" aria-label="${t('notifications.aria.dismiss')}">✕</button>
     </div>`;
 }
 
 function _settingsHtml(prefs) {
   const settings = prefs?.notification_settings || {};
-  const rows = NOTIFICATION_TYPES.map((t) => {
-    const enabled = settings[t]?.enabled !== false;
+  const rows = NOTIFICATION_TYPES.map((nt) => {
+    const enabled = settings[nt]?.enabled !== false;
+    const label   = t(NOTIF_TYPE_KEY_PREFIX + nt);
     return `<div class="flex items-center justify-between py-2 border-b border-slate-100">
-        <span class="text-xs text-slate-700">${t.replace(/_/g, ' ')}</span>
-        <button role="switch" aria-checked="${enabled}" data-toggle-type="${t}"
+        <span class="text-xs text-slate-700">${label}</span>
+        <button role="switch" aria-checked="${enabled}" data-toggle-type="${nt}"
           class="relative inline-flex h-5 w-9 rounded-full transition-colors
                  ${enabled ? 'bg-blue-600' : 'bg-slate-300'}
                  focus-visible:ring-2 focus-visible:ring-blue-500">
@@ -116,11 +116,11 @@ function _settingsHtml(prefs) {
 
   const digestEnabled = prefs?.digest_enabled !== false;
   return `
-    <div class="px-4 py-3 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">Notification types</div>
+    <div class="px-4 py-3 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">${t('notifications.types_header')}</div>
     <div class="px-4">${rows}</div>
     <div class="px-4 py-3 border-t border-slate-200">
       <div class="flex items-center justify-between">
-        <span class="text-xs text-slate-700">Daily email digest</span>
+        <span class="text-xs text-slate-700">${t('notifications.digest_label')}</span>
         <button role="switch" aria-checked="${digestEnabled}" data-toggle-type="digest"
           class="relative inline-flex h-5 w-9 rounded-full transition-colors
                  ${digestEnabled ? 'bg-blue-600' : 'bg-slate-300'}
@@ -137,7 +137,7 @@ function renderNotifList(container) {
     container.innerHTML = `
       <div class="flex flex-col items-center gap-2 py-12 text-slate-400">
         <span class="text-3xl">🔔</span>
-        <div class="text-sm">${EMPTY_STATE_COPY.notifications.heading}</div>
+        <div class="text-sm">${t('notifications.empty')}</div>
       </div>`;
     return;
   }
@@ -183,9 +183,9 @@ export async function render(root) {
   root.innerHTML = `
     <div class="p-6 max-w-[860px] mx-auto">
       <div class="flex items-center justify-between mb-4">
-        <div class="text-sm font-semibold text-slate-900">Notifications</div>
+        <div class="text-sm font-semibold text-slate-900">${t('notifications.title')}</div>
         <button id="btn-mark-all" class="text-xs text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500"
-                aria-label="Mark all read">Mark all read</button>
+                aria-label="${t('notifications.mark_all_read')}">${t('notifications.mark_all_read')}</button>
       </div>
 
       <!-- Loading skeleton -->
@@ -204,14 +204,14 @@ export async function render(root) {
          style="width:${NOTIF_DRAWER_WIDTH_PX}px"
          class="fixed top-0 right-0 h-full bg-white border-l border-slate-200 shadow-2xl z-[200]
                 transition-transform duration-200 translate-x-full flex flex-col"
-         aria-label="Notifications drawer">
+         aria-label="${t('notifications.aria.drawer')}">
       <div class="h-16 border-b border-slate-200 px-4 flex items-center justify-between shrink-0">
-        <span class="text-sm font-semibold text-slate-900">Notifications</span>
+        <span class="text-sm font-semibold text-slate-900">${t('notifications.title')}</span>
         <div class="flex gap-2">
-          <button id="btn-drawer-settings" aria-label="Notification settings"
+          <button id="btn-drawer-settings" aria-label="${t('notifications.aria.settings')}"
                   class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-600
                          focus-visible:ring-2 focus-visible:ring-blue-500">⚙</button>
-          <button id="btn-drawer-close"    aria-label="Close notifications"
+          <button id="btn-drawer-close"    aria-label="${t('notifications.aria.close')}"
                   class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-600
                          focus-visible:ring-2 focus-visible:ring-blue-500">✕</button>
         </div>
@@ -220,7 +220,7 @@ export async function render(root) {
       <div class="flex-1 overflow-y-auto" id="drawer-items"></div>
       <div class="px-4 py-3 border-t border-slate-200 shrink-0">
         <button id="btn-drawer-mark-all" class="text-xs text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500"
-                aria-label="Mark all read">Mark all read</button>
+                aria-label="${t('notifications.mark_all_read')}">${t('notifications.mark_all_read')}</button>
       </div>
     </div>
     <div id="notif-overlay" class="hidden fixed inset-0 z-[199]"></div>`;

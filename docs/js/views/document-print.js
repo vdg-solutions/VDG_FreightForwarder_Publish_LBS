@@ -1,63 +1,73 @@
 // F-03-03 — browser print-to-PDF, no jsPDF/WASM rendering yet
 // Wire real WASM call once F-03-01 operator surface lands
+import { t } from '../i18n/index.js';
 
 const DOC_TYPES = ['HBL', 'MBL', 'D/O', 'AN', 'Debit Note'];
 
-// Mock per-type field templates
+// Tab-selector display label — DOC_TYPES entries double as MOCK_FIELDS lookup keys and the
+// ?type= route param, so the underlying value stays English; only the visible tab text is VN.
+function docTypeLabel(docType) {
+  return docType === 'Debit Note' ? t('note_print.title.debit_note') : docType;
+}
+
+// Mock per-type field templates. First tuple element is an i18n KEY (or a kept loanword-abbrev
+// like ETD/ETA/Container) resolved through t() in fieldTable — the visible field LABELS render
+// VN; the second element is sample DATA, kept verbatim. Prose labels shared across doc types
+// reuse one key (Shipper/Consignee/Port of Load/…) so each is translated once.
 const MOCK_FIELDS = {
   HBL: [
-    ['Shipper',       'Acme Logistics Pte Ltd, 10 Tuas South Ave 2, Singapore 637367'],
-    ['Consignee',     'To Order of Acme Logistics'],
-    ['Notify Party',  'Acme Logistics Pte Ltd'],
-    ['Vessel / Voy',  'MSC OSCAR / 0623E'],
-    ['Port of Load',  'Hochiminh City (VNSGN)'],
-    ['Port of Disch', 'Los Angeles (USLAX)'],
-    ['Marks & Nos',   'EX-260612-001 / TCNU1234567'],
-    ['Description',   'CONSUMER ELECTRONICS — 1 × 40HC'],
-    ['Gross Weight',  '14,500 KGS'],
-    ['Measurement',   '67.3 CBM'],
+    ['sales_new.field.shipper',            'Acme Logistics Pte Ltd, 10 Tuas South Ave 2, Singapore 637367'],
+    ['sales_new.field.consignee',          'To Order of Acme Logistics'],
+    ['document_print.field.notify_party',  'Acme Logistics Pte Ltd'],
+    ['document_print.field.vessel_voy',    'MSC OSCAR / 0623E'],
+    ['document_print.field.port_of_load',  'Hochiminh City (VNSGN)'],
+    ['document_print.field.port_of_disch', 'Los Angeles (USLAX)'],
+    ['document_print.field.marks_nos',     'EX-260612-001 / TCNU1234567'],
+    ['document_print.field.description',   'CONSUMER ELECTRONICS — 1 × 40HC'],
+    ['document_print.field.gross_weight',  '14,500 KGS'],
+    ['document_print.field.measurement',   '67.3 CBM'],
   ],
   MBL: [
-    ['Carrier',       'Mediterranean Shipping Company S.A.'],
-    ['B/L Number',    'MSCUSGN0623E001'],
-    ['Shipper',       'VDG Freight Services Co., Ltd'],
-    ['Consignee',     'MSC Agent — LAX'],
-    ['Vessel / Voy',  'MSC OSCAR / 0623E'],
-    ['Port of Load',  'Hochiminh City (VNSGN)'],
-    ['Port of Disch', 'Los Angeles (USLAX)'],
-    ['No. of B/Ls',   'THREE (3) ORIGINALS'],
-    ['Freight',       'PREPAID'],
+    ['budget_print.field.carrier',         'Mediterranean Shipping Company S.A.'],
+    ['document_print.field.bl_number',     'MSCUSGN0623E001'],
+    ['sales_new.field.shipper',            'VDG Freight Services Co., Ltd'],
+    ['sales_new.field.consignee',          'MSC Agent — LAX'],
+    ['document_print.field.vessel_voy',    'MSC OSCAR / 0623E'],
+    ['document_print.field.port_of_load',  'Hochiminh City (VNSGN)'],
+    ['document_print.field.port_of_disch', 'Los Angeles (USLAX)'],
+    ['document_print.field.no_of_bls',     'THREE (3) ORIGINALS'],
+    ['document_print.field.freight',       'PREPAID'],
   ],
   'D/O': [
-    ['Delivery Order No', 'DO-VDG-2100-01'],
-    ['To',               'Acme Logistics Pte Ltd'],
-    ['Container No',     'TCNU1234567 / 40HC'],
-    ['Seal No',          'VDG000123'],
-    ['Terminal',         'Cai Mep International Terminal (CMIT)'],
-    ['Free Time',        '7 days from discharge date'],
-    ['Release Date',     '2026-07-18'],
-    ['Remarks',          'Present original HBL to collect'],
+    ['document_print.field.do_no',         'DO-VDG-2100-01'],
+    ['note_print.recipient.issued_to',     'Acme Logistics Pte Ltd'],
+    ['document_print.field.container_no',  'TCNU1234567 / 40HC'],
+    ['document_print.field.seal_no',       'VDG000123'],
+    ['document_print.field.terminal',      'Cai Mep International Terminal (CMIT)'],
+    ['document_print.field.free_time',     '7 days from discharge date'],
+    ['document_print.field.release_date',  '2026-07-18'],
+    ['document_print.field.remarks',       'Present original HBL to collect'],
   ],
   AN: [
-    ['Arrival Notice No', 'AN-VDG-2100-01'],
-    ['Consignee',         'Acme Logistics Pte Ltd'],
-    ['Vessel',            'MSC OSCAR'],
-    ['Voyage',            '0623E'],
-    ['ETD',               '2026-06-23'],
-    ['ETA',               '2026-07-18'],
-    ['Port of Disch',     'Los Angeles (USLAX)'],
-    ['Container',         'TCNU1234567 / 40HC / 14,500 KGS'],
-    ['Freight Status',    'PREPAID'],
+    ['document_print.field.an_no',         'AN-VDG-2100-01'],
+    ['sales_new.field.consignee',          'Acme Logistics Pte Ltd'],
+    ['sales_new.field.vessel',             'MSC OSCAR'],
+    ['document_print.field.voyage',        '0623E'],
+    ['ETD',                                '2026-06-23'],
+    ['ETA',                                '2026-07-18'],
+    ['document_print.field.port_of_disch', 'Los Angeles (USLAX)'],
+    ['Container',                          'TCNU1234567 / 40HC / 14,500 KGS'],
+    ['document_print.field.freight_status','PREPAID'],
   ],
   'Debit Note': [
-    ['Debit Note No', 'DN-VDG-2100-01'],
-    ['Issued To',     'Acme Logistics Pte Ltd'],
-    ['Ref Shipment',  'EX-260612-001'],
-    ['Description',   'Ocean Freight — HCM → LAX — 1 × 40HC'],
-    ['Amount',        'USD 2,850.00'],
-    ['Currency',      'USD'],
-    ['Due Date',      '2026-07-28'],
-    ['Bank',          'Vietcombank — HCM Branch — Acc 0071001234567'],
+    ['document_print.field.debit_note_no', 'DN-VDG-2100-01'],
+    ['note_print.recipient.issued_to',     'Acme Logistics Pte Ltd'],
+    ['document_print.field.ref_shipment',  'EX-260612-001'],
+    ['sales_drop.preview.col.description', 'Ocean Freight — HCM → LAX — 1 × 40HC'],
+    ['quote_new.col.amount',               'USD 2,850.00'],
+    ['currency',                           'USD'],
+    ['document_print.field.due_date',      '2026-07-28'],
+    ['document_print.field.bank',          'Vietcombank — HCM Branch — Acc 0071001234567'],
   ],
 };
 
@@ -65,13 +75,13 @@ function docHeader(docId, docType) {
   return `
     <div class="doc-header flex justify-between items-start mb-6">
       <div>
-        <div class="doc-title">${docType}</div>
-        <div class="doc-subtitle">VDG Freight Services Co., Ltd · Ref: ${docId}</div>
+        <div class="doc-title">${docTypeLabel(docType)}</div>
+        <div class="doc-subtitle">VDG Freight Services Co., Ltd · ${t('document_print.header.ref')}: ${docId}</div>
       </div>
       <div class="text-right text-xs text-slate-500">
         <div class="font-semibold text-slate-800">VDG FREIGHT SERVICES CO., LTD</div>
         <div>123 Nguyen Hue, Dist 1, Ho Chi Minh City, Vietnam</div>
-        <div>Tel: +84 28 3822 0000 · ops@vdgfreight.vn</div>
+        <div>${t('document_print.header.tel')}: +84 28 3822 0000 · ops@vdgfreight.vn</div>
       </div>
     </div>
   `;
@@ -80,7 +90,7 @@ function docHeader(docId, docType) {
 function fieldTable(fields) {
   const rows = fields.map(([label, value]) => `
     <tr>
-      <th class="w-1/3 text-left font-semibold bg-slate-50">${label}</th>
+      <th class="w-1/3 text-left font-semibold bg-slate-50">${t(label)}</th>
       <td>${value}</td>
     </tr>
   `).join('');
@@ -91,12 +101,12 @@ function signatureBlock(docType) {
   return `
     <div class="mt-10 flex justify-between text-xs text-slate-600">
       <div>
-        <div class="border-t border-slate-400 pt-1 mt-8 w-48">Shipper / Consignor</div>
+        <div class="border-t border-slate-400 pt-1 mt-8 w-48">${t('document_print.field.shipper_consignor')}</div>
       </div>
       <div>
         <div class="border-t border-slate-400 pt-1 mt-8 w-48">
           For VDG Freight Services Co., Ltd
-          ${docType === 'HBL' ? '<br>As Agents for Carrier' : ''}
+          ${docType === 'HBL' ? `<br>${t('document_print.field.agent_for_carrier')}` : ''}
         </div>
       </div>
     </div>
@@ -104,13 +114,13 @@ function signatureBlock(docType) {
 }
 
 function docTypeSelector(activeType, docId) {
-  const tabs = DOC_TYPES.map((t) => {
-    const active = t === activeType;
+  const tabs = DOC_TYPES.map((dt) => {
+    const active = dt === activeType;
     return `
-      <a href="#/document/${docId}/print?type=${encodeURIComponent(t)}"
+      <a href="#/document/${docId}/print?type=${encodeURIComponent(dt)}"
          class="px-3 py-1.5 rounded text-xs font-medium no-print transition
                 ${active ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}">
-        ${t}
+        ${docTypeLabel(dt)}
       </a>
     `;
   }).join('');
@@ -128,11 +138,11 @@ export async function render(root, docId) {
     <div class="p-6 max-w-[900px] mx-auto">
       <div class="flex items-center justify-between mb-4 no-print">
         <div>
-          <div class="text-xs text-slate-500">F-03-03 · document preview</div>
+          <div class="text-xs text-slate-500">F-03-03 · ${t('document_print.preview_caption')}</div>
           <div class="text-base font-semibold text-slate-900">${docId}</div>
         </div>
         <div class="flex items-center gap-2">
-          <a href="#/documents" class="text-xs text-slate-500 hover:underline no-print">← Back</a>
+          <a href="#/documents" class="text-xs text-slate-500 hover:underline no-print">← ${t('common.back')}</a>
           <vdg-print-button doc-id="${docId}" doc-type="${docType}"></vdg-print-button>
         </div>
       </div>
@@ -144,7 +154,7 @@ export async function render(root, docId) {
         ${fieldTable(fields)}
         ${signatureBlock(docType)}
         <div class="mt-6 pt-4 border-t border-slate-200 text-[10px] text-slate-400 no-print">
-          Mock data — wire WASM operator call once F-03-01 lands
+          ${t('common.mock_data_notice')}
         </div>
       </div>
     </div>

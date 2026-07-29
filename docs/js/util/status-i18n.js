@@ -9,6 +9,7 @@ const PREFIX = {
   document:  'document.status',
   billing:   'billing.status',
   exception: 'exception.severity',
+  approval:  'approval_card.type',
 };
 
 export function statusBadgeLabel(fsm, state) {

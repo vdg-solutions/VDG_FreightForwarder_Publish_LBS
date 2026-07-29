@@ -37,31 +37,32 @@ function fmtNum(v) {
 function headerBlock(s) {
   const row = (label, value) => `
     <tr>
-      <td class="pr-3 py-0.5 text-[11px] font-semibold text-slate-500 whitespace-nowrap w-36">${label}</td>
+      <td class="pr-3 py-0.5 text-[11px] font-semibold text-slate-500 whitespace-nowrap w-36 uppercase">${label}</td>
       <td class="py-0.5 text-[11px] text-slate-900 font-medium">${value}</td>
     </tr>`;
 
   const today = new Date().toISOString().slice(0, 10);
   const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
   const salesRep = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
+  const currencyLabel = t('currency');
   return `
     <div class="grid grid-cols-2 gap-x-8 mb-6">
       <table>
         <tbody>
-          ${row('JOB FILE NO',    fmt(s.job_file_no))}
+          ${row(t('budget_print.field.job_file_no'),    fmt(s.job_file_no))}
           ${row('MBL',           fmt(s.mbl_no))}
           ${row('HBL',           fmt(s.hbl_no))}
-          ${row('SALES REP',     fmt(salesRep))}
-          ${row('PREPARING DATE',fmt(s.prep_date || today))}
-          ${row('SHIPPER',       fmt(s.shipper))}
-          ${row('CONSIGNEE',     fmt(s.consignee))}
+          ${row(t('sales_rep'),  fmt(salesRep))}
+          ${row(t('budget_print.field.preparing_date'), fmt(s.prep_date || today))}
+          ${row(t('sales_new.field.shipper'),   fmt(s.shipper))}
+          ${row(t('sales_new.field.consignee'), fmt(s.consignee))}
         </tbody>
       </table>
       <table>
         <tbody>
           ${row('POL',           fmt(s.pol))}
           ${row('POD',           fmt(s.pod))}
-          ${row('CARRIER',       fmt(s.carrier))}
+          ${row(t('budget_print.field.carrier'), fmt(s.carrier))}
           ${row('ETD',           fmt(s.etd))}
           ${row('ETA',           fmt(s.eta))}
           ${row('ROE BUYING',    fmt(s.roe_buying))}
@@ -72,8 +73,8 @@ function headerBlock(s) {
     <div class="grid grid-cols-2 gap-x-8 mb-6">
       <table>
         <tbody>
-          ${row('FREIGHT TERMS', fmt(s.freight_terms))}
-          ${row('CURRENCY',      fmt(s.currency))}
+          ${row(t('budget_print.field.freight_terms'), fmt(s.freight_terms))}
+          ${row(currencyLabel,   fmt(s.currency))}
         </tbody>
       </table>
     </div>`;
@@ -113,20 +114,20 @@ function lineTable(lines) {
         <thead>
           <tr class="text-[10px] uppercase tracking-wide">
             <th class="py-1.5 pl-2 pr-3 text-left border-b-2 border-slate-400" rowspan="2">#</th>
-            <th class="py-1.5 pr-3 text-left border-b-2 border-slate-400" rowspan="2">DESCRIPTIONS</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700" colspan="4">BUYING / PAY</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700" colspan="4">SELLING / COLLECT</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-orange-50 text-orange-700" rowspan="2">EST GROSS PROFIT</th>
+            <th class="py-1.5 pr-3 text-left border-b-2 border-slate-400 uppercase" rowspan="2">${t('sales_drop.preview.col.description')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700 uppercase" colspan="4">${t('budget_print.table.buying')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700 uppercase" colspan="4">${t('budget_print.table.selling')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-orange-50 text-orange-700 uppercase" rowspan="2">${t('budget_print.table.est_gross_profit')}</th>
           </tr>
           <tr class="text-[10px] uppercase tracking-wide">
-            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">Q'TY</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">UNIT</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">A'MT</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">VND PAY</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">Q'TY</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">UNIT</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">A'MT</th>
-            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">VND COLLECT</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">${t('budget_print.col.qty')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">${t('budget_print.table.unit')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">${t('budget_print.col.amount')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-blue-50 text-blue-700">${t('budget_print.table.vnd_pay')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">${t('budget_print.col.qty')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">${t('budget_print.table.unit')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">${t('budget_print.col.amount')}</th>
+            <th class="py-1 px-3 text-center border border-slate-300 bg-emerald-50 text-emerald-700">${t('budget_print.table.vnd_collect')}</th>
           </tr>
         </thead>
         <tbody>
@@ -134,7 +135,7 @@ function lineTable(lines) {
         </tbody>
         <tfoot>
           <tr class="border-t-2 border-slate-400 font-bold text-[11px] bg-slate-50">
-            <td class="py-2 pl-2 pr-3" colspan="5">TOTAL</td>
+            <td class="py-2 pl-2 pr-3 uppercase" colspan="5">${t('reports.tb.total')}</td>
             <td class="py-2 pr-3 text-right text-blue-800">${fmtNum(totalBuy)}</td>
             <td class="py-2 pr-3" colspan="3"></td>
             <td class="py-2 pr-3 text-right text-emerald-800">${fmtNum(totalSell)}</td>
@@ -151,13 +152,13 @@ function signatureBlock() {
   const sig = (label) => `
     <div class="flex flex-col items-center gap-1">
       <div class="text-[10px] text-slate-500 uppercase tracking-wide mb-6">${label}</div>
-      <div class="border-t border-slate-400 w-36 pt-1 text-[10px] text-center text-slate-500">Signature / Date</div>
+      <div class="border-t border-slate-400 w-36 pt-1 text-[10px] text-center text-slate-500">${t('budget_print.sig.signature_date')}</div>
     </div>`;
   return `
     <div class="flex justify-around mt-10">
-      ${sig('Sales Rep')}
-      ${sig('Prepared By')}
-      ${sig('Approved By')}
+      ${sig(t('sales_rep'))}
+      ${sig(t('budget_print.sig.prepared_by'))}
+      ${sig(t('budget_print.sig.approved_by'))}
     </div>`;
 }
 
@@ -166,8 +167,8 @@ function signatureBlock() {
 function notFoundHtml(ref) {
   return `
     <div class="p-8 text-center">
-      <div class="text-sm font-semibold text-slate-700">Shipment ${ref} not found</div>
-      <div class="text-xs text-slate-500 mt-1">Import or create it via <a href="#/sales/me/pnl/new" class="underline">Sales · New Form</a></div>
+      <div class="text-sm font-semibold text-slate-700">${t('budget_print.empty.title', { ref })}</div>
+      <div class="text-xs text-slate-500 mt-1">${t('budget_print.empty.hint')} <a href="#/sales/me/pnl/new" class="underline">${t('budget_print.empty.link')}</a></div>
     </div>`;
 }
 
@@ -178,26 +179,26 @@ export async function render(root, ref) {
     <div class="p-6 max-w-[960px] mx-auto">
       <div class="flex items-center justify-between mb-4 no-print">
         <div>
-          <div class="text-xs text-slate-500">F-12-08 · PROFIT-LOSS BUDGET</div>
+          <div class="text-xs text-slate-500">F-12-08 · ${t('budget_print.title')}</div>
           <div class="text-base font-semibold text-slate-900">${ref}</div>
         </div>
         <div class="flex items-center gap-3">
-          <a href="#/shipments" class="text-xs text-slate-500 hover:underline">← Shipments</a>
+          <a href="#/shipments" class="text-xs text-slate-500 hover:underline">← ${t('shipments')}</a>
           <button onclick="window.print()"
             class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded font-medium hover:bg-blue-700 transition no-print">
-            Print / PDF
+            ${t('print')} / PDF
           </button>
         </div>
       </div>
       <div id="budget-doc" class="print-doc bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
         <div class="text-center mb-6">
           <div class="font-bold text-base text-slate-900">${COMPANY_NAME}</div>
-          <div class="text-xs text-slate-500">${COMPANY_ADDRESS} · Tel: ${COMPANY_TEL}</div>
+          <div class="text-xs text-slate-500">${COMPANY_ADDRESS} · ${t('document_print.header.tel')}: ${COMPANY_TEL}</div>
           <div class="mt-3 text-sm font-bold uppercase tracking-widest text-slate-800 border-t border-b border-slate-300 py-1.5">
-            PROFIT-LOSS BUDGET
+            ${t('budget_print.title')}
           </div>
         </div>
-        <div id="budget-content" class="text-xs text-slate-500">Loading…</div>
+        <div id="budget-content" class="text-xs text-slate-500">${t('loading')}</div>
       </div>
     </div>
 

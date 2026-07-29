@@ -1,5 +1,6 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate } from '../router.js';
+import { t } from '../i18n/index.js';
 
 class VdgPrintButton extends LitElement {
   static properties = {
@@ -28,7 +29,7 @@ class VdgPrintButton extends LitElement {
         @click=${() => this._openPrint()}
         class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium
                bg-slate-900 text-white rounded-md hover:bg-slate-800 transition no-print"
-        title="Print ${this.docType || 'document'} as PDF"
+        title="${t('print_button.tooltip', { type: this.docType || 'document' })}"
       >
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2"
@@ -37,7 +38,7 @@ class VdgPrintButton extends LitElement {
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
           <rect x="6" y="14" width="12" height="8"/>
         </svg>
-        Print PDF
+        ${t('print')} PDF
       </button>
     `;
   }

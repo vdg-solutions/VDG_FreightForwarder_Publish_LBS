@@ -2,15 +2,20 @@
 
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
+import { t }         from '../../i18n/index.js';
 
 const AUDIT_LOG_L2_MAX       = 500;
 const AUDIT_LOG_SCROLL_BATCH = 50;
 const ACTIVITY_FEED_MAX      = 20;
 const SCROLL_THRESHOLD_PX    = 200;
 const AUDIT_LOG_KIND         = 'audit_log';
-const CSV_HEADERS            = ['When', 'Who', 'Entity Kind', 'Entity ID', 'From', 'To', 'Event', 'Emitted'];
 
-const EMPTY_STATE_COPY = { audit: { heading: 'No log entries', cta: null } };
+function csvHeaders() {
+  return [
+    t('audit.col.when'), t('audit.col.who'), t('audit.csv.entity_kind'), t('audit.csv.entity_id'),
+    t('audit.col.from'), t('audit.col.to'), t('audit.col.event'), t('audit.col.emitted'),
+  ];
+}
 
 const _filter    = { kind: '', entityId: '', actor: '', event: '', dateFrom: '', dateTo: '' };
 let _allRows   = [];
@@ -61,7 +66,7 @@ function applyFilter(rows) {
 function _colDefs() {
   return [
     {
-      headerName: 'When', field: 'created_at', width: 140,
+      headerName: t('audit.col.when'), field: 'created_at', width: 140,
       cellRenderer: ({ value }) => {
         const span = document.createElement('span');
         span.textContent = relTime(value);
@@ -69,14 +74,14 @@ function _colDefs() {
         return span;
       },
     },
-    { headerName: 'Who',         field: 'actor_email',  flex: 1    },
+    { headerName: t('audit.col.who'), field: 'actor_email',  flex: 1    },
     {
-      headerName: 'Entity', width: 200,
+      headerName: t('audit.col.entity'), width: 200,
       cellRenderer: ({ data }) => {
         const btn = document.createElement('button');
         btn.className   = 'text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 text-xs';
         btn.textContent = `${data.entity_kind || data.kind || '?'} · ${data.entity_id || data.id || '?'}`;
-        btn.setAttribute('aria-label', `Open ${data.entity_kind || 'entity'} detail`);
+        btn.setAttribute('aria-label', t('audit.aria.open_detail', { entity: data.entity_kind || 'entity' }));
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           window.dispatchEvent(new CustomEvent('vdg:open-detail', {
@@ -86,16 +91,16 @@ function _colDefs() {
         return btn;
       },
     },
-    { headerName: 'From',    field: 'from_state',  width: 120 },
-    { headerName: 'To',      field: 'to_state',    width: 120 },
-    { headerName: 'Event',   field: 'event',       width: 140 },
-    { headerName: 'Emitted', field: 'emitted_at',  width: 100 },
+    { headerName: t('audit.col.from'),    field: 'from_state',  width: 120 },
+    { headerName: t('audit.col.to'),      field: 'to_state',    width: 120 },
+    { headerName: t('audit.col.event'),   field: 'event',       width: 140 },
+    { headerName: t('audit.col.emitted'), field: 'emitted_at',  width: 100 },
   ];
 }
 
 function initGrid(container, rows) {
   if (!window.agGrid) {
-    container.innerHTML = `<div class="p-4 text-xs text-slate-400">AG Grid not loaded</div>`;
+    container.innerHTML = `<div class="p-4 text-xs text-slate-400">${t('audit.grid.not_loaded')}</div>`;
     return null;
   }
   let api = null;
@@ -140,7 +145,7 @@ function initGrid(container, rows) {
  * @returns {string}
  */
 export function buildFeedHtml(entries) {
-  if (!entries.length) return '<li class="py-2 text-xs text-slate-400">No recent activity</li>';
+  if (!entries.length) return `<li class="py-2 text-xs text-slate-400">${t('dashboard.activity.none')}</li>`;
 
   // group by entity
   const groups = new Map();
@@ -163,7 +168,7 @@ export function buildFeedHtml(entries) {
         <summary class="cursor-pointer text-slate-600">${relTime(first.created_at || first.ts)} — ${label} · ${first.event || first.op || '?'}</summary>
         <ul class="pl-4 mt-1 space-y-0.5">
           ${group.slice(1).map((e) => `<li class="text-slate-500">${relTime(e.created_at || e.ts)} — ${e.event || e.op || '?'}</li>`).join('')}
-          <li class="text-blue-500 text-[11px] cursor-pointer">Show ${group.length - 1} more</li>
+          <li class="text-blue-500 text-[11px] cursor-pointer">${t('audit.feed.show_more', { n: group.length - 1 })}</li>
         </ul>
       </details>
     </li>`;
@@ -178,7 +183,7 @@ function handleExportCsv() {
     : applyFilter(_allRows);
 
   const lines = [
-    CSV_HEADERS.join(','),
+    csvHeaders().join(','),
     ...rows.map((r) => [
       `"${r.created_at || r.ts || ''}"`,
       `"${r.actor_email || r.actor || ''}"`,
@@ -211,21 +216,21 @@ export async function render(root) {
 
   // skeleton
   root.innerHTML = `
-    <div class="p-6 space-y-4 max-w-[1600px] mx-auto print-root" data-report-title="Audit Log">
+    <div class="p-6 space-y-4 max-w-[1600px] mx-auto print-root" data-report-title="${t('audit.title')}">
       <div class="flex items-center justify-between flex-wrap gap-3">
-        <div class="text-sm font-semibold text-slate-900">Audit Log</div>
+        <div class="text-sm font-semibold text-slate-900">${t('audit.title')}</div>
         <button id="btn-export-csv" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 btn-export focus-visible:ring-2 focus-visible:ring-blue-500"
-          aria-label="Export CSV">Export CSV</button>
+          aria-label="${t('audit.export_csv')}">${t('audit.export_csv')}</button>
       </div>
 
       <!-- Filter bar -->
       <div class="filter-bar flex flex-wrap gap-2 bg-slate-50 rounded-lg px-4 py-3 border border-slate-200">
-        <input id="f-kind"      placeholder="Entity Kind" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Filter by entity kind">
-        <input id="f-entity-id" placeholder="Entity ID"   class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Filter by entity ID">
-        <input id="f-actor"     placeholder="Actor"        class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Filter by actor">
-        <input id="f-event"     placeholder="Event"        class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Filter by event">
-        <input id="f-date-from" type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Filter from date">
-        <input id="f-date-to"   type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="Filter to date">
+        <input id="f-kind"      placeholder="${t('audit.filter.entity_kind_placeholder')}" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.entity_kind')}">
+        <input id="f-entity-id" placeholder="${t('audit.filter.entity_id_placeholder')}"   class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.entity_id')}">
+        <input id="f-actor"     placeholder="${t('audit.filter.actor_placeholder')}"        class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.actor')}">
+        <input id="f-event"     placeholder="${t('audit.filter.event_placeholder')}"        class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.event')}">
+        <input id="f-date-from" type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_from')}">
+        <input id="f-date-to"   type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_to')}">
       </div>
 
       <!-- Grid skeleton -->
@@ -240,8 +245,8 @@ export async function render(root) {
     console.error('[audit] wasm-error:', e.detail); // DEV
     root.querySelector('#grid-wrap').innerHTML = `
       <div class="flex flex-col items-center gap-3 py-12 text-slate-400">
-        <div class="text-sm">Something went wrong</div>
-        <button class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700" onclick="location.reload()">Retry</button>
+        <div class="text-sm">${t('audit.error.generic')}</div>
+        <button class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700" onclick="location.reload()">${t('retry')}</button>
       </div>`;
   };
   const _onUnhandled = (e) => { console.error('[audit] unhandledrejection:', e.reason); _onWasmError(e); }; // DEV
@@ -264,7 +269,7 @@ export async function render(root) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
-        <div class="text-sm font-medium">${EMPTY_STATE_COPY.audit.heading}</div>
+        <div class="text-sm font-medium">${t('audit.empty.no_entries')}</div>
       </div>`;
   } else {
     _gridApi = initGrid(gridWrap, _allRows);

@@ -1,20 +1,30 @@
 import { loadWasm } from '../wasm-loader.js';
+import { t } from '../i18n/index.js';
 
 const CSV_HEADER = 'Row,Column,Field,Category,Message';
 
-const TEMPLATES = [
-  { name: 'booking_template.xlsx',   desc: 'Booking + container details · FSM-01',      href: '/docs/templates/booking_template.md' },
-  { name: 'job_cost_template.xlsx',  desc: 'Revenue & cost lines per job · FSM-03',     href: '/docs/templates/job_cost_template.md' },
-  { name: 'document_template.xlsx',  desc: 'Document checklist per job · FSM-02',       href: '/docs/templates/document_template.md' },
-];
+// F-31-04: desc resolved via t() at call time — a locale switch re-renders the templates panel.
+function templates() {
+  return [
+    { name: 'booking_template.xlsx',   desc: t('upload.template.booking_desc'),   href: '/docs/templates/booking_template.md' },
+    { name: 'job_cost_template.xlsx',  desc: t('upload.template.job_cost_desc'),  href: '/docs/templates/job_cost_template.md' },
+    { name: 'document_template.xlsx',  desc: t('upload.template.document_desc'), href: '/docs/templates/document_template.md' },
+  ];
+}
 
-const SAMPLE_ERRORS = [
-  { row: 4, col: 'D', field: 'origin', code: 'MISSING_REQUIRED', message: 'Origin port is required', category: 'Missing Required' },
-  { row: 7, col: 'F', field: 'etd', code: 'INVALID_FORMAT', message: 'ETD must be ISO 8601 date', category: 'Invalid Format' },
-  { row: 7, col: 'G', field: 'eta', code: 'BUSINESS_RULE', message: 'ETA must be after ETD', category: 'Business Rule Violation' },
-  { row: 12, col: 'B', field: 'shipment_ref', code: 'INVALID_FORMAT', message: 'Reference must match EX-YYMMDD-NNN or IM-YYMMDD-NNN', category: 'Invalid Format' },
-  { row: 19, col: 'D', field: 'origin', code: 'MISSING_REQUIRED', message: 'Origin port is required', category: 'Missing Required' },
-];
+// F-31-04: message/category resolved via t() at call time — a locale switch re-renders the error table.
+function sampleErrors() {
+  const missingRequired = t('upload.sample_err.cat.missing_required');
+  const invalidFormat   = t('upload.sample_err.cat.invalid_format');
+  const businessRule    = t('upload.sample_err.cat.business_rule');
+  return [
+    { row: 4, col: 'D', field: 'origin', code: 'MISSING_REQUIRED', message: t('upload.sample_err.msg.origin_required'), category: missingRequired },
+    { row: 7, col: 'F', field: 'etd', code: 'INVALID_FORMAT', message: t('upload.sample_err.msg.etd_iso8601'), category: invalidFormat },
+    { row: 7, col: 'G', field: 'eta', code: 'BUSINESS_RULE', message: t('upload.sample_err.msg.eta_after_etd'), category: businessRule },
+    { row: 12, col: 'B', field: 'shipment_ref', code: 'INVALID_FORMAT', message: t('upload.sample_err.msg.ref_format'), category: invalidFormat },
+    { row: 19, col: 'D', field: 'origin', code: 'MISSING_REQUIRED', message: t('upload.sample_err.msg.origin_required'), category: missingRequired },
+  ];
+}
 
 function errorTable(errors) {
   const grouped = {};
@@ -28,10 +38,10 @@ function errorTable(errors) {
         <table class="w-full text-xs">
           <thead class="bg-slate-50 text-slate-600 font-semibold">
             <tr>
-              <th class="px-3 py-2 text-left w-16">Row</th>
-              <th class="px-3 py-2 text-left w-16">Col</th>
-              <th class="px-3 py-2 text-left w-40">Field</th>
-              <th class="px-3 py-2 text-left">Message</th>
+              <th class="px-3 py-2 text-left w-16">${t('upload.col.row')}</th>
+              <th class="px-3 py-2 text-left w-16">${t('upload.col.col')}</th>
+              <th class="px-3 py-2 text-left w-40">${t('upload.col.field')}</th>
+              <th class="px-3 py-2 text-left">${t('upload.col.message')}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -55,11 +65,11 @@ function errorTable(errors) {
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <div>
-            <div class="text-sm font-semibold text-slate-900">${errors.length} errors found</div>
-            <div class="text-xs text-slate-500">Fix and re-upload</div>
+            <div class="text-sm font-semibold text-slate-900">${t('upload.errors_found', { n: errors.length })}</div>
+            <div class="text-xs text-slate-500">${t('upload.fix_reupload')}</div>
           </div>
         </div>
-        <button id="export-errors-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">Export to CSV</button>
+        <button id="export-errors-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('upload.export_csv')}</button>
       </div>
       ${groupBlocks}
     </div>
@@ -69,18 +79,18 @@ function errorTable(errors) {
 function templatesPanel() {
   return `
     <div class="bg-white rounded-xl border border-slate-200 p-5">
-      <div class="text-sm font-semibold text-slate-900 mb-3">Templates</div>
+      <div class="text-sm font-semibold text-slate-900 mb-3">${t('upload.templates')}</div>
       <div class="space-y-2">
-        ${TEMPLATES.map((t) => `
-          <a href="${t.href}" target="_blank" rel="noopener" class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer group no-underline">
+        ${templates().map((tpl) => `
+          <a href="${tpl.href}" target="_blank" rel="noopener" class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer group no-underline">
             <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <div class="text-sm font-medium text-slate-800 truncate">${t.name}</div>
-              <div class="text-[11px] text-slate-500 truncate">${t.desc}</div>
+              <div class="text-sm font-medium text-slate-800 truncate">${tpl.name}</div>
+              <div class="text-[11px] text-slate-500 truncate">${tpl.desc}</div>
             </div>
             <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -106,19 +116,21 @@ function exportErrorsCsv(errors) {
 }
 
 async function handleFile(file, statusEl) {
-  statusEl.textContent = 'Reading file…';
+  statusEl.textContent = t('upload.status.reading');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const wasm = await loadWasm();
   if (!wasm) {
+    // dev-only fallback — only reachable when wasm-pack hasn't been built; never shown in the
+    // built/deployed app (R-rebuild-dist-before-qa), so this stays English (see whitelist).
     statusEl.innerHTML = `<span class="text-amber-600">WASM not built yet — run <code class="font-mono bg-amber-50 px-1.5 py-0.5 rounded">make build-wasm</code>. Showing mock errors below.</span>`;
     return;
   }
   try {
     const report = wasm.process_excel_file(bytes);
     const sheetSummary = report.sheets.map((s) => `${s.name} (${s.row_count} rows)`).join(', ');
-    statusEl.innerHTML = `<span class="text-emerald-600">Parsed ${report.sheets.length} sheet(s): ${sheetSummary}</span>`;
+    statusEl.innerHTML = `<span class="text-emerald-600">${t('upload.status.parsed', { n: report.sheets.length, summary: sheetSummary })}</span>`;
   } catch (err) {
-    statusEl.innerHTML = `<span class="text-red-600">WASM error: ${err.message}</span>`;
+    statusEl.innerHTML = `<span class="text-red-600">${t('upload.status.wasm_error', { error: err.message })}</span>`;
   }
 }
 
@@ -128,19 +140,19 @@ export async function render(root) {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-2 space-y-4">
           <div class="bg-white rounded-xl border border-slate-200 p-5">
-            <div class="text-sm font-semibold text-slate-900 mb-1">Excel ingestion</div>
-            <div class="text-xs text-slate-500 mb-4">Browser → Rust WASM (calamine) → FSM validation. Sensitive data never leaves your machine.</div>
+            <div class="text-sm font-semibold text-slate-900 mb-1">${t('upload.title')}</div>
+            <div class="text-xs text-slate-500 mb-4">${t('upload.subtitle')}</div>
             <upload-zone></upload-zone>
             <div id="upload-status" class="mt-3 text-xs text-slate-600"></div>
           </div>
-          ${errorTable(SAMPLE_ERRORS)}
+          ${errorTable(sampleErrors())}
         </div>
         <div class="space-y-4">
           ${templatesPanel()}
           <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-5 text-white">
-            <div class="text-xs uppercase tracking-wider text-blue-200">Pipeline</div>
-            <div class="text-sm font-medium mt-1.5">drop → ArrayBuffer → wasm-bindgen → calamine → FSM guard → AG Grid</div>
-            <div class="text-xs text-blue-200 mt-3">10k rows parse target: &lt; 500ms in-browser</div>
+            <div class="text-xs uppercase tracking-wider text-blue-200">${t('pipeline')}</div>
+            <div class="text-sm font-medium mt-1.5">${t('upload.pipeline_flow')}</div>
+            <div class="text-xs text-blue-200 mt-3">${t('upload.parse_target')}</div>
           </div>
         </div>
       </div>
@@ -153,6 +165,6 @@ export async function render(root) {
   });
 
   document.getElementById('export-errors-csv').addEventListener('click', () => {
-    exportErrorsCsv(SAMPLE_ERRORS);
+    exportErrorsCsv(sampleErrors());
   });
 }

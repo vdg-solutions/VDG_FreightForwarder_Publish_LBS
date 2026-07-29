@@ -2,8 +2,9 @@
 // Mounted by auth-gate when getCurrentUser() returns null
 
 import { initGoogleSignIn, renderSignInButton } from '../auth/google-oauth.js';
+import { t } from '../i18n/index.js';
 
-const SESSION_EXPIRED_MESSAGE = 'Session expired — please sign in again';
+function sessionExpiredMessage() { return t('login.session_expired'); }
 
 // ── HTML skeleton ─────────────────────────────────────────────────────────────
 
@@ -20,13 +21,13 @@ function loginHtml() {
           </div>
           <div>
             <div class="text-base font-semibold text-slate-900 leading-tight">VDG FreightForwarder</div>
-            <div class="text-[11px] text-slate-400">Workspace</div>
+            <div class="text-[11px] text-slate-400">${t('login.workspace')}</div>
           </div>
         </div>
 
         <!-- Tagline -->
         <div class="text-center">
-          <div class="text-sm font-medium text-slate-700">Sign in to continue</div>
+          <div class="text-sm font-medium text-slate-700">${t('login.tagline')}</div>
         </div>
 
         <!-- GIS button target -->
@@ -37,8 +38,8 @@ function loginHtml() {
 
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
-          Identity verified by Google · Data stays local
-          <div class="mt-1 font-mono text-slate-400">v0.1.59</div>
+          ${t('login.footer')}
+          <div class="mt-1 font-mono text-slate-400">v0.1.60</div>
         </div>
       </div>
     </div>`;
@@ -59,16 +60,16 @@ export function renderLoginPage(mountEl, onSuccess) {
   }
 
   // OAuth2 callback errors + session expired
-  window.addEventListener('vdg:signin-error', (e) => showError('Sign-in failed: ' + e.detail), { once: true });
-  window.addEventListener('vdg:session-expired', () => showError(SESSION_EXPIRED_MESSAGE), { once: true });
+  window.addEventListener('vdg:signin-error', (e) => showError(t('login.signin_failed', { detail: e.detail })), { once: true });
+  window.addEventListener('vdg:session-expired', () => showError(sessionExpiredMessage()), { once: true });
 
   // initGoogleSignIn just loads GIS script — renderSignInButton handles the OAuth2 popup
   initGoogleSignIn(
     null, // no success callback — renderSignInButton does sign-in + location.reload()
-    (err) => showError('Sign-in failed: ' + (err?.message || 'Unknown error'))
+    (err) => showError(t('login.signin_failed', { detail: err?.message || t('login.unknown_error') }))
   ).then(() => {
     if (btnTarget) renderSignInButton(btnTarget);
   }).catch((err) => {
-    showError('Google Sign-In unavailable: ' + (err?.message || 'Check network'));
+    showError(t('login.gis_unavailable', { detail: err?.message || t('login.check_network') }));
   });
 }

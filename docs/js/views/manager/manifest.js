@@ -58,7 +58,7 @@ function buildAwbRows(awb_refs) {
   return awb_refs.map((r) => `
     <tr class="bg-slate-50 text-xs text-slate-600">
       <td class="pl-10 pr-3 py-1 font-mono">${escHtml(r.awb_ref)}</td>
-      <td class="px-3 py-1">${r.pieces} pcs</td>
+      <td class="px-3 py-1">${r.pieces} ${t('manifest.unit.pieces')}</td>
       <td class="px-3 py-1 text-right">${r.weight_chargeable_kg} kg</td>
       <td></td>
     </tr>`).join('');
@@ -80,9 +80,9 @@ function buildUldRow(alloc, idx) {
         <table class="w-full">
           <thead class="bg-slate-100 text-[10px] text-slate-500">
             <tr>
-              <th class="pl-10 pr-3 py-1 text-left">AWB No.</th>
-              <th class="px-3 py-1 text-left">Pieces</th>
-              <th class="px-3 py-1 text-right">Chargeable kg</th>
+              <th class="pl-10 pr-3 py-1 text-left">${t('awb.label.awb_no')}</th>
+              <th class="px-3 py-1 text-left">${t('awb.label.pieces')}</th>
+              <th class="px-3 py-1 text-right">${t('manifest.col.chargeable_kg')}</th>
               <th></th>
             </tr>
           </thead>
@@ -97,17 +97,17 @@ function buildFlightSection(flightRef, allocs) {
   return `
     <div class="mb-6">
       <div class="text-sm font-semibold text-slate-700 mb-2 px-1">
-        Flight: <span class="font-mono text-blue-700">${escHtml(flightRef)}</span>
+        ${t('manifest.label.flight')}: <span class="font-mono text-blue-700">${escHtml(flightRef)}</span>
         <span class="ml-2 text-xs text-slate-400">${allocs.length} ${allocs.length === 1 ? 'ULD' : 'ULDs'}</span>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
         <table class="w-full">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">ULD Code</th>
-              <th class="px-3 py-2 text-left">Type</th>
-              <th class="px-3 py-2 text-center"># AWBs</th>
-              <th class="px-3 py-2 text-right">Total Weight</th>
+              <th class="px-3 py-2 text-left">${t('manifest.col.uld_code')}</th>
+              <th class="px-3 py-2 text-left">${t('awb.label.type')}</th>
+              <th class="px-3 py-2 text-center">${t('manifest.col.awb_count')}</th>
+              <th class="px-3 py-2 text-right">${t('manifest.col.total_weight')}</th>
             </tr>
           </thead>
           <tbody>${ulds}</tbody>
@@ -123,7 +123,7 @@ export async function render(root) {
     <div class="p-6 max-w-[1100px] mx-auto">
       <div class="flex items-center justify-between mb-6">
         <div class="text-lg font-semibold text-slate-900">${t('manifest.title')}</div>
-        <span class="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">Mock data — v1</span>
+        <span class="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">${t('manifest.badge.mock_data')}</span>
       </div>
       <div class="text-xs text-slate-500 mb-4">${t('manifest.uld_list')}</div>
       <div id="manifest-body"></div>

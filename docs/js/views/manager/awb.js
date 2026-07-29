@@ -107,7 +107,7 @@ function renderGrid(container, entries, statusFilter) {
             <th class="px-3 py-2">${t('sales_new.field.shipper')}</th>
             <th class="px-3 py-2">${t('sales_new.field.consignee')}</th>
             <th class="px-3 py-2">${t('state')}</th>
-            <th class="px-3 py-2 text-right">Pieces</th>
+            <th class="px-3 py-2 text-right">${t('awb.label.pieces')}</th>
             <th class="px-3 py-2 text-right">${t('awb.label.chargeable_weight')}</th>
             <th class="px-3 py-2"></th>
           </tr>
@@ -144,7 +144,7 @@ export async function render(root) {
         <select id="awb-status-filter"
           class="border border-slate-200 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100">
           ${STATUS_OPTS.map((s) =>
-            `<option value="${s}">${s === STATUS_ALL ? STATUS_ALL : statusLabel(s)}</option>`
+            `<option value="${s}">${s === STATUS_ALL ? t('manager.mode.all') : statusLabel(s)}</option>`
           ).join('')}
         </select>
       </div>

@@ -38,10 +38,10 @@ class BackgroundJobsView extends LitElement {
   _formatCountdown(targetMs) {
     if (!targetMs) return '';
     const diff = targetMs - this._now;
-    if (diff <= 0) return 'Running soon...';
+    if (diff <= 0) return t('bg_jobs.countdown.soon');
     const s = Math.ceil(diff / 1000);
-    if (s < 60) return `Next run in ${s}s`;
-    return `Next run in ${Math.floor(s/60)}m ${s%60}s`;
+    if (s < 60) return t('bg_jobs.countdown.seconds', { s });
+    return t('bg_jobs.countdown.minutes', { m: Math.floor(s / 60), s: s % 60 });
   }
 
   _sendCommand(jobId, command) {
@@ -84,7 +84,7 @@ class BackgroundJobsView extends LitElement {
                       <div>
                         <h3 class="font-semibold text-slate-800">${job.name}</h3>
                         <div class="text-xs text-slate-500 mt-0.5">
-                          ${isCyclic && !isPaused && !isRunning ? this._formatCountdown(job.nextRunAt) : `Updated: ${this._formatTime(job.updatedAt)}`}
+                          ${isCyclic && !isPaused && !isRunning ? this._formatCountdown(job.nextRunAt) : t('bg_jobs.updated_at', { time: this._formatTime(job.updatedAt) })}
                         </div>
                       </div>
                     </div>
@@ -92,19 +92,19 @@ class BackgroundJobsView extends LitElement {
                       ${isCyclic ? html`
                         ${isPaused ? html`
                           <button @click="${() => this._sendCommand(job.id, 'resume')}" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border border-emerald-200">
-                            Resume
+                            ${t('bg_jobs.action.resume')}
                           </button>
                         ` : html`
                           <button @click="${() => this._sendCommand(job.id, 'pause')}" class="bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border border-amber-200">
-                            Pause
+                            ${t('bg_jobs.action.pause')}
                           </button>
                         `}
                         <button @click="${() => this._sendCommand(job.id, 'run_now')}" class="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded-md text-xs font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" ?disabled="${isPaused || isRunning}">
-                          Run Now
+                          ${t('bg_jobs.action.run_now')}
                         </button>
                       ` : ''}
                       <span class="inline-flex px-2.5 py-1 rounded-md text-xs font-medium ${isPaused ? 'bg-amber-100 text-amber-800' : isRunning ? 'bg-blue-50 text-blue-700' : isDone ? 'bg-indigo-50 text-indigo-700' : 'bg-red-50 text-red-700'}">
-                        ${isPaused ? 'Paused' : isRunning ? t('bg_jobs.status.running') : isDone ? t('bg_jobs.status.done') : t('bg_jobs.status.error')}
+                        ${isPaused ? t('bg_jobs.status.paused') : isRunning ? t('bg_jobs.status.running') : isDone ? t('bg_jobs.status.done') : t('bg_jobs.status.error')}
                       </span>
                     </div>
                   </div>

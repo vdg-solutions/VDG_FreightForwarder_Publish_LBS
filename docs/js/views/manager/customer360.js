@@ -12,7 +12,6 @@ const KIND_BILLING     = 'billing';
 const KIND_EXCEPTION   = 'exception';
 const KIND_QUOTATION   = 'quotation';
 const AUDIT_BATCH_SIZE = 50;
-const NOTES_NONE_MSG   = 'No notes yet.';
 const TAB_MULTIMODAL   = 'multimodal';
 
 let _vm         = null;
@@ -39,16 +38,16 @@ function healthBadgeCls(score) {
 }
 
 function healthLabel(score) {
-  if (score >= HEALTH_THRESHOLD_GOOD)  return 'Healthy';
-  if (score >= HEALTH_THRESHOLD_WATCH) return 'Watch';
-  return 'At Risk';
+  if (score >= HEALTH_THRESHOLD_GOOD)  return t('c360.health.healthy');
+  if (score >= HEALTH_THRESHOLD_WATCH) return t('c360.health.watch');
+  return t('c360.health.at_risk');
 }
 
 function renderHeader(root) {
   if (!_vm) return;
   const { customer, lifetimeRevenue, outstanding, salesRep, healthScore, healthBreakdown } = _vm;
   const toneCls  = outstanding > 0 ? 'amber' : 'green';
-  const breakdown = healthBreakdown.join(' | ') || 'No deductions';
+  const breakdown = healthBreakdown.join(' | ') || t('c360.health.no_deductions');
 
   const hdr = root.querySelector('#c360-header');
   if (!hdr) return;
@@ -56,8 +55,8 @@ function renderHeader(root) {
     <h1 class="text-xl font-bold text-slate-900">${customer.name || customer.id}</h1>
     <div class="flex flex-wrap gap-3 mt-2 items-center">
       <status-badge label="${salesRep}" tone="blue"></status-badge>
-      <kpi-card label="Lifetime Revenue" value="${fmtNum(lifetimeRevenue)} VND" tone="blue" icon="dollar"></kpi-card>
-      <kpi-card label="Outstanding" value="${fmtNum(outstanding)} VND" tone="${toneCls}" icon="dollar"></kpi-card>
+      <kpi-card label="${t('c360.kpi.lifetime_revenue')}" value="${fmtNum(lifetimeRevenue)} VND" tone="blue" icon="dollar"></kpi-card>
+      <kpi-card label="${t('c360.kpi.outstanding')}" value="${fmtNum(outstanding)} VND" tone="${toneCls}" icon="dollar"></kpi-card>
       <span class="px-3 py-1 rounded-full text-xs font-semibold ${healthBadgeCls(healthScore)}"
             title="${breakdown}">
         ${healthLabel(healthScore)} (${healthScore})
@@ -73,7 +72,7 @@ function renderTabContent(root, tabName, quotations) {
   if (tabName === 'overview') {
     content.innerHTML = `<div class="space-y-4 p-4">
       <div class="h-52"><canvas id="rev-chart"></canvas></div>
-      <div class="text-xs text-slate-500">Last touch: ${_vm.lastTouchDate?.slice(0, 10) || '—'}</div>
+      <div class="text-xs text-slate-500">${t('c360.overview.last_touch', { date: _vm.lastTouchDate?.slice(0, 10) || '—' })}</div>
     </div>`;
     // 12-month revenue chart
     queueMicrotask(() => {
@@ -99,7 +98,7 @@ function renderTabContent(root, tabName, quotations) {
       }
       _chart = new window.Chart(ctx, {
         type: 'line',
-        data: { labels, datasets: [{ label: 'Revenue', data, borderColor: '#3b82f6', tension: 0.3, fill: false }] },
+        data: { labels, datasets: [{ label: t('revenue'), data, borderColor: '#3b82f6', tension: 0.3, fill: false }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
       });
     });
@@ -112,9 +111,10 @@ function renderTabContent(root, tabName, quotations) {
       <td class="py-2 px-3 text-xs">${s.eta || '—'}</td>
       <td class="py-2 px-3 text-xs">${s.state || '—'}</td>
     </tr>`).join('');
+    const shipmentCols = [t('c360.col.ref'), t('c360.col.lane'), 'ETD', 'ETA', t('state')];
     content.innerHTML = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-50">
-      <tr>${['Ref','Lane','ETD','ETA','State'].map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
-      </thead><tbody>${rowHtml || '<tr><td colspan="5" class="p-4 text-slate-400 text-center">No shipments.</td></tr>'}</tbody></table>`;
+      <tr>${shipmentCols.map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
+      </thead><tbody>${rowHtml || `<tr><td colspan="5" class="p-4 text-slate-400 text-center">${t('c360.no_shipments')}</td></tr>`}</tbody></table>`;
     content.addEventListener('click', (e) => {
       const id = e.target.closest('[data-ship-id]')?.dataset.shipId;
       if (id) window.dispatchEvent(new CustomEvent('vdg:open-detail', { detail: { kind: 'shipment', id } }));
@@ -131,9 +131,10 @@ function renderTabContent(root, tabName, quotations) {
         <td class="py-1 px-3 text-xs">${b.status||'—'}</td>
         <td class="py-1 px-3 text-xs text-right">${days}d</td></tr>`;
     }).join('');
+    const arCols = [t('c360.ar.col.invoice_id'), t('c360.ar.col.issue_date'), t('c360.ar.col.due_date'), t('c360.ar.col.amount_vnd'), t('state'), t('c360.ar.col.days_outstanding')];
     content.innerHTML = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-50">
-      <tr>${['Invoice ID','Issue Date','Due Date','Amount VND','Status','Days Outstanding'].map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
-      </thead><tbody>${rowHtml || '<tr><td colspan="6" class="p-4 text-slate-400 text-center">No AR entries.</td></tr>'}</tbody></table>`;
+      <tr>${arCols.map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
+      </thead><tbody>${rowHtml || `<tr><td colspan="6" class="p-4 text-slate-400 text-center">${t('c360.ar.none')}</td></tr>`}</tbody></table>`;
   } else if (tabName === 'quotes') {
     const rows = (quotations || []).filter((q) => (q.customer_id || q.customer || '') === customer.id);
     const rowHtml = rows.map((q) => `<tr class="cursor-pointer hover:bg-slate-50" data-quote-id="${q.id}">
@@ -141,9 +142,10 @@ function renderTabContent(root, tabName, quotations) {
       <td class="py-1 px-3 text-xs">${q.created_at?.slice(0,10)||'—'}</td>
       <td class="py-1 px-3 text-xs text-right">${fmtNum(q.amount)}</td>
       <td class="py-1 px-3 text-xs">${q.state||q.status||'—'}</td></tr>`).join('');
+    const quoteCols = [t('c360.quotes.col.quote_id'), t('c360.quotes.col.date'), t('c360.quotes.col.amount'), t('state')];
     content.innerHTML = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-50">
-      <tr>${['Quote ID','Date','Amount','Status'].map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
-      </thead><tbody>${rowHtml || '<tr><td colspan="4" class="p-4 text-slate-400 text-center">No quotes.</td></tr>'}</tbody></table>`;
+      <tr>${quoteCols.map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
+      </thead><tbody>${rowHtml || `<tr><td colspan="4" class="p-4 text-slate-400 text-center">${t('c360.quotes.none')}</td></tr>`}</tbody></table>`;
     content.addEventListener('click', (e) => {
       const id = e.target.closest('[data-quote-id]')?.dataset.quoteId;
       if (id) window.dispatchEvent(new CustomEvent('vdg:open-detail', { detail: { kind: 'quote', id } }));
@@ -153,17 +155,18 @@ function renderTabContent(root, tabName, quotations) {
     const rowHtml = docs.map((doc) => `<tr>
       <td class="py-1 px-3 text-xs">${doc.name||'—'}</td>
       <td class="py-1 px-3 text-xs">${doc.type||'—'}</td>
-      <td class="py-1 px-3 text-xs"><a href="${doc.url||'#'}" target="_blank" class="text-blue-600 underline">Open</a></td></tr>`).join('');
+      <td class="py-1 px-3 text-xs"><a href="${doc.url||'#'}" target="_blank" class="text-blue-600 underline">${t('c360.documents.action.open')}</a></td></tr>`).join('');
+    const docCols = [t('name'), t('c360.documents.col.type'), t('c360.documents.col.link')];
     content.innerHTML = `<table class="w-full text-xs border-collapse"><thead class="bg-slate-50">
-      <tr>${['Name','Type','Link'].map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
-      </thead><tbody>${rowHtml || '<tr><td colspan="3" class="p-4 text-slate-400 text-center">No documents.</td></tr>'}</tbody></table>`;
+      <tr>${docCols.map((h) => `<th class="py-2 px-3 text-left text-slate-600 font-medium">${h}</th>`).join('')}</tr>
+      </thead><tbody>${rowHtml || `<tr><td colspan="3" class="p-4 text-slate-400 text-center">${t('c360.documents.none')}</td></tr>`}</tbody></table>`;
   } else if (tabName === 'activity') {
     const entries = (window.__vdg_audit_log || [])
       .filter((e) => e.entity_id?.startsWith?.(customer.id))
       .slice(_auditOffset, _auditOffset + AUDIT_BATCH_SIZE);
     content.innerHTML = `<div class="space-y-2 p-3 text-xs">
       ${entries.map((e) => `<timeline-entry .entry=${JSON.stringify(e)}></timeline-entry>`).join('')}
-      ${entries.length === 0 ? '<div class="text-slate-400">No activity entries.</div>' : ''}
+      ${entries.length === 0 ? `<div class="text-slate-400">${t('c360.activity.none')}</div>` : ''}
     </div>`;
   } else if (tabName === 'notes') {
     renderNotesTab(content, customer);
@@ -188,11 +191,11 @@ function renderNotesTab(container, customer) {
       <div class="flex gap-2">
         <textarea id="note-input" rows="2"
           class="flex-1 border rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
-          placeholder="Add a note…"></textarea>
+          placeholder="${t('c360.notes.placeholder')}"></textarea>
         <button id="btn-add-note" disabled
-          class="px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40">Add</button>
+          class="px-3 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40">${t('c360.notes.action.add')}</button>
       </div>
-      <div id="notes-list" class="space-y-2">${noteHtml || `<div class="text-xs text-slate-400">${NOTES_NONE_MSG}</div>`}</div>
+      <div id="notes-list" class="space-y-2">${noteHtml || `<div class="text-xs text-slate-400">${t('c360.notes.none')}</div>`}</div>
     </div>`;
 
   const input  = container.querySelector('#note-input');
@@ -285,14 +288,18 @@ export async function render(root, param) {
 
   if (!_vm) {
     root.innerHTML = `<div class="p-6 space-y-3">
-      <div class="text-slate-500 text-sm">Customer not found.</div>
-      <a href="#/manager/masters/customers" class="text-xs text-blue-600 underline">← Back to masters</a>
+      <div class="text-slate-500 text-sm">${t('c360.not_found')}</div>
+      <a href="#/manager/masters/customers" class="text-xs text-blue-600 underline">${t('c360.back_to_masters')}</a>
     </div>`;
     return;
   }
 
   const tabs = ['overview','shipments','ar','quotes','documents','activity','notes', TAB_MULTIMODAL];
-  const tabLabels = ['Overview','Shipments','AR/Payments','Quotes','Documents','Activity','Notes', t('c360.tab.multimodal')];
+  const tabLabels = [
+    t('c360.tab.overview'), t('shipments'), t('c360.tab.ar'), t('c360.tab.quotes'),
+    t('shipment.detail.tab.documents'), t('c360.tab.activity'), t('c360.tab.notes'),
+    t('c360.tab.multimodal'),
+  ];
   const hashTab = (location.hash.match(/#tab=(\w+)/)?.[1]) || 'overview';
   _tab = tabs.includes(hashTab) ? hashTab : 'overview';
 

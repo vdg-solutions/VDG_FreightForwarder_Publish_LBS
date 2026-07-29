@@ -3,6 +3,7 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { getActiveSalesReps } from '../operators/sales-registry.js';
 import { t } from '../i18n/index.js';
+import { statusBadgeLabel } from '../util/status-i18n.js';
 
 const SWIPE_THRESHOLD_PX   = 60; // F-14-16: min swipe distance for action
 
@@ -18,14 +19,16 @@ const APPROVAL_TYPE_COLORS = {
 };
 const APPROVAL_SLA_HOURS   = 24;
 const ANIMATE_OUT_MS       = 300;
+const JUST_NOW_MAX_MINS    = 1; // below this, show "just now" instead of "0m ago"
 
 function relativeTime(isoStr) {
   const diff = Date.now() - new Date(isoStr).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < JUST_NOW_MAX_MINS) return t('approval_card.time.just_now');
+  if (mins < 60) return t('approval_card.time.min_ago', { n: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return t('approval_card.time.hour_ago', { n: hrs });
+  return t('approval_card.time.day_ago', { n: Math.floor(hrs / 24) });
 }
 
 function ageHours(isoStr) {
@@ -177,7 +180,7 @@ class VdgApprovalCard extends LitElement {
           <button @click="${() => this._submit()}"
                   class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg">${t('approval.action.delegate')}</button>
           <button @click="${() => { this._action = ''; }}"
-                  class="px-2 py-1.5 text-xs text-slate-500">Cancel</button>
+                  class="px-2 py-1.5 text-xs text-slate-500">${t('common.action.cancel')}</button>
         </div>`;
     }
 
@@ -193,7 +196,7 @@ class VdgApprovalCard extends LitElement {
     return html`
       <div class="mt-3 space-y-2">
         <textarea
-          placeholder="${needComment ? 'Comment required' : 'Optional comment…'}"
+          placeholder="${needComment ? t('approval_card.comment_required_placeholder') : t('approval_card.optional_comment_placeholder')}"
           rows="2"
           class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 resize-none"
           @input="${(e) => { this._comment = e.target.value; }}"
@@ -206,7 +209,7 @@ class VdgApprovalCard extends LitElement {
                    disabled:opacity-40 disabled:cursor-not-allowed"
           >${label}</button>
           <button @click="${() => { this._expanded = false; this._action = ''; }}"
-                  class="px-2 py-1.5 text-xs text-slate-500">Cancel</button>
+                  class="px-2 py-1.5 text-xs text-slate-500">${t('common.action.cancel')}</button>
         </div>
       </div>`;
   }
@@ -234,10 +237,10 @@ class VdgApprovalCard extends LitElement {
       >
         <div class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="px-2 py-0.5 rounded text-[11px] font-medium ${typeCls}">${item.type}</span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-medium ${typeCls}">${statusBadgeLabel('approval', item.type)}</span>
             ${overdue ? html`
               <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700">
-                SLA overdue
+                ${t('approval_card.badge.sla_overdue')}
               </span>` : ''}
           </div>
           <span class="text-[11px] text-slate-400 whitespace-nowrap">
@@ -252,7 +255,7 @@ class VdgApprovalCard extends LitElement {
 
         ${item.amount_impact ? html`
           <div class="mt-1 text-xs text-slate-600">
-            Impact: <span class="font-semibold text-slate-800">${fmtNum(item.amount_impact)} VND</span>
+            ${t('approval_card.impact')} <span class="font-semibold text-slate-800">${fmtNum(item.amount_impact)} VND</span>
           </div>` : ''}
 
         ${item.comment ? html`

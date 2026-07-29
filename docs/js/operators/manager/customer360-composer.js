@@ -57,7 +57,7 @@ export function computeHealthScore(customer, shipments, billing, exceptions, tod
   );
   if (openExceptions.length > 0) {
     score -= HEALTH_DEDUCT_DISPUTE;
-    deductions.push(`-${HEALTH_DEDUCT_DISPUTE}: ${openExceptions.length} open exception(s)`);
+    deductions.push(t('c360.health.deduction.open_exceptions', { d: HEALTH_DEDUCT_DISPUTE, n: openExceptions.length }));
   }
 
   // AR overdue buckets
@@ -72,10 +72,10 @@ export function computeHealthScore(customer, shipments, billing, exceptions, tod
   }
   if (has91) {
     score -= HEALTH_DEDUCT_OVERDUE_91;
-    deductions.push(`-${HEALTH_DEDUCT_OVERDUE_91}: AR 91+ days`);
+    deductions.push(t('c360.health.deduction.ar_91', { d: HEALTH_DEDUCT_OVERDUE_91 }));
   } else if (has61) {
     score -= HEALTH_DEDUCT_OVERDUE_61;
-    deductions.push(`-${HEALTH_DEDUCT_OVERDUE_61}: AR 61–90 days`);
+    deductions.push(t('c360.health.deduction.ar_61', { d: HEALTH_DEDUCT_OVERDUE_61 }));
   }
 
   // Low frequency — no shipments in last HEALTH_LOW_FREQ_DAYS
@@ -87,7 +87,7 @@ export function computeHealthScore(customer, shipments, billing, exceptions, tod
   });
   if (!recentShipment) {
     score -= HEALTH_DEDUCT_LOW_FREQ;
-    deductions.push(`-${HEALTH_DEDUCT_LOW_FREQ}: no shipments in ${HEALTH_LOW_FREQ_DAYS} days`);
+    deductions.push(t('c360.health.deduction.low_freq', { d: HEALTH_DEDUCT_LOW_FREQ, n: HEALTH_LOW_FREQ_DAYS }));
   }
 
   // Low margin — avg margin pct across all pnl_lines (passed via billing as proxy)
@@ -99,7 +99,7 @@ export function computeHealthScore(customer, shipments, billing, exceptions, tod
       / custShipments.length;
     if (avgMarginPct < HEALTH_MARGIN_WARN_PCT) {
       score -= HEALTH_DEDUCT_LOW_MARGIN;
-      deductions.push(`-${HEALTH_DEDUCT_LOW_MARGIN}: avg margin ${avgMarginPct.toFixed(1)}% < ${HEALTH_MARGIN_WARN_PCT}%`);
+      deductions.push(t('c360.health.deduction.low_margin', { d: HEALTH_DEDUCT_LOW_MARGIN, pct: avgMarginPct.toFixed(1), warn: HEALTH_MARGIN_WARN_PCT }));
     }
   }
 

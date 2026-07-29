@@ -19,9 +19,16 @@ function toast(type, msg) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message: msg, duration: TOAST_MS } }));
 }
 
+// Mirrors fx-rates.js sourceLabel() — raw value stays the <option value> contract, only the
+// visible text is keyed.
+function sourceLabel(src) {
+  const map = { SBV: 'fx.source.sbv', Vietcombank: 'fx.source.vcb', Manual: 'fx.source.manual' };
+  return t(map[src] || 'fx.source.manual');
+}
+
 function settingsFormHtml(settings) {
   const srcOpts = FX_SOURCE_OPTIONS.map((s) =>
-    `<option value="${s}"${s === settings.fx_source ? ' selected' : ''}>${s}</option>`,
+    `<option value="${s}"${s === settings.fx_source ? ' selected' : ''}>${sourceLabel(s)}</option>`,
   ).join('');
   return `
     <form id="settings-form" class="space-y-4 max-w-sm">
@@ -75,7 +82,7 @@ export async function render(root) {
       const next = { ...settings, fx_source: fd.get('fx_source'), [SECOND_EYES_FIELD]: fd.get(SECOND_EYES_FIELD) === 'on' };
       await saveWorkspaceSettings(api, ws, next);
       settings = next;
-      toast('success', 'Saved');
+      toast('success', t('settings.toast.saved'));
       statusEl.textContent = '';
     } catch (err) {
       statusEl.textContent = err.message;

@@ -6,6 +6,7 @@ import { navigate } from '../../router.js';
 import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { getActiveSalesReps } from '../../operators/sales-registry.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
+import { t } from '../../i18n/index.js';
 
 const DEFAULT_WIDGET_LAYOUT = [
   { id: 'revenue-chart',  span: 2 }, { id: 'carrier-donut', span: 1 },
@@ -16,7 +17,16 @@ const DEFAULT_WIDGET_LAYOUT = [
 ];
 const CHART_BAR_COLOR_REV  = 'rgba(59,130,246,0.7)';
 const CHART_BAR_COLOR_COST = 'rgba(248,113,113,0.7)';
+// data-period contract values consumed by dashboard-composer.js's msRange() switch — never
+// translate the value itself, only the visible button label via PERIOD_LABEL_KEYS.
 const PERIODS              = ['Today', 'Week', 'Month', 'Quarter', 'Year'];
+const PERIOD_LABEL_KEYS    = {
+  Today:   'sales_analytics.period.today',
+  Week:    'sales_analytics.period.week',
+  Month:   'sales_analytics.period.month',
+  Quarter: 'sales_analytics.period.quarter',
+  Year:    'sales_analytics.period.year',
+};
 const PREFS_META_KEY       = 'preferences';
 
 let _period      = 'Month';
@@ -50,29 +60,24 @@ function kpiCard(label, value, tone) {
   return `<kpi-card label="${label}" value="${value}" tone="${tone}"></kpi-card>`;
 }
 
-const VOLUME_LABEL_DISPLAY = {
-  'manager.kpi.teu':           'TEU',
-  'manager.kpi.chargeable_kg': 'Chargeable kg',
-  'manager.kpi.mixed':         'Volume',
-};
-
 function renderKpis(kpis) {
   const pendTone  = kpis.pendingApprovals > 0 ? 'amber' : 'blue';
   const excTone   = kpis.openExceptions   > 0 ? 'red'   : 'blue';
   const arTone    = kpis.arOverdue        > 0 ? 'red'   : 'blue';
-  const volLabel  = VOLUME_LABEL_DISPLAY[kpis.volumeLabelKey] ?? 'Volume';
+  // volumeLabelKey is itself an i18n key (manager.kpi.teu/.chargeable_kg/.mixed) — resolve directly.
+  const volLabel  = t(kpis.volumeLabelKey ?? 'manager.kpi.mixed');
   const volValue  = kpis.volumeValue !== null && kpis.volumeValue !== undefined
     ? fmtNum(kpis.volumeValue) : '—';
   return [
-    kpiCard('Revenue MTD',        fmtNum(kpis.revenue),          'blue'),
-    kpiCard('Cost MTD',           fmtNum(kpis.cost),             'slate'),
-    kpiCard('Margin MTD',         fmtNum(kpis.margin),           kpis.margin >= 0 ? 'green' : 'red'),
-    kpiCard('Margin %',           fmtPct(kpis.marginPct),        'green'),
-    kpiCard('Active Jobs',        kpis.activeCount,              'blue'),
-    kpiCard('Pending Approvals',  kpis.pendingApprovals,         pendTone),
-    kpiCard('Open Exceptions',    kpis.openExceptions,           excTone),
-    kpiCard('AR Overdue >30d',    kpis.arOverdue,                arTone),
-    kpiCard(volLabel,             volValue,                       'blue'),
+    kpiCard(t('revenue_mtd'),        fmtNum(kpis.revenue),          'blue'),
+    kpiCard(t('cost_mtd'),           fmtNum(kpis.cost),             'slate'),
+    kpiCard(t('margin_mtd'),         fmtNum(kpis.margin),           kpis.margin >= 0 ? 'green' : 'red'),
+    kpiCard(t('margin_pct'),         fmtPct(kpis.marginPct),        'green'),
+    kpiCard(t('active_jobs'),        kpis.activeCount,              'blue'),
+    kpiCard(t('pending_approvals'),  kpis.pendingApprovals,         pendTone),
+    kpiCard(t('open_exceptions'),    kpis.openExceptions,           excTone),
+    kpiCard(t('ar_overdue'),         kpis.arOverdue,                arTone),
+    kpiCard(volLabel,                volValue,                       'blue'),
   ].join('');
 }
 
@@ -113,8 +118,8 @@ function renderRevenueChart(monthly) {
     data: {
       labels: monthly.labels,
       datasets: [
-        { label: 'Revenue', data: monthly.revenue, backgroundColor: CHART_BAR_COLOR_REV },
-        { label: 'Cost',    data: monthly.cost,    backgroundColor: CHART_BAR_COLOR_COST },
+        { label: t('revenue'), data: monthly.revenue, backgroundColor: CHART_BAR_COLOR_REV },
+        { label: t('cost'),    data: monthly.cost,    backgroundColor: CHART_BAR_COLOR_COST },
       ],
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } },
@@ -182,9 +187,10 @@ async function _buildSalesBtns() {
   return labels.map((s) => {
     const val    = s === 'All' ? '' : s;
     const active = (s === 'All' && !_salesFilter) || val === _salesFilter;
+    const label  = s === 'All' ? t('manager.mode.all') : s;
     return `<button data-sales="${val}"
       class="px-3 py-1.5 rounded-lg text-xs font-medium ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
-    >${s}</button>`;
+    >${label}</button>`;
   }).join('');
 }
 
@@ -215,7 +221,7 @@ export async function render(root) {
   const periodBtns = PERIODS.map((p) =>
     `<button data-period="${p}"
       class="px-3 py-1.5 rounded-lg text-xs font-medium ${p === _period ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
-    >${p}</button>`).join('');
+    >${t(PERIOD_LABEL_KEYS[p])}</button>`).join('');
 
   const salesBtns = await _buildSalesBtns();
 
@@ -231,25 +237,25 @@ export async function render(root) {
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div class="bg-white rounded-xl border border-slate-200 p-5">
           <div class="flex items-center justify-between mb-3">
-            <div class="text-sm font-semibold text-slate-900">Revenue vs Cost (12M)</div>
-            <button data-export="revenue-chart" class="text-xs text-blue-600 hover:underline">⬇ Export</button>
+            <div class="text-sm font-semibold text-slate-900">${t('dashboard.chart.revenue_vs_cost')}</div>
+            <button data-export="revenue-chart" class="text-xs text-blue-600 hover:underline">⬇ ${t('export')}</button>
           </div>
           <div class="h-56"><canvas id="mgr-bar-chart"></canvas></div>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 p-5">
           <div class="flex items-center justify-between mb-3">
-            <div class="text-sm font-semibold text-slate-900">Revenue by sales</div>
-            <button data-export="carrier-donut" class="text-xs text-blue-600 hover:underline">⬇ Export</button>
+            <div class="text-sm font-semibold text-slate-900">${t('sales_analytics.rev_by_sales')}</div>
+            <button data-export="carrier-donut" class="text-xs text-blue-600 hover:underline">⬇ ${t('export')}</button>
           </div>
           <div class="h-56"><canvas id="mgr-donut-chart"></canvas></div>
         </div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-100">
-          <div class="text-sm font-semibold text-slate-900">Recent activity</div>
+          <div class="text-sm font-semibold text-slate-900">${t('dashboard.activity.recent')}</div>
         </div>
         <ul id="activity-feed" class="px-4 py-2 max-h-48 overflow-y-auto">
-          <li class="py-1.5 text-xs text-slate-400">No recent activity</li>
+          <li class="py-1.5 text-xs text-slate-400">${t('dashboard.activity.none')}</li>
         </ul>
       </div>
     </div>`;
@@ -277,7 +283,7 @@ export async function render(root) {
   _onModeChange    = (e) => { _mode = e.detail?.mode ?? DEFAULT_MODE; recompose(root); };
   _onEntityChanged = (e) => {
     const { kind, id } = e.detail || {};
-    prependActivity(`${kind} ${id} updated`);
+    prependActivity(t('dashboard.activity.entity_updated', { kind, id }));
     if (kind === 'user') {
       // Reload filter buttons when user roster changes
       _buildSalesBtns().then((html) => {
@@ -289,7 +295,7 @@ export async function render(root) {
     _debounce = setTimeout(() => recompose(root), LAYOUT_DEBOUNCE_MS);
   };
   _onPeriodChanged = (e) => { _period = e.detail?.period || _period; recompose(root); };
-  _onSyncError     = () => prependActivity('⚠ Sync paused — retrying…');
+  _onSyncError     = () => prependActivity(t('dashboard.activity.sync_paused'));
 
   window.addEventListener('vdg:entity-changed', _onEntityChanged);
   window.addEventListener('vdg:period-changed', _onPeriodChanged);

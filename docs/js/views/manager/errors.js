@@ -3,9 +3,11 @@
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { t }         from '../../i18n/index.js';
 
 const ERROR_LOG_PATH = '_shared/error-log';
 
+// raw technical tokens shown verbatim (mono diagnostic dump), same carve-out as row.kind below
 const KIND_OPTS = ['js_error', 'unhandled_rejection', 'sync_error'];
 
 let _grid     = null;
@@ -81,12 +83,12 @@ function mountGrid(container, rows) {
   if (!window.agGrid) return;
 
   const colDefs = [
-    { field: 'ts',          headerName: 'Time',        width: 170, sort: 'desc' },
-    { field: 'kind',        headerName: 'Kind',        width: 140 },
-    { field: 'msg',         headerName: 'Message',     flex: 1 },
-    { field: 'user_email',  headerName: 'User',        width: 160 },
-    { field: 'app_version', headerName: 'Version',     width: 90  },
-    { field: 'url',         headerName: 'URL',         width: 200 },
+    { field: 'ts',          headerName: t('errors.col.time'),    width: 170, sort: 'desc' },
+    { field: 'kind',        headerName: t('errors.col.kind'),    width: 140 },
+    { field: 'msg',         headerName: t('errors.col.message'), flex: 1 },
+    { field: 'user_email',  headerName: t('errors.col.user'),    width: 160 },
+    { field: 'app_version', headerName: t('errors.col.version'), width: 90  },
+    { field: 'url',         headerName: t('errors.col.url'),     width: 200 },
   ];
 
   const opts = {
@@ -117,45 +119,45 @@ export async function render(root) {
   root.innerHTML = `
     <div class="p-6 max-w-[1400px] mx-auto">
       <div class="flex items-center justify-between mb-4">
-        <div class="text-lg font-semibold text-slate-900">Error Log</div>
+        <div class="text-lg font-semibold text-slate-900">${t('errors.title')}</div>
         <button id="btn-clear-all"
                 class="px-3 py-1.5 text-xs rounded bg-red-50 text-red-600 hover:bg-red-100">
-          Clear current month
+          ${t('errors.action.clear_month')}
         </button>
       </div>
       <div class="flex gap-3 mb-4">
         <select id="filter-kind" class="border rounded-lg px-3 py-1.5 text-xs text-slate-700">
-          <option value="">All kinds</option>
+          <option value="">${t('errors.filter.all_kinds')}</option>
           ${KIND_OPTS.map((k) => `<option value="${k}">${k}</option>`).join('')}
         </select>
         <input id="filter-date" type="date"
                class="border rounded-lg px-3 py-1.5 text-xs text-slate-700"
-               title="Filter by date prefix (YYYY-MM-DD)" />
+               title="${t('errors.filter.date_title')}" />
         <button id="btn-apply" class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700">
-          Apply
+          ${t('errors.action.apply')}
         </button>
         <button id="btn-refresh" class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
-          Refresh
+          ${t('errors.action.refresh')}
         </button>
       </div>
       <div id="err-grid-container"></div>
-      <div id="err-status" class="text-xs text-slate-400 mt-2">Loading…</div>
+      <div id="err-status" class="text-xs text-slate-400 mt-2">${t('loading')}</div>
     </div>`;
 
   const api = getApi();
 
   async function reload() {
-    root.querySelector('#err-status').textContent = 'Loading…';
+    root.querySelector('#err-status').textContent = t('loading');
     try {
       _allRows = api ? await loadErrorRecords(api) : [];
     } catch (err) {
       _allRows = [];
-      root.querySelector('#err-status').textContent = `Error: ${err.message}`;
+      root.querySelector('#err-status').textContent = t('errors.status.error_prefix', { msg: err.message });
       return;
     }
     const filtered = applyFilters(_allRows);
     mountGrid(root.querySelector('#err-grid-container'), filtered);
-    root.querySelector('#err-status').textContent = `${filtered.length} of ${_allRows.length} records`;
+    root.querySelector('#err-status').textContent = t('errors.status.count', { filtered: filtered.length, total: _allRows.length });
   }
 
   await reload();
@@ -165,7 +167,7 @@ export async function render(root) {
     _dateFilter = root.querySelector('#filter-date').value;
     const filtered = applyFilters(_allRows);
     mountGrid(root.querySelector('#err-grid-container'), filtered);
-    root.querySelector('#err-status').textContent = `${filtered.length} of ${_allRows.length} records`;
+    root.querySelector('#err-status').textContent = t('errors.status.count', { filtered: filtered.length, total: _allRows.length });
   });
 
   root.querySelector('#btn-refresh').addEventListener('click', reload);
@@ -173,10 +175,10 @@ export async function render(root) {
   root.querySelector('#btn-clear-all').addEventListener('click', async () => {
     if (!api) return;
     const ok = await showConfirm({
-      title: 'Delete error log for current month?',
-      body:  'This cannot be undone.',
-      confirmLabel: 'Delete',
-      cancelLabel:  'Cancel',
+      title: t('errors.confirm.delete_title'),
+      body:  t('dunning_tmpl.confirm.body'),
+      confirmLabel: t('common.action.delete'),
+      cancelLabel:  t('common.action.cancel'),
       destructive:  true,
     });
     if (!ok) return;
@@ -187,7 +189,7 @@ export async function render(root) {
       await reload();
     } catch (err) {
       window.dispatchEvent(new CustomEvent('vdg:toast', {
-        detail: { type: 'error', message: `Clear failed: ${err.message}` },
+        detail: { type: 'error', message: t('errors.toast.clear_failed', { msg: err.message }) },
       }));
     }
   });

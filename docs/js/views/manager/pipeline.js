@@ -13,19 +13,30 @@ const SEA_KANBAN_STATES = ['Created','BookingConfirmed','InTransit','Arrived','D
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
 const ALL_KANBAN_STATES = [...SEA_KANBAN_STATES,'Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
 
-const PIPELINE_GRID_COLS = [
-  { field: 'shipment_ref', headerName: 'Ref',       width: 130 },
-  { field: 'customer',     headerName: 'Customer',   flex: 1    },
-  { field: 'lane',         headerName: 'Lane',       width: 140 },
-  { field: 'state',        headerName: 'State',      width: 140 },
-  { field: 'etd',          headerName: 'ETD',        width: 110 },
-  { field: 'eta',          headerName: 'ETA',        width: 110 },
-  { field: 'margin_pct',   headerName: 'Margin %',   width: 100 },
-  { field: 'sales_rep',    headerName: 'Sales Rep',  width: 110 },
-];
+// headerName resolved at render time (t() reads the currently-loaded locale) — evaluated inside
+// pipelineGridCols(), not at module load.
+function pipelineGridCols() {
+  return [
+    { field: 'shipment_ref', headerName: t('pipeline.col.ref'), width: 130 },
+    { field: 'customer',     headerName: t('customer'),         flex: 1    },
+    { field: 'lane',         headerName: t('pipeline.col.lane'), width: 140 },
+    { field: 'state',        headerName: t('state'),            width: 140 },
+    { field: 'etd',          headerName: 'ETD',                 width: 110 }, // loanword, kept
+    { field: 'eta',          headerName: 'ETA',                 width: 110 }, // loanword, kept
+    { field: 'margin_pct',   headerName: t('margin_pct'),       width: 100 },
+    { field: 'sales_rep',    headerName: t('sales_rep'),        width: 110 },
+  ];
+}
 const PIPELINE_VIEW_KEY   = 'pipeline_view_mode';
 const PREFS_META_KEY      = 'preferences';
-const FILTER_CHIPS_CONFIG = ['Sales', 'Customer', 'Carrier', 'Lane', 'State'];
+// value = data-chip contract token (unchanged); labelKey resolves the visible chip text.
+const FILTER_CHIPS_CONFIG = [
+  { value: 'sales',    labelKey: 'sales_rep' },
+  { value: 'customer', labelKey: 'customer' },
+  { value: 'carrier',  labelKey: 'carrier' },
+  { value: 'lane',     labelKey: 'pipeline.chip.lane' },
+  { value: 'state',    labelKey: 'state' },
+];
 
 let _viewMode    = 'board';
 let _filter      = {};
@@ -96,7 +107,7 @@ function mountGrid(container, filtered) {
   if (!window.agGrid) return;
 
   const opts = {
-    columnDefs:        PIPELINE_GRID_COLS,
+    columnDefs:        pipelineGridCols(),
     rowData,
     rowSelection:      'multiple',
     suppressRowClickSelection: true,
@@ -121,7 +132,7 @@ function updateBulkToolbar(root) {
   if (!bar) return;
   const n = _selectedIds.size;
   bar.classList.toggle('translate-y-full', n === 0);
-  root.querySelector('#bulk-count').textContent = `${n} selected`;
+  root.querySelector('#bulk-count').textContent = t('bulk_selected_count', { n });
 
   const states = [..._selectedIds].map((id) => {
     const s = _shipments.find((x) => x.id === id);
@@ -133,7 +144,7 @@ function updateBulkToolbar(root) {
 
   const select = root.querySelector('#bulk-transition-select');
   if (select) {
-    select.innerHTML = `<option value="">Transition to…</option>${validTargets.map((t) => `<option>${t}</option>`).join('')}`;
+    select.innerHTML = `<option value="">${t('pipeline.bulk.transition_placeholder')}</option>${validTargets.map((s) => `<option>${s}</option>`).join('')}`;
   }
 }
 
@@ -165,10 +176,10 @@ export async function render(root) {
   _shipments = enrichShipments(await loadShipments());
   root.setAttribute('data-mgr-pipeline', '1');
 
-  const chipHtml = FILTER_CHIPS_CONFIG.map((f) =>
-    `<button data-chip="${f.toLowerCase()}"
+  const chipHtml = FILTER_CHIPS_CONFIG.map((c) =>
+    `<button data-chip="${c.value}"
       class="px-3 py-1 rounded-full text-xs bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-    >${f}</button>`).join('');
+    >${t(c.labelKey)}</button>`).join('');
 
   root.innerHTML = `
     <div class="p-6 space-y-4 max-w-[1600px] mx-auto" data-mgr-pipeline="1">
@@ -176,7 +187,7 @@ export async function render(root) {
         <div class="flex gap-2 flex-wrap">${chipHtml}</div>
         <button id="view-toggle"
           class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
-          ${_viewMode === 'board' ? 'List view' : 'Board view'}
+          ${_viewMode === 'board' ? t('list_view') : t('board_view')}
         </button>
       </div>
 
@@ -189,13 +200,13 @@ export async function render(root) {
         <span id="bulk-count" class="text-sm font-medium"></span>
         <select id="bulk-transition-select"
           class="text-xs bg-slate-700 text-white border border-slate-600 rounded px-2 py-1">
-          <option value="">Transition to…</option>
+          <option value="">${t('pipeline.bulk.transition_placeholder')}</option>
         </select>
         <button id="bulk-export" class="px-3 py-1.5 text-xs bg-blue-600 rounded hover:bg-blue-700">
-          Export CSV
+          ${t('air_invoice.export_csv')}
         </button>
         <button id="bulk-clear"
-          class="ml-auto px-2 py-1.5 text-xs text-slate-400 hover:text-white">✕ Clear</button>
+          class="ml-auto px-2 py-1.5 text-xs text-slate-400 hover:text-white">${t('bulk_clear')}</button>
       </div>
     </div>`;
 
@@ -242,7 +253,7 @@ export async function render(root) {
 
   root.querySelector('#view-toggle').addEventListener('click', async () => {
     _viewMode = _viewMode === 'board' ? 'list' : 'board';
-    root.querySelector('#view-toggle').textContent = _viewMode === 'board' ? 'List view' : 'Board view';
+    root.querySelector('#view-toggle').textContent = _viewMode === 'board' ? t('list_view') : t('board_view');
     mountView();
     await saveViewMode(db, _viewMode);
   });

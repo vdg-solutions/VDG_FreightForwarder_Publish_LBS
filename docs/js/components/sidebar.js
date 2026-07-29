@@ -195,7 +195,7 @@ class VdgSidebar extends LitElement {
           </svg>
         `}
         <span class="flex-1 text-left truncate ${item.sub ? 'text-slate-400' : ''}">${text}</span>
-        ${item.disabled ? html`<span class="text-[10px] uppercase tracking-wider text-slate-600">soon</span>` : ''}
+        ${item.disabled ? html`<span class="text-[10px] uppercase tracking-wider text-slate-600">${t('sidebar.badge.soon')}</span>` : ''}
       </button>
     `;
   }
@@ -245,7 +245,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 332d73e">v0.1.59</span>
+        <span class="font-mono whitespace-nowrap" title="build bc0253b">v0.1.60</span>
       </div>
     `;
   }

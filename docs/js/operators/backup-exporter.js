@@ -2,6 +2,7 @@
 
 import { activeWorkspaceName } from './workspace-registry.js';
 import { MASTER_REGISTRY } from '../data/master-registry.js';
+import { t } from '../i18n/index.js';
 
 const JSZIP_CDN          = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
 // F-28-01: derived from the registry instead of a hand-maintained list — the old 3-item
@@ -63,35 +64,35 @@ export async function exportWorkspace(repo, driveApi, onProgress = () => {}) {
   await _loadJsZip();
   const zip = new window.JSZip();
 
-  onProgress(5, 'Locating workspace…');
+  onProgress(5, t('backup.progress.locating'));
   const rootId = await driveApi.findWorkspaceRoot(activeWorkspaceName());
   if (!rootId) throw new Error('Workspace root not found');
 
   // Masters
-  onProgress(10, 'Exporting masters…');
+  onProgress(10, t('backup.progress.exporting_masters'));
   for (let i = 0; i < TEAM_MASTER_KINDS.length; i++) {
     const kind  = TEAM_MASTER_KINDS[i];
     const items = await repo.list(kind, null).catch(() => []);
     if (items.length > 0) {
       zip.file(`masters/${kind}/all.jsonl`, items.map((e) => JSON.stringify(e)).join('\n') + '\n');
     }
-    onProgress(10 + Math.round((i + 1) / TEAM_MASTER_KINDS.length * 30), `Masters: ${kind}`);
+    onProgress(10 + Math.round((i + 1) / TEAM_MASTER_KINDS.length * 30), t('backup.progress.masters_kind', { kind }));
   }
 
   // Users (monthly bundles) — traverse Drive folder tree
-  onProgress(40, 'Exporting user bundles…');
+  onProgress(40, t('backup.progress.exporting_users'));
   const usersFolder = await driveApi.findFolder
     ? null // fallback: collect via Drive tree
     : null;
   // Use Drive folder traversal for everything under workspace root
   await _collectBundles(driveApi, zip, rootId, 'workspace');
 
-  onProgress(85, 'Packing zip…');
+  onProgress(85, t('backup.progress.packing'));
   const blob     = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
   const date     = new Date().toISOString().slice(0, 10);
   const filename = `${ZIP_FILE_PREFIX}${date}.zip`;
 
-  onProgress(95, 'Downloading…');
+  onProgress(95, t('backup.progress.downloading'));
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
   a.href     = url;
@@ -99,6 +100,6 @@ export async function exportWorkspace(repo, driveApi, onProgress = () => {}) {
   a.click();
   URL.revokeObjectURL(url);
 
-  onProgress(100, 'Done');
+  onProgress(100, t('backup.progress.done'));
   return filename;
 }

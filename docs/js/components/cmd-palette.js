@@ -3,21 +3,26 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate }         from '../router.js';
 import { idbGet, idbPut }   from '../cache/idb-cache.js';
+import { t }                from '../i18n/index.js';
 
 const PALETTE_MAX_RESULTS = 8;
 const PALETTE_RECENT_MAX  = 5;
 const PALETTE_PREFS_KEY   = 'preferences';
 
-const PALETTE_ACTIONS = [
-  { label: 'Dashboard',         shortcut: 'g d', kind: 'action', action: () => navigate('/manager/dashboard') },
-  { label: 'Shipments pipeline',shortcut: 'g s', kind: 'action', action: () => navigate('/manager/pipeline') },
-  { label: 'Customers',         shortcut: 'g c', kind: 'action', action: () => navigate('/masters/customers') },
-  { label: 'P&L Report',        shortcut: 'g r', kind: 'action', action: () => navigate('/manager/reports/pnl') },
-  { label: 'Approve all',       shortcut: null,  kind: 'action', action: () => navigate('/manager/approvals') },
-  { label: 'Period close',      shortcut: null,  kind: 'action', action: () => navigate('/manager/finance/close-period') },
-  { label: 'Sales view',        shortcut: null,  kind: 'action', action: () => navigate('/dashboard') },
-  { label: 'Create shipment',   shortcut: null,  kind: 'action', action: () => navigate('/sales/me/pnl/new') },
-];
+// F-31-04: labels resolved via t() at build time so a locale switch re-renders this list —
+// the hard-lesson array-literal-label-table shape (E-31 spec), invisible to the detector.
+function paletteActions() {
+  return [
+    { label: t('dashboard'),                             shortcut: 'g d', kind: 'action', action: () => navigate('/manager/dashboard') },
+    { label: t('cmd_palette.action.shipments_pipeline'),  shortcut: 'g s', kind: 'action', action: () => navigate('/manager/pipeline') },
+    { label: t('masters_customers.title'),                shortcut: 'g c', kind: 'action', action: () => navigate('/masters/customers') },
+    { label: t('nav.reports.pnl_report'),                 shortcut: 'g r', kind: 'action', action: () => navigate('/manager/reports/pnl') },
+    { label: t('cmd_palette.action.approve_all'),         shortcut: null,  kind: 'action', action: () => navigate('/manager/approvals') },
+    { label: t('close_period.title'),                     shortcut: null,  kind: 'action', action: () => navigate('/manager/finance/close-period') },
+    { label: t('cmd_palette.action.sales_view'),          shortcut: null,  kind: 'action', action: () => navigate('/dashboard') },
+    { label: t('nav.sales.create_pnl'),                   shortcut: null,  kind: 'action', action: () => navigate('/sales/me/pnl/new') },
+  ];
+}
 
 // ── fuzzy match ───────────────────────────────────────────────────────────────
 
@@ -106,17 +111,17 @@ class VdgCmdPalette extends LitElement {
   }
 
   async _loadRecent() {
-    if (!this._db) return PALETTE_ACTIONS.slice(0, PALETTE_MAX_RESULTS);
+    if (!this._db) return paletteActions().slice(0, PALETTE_MAX_RESULTS);
     try {
       const prefs  = await idbGet(this._db, 'meta', PALETTE_PREFS_KEY);
       const recent = prefs?.palette_recent || [];
-      return [...recent.slice(0, PALETTE_RECENT_MAX), ...PALETTE_ACTIONS]
+      return [...recent.slice(0, PALETTE_RECENT_MAX), ...paletteActions()]
         .slice(0, PALETTE_MAX_RESULTS);
-    } catch { return PALETTE_ACTIONS.slice(0, PALETTE_MAX_RESULTS); }
+    } catch { return paletteActions().slice(0, PALETTE_MAX_RESULTS); }
   }
 
   async _search(q) {
-    const candidates = [...PALETTE_ACTIONS];
+    const candidates = [...paletteActions()];
 
     // L1 LRU shipments
     const lru = window.__vdg_lru;
@@ -217,15 +222,15 @@ class VdgCmdPalette extends LitElement {
             <input id="palette-input"
                    .value="${this._query}"
                    @input="${(e) => this._handleInput(e)}"
-                   placeholder="Search routes, shipments, customers…"
+                   placeholder="${t('cmd_palette.search_placeholder')}"
                    class="flex-1 outline-none text-sm text-slate-800 placeholder-slate-400"
-                   aria-label="Command palette search"
+                   aria-label="${t('cmd_palette.aria.search')}"
                    autocomplete="off" spellcheck="false" />
             <kbd class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Esc</kbd>
           </div>
 
           ${this._results.length ? html`
-            <ul class="py-1 max-h-80 overflow-y-auto" role="listbox" aria-label="Results">
+            <ul class="py-1 max-h-80 overflow-y-auto" role="listbox" aria-label="${t('cmd_palette.aria.results')}">
               ${this._results.map((r, i) => html`
                 <li role="option" aria-selected="${i === this._activeIdx}"
                     @click="${() => this._select(r)}"
@@ -239,13 +244,13 @@ class VdgCmdPalette extends LitElement {
                 </li>`)}
             </ul>
           ` : html`
-            <div class="px-4 py-6 text-center text-sm text-slate-400">No results</div>
+            <div class="px-4 py-6 text-center text-sm text-slate-400">${t('cmd_palette.no_results')}</div>
           `}
 
           <div class="px-4 py-2 border-t border-slate-100 flex gap-4 text-[10px] text-slate-400">
-            <span>↑↓ / j k Navigate</span>
-            <span>↵ Select</span>
-            <span>Esc Close</span>
+            <span>${t('cmd_palette.hint.navigate')}</span>
+            <span>${t('cmd_palette.hint.select')}</span>
+            <span>${t('cmd_palette.hint.close')}</span>
           </div>
         </div>
       </div>`;
@@ -253,4 +258,4 @@ class VdgCmdPalette extends LitElement {
 }
 
 customElements.define('vdg-cmd-palette', VdgCmdPalette);
-export { PALETTE_ACTIONS, PALETTE_MAX_RESULTS, PALETTE_RECENT_MAX, fuzzyScore };
+export { paletteActions, PALETTE_MAX_RESULTS, PALETTE_RECENT_MAX, fuzzyScore };

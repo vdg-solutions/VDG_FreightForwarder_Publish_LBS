@@ -2,6 +2,7 @@
 // Extracted from topbar.js for the 350-line cap.
 
 import { html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
+import { t } from '../i18n/index.js';
 
 const BADGE_MAX = 99;
 
@@ -26,7 +27,7 @@ export function idbSavePref(patch) {
 // User avatar: picture if present, else initials chip.
 export function renderAvatar(user) {
   if (user?.picture) {
-    return html`<img src="${user.picture}" alt="${user.name || 'User'}"
+    return html`<img src="${user.picture}" alt="${user.name || t('topbar.user_fallback')}"
       class="w-8 h-8 rounded-full object-cover ring-2 ring-slate-200"
       title="${user.name || user.email}" referrerpolicy="no-referrer" />`;
   }
