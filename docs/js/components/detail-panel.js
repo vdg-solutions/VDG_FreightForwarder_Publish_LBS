@@ -210,7 +210,7 @@ class VdgDetailPanel extends LitElement {
           <status-badge state=${cur} fsm="shipment"></status-badge>
         </div>
         <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
-          ${['lane','vessel','voyage','etd','eta','teu'].map(f => html`
+          ${['lane','carrier','vessel','voyage','etd','eta','teu'].map(f => html`
             <div><dt class="text-slate-400 mb-0.5">${t('shipment.detail.field.' + f)}</dt><dd class="font-medium text-slate-800 font-mono">${s[f] ?? '—'}</dd></div>`)}
         </dl>
         ${this._renderChips(s)}

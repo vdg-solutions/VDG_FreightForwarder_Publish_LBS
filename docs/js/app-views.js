@@ -8,7 +8,6 @@ export const VIEWS = {
   '/finance':         () => import('./views/finance-dashboard.js'),
   '/finance/credit':  () => import('./views/credit-dashboard.js'),
   '/finance/demdet':  () => import('./views/demdet.js'),
-  '/sales/drop':      () => import('./views/sales-drop.js'),
   // '/sales/:salesId/pnl/new' — create PNL, handled by tryParamRoute (app-router-ext.js)
   '/sales/me':        () => import('./views/sales-me.js'),
 '/sales/analytics':  () => import('./views/sales-analytics.js'),

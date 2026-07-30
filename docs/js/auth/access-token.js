@@ -8,6 +8,14 @@ const TOKEN_EXPIRY_BUFFER_MS  = 60_000; // refresh 60s before expiry
 const SILENT_REFRESH_TIMEOUT_MS = 10_000;   // AC-03 — GIS prompt:'' can no-op forever; bound it
 const REFRESH_NEGATIVE_CACHE_MS = 30_000;   // AC-03 — a known-expired session fast-fails this long instead of re-firing GIS
 
+// F-35-01 AC-02 — GIS error_callback types that mean "popup blocked", per Google's error guide.
+// requestAccessToken({prompt:''}) is popup-based; fired outside a user gesture the popup is
+// blocked and, without error_callback, GIS never calls back at all — this fires FAST instead.
+const GIS_ERROR_POPUP_FAILED = 'popup_failed_to_open';
+const GIS_ERROR_POPUP_CLOSED = 'popup_closed';
+
+function _isPopupBlockedError(type) { return type === GIS_ERROR_POPUP_FAILED || type === GIS_ERROR_POPUP_CLOSED; }
+
 // F-19-84 — single-flight guard shared by getAccessToken AND both token-refresh.js schedulers
 // (AC-01: concurrent ticks share ONE in-flight GIS refresh instead of firing one each). The 401
 // reactive path in drive-api.js keeps its own _reauthInflight guard and calls
@@ -71,6 +79,12 @@ function _requestAccessToken(prompt, timeoutMs, { returnResp = false } = {}) {
         localStorage.setItem(ACCESS_TOKEN_KEY,     resp.access_token);
         localStorage.setItem(ACCESS_TOKEN_EXP_KEY, String(expMs));
         done(resolve, returnResp ? resp : resp.access_token);
+      },
+      // AC-02/AC-04 — a definitive GIS error (popup blocked or otherwise) settles the promise
+      // immediately, distinct from 'silent-refresh-timeout' — never eats the full timeoutMs.
+      error_callback: (err) => {
+        const type = err?.type || 'unknown';
+        done(reject, new Error(_isPopupBlockedError(type) ? `popup-blocked:${type}` : `gis-error:${type}`));
       },
     });
     client.requestAccessToken({ prompt });

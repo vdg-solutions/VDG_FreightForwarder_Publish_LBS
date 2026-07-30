@@ -13,6 +13,15 @@ const DRIVE_SCOPE          = 'https://www.googleapis.com/auth/drive.file';
 const USERINFO_URL         = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime when expires_in absent
 
+// F-35-01 AC-02 — mirrors access-token.js: GIS error_callback types meaning "popup blocked".
+const GIS_ERROR_POPUP_FAILED = 'popup_failed_to_open';
+const GIS_ERROR_POPUP_CLOSED = 'popup_closed';
+function _isPopupBlockedError(type) { return type === GIS_ERROR_POPUP_FAILED || type === GIS_ERROR_POPUP_CLOSED; }
+function _gisErrorMessage(err) {
+  const type = err?.type || 'unknown';
+  return _isPopupBlockedError(type) ? `popup-blocked:${type}` : `gis-error:${type}`;
+}
+
 // Canonical auth-owned localStorage keys — single source of truth (F-15-50 AC-07).
 // Add new auth keys here; every clear path picks them up automatically.
 export const AUTH_STORAGE_KEYS = Object.freeze([
@@ -167,6 +176,8 @@ export function requestDriveScopeGrant(onGranted, onDenied) {
         onDenied(new Error('Drive scope still not granted'));
       }
     },
+    // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
+    error_callback: (err) => onDenied(new Error(_gisErrorMessage(err))),
   });
   client.requestAccessToken({ prompt: 'consent' });
 }
@@ -228,6 +239,10 @@ export function renderSignInButton(container) {
           .catch((err) => {
             window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: err.message }));
           });
+      },
+      // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
+      error_callback: (err) => {
+        window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: _gisErrorMessage(err) }));
       },
     });
     client.requestAccessToken({ prompt: 'consent' });

@@ -4,18 +4,14 @@ import { t } from '../i18n/index.js';
 import { navigate } from '../router.js';
 import { currentSalesRepId } from '../auth/auth-gate.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
-import { renderForm, collectFormState, validateNiForm,
-         PNL_VERTICAL_AUTOFILL_KEY, niDtoToDraft, shipmentToDraft } from './sales-new-form.js';
+import { renderForm, collectFormState, validateNiForm, shipmentToDraft } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
-import { runBatchImport } from '../operators/pnl-vertical-batch-import.js';
-import { loadWasm } from '../wasm-loader.js';
+import { createSubmitGuard } from './sales-new/submit-guard.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
 import { safeMasterLoad } from '../util/master-load.js';
 import { ensureRepCode } from '../operators/rep-code-registry.js';
 import { assignJobNo } from '../operators/job-no-gen.js';
-
-const ROUTE_SHIPMENTS = '/shipments';  // batch success navigation target (F-15-57)
 
 // F-19-29: personalization reads (userConfig + commission override) are optional — bound them
 // under RENDER_MOUNT_TIMEOUT_MS (8s) so a slow Drive fallback still leaves headroom for the
@@ -126,15 +122,7 @@ export async function render(root, opts = {}) {
       </div>
       <div id="form-mount"></div>`;
   } else {
-    // AC-05: check sessionStorage for pending NI autofill
-    const pending = sessionStorage.getItem(PNL_VERTICAL_AUTOFILL_KEY);
-    if (pending) {
-      sessionStorage.removeItem(PNL_VERTICAL_AUTOFILL_KEY);
-      try { draft = niDtoToDraft(JSON.parse(pending)); }
-      catch { /* malformed — fall through to loadDraft */ }
-    }
-
-    if (!draft && quotePrefill) {
+    if (quotePrefill) {
       draft = {
         quote_id: quotePrefill.quote_id,
         customer: quotePrefill.customer,
@@ -170,76 +158,56 @@ export async function render(root, opts = {}) {
   const fxRepo    = await _fxRepo();
   await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo });
 
-  // NI file drop + save draft: create path only
-  if (!isEdit) {
-    formMount.querySelector('#ni-upload-zone')?.addEventListener('vdg:file', async (e) => {
-      const bytes = new Uint8Array(await e.detail.file.arrayBuffer());
-      const wasm  = await loadWasm();
-      if (!wasm) { showToast('WASM not ready', 'error'); return; }
-      try {
-        const pairs = wasm.import_legacy_pnl_wasm(bytes);
-        if (!pairs?.length) { showToast('No shipments parsed', 'error'); return; }
-        if (pairs.length === 1) {
-          sessionStorage.setItem(PNL_VERTICAL_AUTOFILL_KEY, JSON.stringify(pairs[0]));
-          await render(root);  // re-render picks up sessionStorage → autofills
-          return;
-        }
-        // F-15-57: N>1 pairs → batch-commit directly, no per-pair form review
-        const result = await runBatchImport(pairs, repo, salesRepId);
-        if (!result.ok) {
-          const msg = t('pnl.import.batch_failed_at_pair').replace('{index}', result.pairIndex);
-          showToast(`${msg}: ${result.reason}`, 'error');
-          return;
-        }
-        showToast(t('pnl.import.batch_created').replace('{count}', result.refs.length), 'success');
-        navigate(ROUTE_SHIPMENTS);
-      } catch (err) {
-        showToast(`NI parse error: ${err.message}`, 'error');
-      }
-    });
-
-  }
+  // F-32-02: one guard per render() — re-entrancy-blocks a second submit while the
+  // first is still pending (double-click / slow network) so only one shipment/job_no
+  // is ever consumed per user action.
+  const guardedSubmit = createSubmitGuard();
 
   root.querySelector('#ni-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const intent  = e.submitter?.dataset?.intent === 'save' ? 'save' : 'publish';
-    const publish = intent === 'publish';
-    const state   = collectFormState(formMount);
-    const errors  = validateNiForm(state);
-    if (errors.length) {
-      highlightErrors(root, errors);
-      const errEl = root.querySelector('#ni-form-errors');
-      if (errEl) {
-        errEl.innerHTML = errors.map((err) => `<div>&#x2022; ${err}</div>`).join('');
-        errEl.classList.remove('hidden');
+    const saveBtn    = formMount.querySelector('#ni-save-btn');
+    const publishBtn = formMount.querySelector('#ni-publish-btn');
+
+    await guardedSubmit([saveBtn, publishBtn], async () => {
+      const publish = intent === 'publish';
+      const state   = collectFormState(formMount);
+      const errors  = validateNiForm(state);
+      if (errors.length) {
+        highlightErrors(root, errors);
+        const errEl = root.querySelector('#ni-form-errors');
+        if (errEl) {
+          errEl.innerHTML = errors.map((err) => `<div>&#x2022; ${err}</div>`).join('');
+          errEl.classList.remove('hidden');
+        }
+        return;
       }
-      return;
-    }
-    // F-29-04 VR-03: hard fx-deviation warn — blocks until explicitly confirmed
-    const flagged = await findFxDeviations(state, fxRepo);
-    if (flagged.length) {
-      const { proceed, overrides } = await confirmFxDeviations(
-        flagged, { confirmedBy: window.__vdg_current_user?.email || 'unknown' });
-      if (!proceed) return;
-      state._fx_overrides = overrides;
-    }
-    try {
-      if (isEdit) {
-        await updateForm(state, repo, salesRepId, editRef, undefined, { publish });
-        _dispatchCommitted(formMount, salesRepId);
-        const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
-        showToast(t(key).replace('{ref}', editRef), 'success');
-        // Do not navigate if we are already on the edit page, to avoid a white screen flash
-      } else {
-        const { ref } = await submitForm(state, repo, salesRepId, undefined, { publish });
-        _dispatchCommitted(formMount, salesRepId);
-        await clearDraft();
-        const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
-        showToast(t(key).replace('{ref}', ref), 'success');
-        navigate('/sales/edit/' + ref);
+      // F-29-04 VR-03: hard fx-deviation warn — blocks until explicitly confirmed
+      const flagged = await findFxDeviations(state, fxRepo);
+      if (flagged.length) {
+        const { proceed, overrides } = await confirmFxDeviations(
+          flagged, { confirmedBy: window.__vdg_current_user?.email || 'unknown' });
+        if (!proceed) return;
+        state._fx_overrides = overrides;
       }
-    } catch (err) {
-      showToast(`Error: ${err.message}`, 'error');
-    }
+      try {
+        if (isEdit) {
+          await updateForm(state, repo, salesRepId, editRef, undefined, { publish });
+          _dispatchCommitted(formMount, salesRepId);
+          const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
+          showToast(t(key).replace('{ref}', editRef), 'success');
+          // Do not navigate if we are already on the edit page, to avoid a white screen flash
+        } else {
+          const { ref } = await submitForm(state, repo, salesRepId, undefined, { publish });
+          _dispatchCommitted(formMount, salesRepId);
+          await clearDraft();
+          const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
+          showToast(t(key).replace('{ref}', ref), 'success');
+          navigate('/sales/edit/' + ref);
+        }
+      } catch (err) {
+        showToast(`Error: ${err.message}`, 'error');
+      }
+    });
   });
 }

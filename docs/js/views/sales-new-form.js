@@ -2,7 +2,7 @@
 
 import { t } from '../i18n/index.js';
 import { saveDraft } from './sales-new/draft-manager.js';
-export { PNL_VERTICAL_AUTOFILL_KEY, niDtoToDraft, shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
+export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
 import { sectionAHtml, wireHeaderSection } from './sales-new-form/section-header.js';
 import { sectionBHtml, wireLinesSection, collectLines, sumVndPay, sumVndCollect }
   from './sales-new-form/section-lines.js';
@@ -49,9 +49,6 @@ export async function renderForm(root, opts = {}) {
         <div>
           <div class="text-xl font-semibold text-slate-900">${formTitle}</div>
           <div class="text-xs text-slate-500 mt-0.5">${formSubtitle}</div>
-        </div>
-        <div class="w-64">
-          <upload-zone id="ni-upload-zone" accept=".xlsx, .xls"></upload-zone>
         </div>
       </div>
       <form id="ni-form" class="space-y-4">

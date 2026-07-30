@@ -20,6 +20,46 @@ export function refreshFailureAction() { return REFRESH_FAILURE_ACTION.RECONNECT
 
 function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); }
 
+// ── F-35-01 AC-05: gesture-anchored silent refresh ──────────────────────────────
+// Google's use-token-model guide: a popup-based requestAccessToken() needs a real user
+// gesture to avoid the browser's popup blocker. The 60s schedulers above run OUTSIDE any
+// gesture, so their own silent-refresh attempt is structurally doomed once the browser
+// blocks the popup — AC-02's error_callback just makes that failure fast instead of a 10s
+// hang. This hook is the actual recovery: once a token enters its lead window, arm a
+// one-shot click/keydown listener that fires requestAccessToken({prompt:''}) SYNCHRONOUSLY
+// inside the user's next real interaction — a genuine gesture, so the popup is not blocked
+// and (with a live Google session) resolves invisibly. Idempotent via sharedSilentRefresh's
+// single-flight: if a scheduler tick's own attempt is already in flight, the gesture just
+// joins it instead of firing a second GIS request.
+const GESTURE_EVENTS = ['click', 'keydown'];
+let _gestureArmed = false;
+
+function _onGestureRefresh() {
+  _disarmGestureRefresh();                    // one-shot — consumed by this gesture
+  sharedSilentRefresh()
+    .then((/* token */) => {
+      const newExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+      restampIdTokenExp(newExp);
+      // Invisible recovery — clear any red state a prior non-gesture scheduler attempt set.
+      window.dispatchEvent(new CustomEvent('vdg:auth-reconnected'));
+    })
+    .catch(() => {
+      if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+    });
+}
+
+function _armGestureRefresh() {
+  if (_gestureArmed) return;                  // idempotent — only one arm in flight
+  _gestureArmed = true;
+  for (const ev of GESTURE_EVENTS) window.addEventListener(ev, _onGestureRefresh);
+}
+
+function _disarmGestureRefresh() {
+  if (!_gestureArmed) return;
+  _gestureArmed = false;
+  for (const ev of GESTURE_EVENTS) window.removeEventListener(ev, _onGestureRefresh);
+}
+
 // ── internal ──────────────────────────────────────────────────────────────────
 
 function _getExpMs() {
@@ -58,7 +98,10 @@ function _check() {
   }
   const remaining = expMs - Date.now();
   if (remaining < REFRESH_LEAD_MS) {        // within lead OR already past exp → renew silently
+    _armGestureRefresh();                   // AC-05 — arm the invisible gesture-anchored recovery
     _silentPrompt();
+  } else {
+    _disarmGestureRefresh();                // out of window — drop any stale arm
   }
 }
 
@@ -75,6 +118,7 @@ export function stopTokenRefresh() {
     clearInterval(_checkTimer);
     _checkTimer = null;
   }
+  _disarmGestureRefresh(); // never leak the click/keydown listener past the scheduler's life
 }
 
 // ── F-29-13: proactive access-token scheduler ───────────────────────────────────
@@ -93,7 +137,8 @@ export function accessRefreshDue(expMs, now, leadMs = ACCESS_REFRESH_LEAD_MS) {
 
 function _accessCheck() {
   const expMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
-  if (!accessRefreshDue(expMs, Date.now())) return;
+  if (!accessRefreshDue(expMs, Date.now())) { _disarmGestureRefresh(); return; } // out of window
+  _armGestureRefresh();                     // AC-05 — arm the invisible gesture-anchored recovery
   // AC-01: routed through the shared single-flight so a near-simultaneous id-token scheduler
   // tick shares this same refresh instead of firing a second GIS request.
   sharedSilentRefresh()
@@ -134,4 +179,5 @@ export function stopAccessTokenRefresh() {
     _accessTimer = null;
   }
   window.removeEventListener('vdg:auth-reconnect-request', _onReconnectRequest);
+  _disarmGestureRefresh(); // never leak the click/keydown listener past the scheduler's life
 }

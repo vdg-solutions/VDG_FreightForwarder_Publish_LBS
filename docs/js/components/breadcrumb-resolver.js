@@ -60,7 +60,7 @@ const FALLBACK_GROUP = 'nav.group.workspace';
 const FALLBACK_VIEW  = 'nav.workspace.dashboard';
 
 /**
- * @param {string} hash - location.hash (e.g. '#/sales/drop')
+ * @param {string} hash - location.hash (e.g. '#/sales/me')
  * @param {string} _locale - current locale (reserved; t() is already locale-aware)
  * @param {function} t - i18n fn: key → string (key-as-fallback for missing keys)
  * @returns {{ group: string, view: string }}

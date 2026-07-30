@@ -2,6 +2,7 @@ import '../components/detail-panel.js';
 import { resolveShipmentState } from '../util/shipment-state-resolver.js';
 import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
+import { shipmentLane } from '../util/shipment-lane.js';
 import { t, fmtNumber } from '../i18n/index.js';
 import { agGridLocaleText } from '../i18n/ag-grid-locale.js';
 import { isManager } from '../auth/auth-gate.js';
@@ -108,7 +109,7 @@ export function buildColumnDefs() {
     { headerName: t(COLUMN_LABEL_KEY.ref), field: 'ref', pinned: 'left', width: 140, cellClass: 'font-mono text-xs' },
     { headerName: t(COLUMN_LABEL_KEY.customer), field: 'customer', width: 170 },
     { headerName: t(COLUMN_LABEL_KEY.lane), field: 'lane', width: 140, cellClass: 'font-mono text-xs',
-      valueGetter: (p) => p.data.lane || `${p.data.pol || '—'} → ${p.data.pod || '—'}` },
+      valueGetter: (p) => p.data.lane ?? '—' },
     { headerName: t(COLUMN_LABEL_KEY.vessel), field: 'vessel', width: 170,
       valueGetter: (p) => `${p.data.vessel || '—'} / ${p.data.voyage || '—'}` },
     { headerName: t(COLUMN_LABEL_KEY.etd), field: 'etd', width: 110, cellClass: 'font-mono text-xs text-slate-600' },
@@ -170,6 +171,9 @@ async function loadRealData() {
     // component) — the grid always receives a canonical code or the literal 'Unknown', never
     // a raw unresolved value.
     s.state = resolveShipmentState(s.state || s.status, aliasRows) || UNKNOWN_STATE;
+    // F-36-01: route is stored as pol+pod, never a `lane` field — derive it once here so the
+    // grid AND the detail-panel (opened with this same row object) both get it.
+    s.lane = shipmentLane(s);
     // pnl_line entities are the aggregation source. Fall back to the shipment's embedded
     // pnl_lines for manual P&Ls saved before they materialized entities, so existing shipments
     // show revenue without a re-save.

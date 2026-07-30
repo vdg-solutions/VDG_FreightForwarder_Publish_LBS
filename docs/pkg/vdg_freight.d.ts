@@ -88,11 +88,6 @@ export function compute_freight(actual: number, l: number, w: number, h: number,
  */
 export function create_document_wasm(cmd_json: string): any;
 
-/**
- * Auto-detect legacy format only → DetectResult as JsValue.
- */
-export function detect_pnl_format_wasm(bytes: Uint8Array): any;
-
 export function drain_events(): any;
 
 /**
@@ -129,13 +124,6 @@ export function import_booking_excel_wasm(bytes: Uint8Array): any;
  * Document Excel import → ImportReport<CreateDocumentCommand> as JsValue.
  */
 export function import_document_excel_wasm(bytes: Uint8Array): any;
-
-export function import_legacy_pnl_wasm(bytes: Uint8Array): any;
-
-/**
- * Combined PNL import → CombinedImportReport as JsValue.
- */
-export function import_pnl_combined_wasm(bytes: Uint8Array): any;
 
 /**
  * P&L Excel import → ImportReport<PnlImportRowDto> as JsValue.
@@ -265,7 +253,6 @@ export interface InitOutput {
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly detect_pnl_format_wasm: (a: number, b: number, c: number) => void;
     readonly drain_events: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -275,8 +262,6 @@ export interface InitOutput {
     readonly get_validation_errors: (a: number) => void;
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
-    readonly import_legacy_pnl_wasm: (a: number, b: number, c: number) => void;
-    readonly import_pnl_combined_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
     readonly license_status: (a: number, b: number, c: bigint) => number;
@@ -312,8 +297,8 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly __wasm_bindgen_func_elem_6857: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_6870: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6664: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6677: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
