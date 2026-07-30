@@ -11,9 +11,9 @@ import { agGridLocaleText } from '../../i18n/ag-grid-locale.js';
 const MASTERS_RE               = /^\/manager\/masters\/([^/]+)$/;
 const KIND_CUSTOMER            = 'customers';
 const KIND_CARRIER             = 'carriers';
-const KIND_USER                = 'users';
+const KIND_USER                = 'user'; // F-39-01: canonical user-master kind (MASTER_REGISTRY)
 const KIND_MAP                 = { customers: KIND_CUSTOMER, carriers: KIND_CARRIER, users: KIND_USER };
-const USER_KIND                = 'users';
+const USER_KIND                = 'user'; // F-39-01: canonical user-master kind (MASTER_REGISTRY)
 const USER_ID_PREFIX           = 'USR';
 const ROLE_SALES               = 'sales';
 const STATUS_ACTIVE            = 'Active';

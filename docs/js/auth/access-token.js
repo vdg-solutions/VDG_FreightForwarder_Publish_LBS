@@ -2,9 +2,10 @@
 // 350-line cap). Re-exported through drive-api.js so every existing importer (token-refresh.js,
 // f-29-13-bounded-silent-refresh.test.mjs) keeps resolving unchanged.
 
-const ACCESS_TOKEN_KEY        = 'vdg.auth.access_token';
-const ACCESS_TOKEN_EXP_KEY    = 'vdg.auth.access_token_exp';
-const TOKEN_EXPIRY_BUFFER_MS  = 60_000; // refresh 60s before expiry
+const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
+const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
+const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
+const TOKEN_EXPIRY_BUFFER_MS   = 60_000; // refresh 60s before expiry
 const SILENT_REFRESH_TIMEOUT_MS = 10_000;   // AC-03 — GIS prompt:'' can no-op forever; bound it
 const REFRESH_NEGATIVE_CACHE_MS = 30_000;   // AC-03 — a known-expired session fast-fails this long instead of re-firing GIS
 
@@ -71,7 +72,7 @@ function _requestAccessToken(prompt, timeoutMs, { returnResp = false } = {}) {
       : null;
     const done = (fn, arg) => { if (!settled) { settled = true; if (timer) clearTimeout(timer); fn(arg); } };
     const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: window.__vdg_google_client_id || '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com',
+      client_id: CLIENT_ID,
       scope:     'https://www.googleapis.com/auth/drive.file',
       callback:  (resp) => {
         if (resp.error) { done(reject, new Error(resp.error)); return; }

@@ -7,6 +7,7 @@ import { navigate }  from '../../router.js';
 import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+import { shipmentLane } from '../../util/shipment-lane.js';
 import { t } from '../../i18n/index.js';
 
 const SEA_KANBAN_STATES = ['Created','BookingConfirmed','InTransit','Arrived','Delivered','Closed'];
@@ -76,17 +77,18 @@ function applyFilter(list, filter) {
     if (filter.sales  && (s.sales_rep || s.SalesRep) !== filter.sales)  return false;
     if (filter.state  && (s.state     || s.State)     !== filter.state)  return false;
     if (filter.lane) {
-      const lane = `${s.pol || s.POL || ''}→${s.pod || s.POD || ''}`;
-      if (lane !== filter.lane) return false;
+      if (shipmentLane(s) !== filter.lane) return false;
     }
     return true;
   });
 }
 
+// F-37-01: route is stored as pol+pod, never a `lane` field — derive it once here
+// (same seam as shipments.js/F-36-01) so grid + CSV export both read s.lane already resolved.
 function enrichShipments(list) {
   return list.map((s) => ({
     ...s,
-    lane: `${s.pol || s.POL || '?'}→${s.pod || s.POD || '?'}`,
+    lane: shipmentLane(s),
   }));
 }
 
@@ -97,7 +99,7 @@ function mountGrid(container, filtered) {
     ...s,
     shipment_ref: s.shipment_ref || s.ShipmentRef || s.id,
     customer:     s.customer     || s.Customer     || '—',
-    lane:         `${s.pol || s.POL || '?'}→${s.pod || s.POD || '?'}`,
+    // lane already resolved by enrichShipments (F-37-01) — no re-derivation here
     state:        s.state        || s.State        || '—',
     sales_rep:    resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—',
   }));

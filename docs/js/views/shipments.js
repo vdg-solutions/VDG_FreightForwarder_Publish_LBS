@@ -153,12 +153,18 @@ export function toolbar(total, isLarge) {
   `;
 }
 
-async function loadRealData() {
+// F-40-01 AC-01/AC-04: the three sources have no dependency on each other's result — fire them
+// concurrently, each shielded to its own fallback BEFORE combining, so Promise.all's fail-fast
+// on first rejection can never actually see one (a slow/failing source degrades alone, the grid
+// still mounts with the other two).
+export async function loadRealData() {
   const repo = window.__vdg_repo;
   if (!repo) return [];
-  const allShipments = await repo.list('shipment', null);
-  const allLines = await repo.list('pnl_line').catch(() => []);
-  const aliasRows = await ensureShipmentStateAliases(repo); // DEFECT-1: seed-on-first-read
+  const [allShipments, allLines, aliasRows] = await Promise.all([
+    repo.list('shipment', null).catch(() => []),          // was unguarded — AC-04 gap
+    repo.list('pnl_line').catch(() => []),                 // unchanged
+    ensureShipmentStateAliases(repo),                      // already never rejects
+  ]);
   const linesByRef = {};
   for (const l of allLines) {
     const r = l.shipment_ref;

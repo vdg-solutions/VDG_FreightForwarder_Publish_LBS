@@ -3,6 +3,7 @@
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }                      from '../../router.js';
 import { compose, HEALTH_THRESHOLD_GOOD, HEALTH_THRESHOLD_WATCH, compose360 } from '../../operators/manager/customer360-composer.js';
+import { shipmentLane } from '../../util/shipment-lane.js';
 import { t } from '../../i18n/index.js';
 
 const CUSTOMER360_RE   = /^\/manager\/customers\/([^/]+)$/;
@@ -106,7 +107,7 @@ function renderTabContent(root, tabName, quotations) {
     const rows = _shipments.filter((s) => (s.customer_id || s.customer || s.Customer || '') === customer.id);
     const rowHtml = rows.map((s) => `<tr class="hover:bg-slate-50 cursor-pointer" data-ship-id="${s.id}">
       <td class="py-2 px-3 text-xs">${s.shipment_ref || s.id}</td>
-      <td class="py-2 px-3 text-xs">${(s.pol||'?')}→${(s.pod||'?')}</td>
+      <td class="py-2 px-3 text-xs">${shipmentLane(s) || '—'}</td>
       <td class="py-2 px-3 text-xs">${s.etd || '—'}</td>
       <td class="py-2 px-3 text-xs">${s.eta || '—'}</td>
       <td class="py-2 px-3 text-xs">${s.state || '—'}</td>

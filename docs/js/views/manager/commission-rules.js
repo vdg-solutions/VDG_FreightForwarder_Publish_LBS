@@ -4,7 +4,7 @@ import { bulkPut } from '../../cache/bulk-orchestrator.js';
 import { t } from '../../i18n/index.js';
 
 const KIND_COMMISSION_RULES = 'commission_rules';
-const KIND_USERS            = 'users';
+const KIND_USERS            = 'user'; // F-39-01: canonical user-master kind (MASTER_REGISTRY)
 const DEFAULT_SALES_PCT     = 70; // fallback default shown in placeholder
 
 let _users   = [];

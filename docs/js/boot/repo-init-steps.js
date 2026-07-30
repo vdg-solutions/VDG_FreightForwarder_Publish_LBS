@@ -281,10 +281,14 @@ async function _deferredManagerInit(user, driveApi, ledgerRepo, userRepo, repo) 
 
   // Pre-warm IDB cache
   const { prefetchDashboard } = await import('../cache/route-prefetch.js');
+  const { ensureShipmentStateAliases } = await import('../util/shipment-state-aliases.js');
   const WARM_KINDS = [
     'shipment', 'pnl_line', 'billing', 'approval_request', 'customers',
-    'exception', 'quotation', 'commission_rules', 'users',
+    'exception', 'quotation', 'commission_rules', 'user', // F-39-01: canonical user-master kind
   ];
   Promise.all(WARM_KINDS.map((k) => repo.list(k, null))).catch(() => {});
+  // F-40-01: WARM_KINDS only does a bare list — never triggers the seed migration. Warm the
+  // shipment-states alias seed directly, off the grid's mount path.
+  ensureShipmentStateAliases(repo).catch(() => {});
   prefetchDashboard(repo).catch(() => {});
 }
