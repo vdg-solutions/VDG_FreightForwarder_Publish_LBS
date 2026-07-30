@@ -45,7 +45,10 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     consignee:             state.consignee             || null,
     notify_party:          state.notify_party          || null,
     mbl:                   state.mbl                   || null,
-    hbl:                   state.hbl                   || null,
+    // F-32-01: HBL present ⇒ HBL No = D/O No = Job No (auto-fill supersedes any typed value)
+    job_no:                opts.jobNo                  || null,
+    do_no:                 (state.has_hbl && opts.jobNo) ? opts.jobNo : null,
+    hbl:                   state.has_hbl ? (opts.jobNo || null) : (state.hbl || null),
     doc_type:              state.doc_type              || null,
     mode:                  (state.mode || '').toLowerCase() || null,
     direction:             state.direction             || null,

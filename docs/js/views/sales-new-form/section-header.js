@@ -96,7 +96,8 @@ export function sectionAHtml(draft = {}, customers = []) {
         ${fld(t('sales_new.mode_selector.title'),
           selFld('mode', MODE_OPTIONS, mode, MODE_LABEL_KEYS))}
         ${fld(t('sales_new.field.mbl'),      txt('mbl', d.mbl))}
-        ${fld(t('sales_new.field.hbl'),      txt('hbl', d.hbl))}
+        ${fld(t('sales_new.field.job_no'), `<div class="flex items-center gap-2"><input type="text" name="job_no" value="${d.job_no || ''}" readonly class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" /><label class="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap"><input type="checkbox" name="has_hbl" ${d.has_hbl ? 'checked' : ''} class="h-3.5 w-3.5" />${t('sales_new.field.has_hbl')}</label></div>`)}
+        ${cfld(t('sales_new.field.hbl_do'), `<input type="text" name="hbl_do_display" value="${d.has_hbl ? (d.job_no || '') : ''}" readonly class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" />`, `data-hbl-do-row${d.has_hbl ? '' : ' class="hidden"'}`)}
         ${fld(t('sales_new.field.product'),  selFld('product', PRODUCT_OPTIONS, d.product, PRODUCT_LABEL_KEYS))}
         ${fld(t('sales_new.field.customer'), custSel(customers, d.customer, d._autofilled))}
         ${fld(t('sales_new.field.shipper'),   txt('shipper',  d.shipper))}
@@ -179,6 +180,12 @@ export function wireHeaderSection(root, onChanged) {
   modeEl?.addEventListener('change', () => {
     _applyMode(root, modeEl.value);
     onChanged?.();
+  });
+  const hblChk = root.querySelector('[name=has_hbl]'); // F-32-01 DEFECT-02: HBL/D-O display toggle
+  hblChk?.addEventListener('change', () => {
+    const on = hblChk.checked, disp = root.querySelector('[name=hbl_do_display]');
+    root.querySelectorAll('[data-hbl-do-row]').forEach((el) => el.classList.toggle('hidden', !on));
+    if (disp) disp.value = on ? (root.querySelector('[name=job_no]')?.value || '') : '';
   });
 
   const airFields = ['weight_actual_kg', 'dim_l_cm', 'dim_w_cm', 'dim_h_cm'];

@@ -131,6 +131,10 @@ export function shipmentToDraft(shipment, ce) {
     quote_id:     s.quote_id              ?? null,
     mbl:          s.mbl                   || '',
     hbl:          s.hbl                   || '',
+    // F-32-01: carry the persisted Job No / HBL-linkage flag through the edit round-trip —
+    // renderForm only generates a fresh job_no when the draft has none (create-mount path).
+    job_no:       s.job_no                || '',
+    has_hbl:      Boolean(s.do_no),
     job_file_no:  s.job_file_no           || '',
     product:      s.commodity_description || '',
     sales_rep:    s.sales_rep_id          || '',

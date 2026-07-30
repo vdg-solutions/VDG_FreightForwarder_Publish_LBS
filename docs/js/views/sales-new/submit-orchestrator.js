@@ -5,7 +5,10 @@ import { genShipmentRef, nextSeq } from '../../operators/shipment-ref-gen.js';
 import { buildShipment } from './shipment-builder.js';
 import { ensureShipmentStateAliases } from '../../util/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../operators/fsm-ingest.js';
+import { ensureRepCode } from '../../operators/rep-code-registry.js';
+import { assignJobNo } from '../../operators/job-no-gen.js';
 
+const KIND_USER = 'user';
 const WARN_PNL_LINES_MISSING = 'pnl_lines_empty';
 // AC-08: max number of CE keys to attempt deletion during commission overwrite
 const MAX_CE_CLEANUP = 20;
@@ -90,6 +93,39 @@ async function _loadStateAliasRows(repo) {
   return ensureShipmentStateAliases(repo);
 }
 
+async function _repCodeFor(repo, salesRepId) {
+  const userId = `user:${salesRepId}`;
+  const user = (await repo.get(KIND_USER, userId).catch(() => null)) || { id: userId, sales_code: null };
+  return ensureRepCode(user, repo);
+}
+
+// True if some OTHER shipment (shipment_ref !== excludeRef) already carries jobNo. Catches the
+// stale-draft-reuse case: a form draft persisted job_no before submit (mount-time preview),
+// the user abandons/reopens it after already submitting once, and resubmits — without this
+// check the second save would mint a duplicate legal doc number (F-32-01 QA rework).
+async function _jobNoTaken(repo, jobNo, excludeRef) {
+  const matches = await repo.list('shipment', (s) => s.job_no === jobNo && s.shipment_ref !== excludeRef);
+  return matches.length > 0;
+}
+
+// F-32-01: use the form-supplied Job No when present; on edit, preserve the shipment's prior
+// Job No (mirrors the state-preservation precedent above); otherwise generate one locally —
+// keeps submitForm/updateForm complete, independently-correct entry points for callers that
+// bypass the interactive form (e.g. batch import, tests). `ownRef` is the shipment_ref this
+// call is writing to (null for submitForm's brand-new ref) — excluded from the collision check
+// so re-saving a record never regenerates its own job_no.
+async function _resolveJobNo(state, repo, salesRepId, priorJobNo = null, ownRef = null) {
+  if (state.job_no) {
+    if (state.job_no === priorJobNo) return state.job_no; // own record, unchanged — no lookup needed
+    if (await _jobNoTaken(repo, state.job_no, ownRef)) {
+      return assignJobNo(repo, await _repCodeFor(repo, salesRepId));
+    }
+    return state.job_no;
+  }
+  if (priorJobNo) return priorJobNo;
+  return assignJobNo(repo, await _repCodeFor(repo, salesRepId));
+}
+
 // validate → buildShipment → repo.put → commission_entries → post ledger → return
 // { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every repo.put this
 // call made (compensating delete, not a real transaction — pm-decisions.md Q3).
@@ -103,7 +139,8 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   const ref = genShipmentRef(dir, Date.now(), seq);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
-  const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows });
+  const jobNo = await _resolveJobNo(state, repo, salesRepId);
+  const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
   shipment._ledger_version = INITIAL_LEDGER_VERSION;
   await repo.put('shipment', ref, shipment);
   await registerFsmEntity(ref, shipment.state); // F-19-88 AC-01: make it a first-class FSM entity
@@ -166,7 +203,8 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
   // rebuilding via buildShipment. An explicit edit-time state change (once the UI grows one)
   // still wins since state.state is checked first.
   const stateInput = { ...state, state: state.state ?? prior?.state };
-  const shipment = buildShipment(stateInput, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows });
+  const jobNo = await _resolveJobNo(state, repo, salesRepId, prior?.job_no, ref);
+  const shipment = buildShipment(stateInput, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
   shipment._ledger_version = (prior?._ledger_version || 0) + 1;
   await repo.put('shipment', ref, shipment);
   await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state

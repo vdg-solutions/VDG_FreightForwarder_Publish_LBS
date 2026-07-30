@@ -12,6 +12,8 @@ import { loadWasm } from '../wasm-loader.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
 import { safeMasterLoad } from '../util/master-load.js';
+import { ensureRepCode } from '../operators/rep-code-registry.js';
+import { assignJobNo } from '../operators/job-no-gen.js';
 
 const ROUTE_SHIPMENTS = '/shipments';  // batch success navigation target (F-15-57)
 
@@ -64,11 +66,14 @@ export async function render(root, opts = {}) {
   let customers  = [];
   let userConfig = null;
   let draft      = null;
+  let jobNo      = null;
 
   // F-19-29: customers list + personalization reads raced concurrently under one bound —
   // a slow/cold Drive fallback degrades to customers=[]/userConfig=null (both already
   // tolerated downstream in sales-new-form.js) instead of hanging render() past mountView's
   // outer RENDER_MOUNT_TIMEOUT_MS ceiling.
+  // F-32-01: Job No assignment folded into the SAME bounded block (not a second sequential
+  // await) so a stalled repo never doubles the wait — reuses rawUserConfig, no extra fetch.
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
       const [customerList, rawUserConfig, assignment] = await Promise.all([
@@ -81,15 +86,25 @@ export async function render(root, opts = {}) {
       if (assignment?.sales_pct != null) {
         resolvedUserConfig = { ...(rawUserConfig || {}), sales_share_pct: Number(assignment.sales_pct) };
       }
-      return { customerList, userConfig: resolvedUserConfig };
+      let generatedJobNo = null;
+      if (!isEdit && salesRepId) {
+        try {
+          const user = rawUserConfig || { id: `user:${salesRepId}`, sales_code: null };
+          const repCode = await ensureRepCode(user, repo);
+          generatedJobNo = await assignJobNo(repo, repCode);
+        } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
+      }
+      return { customerList, userConfig: resolvedUserConfig, jobNo: generatedJobNo };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
       customers  = loadRes.value.customerList;
       userConfig = loadRes.value.userConfig;
+      jobNo      = loadRes.value.jobNo;
     }
-    // !loadRes.ok (timeout or thrown): customers=[], userConfig=null — both already-tolerated
-    // defaults downstream (sales-new-form.js:20,30 — no contract change).
+    // !loadRes.ok (timeout or thrown): customers=[], userConfig=null, jobNo=null — all
+    // already-tolerated defaults downstream (sales-new-form.js — no contract change;
+    // submitForm's own fallback still assigns a Job No at save time).
   }
 
   if (isEdit) {
@@ -153,7 +168,7 @@ export async function render(root, opts = {}) {
 
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
-  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo });
+  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo });
 
   // NI file drop + save draft: create path only
   if (!isEdit) {

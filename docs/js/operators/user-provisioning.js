@@ -1,6 +1,7 @@
 // Operator: user lifecycle (invite, promote, disable, edit)
 
 import { activeWorkspaceName } from './workspace-registry.js';
+import { assignRepCode, assertRepCodeAssignable } from './rep-code-registry.js';
 
 const KIND_USER            = 'user';
 const GRANTS_FILE          = 'permission-grants.jsonl';
@@ -19,6 +20,7 @@ const EDITABLE_FIELDS = ['name', 'sales_code', 'commission_pct_override', 'dunni
 
 export async function inviteSales(email, name, driveApi, repo, workspaceRootId) {
   const prefix   = email.split('@')[0].toLowerCase();
+  const salesCode = await assignRepCode(repo);
   const usersId  = await _ensureFolder(driveApi, workspaceRootId, USERS_FOLDER);
   const existing = await driveApi.findFolder(usersId, prefix);
   const folder   = existing || await driveApi.createFolder(usersId, prefix);
@@ -52,6 +54,7 @@ export async function inviteSales(email, name, driveApi, repo, workspaceRootId) 
     folder_id:     folder.id,
     permission_id: perm.id,
     sales_share_pct: null,   // null = use workspace default (50)
+    sales_code:    salesCode, // F-32-01: 4-digit rep code, Job No REP_CODE namespace
   };
 
   if (repo) {
@@ -114,6 +117,10 @@ export async function disableUser(userId, driveApi, repo) {
 export async function editProfile(userId, fields, repo) {
   const user = await repo.get(KIND_USER, userId);
   if (!user) throw new Error(`User not found: ${userId}`);
+
+  if ('sales_code' in fields) {
+    await assertRepCodeAssignable(fields.sales_code, userId, repo);
+  }
 
   const patch = {};
   for (const key of EDITABLE_FIELDS) {

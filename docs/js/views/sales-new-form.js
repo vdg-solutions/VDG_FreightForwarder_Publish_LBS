@@ -18,7 +18,7 @@ const AUTOSAVE_DELAY_MS = 1500;
 
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
-          mode = 'create', fxRepo = null } = opts;
+          mode = 'create', fxRepo = null, jobNo = null } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || new Date().toISOString().slice(0, 10);
@@ -26,14 +26,22 @@ export async function renderForm(root, opts = {}) {
   const d = draft ? { ...draft } : {};
   if (!d.sales_rep && salesRepId) d.sales_rep = salesRepId;
 
+  // F-32-01 AC-01/AC-07: Job No is resolved by the caller (render()'s bounded personalization
+  // load, same PERSONALIZATION_LOAD_TIMEOUT_MS ceiling as customers/userConfig — F-19-29) and
+  // handed in via opts.jobNo. Edit mode carries the persisted job_no through the draft
+  // (shipmentToDraft) — never regenerated on re-open.
+  if (!isEdit && !d.job_no) d.job_no = jobNo;
+
   // Annotate draft with rule label for display
   if (!isManager && userConfig?.sales_share_pct != null) {
     d._rule_label = `${userConfig.sales_share_pct}% sales`;
     d.sales_share_pct_override = d.sales_share_pct_override ?? userConfig.sales_share_pct;
   }
 
-  const formTitle    = isEdit ? 'Edit P&L' : 'Create New PNL';
-  const formSubtitle = isEdit ? 'Update existing shipment' : 'Canonical 4-section form';
+  // F-32-01 QA rework DEFECT-03: keyed through t() — the ternary-assigned-to-const shape
+  // evaded the detector (only the interpolated ${formTitle}/${formSubtitle} vars were scanned).
+  const formTitle    = isEdit ? t('sales_new.form.edit_title') : t('sales_new.form.create_title');
+  const formSubtitle = isEdit ? t('sales_new.form.edit_subtitle') : t('sales_new.form.create_subtitle');
 
   root.innerHTML = `
     <div class="p-6 max-w-[1100px] mx-auto space-y-4">
@@ -86,11 +94,17 @@ export async function renderForm(root, opts = {}) {
 
 export function collectFormState(root) {
   const g = (name) => root.querySelector(`[name=${name}]`)?.value || '';
+  const jobNo  = g('job_no') || null;
+  const hasHbl = root.querySelector('[name=has_hbl]')?.checked || false;
   return {
     quote_id:         g('quote_id') || null,
     mode:             g('mode') || 'SEA',
     mbl:              g('mbl'),
-    hbl:              g('hbl'),
+    // F-32-01 QA rework DEFECT-01: hbl must be derived HERE, not only in buildShipment —
+    // validateNiForm's save-gate runs on this state before buildShipment ever sees it.
+    job_no:           jobNo,
+    has_hbl:          hasHbl,
+    hbl:              hasHbl ? jobNo : null,
     job_file_no:      g('job_file_no'),
     product:          g('product'),
     sales_rep:        g('sales_rep'),
