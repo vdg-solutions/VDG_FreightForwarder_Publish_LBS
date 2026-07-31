@@ -33,8 +33,6 @@ export const VIEWS = {
   '/manager/finance/commissions':    () => import('./views/manager/commissions.js'),
   '/manager/commission-rules':       () => import('./views/manager/commission-rules.js'),
   '/manager/exceptions':             () => import('./views/manager/exceptions.js'),
-  // E-14 batch-04
-  '/manager/onboarding':             () => import('./views/manager/onboarding.js'),
   // E-15
   '/manager/errors':             () => import('./views/manager/errors.js'),
   '/manager/dunning':            () => import('./views/manager/dunning.js'),

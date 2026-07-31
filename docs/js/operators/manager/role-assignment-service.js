@@ -1,5 +1,5 @@
 // RoleAssignmentService — cascades protection-table grants via Drive putPermission (F-24-03,
-// F-27-01). Pattern: ledger-reconciler.js / onboarding-orchestrator.js (DI over injected
+// F-27-01). Pattern: ledger-reconciler.js / workspace-bootstrap.js (DI over injected
 // driveApi, no direct implementations/* import). UserDriveRepo (F-24-02) is consumed through
 // its existing contract; the grant list now comes from the WASM permission_resolve_grants
 // bridge (protection_table.rs) instead of fetching role-drive-acl.json.

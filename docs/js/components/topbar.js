@@ -35,7 +35,7 @@ class VdgTopbar extends LitElement {
     _breadcrumb:               { type: Object, state: true },
     _managerMode:              { type: String, state: true },
     _authReconnect:            { type: Boolean, state: true },
-    _popupBlocked:             { type: Boolean, state: true },  // F-49-01 ad-blocker popup-blocked hint
+    _popupBlocked:             { type: Boolean, state: true },  _authPending: { type: Boolean, state: true }, // F-49-01 ad-blocker hint + F-50-01 calm pending
   };
 
   createRenderRoot() { return this; }
@@ -50,7 +50,7 @@ class VdgTopbar extends LitElement {
     this._retrying = false; this._retryStreak = 0; this._backoff429 = false;
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
-    this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false;
+    this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     this._onSyncComplete  = (e) => {
@@ -76,9 +76,9 @@ class VdgTopbar extends LitElement {
     this._onQuotaWarn     = () => { this._quotaWarn = true; };
     this._onOnline        = () => { this._online = true;  this._recomputeAndMaybeNotify(); };
     this._onOffline       = () => { this._online = false; this._recomputeAndMaybeNotify(); };
-    this._onNeedsReconnect = () => { this._authReconnect = true; }; this._onReconnected = () => { this._authReconnect = false; this._popupBlocked = false; };
+    this._onNeedsReconnect = () => { this._authReconnect = true; this._authPending = false; }; this._onReconnected = () => { this._authReconnect = false; this._popupBlocked = false; this._authPending = false; };
     // F-49-01 — restore failed (ad-blocker nulled window.open): actionable hint replaces the dead reconnect (still red/clickable)
-    this._onPopupBlocked = () => { this._popupBlocked = true; this._authReconnect = true; };
+    this._onPopupBlocked = () => { this._popupBlocked = true; this._authReconnect = true; }; this._onAuthPending = () => { this._authPending = true; }; // F-50-01 AC-05/09
   }
 
   _computeBreadcrumb() {
@@ -100,7 +100,7 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:sync-complete',       this._onSyncComplete);
     window.addEventListener('vdg:sync-error',          this._onSyncError);
     window.addEventListener('online', this._onOnline); window.addEventListener('offline', this._onOffline);
-    window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked);
+    window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.addEventListener('vdg:auth-refresh-pending', this._onAuthPending);
     document.addEventListener('click', this._onDocClick);
     this._stuckTickId = setInterval(() => this._recomputeAndMaybeNotify(), STUCK_RECHECK_INTERVAL_MS);
     this._computeBreadcrumb();
@@ -122,7 +122,7 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:sync-error',          this._onSyncError);
     window.removeEventListener('online', this._onOnline); window.removeEventListener('offline', this._onOffline);
     window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
-    window.removeEventListener('vdg:auth-reconnected',     this._onReconnected); window.removeEventListener('vdg:auth-popup-blocked', this._onPopupBlocked);
+    window.removeEventListener('vdg:auth-reconnected',     this._onReconnected); window.removeEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.removeEventListener('vdg:auth-refresh-pending', this._onAuthPending);
     document.removeEventListener('click', this._onDocClick);
     clearInterval(this._stuckTickId);
   }
@@ -271,7 +271,7 @@ class VdgTopbar extends LitElement {
     const state = computeChipState({
       pending: this._outboxCount, retrying: this._retrying, retryStreak: this._retryStreak,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
-      lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect,
+      lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t);
     const labelText = (state === 'red' && !this._online) ? t('topbar.sync.state.offline') : t('topbar.sync.label');

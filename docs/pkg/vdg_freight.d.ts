@@ -184,17 +184,6 @@ export function proposal_propose(input_json: string, author_role: string): any;
 export function proposal_reject(proposal_json: string, actor_role: string, reason: string): any;
 
 /**
- * Returns canonical sales-rep provisioning spec as JSON.
- */
-export function provision_sales_rep(email: string, role: string): any;
-
-/**
- * Returns canonical workspace provisioning spec as JSON.
- * Drive folder creation stays JS-side; WASM owns the schema.
- */
-export function provision_workspace(workspace_name: string): any;
-
-/**
  * Registers a shipment into the FSM state map — register-if-absent (AC-09
  * idempotency lives here, not in every JS caller). No-op if the entity
  * already has a stored state.
@@ -275,8 +264,6 @@ export interface InitOutput {
     readonly proposal_merge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly proposal_propose: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly provision_sales_rep: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly provision_workspace: (a: number, b: number, c: number) => void;
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly validate_airport_iata: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
@@ -297,8 +284,8 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly __wasm_bindgen_func_elem_6664: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_6677: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6650: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6663: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

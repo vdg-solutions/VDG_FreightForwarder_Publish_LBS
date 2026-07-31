@@ -14,11 +14,20 @@ const REFRESH_CHECK_INTERVAL_MS = 60 * 1000;    // check every 60s
 let _checkTimer = null;
 
 // AC-07 — pure decision, guards the AC-02 regression at the unit level: a failed silent
-// refresh is ALWAYS a reconnect intent, never sign-out/clear-keys.
-export const REFRESH_FAILURE_ACTION = Object.freeze({ RECONNECT: 'needs-reconnect' });
-export function refreshFailureAction() { return REFRESH_FAILURE_ACTION.RECONNECT; }
+// refresh is ALWAYS a reconnect intent, never sign-out/clear-keys. F-50-01 AC-01/02 — a
+// structural popup-blocked failure (expected on an idle-tab tick outside any user gesture) is
+// classified PENDING instead, so it never flips the chip red; every other failure — a genuine
+// GIS error, a bound timeout, a raw resp.error — is still RECONNECT, unchanged.
+export const REFRESH_FAILURE_ACTION = Object.freeze({ RECONNECT: 'needs-reconnect', PENDING: 'pending-gesture' });
+const POPUP_BLOCKED_PREFIX = 'popup-blocked:'; // matches the tag access-token.js sets on a blocked popup
+export function refreshFailureAction(errorMessage) {
+  return typeof errorMessage === 'string' && errorMessage.startsWith(POPUP_BLOCKED_PREFIX)
+    ? REFRESH_FAILURE_ACTION.PENDING
+    : REFRESH_FAILURE_ACTION.RECONNECT;
+}
 
 function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); }
+function _dispatchAuthPending()    { window.dispatchEvent(new CustomEvent('vdg:auth-refresh-pending')); } // F-50-01 AC-05
 
 // ── F-35-01 AC-05: gesture-anchored silent refresh ──────────────────────────────
 // Google's use-token-model guide: a popup-based requestAccessToken() needs a real user
@@ -43,8 +52,11 @@ function _onGestureRefresh() {
       // Invisible recovery — clear any red state a prior non-gesture scheduler attempt set.
       window.dispatchEvent(new CustomEvent('vdg:auth-reconnected'));
     })
-    .catch(() => {
-      if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+    .catch((err) => {
+      // F-50-01 AC-01/02/05 — classify even inside a real gesture: a structural popup-blocked
+      // failure stays calm instead of flashing red.
+      if (refreshFailureAction(err?.message) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+      else _dispatchAuthPending();
     });
 }
 
@@ -82,9 +94,11 @@ function _silentPrompt() {
       const accessExpMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
       restampIdTokenExp(accessExpMs);                             // extend id-token to new access exp
     })
-    .catch(() => {
-      // AC-02/AC-07: a real failure is a reconnect intent — never a blind purge.
-      if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+    .catch((err) => {
+      // AC-01/02/07: classify — an idle-tab popup-blocked failure is expected and structural,
+      // never a blind reconnect purge; a real failure still surfaces exactly as before.
+      if (refreshFailureAction(err?.message) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+      else _dispatchAuthPending();
     });
 }
 
@@ -105,12 +119,27 @@ function _check() {
   }
 }
 
+// F-50-01 AC-16 — refocus re-arm: recompute the due/arm decision ONLY, no GIS call/attempt.
+// Keeps the gesture hook current by the time the user's first real click/keydown lands after
+// switching back to a tab that missed a tick while hidden/blurred.
+function _recheckArmOnly() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  const expMs = _getExpMs();
+  if (expMs == null) return;
+  if ((expMs - Date.now()) < REFRESH_LEAD_MS) _armGestureRefresh(); else _disarmGestureRefresh();
+}
+const _hasDocument = () => typeof document !== 'undefined'; // node:test envs shim window, not document
+function _onIdTokenRefocus() { if (_hasDocument() && document.visibilityState === 'visible') _recheckArmOnly(); } // focus is always visible
+
 // ── public API ────────────────────────────────────────────────────────────────
 
 export function initTokenRefresh() {
   if (_checkTimer) return; // already running
   _check(); // immediate check on boot
   _checkTimer = setInterval(_check, REFRESH_CHECK_INTERVAL_MS);
+  if (_hasDocument()) document.addEventListener('visibilitychange', _onIdTokenRefocus);
+  window.addEventListener('focus', _onIdTokenRefocus);
 }
 
 export function stopTokenRefresh() {
@@ -118,14 +147,29 @@ export function stopTokenRefresh() {
     clearInterval(_checkTimer);
     _checkTimer = null;
   }
+  if (_hasDocument()) document.removeEventListener('visibilitychange', _onIdTokenRefocus);
+  window.removeEventListener('focus', _onIdTokenRefocus);
   _disarmGestureRefresh(); // never leak the click/keydown listener past the scheduler's life
 }
 
 // ── F-29-13: proactive access-token scheduler ───────────────────────────────────
 
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
+const ACCESS_TOKEN_ISSUED_KEY  = 'vdg.auth.access_token_issued'; // F-50-01 — mirrors access-token.js (redeclared literal, same style as ACCESS_TOKEN_EXP_KEY above)
 const ACCESS_REFRESH_LEAD_MS   = 5 * 60 * 1000;   // refresh access token 5min before exp
 const ACCESS_CHECK_INTERVAL_MS = 60 * 1000;
+
+// F-50-01 AC-14 — additive to accessRefreshDue (3-arg signature locked, do not touch). Fires
+// once a token is past half its lifetime, well before the final ACCESS_REFRESH_LEAD_MS window,
+// so an active user's token gets opportunistically armed instead of waiting for the alarming
+// last-minute stretch.
+export const EAGER_REFRESH_ELAPSED_FRACTION = 0.5;
+export function eagerRefreshDue(issuedAtMs, expMs, now) {
+  if (!issuedAtMs || !expMs) return false;    // no mint time recorded yet → not due
+  const lifetimeMs = expMs - issuedAtMs;
+  if (lifetimeMs <= 0) return false;
+  return (now - issuedAtMs) >= lifetimeMs * EAGER_REFRESH_ELAPSED_FRACTION;
+}
 
 let _accessTimer = null;
 
@@ -136,9 +180,14 @@ export function accessRefreshDue(expMs, now, leadMs = ACCESS_REFRESH_LEAD_MS) {
 }
 
 function _accessCheck() {
-  const expMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
-  if (!accessRefreshDue(expMs, Date.now())) { _disarmGestureRefresh(); return; } // out of window
-  _armGestureRefresh();                     // AC-05 — arm the invisible gesture-anchored recovery
+  const expMs    = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+  const issuedMs = parseInt(localStorage.getItem(ACCESS_TOKEN_ISSUED_KEY) || '0', 10);
+  const now      = Date.now();
+  const due      = accessRefreshDue(expMs, now);
+  // AC-15 — eager-due also arms, opportunistically, well before the final lead window.
+  if (!due && !eagerRefreshDue(issuedMs, expMs, now)) { _disarmGestureRefresh(); return; } // comfortably fresh
+  _armGestureRefresh();                     // AC-05/AC-15 — arm the invisible gesture-anchored recovery
+  if (!due) return;                         // eager-only tick just arms — no out-of-gesture attempt yet
   // AC-01: routed through the shared single-flight so a near-simultaneous id-token scheduler
   // tick shares this same refresh instead of firing a second GIS request.
   sharedSilentRefresh()
@@ -146,11 +195,23 @@ function _accessCheck() {
       const newExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
       restampIdTokenExp(newExp);            // keep synthetic id-token session in lockstep
     })
-    .catch(() => {
-      // AC-02/AC-07: a real failure is a reconnect intent — never a blind purge.
-      if (refreshFailureAction() === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+    .catch((err) => {
+      // AC-01/02/07: classify — an idle-tab popup-blocked failure is expected and structural,
+      // never a blind reconnect purge; a real failure still surfaces exactly as before.
+      if (refreshFailureAction(err?.message) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+      else _dispatchAuthPending();
     });
 }
+
+// F-50-01 AC-16 — refocus re-arm for the access-token scheduler, arm-only (no GIS call/attempt).
+function _accessRecheckArmOnly() {
+  const expMs    = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+  const issuedMs = parseInt(localStorage.getItem(ACCESS_TOKEN_ISSUED_KEY) || '0', 10);
+  const now      = Date.now();
+  if (accessRefreshDue(expMs, now) || eagerRefreshDue(issuedMs, expMs, now)) _armGestureRefresh();
+  else _disarmGestureRefresh();
+}
+function _onAccessTokenRefocus() { if (_hasDocument() && document.visibilityState === 'visible') _accessRecheckArmOnly(); } // focus is always visible
 
 // AC-03/AC-06 — interactive reconnect: prompt:'consent' grant re-hydrates the FULL session
 // (token + scope + identity + role), the same hydrate as sign-in — not just the access token.
@@ -171,6 +232,8 @@ export function initAccessTokenRefresh() {
   window.addEventListener('vdg:auth-reconnect-request', _onReconnectRequest);
   _accessCheck();                                  // immediate check on boot
   _accessTimer = setInterval(_accessCheck, ACCESS_CHECK_INTERVAL_MS);
+  if (_hasDocument()) document.addEventListener('visibilitychange', _onAccessTokenRefocus);
+  window.addEventListener('focus', _onAccessTokenRefocus);
 }
 
 export function stopAccessTokenRefresh() {
@@ -179,5 +242,7 @@ export function stopAccessTokenRefresh() {
     _accessTimer = null;
   }
   window.removeEventListener('vdg:auth-reconnect-request', _onReconnectRequest);
+  if (_hasDocument()) document.removeEventListener('visibilitychange', _onAccessTokenRefocus);
+  window.removeEventListener('focus', _onAccessTokenRefocus);
   _disarmGestureRefresh(); // never leak the click/keydown listener past the scheduler's life
 }

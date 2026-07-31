@@ -7,6 +7,7 @@ import { ensureWindowOpen } from './window-open-guard.js';
 const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
+export const ACCESS_TOKEN_ISSUED_KEY = 'vdg.auth.access_token_issued'; // F-50-01 — mint time, feeds eagerRefreshDue
 const TOKEN_EXPIRY_BUFFER_MS   = 60_000; // refresh 60s before expiry
 const SILENT_REFRESH_TIMEOUT_MS = 10_000;   // AC-03 — GIS prompt:'' can no-op forever; bound it
 const REFRESH_NEGATIVE_CACHE_MS = 30_000;   // AC-03 — a known-expired session fast-fails this long instead of re-firing GIS
@@ -81,6 +82,7 @@ function _requestAccessToken(prompt, timeoutMs, { returnResp = false } = {}) {
         const expMs = Date.now() + (resp.expires_in || 3600) * 1000;
         localStorage.setItem(ACCESS_TOKEN_KEY,     resp.access_token);
         localStorage.setItem(ACCESS_TOKEN_EXP_KEY, String(expMs));
+        localStorage.setItem(ACCESS_TOKEN_ISSUED_KEY, String(Date.now())); // F-50-01 AC-14/15 — mint time for eagerRefreshDue
         done(resolve, returnResp ? resp : resp.access_token);
       },
       // AC-02/AC-04 — a definitive GIS error (popup blocked or otherwise) settles the promise

@@ -9,18 +9,20 @@ export const SYNC_RETRY_PROMOTE_THRESHOLD   = 2;
 
 // Color → Tailwind class map (used by AC-01/03 introspection)
 export const DOT_CLASS = {
-  green:  'bg-emerald-500',
-  yellow: 'bg-amber-400',
-  orange: 'bg-orange-500',
-  red:    'bg-red-500',
+  green:   'bg-emerald-500',
+  yellow:  'bg-amber-400',
+  orange:  'bg-orange-500',
+  red:     'bg-red-500',
+  pending: 'bg-slate-400', // F-50-01 — calm, distinct from red: expected structural wait, not a failure
 };
 
 // State color → i18n semantic label key (AC-07)
 export const STATE_TO_LABEL_KEY = {
-  green:  'healthy',
-  yellow: 'flushing',
-  orange: 'retrying',
-  red:    'offline',
+  green:   'healthy',
+  yellow:  'flushing',
+  orange:  'retrying',
+  red:     'offline',
+  pending: 'auth_pending', // F-50-01 AC-10 — distinct key, never reuses offline/healthy
 };
 
 // AC-07 — aria-label builder; pure, testable without DOM
@@ -32,11 +34,14 @@ export function buildAriaLabel(state, outboxCount, t) {
   return `${t('topbar.sync.label')} — ${t(`topbar.sync.state.${key}`)}${suffix}`;
 }
 
-// AC-03 — 4-state color machine; clock injected via `now`
-export function computeChipState({ pending, retrying, retryStreak, backoff429, offline, signedOut, lastSyncMs, now, authReconnect }) {
+// AC-03 — 4-state color machine; clock injected via `now`. F-50-01 adds a 5th, calm 'pending'
+// state (AC-06/07/08): checked after the hard-red branches (a genuine problem always outranks
+// it) and before backoff429/retrying (the auth-health signal isn't buried under sync noise).
+export function computeChipState({ pending, retrying, retryStreak, backoff429, offline, signedOut, lastSyncMs, now, authReconnect, authPending }) {
   if (authReconnect) return 'red';          // F-29-13 AC-05 — genuine reconnect need
   if (offline || signedOut) return 'red';
   if (pending > 0 && lastSyncMs > 0 && (now - lastSyncMs) > SYNC_STUCK_NOTIFY_MS) return 'red';
+  if (authPending) return 'pending';        // F-50-01 AC-06 — expected structural popup-blocked wait
   if (backoff429) return 'orange';
   if (retrying) return retryStreak >= SYNC_RETRY_PROMOTE_THRESHOLD ? 'orange' : 'yellow';
   if (pending > 0 && lastSyncMs === 0) return 'yellow'; // F-19-80 D-B — never-synced baseline with pending backlog must not be green
@@ -73,6 +78,7 @@ export function buildChipTitle({ state, ago, lastError, t, user, online, authRec
   if (state === 'red' && authReconnect)   return t('topbar.sync.tooltip.reconnect');   // F-29-13 AC-05
   if (state === 'red' && !user)   return t('topbar.sync.tooltip.click_to_signin');
   if (state === 'red' && !online) return t('topbar.sync.tooltip.waiting_network');
+  if (state === 'pending')        return t('topbar.sync.tooltip.auth_pending'); // F-50-01 AC-10 — calm, no "hết hạn"/expired wording
   const stateKey  = STATE_TO_LABEL_KEY[state] ?? 'healthy';
   const stateText = t(`topbar.sync.state.${stateKey}`);
   if (state === 'green') {
@@ -129,6 +135,7 @@ export const CHIP_ACTION = { NOOP:'noop', SIGNIN:'signin', WAITING_NETWORK:'wait
 // AC-06 — pure click decision; reconnect wins over signin/offline when authReconnect is set
 export function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === 'yellow')                     return CHIP_ACTION.NOOP;
+  if (state === 'pending')                    return CHIP_ACTION.NOOP; // F-50-01 AC-12 — click isn't swallowed: the window-level gesture listener still fires independently
   if (state === 'red' && authReconnect)       return CHIP_ACTION.RECONNECT;
   if (state === 'red' && !user)               return CHIP_ACTION.SIGNIN;
   if (state === 'red' && !online)             return CHIP_ACTION.WAITING_NETWORK;
