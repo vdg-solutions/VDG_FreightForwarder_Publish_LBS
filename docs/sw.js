@@ -2,7 +2,7 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v577fbf2';
+const STATIC_CACHE     = 'vdg-static-v328cb14';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 
@@ -52,6 +52,7 @@ const BOOT_GRAPH = [
   'js/cache/idb-cache.js',
   'js/cache/outbox-count.js',
   'js/cache/outbox-dedupe.js',
+  'js/cache/seed-migrator.js',
   'js/components/breadcrumb-resolver.js',
   'js/components/cmd-palette.js',
   'js/components/cutoff-timer.js',
@@ -94,6 +95,7 @@ const BOOT_GRAPH = [
   'js/util/mount-view.js',
   'js/util/safe-await.js',
   'js/util/sales-rep-i18n.js',
+  'js/util/shipment-state-aliases.js',
   'js/util/shipment-state-resolver.js',
   'js/util/status-i18n.js',
   'js/util/view-fallback.js',
