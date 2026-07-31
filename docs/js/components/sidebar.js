@@ -4,7 +4,8 @@ import { isManager } from '../auth/auth-gate.js';
 import { t } from '../i18n/index.js';
 import { filterSidebarItems, currentUserRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
 import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed,
-         toggleCollapsed, isGroupCollapsed, activeGroupKey } from './sidebar-collapse-state.js';
+         toggleCollapsed, isGroupCollapsed, activeGroupKey,
+         DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
 
 const DRAWER_BREAKPOINT_PX = 768;
 const V1_BUTTON_COUNT      = 5;   // AC-01/02 invariant
@@ -122,10 +123,11 @@ class VdgSidebar extends LitElement {
   `;
 
   static properties = {
-    activeRoute: { type: String, state: true },
-    _drawerOpen: { type: Boolean, state: true },
-    _mobile:     { type: Boolean, state: true },
-    _collapsed:  { state: true },   // Set<string> of collapsed group keys
+    activeRoute:       { type: String, state: true },
+    _drawerOpen:       { type: Boolean, state: true },
+    _mobile:           { type: Boolean, state: true },
+    _collapsed:        { state: true },   // Set<string> of collapsed group keys
+    _desktopCollapsed: { type: Boolean, state: true },   // F-43-01 AC-04
   };
 
   createRenderRoot() { return this; }
@@ -136,10 +138,16 @@ class VdgSidebar extends LitElement {
     this._drawerOpen = false;
     this._mobile     = window.innerWidth < DRAWER_BREAKPOINT_PX;
     this._collapsed  = new Set();
+    this._desktopCollapsed = false;
 
     this._onNav           = (e) => { this.activeRoute = e.detail.route; if (this._mobile) this._drawerOpen = false; this.requestUpdate(); };
     this._onBreakpt       = (e) => { this._mobile = e.detail.mobile; if (!this._mobile) this._drawerOpen = false; };
-    this._onToggle        = () => { this._drawerOpen = !this._drawerOpen; };
+    this._onToggle         = () => {
+      if (this._mobile) { this._drawerOpen = !this._drawerOpen; return; }
+      this._desktopCollapsed = !this._desktopCollapsed;
+      try { localStorage.setItem(DESKTOP_COLLAPSED_KEY, serializeDesktopCollapsed(this._desktopCollapsed)); }
+      catch { /* private-mode/quota: keep in-memory state, pref just won't persist */ }
+    };
     this._onBackdrop      = () => { this._drawerOpen = false; };
     this._onLocaleChanged = () => this.requestUpdate();
     this._onGroupToggle   = (key) => {
@@ -158,6 +166,8 @@ class VdgSidebar extends LitElement {
     window.addEventListener(LOCALE_CHANGE_EVENT,      this._onLocaleChanged);
     try { this._collapsed = parseCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY)); }
     catch { /* storage disabled: default all-expanded */ this._collapsed = new Set(); }
+    try { this._desktopCollapsed = parseDesktopCollapsed(localStorage.getItem(DESKTOP_COLLAPSED_KEY)); }
+    catch { /* storage disabled: default expanded */ this._desktopCollapsed = false; }
   }
 
   disconnectedCallback() {
@@ -245,7 +255,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 328cb14">v0.1.64</span>
+        <span class="font-mono whitespace-nowrap" title="build ae1b3ed">v0.1.65</span>
       </div>
     `;
   }
@@ -263,6 +273,7 @@ class VdgSidebar extends LitElement {
             <div class="flex-1 bg-black/40" @click="${this._onBackdrop}"></div>
           </div>` : ''}`;
     }
+    if (this._desktopCollapsed) return html``; // F-43-01 AC-04: same "render nothing" idiom as the mobile-closed branch
     return html`
       <aside class="w-60 shrink-0 h-screen bg-slate-900 text-slate-100 flex flex-col">
         ${this._renderNav()}

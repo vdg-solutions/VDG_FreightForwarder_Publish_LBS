@@ -260,8 +260,8 @@ export async function render(root) {
     const panel = document.createElement('vdg-detail-panel');
     panel.id = 'detail-panel';
     panel.setAttribute('hidden', '');
-    panel.className = `fixed right-0 bg-white shadow-xl flex flex-col md:w-[${PANEL_WIDTH_PX}px] w-full transition-transform duration-[${SLIDE_DURATION_MS}ms] ease-out translate-x-full`;
-    panel.style.cssText = `top:${NAV_HEIGHT_REM}rem;height:calc(100vh - ${NAV_HEIGHT_REM}rem);z-index:${Z_PANEL}`;
+    panel.className = 'fixed right-0 bg-white shadow-xl flex flex-col translate-x-full';
+    panel.style.cssText = `top:${NAV_HEIGHT_REM}rem;height:calc(100vh - ${NAV_HEIGHT_REM}rem);z-index:${Z_PANEL};width:${PANEL_WIDTH_PX}px;max-width:100%;transition:transform ${SLIDE_DURATION_MS}ms ease-out`;
     document.body.appendChild(panel);
   }
 

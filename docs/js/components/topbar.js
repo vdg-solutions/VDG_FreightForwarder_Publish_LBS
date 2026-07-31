@@ -279,13 +279,12 @@ class VdgTopbar extends LitElement {
       ${this._renderSwBanner()}
       <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
         <div class="flex items-center gap-3">
-          ${this._mobile ? html`
-            <button @click="${() => this._handleHamburger()}" aria-label="${t('topbar.aria.open_menu')}"
-                    class="w-11 h-11 border-0 box-border flex items-center justify-center rounded-md text-slate-600 hover:bg-slate-100">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-              </svg>
-            </button>` : ''}
+          <button @click="${() => this._handleHamburger()}" aria-label="${t('topbar.aria.open_menu')}"
+                  class="w-11 h-11 border-0 box-border flex items-center justify-center rounded-md text-slate-600 hover:bg-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
           <div>
             <span class="text-xs text-slate-400">${this._breadcrumb.group}</span>
             <span class="mx-1 text-slate-300">/</span>

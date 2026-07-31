@@ -38,3 +38,14 @@ export function activeGroupKey(items, activeRoute) {
   const match = items.find((i) => i.route === activeRoute);
   return match ? match.group : null;
 }
+
+// F-43-01 AC-04: desktop rail collapse is a single boolean flag, unlike the per-group Set above.
+export const DESKTOP_COLLAPSED_KEY = 'vdg.sidebar.desktop_collapsed';
+
+export function parseDesktopCollapsed(raw) {
+  return raw === 'true';
+}
+
+export function serializeDesktopCollapsed(collapsed) {
+  return String(!!collapsed);
+}
