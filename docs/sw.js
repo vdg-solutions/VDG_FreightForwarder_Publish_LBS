@@ -2,7 +2,7 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vae1b3ed';
+const STATIC_CACHE     = 'vdg-static-vad50d3d';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 
@@ -43,12 +43,14 @@ const BOOT_GRAPH = [
   'js/auth/drive-folder-dedup.js',
   'js/auth/google-oauth.js',
   'js/auth/token-refresh.js',
+  'js/auth/window-open-guard.js',
   'js/auth/workspace-root.js',
   'js/boot/license-boot-gate.js',
   'js/boot/repo-bootstrap.js',
   'js/boot/repo-diag.js',
   'js/boot/repo-init-fallback.js',
   'js/boot/repo-init-steps.js',
+  'js/cache/background-pull.js',
   'js/cache/idb-cache.js',
   'js/cache/outbox-count.js',
   'js/cache/outbox-dedupe.js',
@@ -151,15 +153,11 @@ self.addEventListener('install', (ev) => {
       )
     )
   );
-  // Auto-activate a freshly-deployed build. The client reloads once on controllerchange
-  // (guarded, only when a controller already existed) so users get updates without a
-  // manual cache clear.
-  self.skipWaiting();
+  // No auto-skipWaiting: the new worker parks in `waiting` when a controller already
+  // exists, so the client can prompt the user instead of forcing a reload mid-edit.
 });
 
 // ── activate ──────────────────────────────────────────────────────────────────
-
-let _updateNotified = false;
 
 self.addEventListener('activate', (ev) => {
   ev.waitUntil(
@@ -169,14 +167,15 @@ self.addEventListener('activate', (ev) => {
         keys.filter((k) => !validCaches.includes(k)).map((k) => caches.delete(k))
       );
       await self.clients.claim();
-
-      if (!_updateNotified) {
-        _updateNotified = true;
-        const clients = await self.clients.matchAll({ type: 'window' });
-        clients.forEach((c) => c.postMessage({ type: 'VDG_SW_UPDATE_AVAILABLE' }));
-      }
     })
   );
+});
+
+// ── message ───────────────────────────────────────────────────────────────────
+
+// Client-triggered activation: sent only after the user clicks the update banner.
+self.addEventListener('message', (ev) => {
+  if (ev.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 // ── fetch ─────────────────────────────────────────────────────────────────────

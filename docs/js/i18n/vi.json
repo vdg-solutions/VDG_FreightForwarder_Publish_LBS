@@ -499,6 +499,7 @@
   "topbar.sync.tooltip.lastError":      "Lỗi gần nhất: {reason}",
   "topbar.sync.tooltip.max_retries_reason": "đã hết số lần thử lại",
   "topbar.sync.tooltip.reconnect": "Kết nối Google Drive đã hết hạn — bấm để kết nối lại",
+  "auth.popup_blocked": "Trình chặn quảng cáo đang chặn cửa sổ đăng nhập Google — hãy cho phép trang này (hoặc tắt trình chặn cho trang), rồi bấm để kết nối lại",
   "topbar.sync.toast.schema_drift_drop": "1 mục đồng bộ bị xóa do dữ liệu cũ (schema đã đổi)",
   "topbar.sync.state.healthy":          "tốt",
   "topbar.sync.state.flushing":         "đang đồng bộ",
@@ -1756,7 +1757,6 @@
 
   "notifications.empty":                "Không có thông báo",
   "notifications.types_header":         "Loại thông báo",
-  "notifications.digest_label":         "Email tổng hợp hàng ngày",
   "notifications.title":                "Thông báo",
   "notifications.mark_all_read":        "Đánh dấu đã đọc tất cả",
   "notifications.aria.unread":          "Chưa đọc",

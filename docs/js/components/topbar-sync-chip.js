@@ -68,7 +68,8 @@ export function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNoti
 
 // AC-01 — native tooltip text; pure, no DOM
 // user/online added for red-signedOut and red-offline branch (F-19-19)
-export function buildChipTitle({ state, ago, lastError, t, user, online, authReconnect }) {
+export function buildChipTitle({ state, ago, lastError, t, user, online, authReconnect, popupBlocked }) {
+  if (state === 'red' && popupBlocked)    return t('auth.popup_blocked');              // F-49-01 — ad-blocker nulled window.open
   if (state === 'red' && authReconnect)   return t('topbar.sync.tooltip.reconnect');   // F-29-13 AC-05
   if (state === 'red' && !user)   return t('topbar.sync.tooltip.click_to_signin');
   if (state === 'red' && !online) return t('topbar.sync.tooltip.waiting_network');
@@ -90,14 +91,14 @@ export function buildChipTitle({ state, ago, lastError, t, user, online, authRec
 // `html` from lit is passed by the caller so this file needs no CDN import.
 export function renderSyncChip({
   html, state, pending, lastSyncMs, now, online,
-  ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect,
+  ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect, popupBlocked,
 }) {
   const dotClass   = DOT_CLASS[state] ?? DOT_CLASS.green;
   const isFlushing = state === 'yellow';
   const hasPending = pending > 0;
   const pulseClass = hasPending ? 'animate-pulse' : '';
   const ago        = formatLastSyncAgo(lastSyncMs, now);
-  const titleText  = buildChipTitle({ state, ago, lastError, t, user, online, authReconnect });
+  const titleText  = buildChipTitle({ state, ago, lastError, t, user, online, authReconnect, popupBlocked });
 
   return html`
     <button type="button"

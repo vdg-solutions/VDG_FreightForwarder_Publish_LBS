@@ -35,6 +35,7 @@ class VdgTopbar extends LitElement {
     _breadcrumb:               { type: Object, state: true },
     _managerMode:              { type: String, state: true },
     _authReconnect:            { type: Boolean, state: true },
+    _popupBlocked:             { type: Boolean, state: true },  // F-49-01 ad-blocker popup-blocked hint
   };
 
   createRenderRoot() { return this; }
@@ -49,7 +50,7 @@ class VdgTopbar extends LitElement {
     this._retrying = false; this._retryStreak = 0; this._backoff429 = false;
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
-    this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false;
+    this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     this._onSyncComplete  = (e) => {
@@ -75,7 +76,9 @@ class VdgTopbar extends LitElement {
     this._onQuotaWarn     = () => { this._quotaWarn = true; };
     this._onOnline        = () => { this._online = true;  this._recomputeAndMaybeNotify(); };
     this._onOffline       = () => { this._online = false; this._recomputeAndMaybeNotify(); };
-    this._onNeedsReconnect = () => { this._authReconnect = true; }; this._onReconnected = () => { this._authReconnect = false; };
+    this._onNeedsReconnect = () => { this._authReconnect = true; }; this._onReconnected = () => { this._authReconnect = false; this._popupBlocked = false; };
+    // F-49-01 — restore failed (ad-blocker nulled window.open): actionable hint replaces the dead reconnect (still red/clickable)
+    this._onPopupBlocked = () => { this._popupBlocked = true; this._authReconnect = true; };
   }
 
   _computeBreadcrumb() {
@@ -96,9 +99,8 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:quota-warning',       this._onQuotaWarn);
     window.addEventListener('vdg:sync-complete',       this._onSyncComplete);
     window.addEventListener('vdg:sync-error',          this._onSyncError);
-    window.addEventListener('online',  this._onOnline);
-    window.addEventListener('offline', this._onOffline);
-    window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected);
+    window.addEventListener('online', this._onOnline); window.addEventListener('offline', this._onOffline);
+    window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked);
     document.addEventListener('click', this._onDocClick);
     this._stuckTickId = setInterval(() => this._recomputeAndMaybeNotify(), STUCK_RECHECK_INTERVAL_MS);
     this._computeBreadcrumb();
@@ -118,10 +120,9 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:quota-warning',       this._onQuotaWarn);
     window.removeEventListener('vdg:sync-complete',       this._onSyncComplete);
     window.removeEventListener('vdg:sync-error',          this._onSyncError);
-    window.removeEventListener('online',  this._onOnline);
-    window.removeEventListener('offline', this._onOffline);
+    window.removeEventListener('online', this._onOnline); window.removeEventListener('offline', this._onOffline);
     window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
-    window.removeEventListener('vdg:auth-reconnected',     this._onReconnected);
+    window.removeEventListener('vdg:auth-reconnected',     this._onReconnected); window.removeEventListener('vdg:auth-popup-blocked', this._onPopupBlocked);
     document.removeEventListener('click', this._onDocClick);
     clearInterval(this._stuckTickId);
   }
@@ -141,7 +142,7 @@ class VdgTopbar extends LitElement {
   }
 
   _handleSignOut() { window.__vdg_auth?.signOut?.(); location.reload(); }
-  _handleReloadForUpdate() { window.location.reload(); } // SW skipWaiting()s on install — no waiting worker to message
+  _handleReloadForUpdate() { window.dispatchEvent(new CustomEvent('vdg:sw-update-accept')); }
   _dismissSwBanner() { sessionStorage.setItem(SW_DISMISS_KEY, '1'); this._swUpdate = false; }
   _handleBellClick() {
     window.dispatchEvent(new CustomEvent('vdg:open-notif-drawer'));
@@ -297,7 +298,7 @@ class VdgTopbar extends LitElement {
           ${renderSyncChip({
             html, state, pending: this._outboxCount, lastSyncMs: this._lastSyncMs, now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
-            authReconnect: this._authReconnect,
+            authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
             onSyncNow: () => this._onChipClick(state),
           })}
           ${isManager() && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}

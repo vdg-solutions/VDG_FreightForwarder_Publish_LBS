@@ -2,6 +2,8 @@
 // 350-line cap). Re-exported through drive-api.js so every existing importer (token-refresh.js,
 // f-29-13-bounded-silent-refresh.test.mjs) keeps resolving unchanged.
 
+import { ensureWindowOpen } from './window-open-guard.js';
+
 const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
@@ -88,6 +90,14 @@ function _requestAccessToken(prompt, timeoutMs, { returnResp = false } = {}) {
         done(reject, new Error(_isPopupBlockedError(type) ? `popup-blocked:${type}` : `gis-error:${type}`));
       },
     });
+    // F-49-01 — an ad-blocker can null window.open; GIS requestAccessToken() calls it internally
+    // and throws synchronously (permanent reconnect chip). Restore a native window.open first; if
+    // it can't be restored, surface a distinct popup-blocked state instead of a dead refresh.
+    if (!ensureWindowOpen()) {
+      window.dispatchEvent(new CustomEvent('vdg:auth-popup-blocked'));
+      done(reject, new Error('popup-blocked:window-open-unavailable'));
+      return;
+    }
     client.requestAccessToken({ prompt });
   });
 }

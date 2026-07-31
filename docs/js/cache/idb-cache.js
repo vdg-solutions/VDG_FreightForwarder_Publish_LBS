@@ -3,6 +3,7 @@
 import { EntityRepo } from '../abstractions/entity-repo.js';
 import { OUTBOX_INDEX_KIND_ID_OP, idbUpsertOutboxRecord, dedupeOutboxStore, purgeStaleFailedOutboxRows } from './outbox-dedupe.js';
 import { emitOutboxChanged } from './outbox-count.js';
+import { runBackgroundPull } from './background-pull.js';
 
 const IDB_DB_NAME         = 'vdg-workspace';
 const IDB_DB_VERSION      = 6;  // v6: ensure entities indexes exist
@@ -259,23 +260,23 @@ export class CachedEntityRepo extends EntityRepo {
 
   async _backgroundPull(kind) {
     if (this._inflightPulls.has(kind)) return this._inflightPulls.get(kind);
-    const promise = (async () => {
-      try {
-        const driveRows = await this._drive.list(kind, null);
+    const promise = runBackgroundPull(kind, {
+      driveList: (k) => this._drive.list(k, null),
+      readCached: async (k) => {
+        if (!this._db) return new Map();
+        return new Map((await idbGetAllByIndex(this._db, STORE_ENTITIES, 'by_kind', k)).map((r) => [r.id, _restoreDomainKind(r)]));
+      },
+      writeCached: async (k, r) => {
         if (!this._db) return;
-        for (const r of driveRows) {
-          const domainKind = r.kind;
-          const idbRec = { ...r, kind };
-          if (domainKind !== undefined && domainKind !== kind) idbRec._domain_kind = domainKind;
-          await idbPut(this._db, STORE_ENTITIES, idbRec);
-        }
+        await idbPut(this._db, STORE_ENTITIES, { ...r, kind: k, ...(r.kind !== undefined && r.kind !== k ? { _domain_kind: r.kind } : {}) });
+      },
+      writeMeta: async (k) => {
+        if (!this._db) return;
         const meta = await idbGet(this._db, STORE_META, META_SYNC_KEY) || { key: META_SYNC_KEY };
-        await idbPut(this._db, STORE_META, { ...meta, [`last_full_pull_ms_${kind}`]: Date.now() });
-        window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind } }));
-      } finally {
-        this._inflightPulls.delete(kind);
-      }
-    })();
+        await idbPut(this._db, STORE_META, { ...meta, [`last_full_pull_ms_${k}`]: Date.now() });
+      },
+      dispatchChanged: (k) => window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: k } })),
+    }).finally(() => this._inflightPulls.delete(kind));
     this._inflightPulls.set(kind, promise);
     return promise;
   }

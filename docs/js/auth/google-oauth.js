@@ -1,6 +1,8 @@
 // F-13-P2 — Google Identity Services wrapper
 // F-15-20 merged into F-15-19 R3: single OAuth2 popup grants identity + drive.file scope
 
+import { ensureWindowOpen } from './window-open-guard.js';
+
 const CLIENT_ID            = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com';
 const TOKEN_KEY            = 'vdg.auth.id_token';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
@@ -179,6 +181,12 @@ export function requestDriveScopeGrant(onGranted, onDenied) {
     // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
     error_callback: (err) => onDenied(new Error(_gisErrorMessage(err))),
   });
+  // F-49-01 — restore a native window.open the ad-blocker may have nulled before GIS uses it.
+  if (!ensureWindowOpen()) {
+    window.dispatchEvent(new CustomEvent('vdg:auth-popup-blocked'));
+    onDenied(new Error('popup-blocked:window-open-unavailable'));
+    return;
+  }
   client.requestAccessToken({ prompt: 'consent' });
 }
 
@@ -245,6 +253,12 @@ export function renderSignInButton(container) {
         window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: _gisErrorMessage(err) }));
       },
     });
+    // F-49-01 — restore a native window.open the ad-blocker may have nulled before GIS uses it.
+    if (!ensureWindowOpen()) {
+      window.dispatchEvent(new CustomEvent('vdg:auth-popup-blocked'));
+      window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: 'popup-blocked:window-open-unavailable' }));
+      return;
+    }
     client.requestAccessToken({ prompt: 'consent' });
   });
 }

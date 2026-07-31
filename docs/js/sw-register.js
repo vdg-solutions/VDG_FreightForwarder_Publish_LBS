@@ -4,34 +4,48 @@
 // under /js/ scopes to /js/ and never controls the page (controller stays null). Exactly one
 // register() call in the app — app.js and index.html defer to this.
 
+import { shouldPromptUpdate, consumeReloadGuard, rearmReloadGuard } from './util/sw-update-guard.js';
+
 const UPDATE_DEBOUNCE_MS = 60_000;   // don't spam update() on rapid tab switches
 
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
-  // Auto-reload once when a freshly-activated SW takes control — only if a controller
-  // already existed (skip first-ever load so a fresh visit isn't reloaded). Guarded
-  // against reload loops.
-  if (navigator.serviceWorker.controller) {
-    let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloading) return;
-      reloading = true;
-      location.reload();
-    });
-  }
-
-  navigator.serviceWorker.addEventListener('message', (e) => {
-    if (e.data?.type === 'VDG_SW_UPDATE_AVAILABLE')
-      window.dispatchEvent(new CustomEvent('vdg:sw-update-available'));
-  });
-
   // Root-relative 'sw.js' (against document.baseURI) → served from the base path, so scope
   // defaults to the base path and covers the document. No explicit scope: the script location
   // sets it correctly; a hand-built scope would risk being wrong under the deploy subpath.
   navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href)
-    .then(_wireUpdateChecks)
+    .then((reg) => { _wireUpdateChecks(reg); _wireUpdatePrompt(reg); })
     .catch((err) => console.warn('[SW] registration failed:', err)); // DEV
+}
+
+// User-triggered update prompt: detect a genuine waiting worker (not first install), let
+// the banner ask the user, and reload once the new worker actually takes control. Never
+// auto-skipWaiting — SKIP_WAITING is sent only from the user's explicit banner click.
+function _wireUpdatePrompt(reg) {
+  const notify = () => {
+    if (shouldPromptUpdate({ hasWaiting: !!reg.waiting, hasController: !!navigator.serviceWorker.controller })) {
+      rearmReloadGuard(sessionStorage);          // a fresh update cycle — allow one more reload
+      window.dispatchEvent(new CustomEvent('vdg:sw-update-available'));
+    }
+  };
+
+  if (reg.waiting) notify();                     // a worker was already waiting when we registered
+  reg.addEventListener('updatefound', () => {
+    const installing = reg.installing;
+    if (!installing) return;
+    installing.addEventListener('statechange', () => {
+      if (installing.state === 'installed') notify();
+    });
+  });
+
+  window.addEventListener('vdg:sw-update-accept', () => {
+    reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (consumeReloadGuard(sessionStorage)) location.reload();
+  });
 }
 
 // Force an update check when the user returns to the tab. The spec's implicit per-navigation

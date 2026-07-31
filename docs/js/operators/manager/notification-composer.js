@@ -2,9 +2,6 @@
 
 const PERIOD_CLOSE_WARN_DAYS = 7;
 const CUTOFF_WARN_HOURS      = 24;
-const DIGEST_SEND_HOUR       = 8;    // 08:00 local
-const DIGEST_WINDOW_HOURS    = 2;
-const DIGEST_LS_KEY          = 'vdg.digest.last_sent';
 
 const NOTIFICATION_TYPES = [
   'approval_request',
@@ -90,53 +87,6 @@ export function computeTimeBased(shipments, today) {
   return notifs;
 }
 
-// ── digest ────────────────────────────────────────────────────────────────────
-
-/**
- * Groups last-24h notifications by type → plain-text mailto body.
- * @param {object[]} notifications  stored notification records
- * @returns {string}
- */
-export function formatDigestBody(notifications) {
-  const cutoff = Date.now() - 86_400_000;
-  const recent = notifications.filter((n) => new Date(n.created_at).getTime() >= cutoff);
-
-  const groups = {};
-  for (const n of recent) {
-    (groups[n.type] = groups[n.type] || []).push(n);
-  }
-
-  const lines = [`VDG Daily Digest — ${new Date().toLocaleDateString()}`, ''];
-  for (const [type, items] of Object.entries(groups)) {
-    lines.push(`${type.replace(/_/g, ' ').toUpperCase()} (${items.length})`);
-    items.forEach((i) => lines.push(`  • ${i.title}`));
-    lines.push('');
-  }
-  if (lines.length <= 2) lines.push('No notifications in last 24h.');
-  return lines.join('\n');
-}
-
-/**
- * Returns true if digest should be sent now (within window of DIGEST_SEND_HOUR).
- */
-export function shouldSendDigest() {
-  try {
-    const last = localStorage.getItem(DIGEST_LS_KEY);
-    if (last) {
-      const lastDate = new Date(last).toDateString();
-      if (lastDate === new Date().toDateString()) return false; // already sent today
-    }
-    const now  = new Date();
-    const hour = now.getHours();
-    return hour >= DIGEST_SEND_HOUR && hour < (DIGEST_SEND_HOUR + DIGEST_WINDOW_HOURS);
-  } catch { return false; }
-}
-
-export function markDigestSent() {
-  try { localStorage.setItem(DIGEST_LS_KEY, new Date().toISOString()); }
-  catch { /* quota — non-fatal */ }
-}
-
 // ── internal ──────────────────────────────────────────────────────────────────
 
 function _make(type, title, meta) {
@@ -151,5 +101,4 @@ function _make(type, title, meta) {
   };
 }
 
-export { NOTIFICATION_TYPES, PERIOD_CLOSE_WARN_DAYS, CUTOFF_WARN_HOURS,
-         DIGEST_SEND_HOUR, DIGEST_WINDOW_HOURS, DIGEST_LS_KEY };
+export { NOTIFICATION_TYPES, PERIOD_CLOSE_WARN_DAYS, CUTOFF_WARN_HOURS };

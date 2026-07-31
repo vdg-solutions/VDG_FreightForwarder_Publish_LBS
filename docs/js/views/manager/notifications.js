@@ -1,8 +1,6 @@
 // Manager Notifications Center — F-14-14
 
-import {
-  NOTIFICATION_TYPES, formatDigestBody, shouldSendDigest, markDigestSent,
-} from '../../operators/manager/notification-composer.js';
+import { NOTIFICATION_TYPES } from '../../operators/manager/notification-composer.js';
 import { isManager }  from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
 import { idbGet, idbPut } from '../../cache/idb-cache.js';
@@ -114,21 +112,9 @@ function _settingsHtml(prefs) {
       </div>`;
   }).join('');
 
-  const digestEnabled = prefs?.digest_enabled !== false;
   return `
     <div class="px-4 py-3 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">${t('notifications.types_header')}</div>
-    <div class="px-4">${rows}</div>
-    <div class="px-4 py-3 border-t border-slate-200">
-      <div class="flex items-center justify-between">
-        <span class="text-xs text-slate-700">${t('notifications.digest_label')}</span>
-        <button role="switch" aria-checked="${digestEnabled}" data-toggle-type="digest"
-          class="relative inline-flex h-5 w-9 rounded-full transition-colors
-                 ${digestEnabled ? 'bg-blue-600' : 'bg-slate-300'}
-                 focus-visible:ring-2 focus-visible:ring-blue-500">
-          <span class="absolute inset-y-0.5 ${digestEnabled ? 'left-4' : 'left-0.5'} w-4 h-4 rounded-full bg-white shadow transition-all"></span>
-        </button>
-      </div>
-    </div>`;
+    <div class="px-4">${rows}</div>`;
 }
 
 function renderNotifList(container) {
@@ -163,19 +149,6 @@ export async function render(root) {
       const meta = await idbGet(_db, 'meta', PREFS_META_KEY);
       _prefs = meta || {};
     } catch { _prefs = {}; }
-  }
-
-  // Check digest
-  if (_prefs?.digest_enabled !== false && shouldSendDigest()) {
-    const repo = getRepo();
-    if (repo) {
-      const body = formatDigestBody(_notifications);
-      const user = window.__vdg_auth?.getCurrentUser?.();
-      if (user?.email) {
-        window.location.href = `mailto:${user.email}?subject=VDG+Daily+Digest&body=${encodeURIComponent(body)}`;
-        markDigestSent();
-      }
-    }
   }
 
   _emitCount(_notifications);
@@ -304,13 +277,9 @@ export async function render(root) {
     const type    = btn.dataset.toggleType;
     const enabled = btn.getAttribute('aria-checked') !== 'true';
 
-    if (type === 'digest') {
-      _prefs = { ..._prefs, digest_enabled: enabled };
-    } else {
-      const ns = { ...(_prefs.notification_settings || {}) };
-      ns[type] = { ...(ns[type] || {}), enabled };
-      _prefs = { ..._prefs, notification_settings: ns };
-    }
+    const ns = { ...(_prefs.notification_settings || {}) };
+    ns[type] = { ...(ns[type] || {}), enabled };
+    _prefs = { ..._prefs, notification_settings: ns };
 
     if (_db) {
       try {

@@ -156,22 +156,6 @@ window.addEventListener('vdg:outbox-drop', (e) => {
     }, duration);
   });
 
-  // SW Update Notification (F-15-70)
-  window.addEventListener('vdg:sw-update-available', () => {
-    const el = document.createElement('div');
-    el.className = `fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded shadow-lg z-[10000] flex items-center gap-4`;
-    el.innerHTML = `
-      <span>Có phiên bản hệ thống mới!</span>
-      <button class="bg-white text-indigo-600 px-3 py-1 rounded text-sm font-semibold hover:bg-slate-100" 
-              onclick="window.location.reload(true)">
-        Tải lại ngay
-      </button>
-      <button class="text-white hover:text-slate-200 ml-2" onclick="this.parentElement.remove()">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
-    `;
-    document.body.appendChild(el);
-  });
 }());
 
 // renderNotProvisioned + renderLoadingBanner extracted to auth/auth-fallback-views.js (F-15-19 AC-4)

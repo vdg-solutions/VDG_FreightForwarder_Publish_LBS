@@ -499,6 +499,7 @@
   "topbar.sync.tooltip.lastError":      "Last error: {reason}",
   "topbar.sync.tooltip.max_retries_reason": "max retries exceeded",
   "topbar.sync.tooltip.reconnect": "Google Drive connection expired — click to reconnect",
+  "auth.popup_blocked": "An ad blocker is blocking the Google sign-in window — allow this site (or disable the ad blocker for it), then click to reconnect",
   "topbar.sync.toast.schema_drift_drop": "1 sync item dropped due to stale data (schema changed)",
   "topbar.sync.state.healthy":          "healthy",
   "topbar.sync.state.flushing":         "flushing",
@@ -1756,7 +1757,6 @@
 
   "notifications.empty":                "No notifications",
   "notifications.types_header":         "Notification types",
-  "notifications.digest_label":         "Daily email digest",
   "notifications.title":                "Notifications",
   "notifications.mark_all_read":        "Mark all read",
   "notifications.aria.unread":          "Unread",

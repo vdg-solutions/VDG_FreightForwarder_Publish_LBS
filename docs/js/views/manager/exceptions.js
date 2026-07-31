@@ -11,8 +11,9 @@ import { getActiveSalesReps } from '../../operators/sales-registry.js';
 import { showConfirm }        from '../../helpers/show-confirm.js';
 import { t }                  from '../../i18n/index.js';
 
-const ANIMATE_OUT_MS   = 300;
-const CHART_COLOR_SET  = ['#3b82f6','#f59e0b','#ef4444','#10b981','#8b5cf6','#64748b'];
+const ANIMATE_OUT_MS      = 300;
+const CHART_COLOR_SET     = ['#3b82f6','#f59e0b','#ef4444','#10b981','#8b5cf6','#64748b'];
+const ENTITY_DEBOUNCE_MS  = 500; // matches dashboard.js's LAYOUT_DEBOUNCE_MS — same-family value
 
 let _exceptions   = [];
 let _gridApi      = null;
@@ -161,29 +162,55 @@ async function runBulkAction(root, action) {
   updateBulkToolbar(root);
 }
 
-function renderTrends(root, exceptions) {
+// AC-01: coalesce a burst of same-mount vdg:entity-changed dispatches into one refresh.
+// Exported for unit tests to drive directly, without going through render()/repo/DOM.
+export function createEntityChangeHandler(kind, refreshFn, debounceMs = ENTITY_DEBOUNCE_MS) {
+  let timer = null;
+  const handler = (e) => {
+    if (e.detail?.kind !== kind) return;
+    clearTimeout(timer);
+    timer = setTimeout(refreshFn, debounceMs);
+  };
+  handler.cancel = () => clearTimeout(timer);
+  return handler;
+}
+
+async function refreshFromEntity(root, repo) {
+  if (repo) _exceptions = await repo.list(KIND_EXCEPTION, null);
+  const vms = computeSortedExceptions(_exceptions);
+  mountGrid(root.querySelector('#exc-grid'), vms);
+  renderTrends(root, _exceptions);
+}
+
+export function renderTrends(root, exceptions) {
   const trends   = computeTrends(exceptions);
   const mttr     = computeMttr(exceptions);
   const perSales = computePerSalesRate(exceptions);
 
-  // Chart
+  // Chart — AC-02: update the existing instance in place, never destroy/reconstruct
+  // on a same-mount refresh (only a real navigation tears the canvas down, see render()).
   const ctx = root.querySelector('#exc-trend-chart');
   if (ctx && window.Chart) {
-    if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
-    _trendChart = new window.Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: trends.weeks,
-        datasets: trends.datasets.map((ds, i) => ({
-          label: ds.label,
-          data:  ds.data,
-          borderColor: CHART_COLOR_SET[i % CHART_COLOR_SET.length],
-          tension: 0.3,
-          fill: false,
-        })),
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } },
-    });
+    const chartData = {
+      labels: trends.weeks,
+      datasets: trends.datasets.map((ds, i) => ({
+        label: ds.label,
+        data:  ds.data,
+        borderColor: CHART_COLOR_SET[i % CHART_COLOR_SET.length],
+        tension: 0.3,
+        fill: false,
+      })),
+    };
+    if (_trendChart) {
+      _trendChart.data = chartData;
+      _trendChart.update();
+    } else {
+      _trendChart = new window.Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } },
+      });
+    }
   }
 
   // MTTR table
@@ -205,7 +232,7 @@ function renderTrends(root, exceptions) {
 
 export async function render(root) {
   if (!isManager()) { navigate('/dashboard'); return; }
-  if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
+  if (_onEntity) { window.removeEventListener('vdg:entity-changed', _onEntity); _onEntity.cancel?.(); }
   if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
   _selectedIds.clear();
 
@@ -261,12 +288,6 @@ export async function render(root) {
     }
   });
 
-  _onEntity = async (e) => {
-    if (e.detail?.kind !== KIND_EXCEPTION) return;
-    if (repo) _exceptions = await repo.list(KIND_EXCEPTION, null);
-    const vms2 = computeSortedExceptions(_exceptions);
-    mountGrid(root.querySelector('#exc-grid'), vms2);
-    renderTrends(root, _exceptions);
-  };
+  _onEntity = createEntityChangeHandler(KIND_EXCEPTION, () => refreshFromEntity(root, repo));
   window.addEventListener('vdg:entity-changed', _onEntity);
 }
