@@ -7,6 +7,9 @@
 import { shouldPromptUpdate, consumeReloadGuard, rearmReloadGuard } from './util/sw-update-guard.js';
 
 const UPDATE_DEBOUNCE_MS = 60_000;   // don't spam update() on rapid tab switches
+const DUE_SOON_SYNC_TAG  = 'due-soon-check';
+// Minimum request only — Chromium decides real cadence, not a schedule.
+const PERIODIC_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -15,8 +18,37 @@ export function registerServiceWorker() {
   // defaults to the base path and covers the document. No explicit scope: the script location
   // sets it correctly; a hand-built scope would risk being wrong under the deploy subpath.
   navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href)
-    .then((reg) => { _wireUpdateChecks(reg); _wireUpdatePrompt(reg); })
+    .then((reg) => {
+      _wireUpdateChecks(reg); _wireUpdatePrompt(reg);
+      _wireDueSoonPeriodicSync(reg); _wireDueSoonBackgroundSync(reg);
+    })
     .catch((err) => console.warn('[SW] registration failed:', err)); // DEV
+}
+
+// F-48-01 Tier 1 — best case: notifies while the tab is fully closed. Requires Chromium +
+// an installed PWA (F-54, nice-to-have — not a prerequisite for F-48-01) + the
+// periodic-background-sync permission actually granted. Any unmet precondition silently
+// falls to tier 2/3/4 — this is never a hard failure.
+async function _wireDueSoonPeriodicSync(reg) {
+  if (!('periodicSync' in reg)) return false;                              // → fall to tier 2
+  const status = await navigator.permissions.query({ name: 'periodic-background-sync' }).catch(() => null);
+  if (status?.state !== 'granted') return false;                           // not installed (pre-F-54) → fall to tier 2
+  try {
+    await reg.periodicSync.register(DUE_SOON_SYNC_TAG, { minInterval: PERIODIC_SYNC_MIN_INTERVAL_MS });
+    return true;
+  } catch { return false; }                                                // low engagement heuristic etc — fall to tier 2
+}
+
+// F-48-01 Tier 2(b) — opportunistic one-off Background Sync (Chromium-only, no PWA install
+// or PBS permission needed). Requested when the tab goes hidden — closer to true
+// opportunistic background firing than the message-relay alone (tier 2(a), wired from the
+// main-thread due-soon-checker.js tick).
+function _wireDueSoonBackgroundSync(reg) {
+  if (!('sync' in reg)) return;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden') return;
+    reg.sync.register(DUE_SOON_SYNC_TAG).catch(() => { /* opportunistic request — unsupported/denied is silent, no user-facing effect */ });
+  });
 }
 
 // User-triggered update prompt: detect a genuine waiting worker (not first install), let

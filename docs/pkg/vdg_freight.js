@@ -423,6 +423,32 @@ export function compute_chargeable_kg(actual, l, w, h) {
 }
 
 /**
+ * @param {string} billing_json
+ * @param {string} today_str
+ * @param {number} warn_days
+ * @returns {any}
+ */
+export function compute_due_soon(billing_json, today_str, warn_days) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(billing_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(today_str, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.compute_due_soon(retptr, ptr0, len0, ptr1, len1, warn_days);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * @param {number} actual
  * @param {number} l
  * @param {number} w
@@ -1539,7 +1565,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_6663(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_6700(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -1618,8 +1644,8 @@ function __wbg_get_imports() {
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 932, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_6650);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 933, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_6687);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -1656,10 +1682,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_6650(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_6687(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_6650(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_6687(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -1670,8 +1696,8 @@ function __wasm_bindgen_func_elem_6650(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_6663(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_6663(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_6700(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_6700(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')

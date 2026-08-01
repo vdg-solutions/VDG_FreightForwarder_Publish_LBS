@@ -2,7 +2,7 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v5bcb099';
+const STATIC_CACHE     = 'vdg-static-v4a02b41';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 
@@ -19,6 +19,9 @@ const SHELL_ASSETS = [
   'css/styles.css',
   'pkg/vdg_freight.js',
   'pkg/vdg_freight_bg.wasm',
+  // F-48-01: dynamically imported by _runDueSoonCheck() below — precached so tier-1
+  // periodicsync (tab fully closed) can still resolve it without a live network fetch.
+  'js/sw-due-soon.js',
 ];
 
 // app.js's SYNCHRONOUS static-import closure — the modules eval'd before the app is interactive.
@@ -176,6 +179,33 @@ self.addEventListener('activate', (ev) => {
 // Client-triggered activation: sent only after the user clicks the update banner.
 self.addEventListener('message', (ev) => {
   if (ev.data?.type === 'SKIP_WAITING') self.skipWaiting();
+  // F-48-01 tier 2(a): main-thread active tick relays a check request — same shared
+  // _runDueSoonCheck() tier 1 uses (AC-04d).
+  if (ev.data?.type === 'DUE_SOON_CHECK') {
+    const p = _runDueSoonCheck();
+    if (ev.waitUntil) ev.waitUntil(p);
+  }
+});
+
+// ── payment due-soon (F-48-01 tiers 1/2) ────────────────────────────────────────
+// One shared check behind both delivery mechanisms — never a second copy of the
+// date-window/guard/notify logic (AC-05d). Body lives in sw-due-soon.js (split precedent:
+// js_bridge_fx.rs/js_bridge_commission.rs off js_bridge.rs — 350-line cap).
+async function _runDueSoonCheck() {
+  const { runDueSoonCheck } = await import('./js/sw-due-soon.js');
+  return runDueSoonCheck(self);
+}
+
+// Tier 1 — SW Periodic Background Sync (needs installed PWA + granted permission; nice-to-
+// have per F-54, registration lives in sw-register.js).
+self.addEventListener('periodicsync', (ev) => {
+  if (ev.tag === 'due-soon-check') ev.waitUntil(_runDueSoonCheck());
+});
+
+// Tier 2(b) — opportunistic one-off Background Sync (Chromium-only, no PWA/PBS permission
+// needed).
+self.addEventListener('sync', (ev) => {
+  if (ev.tag === 'due-soon-check') ev.waitUntil(_runDueSoonCheck());
 });
 
 // ── fetch ─────────────────────────────────────────────────────────────────────

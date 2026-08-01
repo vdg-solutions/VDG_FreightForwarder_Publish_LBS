@@ -1,12 +1,27 @@
 // sales-me-overdue.js — overdue follow-up section for sales-me view
-import { classifyOverdue } from '../operators/manager/dunning-ladder.js';
-import { pickTemplate, mergeFields } from '../operators/manager/dunning-ladder.js';
-import { appendDunning } from '../sync/dunning-log.js';
+// F-48-01: rewritten off billing.due_date (was invoice_date); dunning-ladder/dunning-log
+// dependencies dropped along with the auto-dunning subsystem removal. Stage bucketing kept
+// as a small local day-threshold classifier — display only, no template ladder, no
+// per-customer override (dunning_threshold_days_override field removed).
 import { t } from '../i18n/index.js';
+
+const STAGE_THRESHOLDS_DAYS = { reminder_1: 7, reminder_2: 14, escalate: 30, legal: 60, blacklist: 95 };
+const STAGE_ORDER = ['reminder_1', 'reminder_2', 'escalate', 'legal', 'blacklist'];
 
 function fmtVnd(n) {
   if (!n && n !== 0) return '—';
   return Number(n).toLocaleString('vi-VN');
+}
+
+function daysOverdue(dueDate, now) {
+  if (!dueDate) return 0;
+  return Math.floor((now - new Date(dueDate).getTime()) / 86_400_000);
+}
+
+function classifyStage(days) {
+  let stage = null;
+  for (const s of STAGE_ORDER) if (days >= STAGE_THRESHOLDS_DAYS[s]) stage = s;
+  return stage;
 }
 
 export async function overdueFollowupsHtml(salesId) {
@@ -26,6 +41,8 @@ export async function overdueFollowupsHtml(salesId) {
     if (b.status === 'Paid' || b._deleted) continue;
     const rep = (b.sales_rep || '').toLowerCase();
     if (rep && rep !== salesId.toLowerCase()) continue;
+    const due = b.due_date || b.DueDate;
+    if (daysOverdue(due, now) <= 0) continue;
     const cid = b.customer_id || b.customer || '';
     if (!byCustomer.has(cid)) byCustomer.set(cid, []);
     byCustomer.get(cid).push(b);
@@ -34,16 +51,11 @@ export async function overdueFollowupsHtml(salesId) {
   const rows = [];
   for (const [cid, bs] of byCustomer) {
     const customer = custMap.get(cid) || { id: cid, name: cid };
-    const override = customer.dunning_threshold_days_override
-      ? { reminder_1: customer.dunning_threshold_days_override }
-      : null;
     const maxDays = bs.reduce((max, b) => {
-      const inv = b.invoice_date || b.InvoiceDate;
-      if (!inv) return max;
-      const d = Math.floor((now - new Date(inv).getTime()) / 86_400_000);
+      const d = daysOverdue(b.due_date || b.DueDate, now);
       return d > max ? d : max;
     }, 0);
-    const stage = classifyOverdue(maxDays, override);
+    const stage = classifyStage(maxDays);
     if (!stage) continue;
     const total = bs.reduce((s, b) => s + Number(b.amount_vnd ?? b.AmountVnd ?? 0), 0);
     rows.push({ cid, name: customer.name || cid, email: customer.email || '', stage, maxDays, total });
@@ -60,8 +72,7 @@ export async function overdueFollowupsHtml(salesId) {
       <td class="px-3 py-2">
         <button class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-[10px] hover:bg-blue-100"
                 data-send-reminder="${r.cid}"
-                data-email="${r.email}"
-                data-stage="${r.stage}">
+                data-email="${r.email}">
           ${t('sales_overdue.send')}
         </button>
       </td>
@@ -90,21 +101,7 @@ export async function overdueFollowupsHtml(salesId) {
     </div>`;
 }
 
-export function sendSalesReminder(customerId, mailto, stage, locale, billingIds) {
-  const tmpl   = pickTemplate(stage, locale, []);
-  const merged = mergeFields(tmpl, { name: customerId }, []);
-  const subj   = encodeURIComponent(merged.subject);
-  const body   = encodeURIComponent(merged.body);
-  window.open(`mailto:${mailto}?subject=${subj}&body=${body}`, '_blank');
-
-  const user = window.__vdg_auth?.getCurrentUser?.();
-  appendDunning({
-    customer_id: customerId,
-    stage,
-    sent_at:     new Date().toISOString(),
-    channel:     'mailto',
-    sent_by:     user?.email || 'sales',
-    template_id: '',
-    billing_ids: billingIds,
-  });
+// Plain mailto — no template ladder, no dunning-log write.
+export function sendSalesReminder(customerId, mailto) {
+  window.open(`mailto:${mailto}?subject=${encodeURIComponent(t('sales_overdue.mail.subject'))}`, '_blank');
 }

@@ -23,6 +23,7 @@ export const BRIDGE_EXPORTS = [
   'proposal_merge',
   'proposal_reject',            // AC-04: reject round-trip needs the global bridge
   'priced_ref_resolve_on_date',
+  'compute_due_soon',           // F-48-01: payment-due-soon 4-tier ladder shared compute
 ];
 
 // Binds every BRIDGE_EXPORTS name present as a function on `mod` onto `window`.

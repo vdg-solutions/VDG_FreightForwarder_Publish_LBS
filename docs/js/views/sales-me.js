@@ -3,6 +3,7 @@
 
 import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
+import { dueSoonHtml } from './sales-me-due-soon.js';
 import { t, currentLocale } from '../i18n/index.js';
 import { safeAwait } from '../util/safe-await.js';
 import { resolveShipmentState } from '../util/shipment-state-resolver.js';
@@ -305,6 +306,7 @@ async function populateView(root, salesId, user) {
 
       ${commissionHtml(stats)}
 
+      ${await dueSoonHtml(salesId)}
       ${await overdueFollowupsHtml(salesId)}`;
 
     bodyEl.classList.remove('hidden');
@@ -317,7 +319,6 @@ async function populateView(root, salesId, user) {
     if (!btn) return;
     const cid    = btn.dataset.sendReminder;
     const mailto = btn.dataset.email || '';
-    const stage  = btn.dataset.stage || 'reminder_1';
-    sendSalesReminder(cid, mailto, stage, 'vi', []);
+    sendSalesReminder(cid, mailto);
   });
 }

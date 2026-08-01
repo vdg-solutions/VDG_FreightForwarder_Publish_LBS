@@ -83,7 +83,6 @@ const V1_GROUPS = [
 //   { route: '/manager/finance/close-period', label: 'Period Close',       icon: 'lock',   sub: true },
 //   { route: '/manager/audit',                label: 'Audit Log',          icon: 'doc',    sub: true },
 //   { route: '/manager/notifications',        label: 'Notifications',      icon: 'bell',   sub: true },
-//   { route: '/manager/dunning',              label: 'AR Dunning',         icon: 'alert',  sub: true },
 //   { route: '/manager/errors',               label: 'Error Log',          icon: 'alert',  sub: true },
 //   { route: '/manager/backup',               label: 'Backup / DR',        icon: 'doc',    sub: true },
 //   { route: '/manager/users',                label: 'Người dùng',         icon: 'db',     sub: true },
@@ -255,7 +254,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 5bcb099">v0.1.68</span>
+        <span class="font-mono whitespace-nowrap" title="build 4a02b41">v0.1.69</span>
       </div>
     `;
   }

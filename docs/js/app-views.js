@@ -35,8 +35,6 @@ export const VIEWS = {
   '/manager/exceptions':             () => import('./views/manager/exceptions.js'),
   // E-15
   '/manager/errors':             () => import('./views/manager/errors.js'),
-  '/manager/dunning':            () => import('./views/manager/dunning.js'),
-  '/manager/dunning-templates':  () => import('./views/manager/dunning-templates.js'),
   '/manager/backup':             () => import('./views/manager/backup.js'),
   '/manager/users':              () => import('./views/manager/users.js'),
   // E-15 F-15-36

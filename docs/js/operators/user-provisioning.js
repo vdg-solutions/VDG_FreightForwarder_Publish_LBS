@@ -14,7 +14,7 @@ const USERS_FOLDER         = 'users';
 const ADMIN_FOLDER         = 'admin';
 
 // Allowed fields for editProfile
-const EDITABLE_FIELDS = ['name', 'sales_code', 'commission_pct_override', 'dunning_threshold_days_override', 'sales_share_pct'];
+const EDITABLE_FIELDS = ['name', 'sales_code', 'commission_pct_override', 'sales_share_pct'];
 
 // ── invite ────────────────────────────────────────────────────────────────────
 

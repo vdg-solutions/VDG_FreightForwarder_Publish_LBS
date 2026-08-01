@@ -24,10 +24,6 @@ export function openEditModal(user, root, deps) {
           <input id="ep-comm" type="number" step="0.1" value="${user.commission_pct_override ?? ''}"
                  class="mt-1 w-full border rounded px-3 py-1.5 text-xs" />
         </label>
-        <label class="block text-xs text-slate-600">${t('users.edit.field.dunning_override')}
-          <input id="ep-dun" type="number" value="${user.dunning_threshold_days_override ?? ''}"
-                 class="mt-1 w-full border rounded px-3 py-1.5 text-xs" />
-        </label>
       </div>
       <div id="ep-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -44,7 +40,6 @@ export function openEditModal(user, root, deps) {
       name:                            overlay.querySelector('#ep-name').value.trim(),
       sales_code:                      overlay.querySelector('#ep-code').value.trim(),
       commission_pct_override:         overlay.querySelector('#ep-comm').value !== '' ? Number(overlay.querySelector('#ep-comm').value) : undefined,
-      dunning_threshold_days_override: overlay.querySelector('#ep-dun').value  !== '' ? Number(overlay.querySelector('#ep-dun').value)  : undefined,
     };
     // Remove undefined keys
     Object.keys(fields).forEach((k) => fields[k] === undefined && delete fields[k]);

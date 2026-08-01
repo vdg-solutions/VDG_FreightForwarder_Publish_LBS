@@ -19,7 +19,6 @@ export const MASTER_REGISTRY = {
   customers:          { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: null,                                    tier: 'reference' },
   carriers:           { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
   services:           { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
-  dunning_templates:  { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
   user:               { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
   airports:           { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/airports.jsonl`,          tier: 'reference' },
   flights:            { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/flights.jsonl`,           tier: 'reference' },

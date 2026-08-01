@@ -66,25 +66,16 @@ function buildModal(entity) {
           <input id="m-address" type="text" value="${escHtml(e.address)}"
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.commercial_terms')}</label>
-            <select id="m-commercial_terms"
-                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-              <option value="">— None —</option>
-              <option value="NET-30" ${e.commercial_terms === 'NET-30' ? 'selected' : ''}>NET-30</option>
-              <option value="NET-45" ${e.commercial_terms === 'NET-45' ? 'selected' : ''}>NET-45</option>
-              <option value="NET-60" ${e.commercial_terms === 'NET-60' ? 'selected' : ''}>NET-60</option>
-              <option value="COD"    ${e.commercial_terms === 'COD'    ? 'selected' : ''}>${t('masters_customers.field.cod')}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.dunning_override')}</label>
-            <input id="m-dunning_threshold_days_override" type="number" min="1" max="365"
-                   value="${escHtml(e.dunning_threshold_days_override)}"
-                   placeholder="Default ladder"
-                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.commercial_terms')}</label>
+          <select id="m-commercial_terms"
+                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">— None —</option>
+            <option value="NET-30" ${e.commercial_terms === 'NET-30' ? 'selected' : ''}>NET-30</option>
+            <option value="NET-45" ${e.commercial_terms === 'NET-45' ? 'selected' : ''}>NET-45</option>
+            <option value="NET-60" ${e.commercial_terms === 'NET-60' ? 'selected' : ''}>NET-60</option>
+            <option value="COD"    ${e.commercial_terms === 'COD'    ? 'selected' : ''}>${t('masters_customers.field.cod')}</option>
+          </select>
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
           <button type="submit"
@@ -113,7 +104,6 @@ function openModal(root, entity, onSave) {
     }
     errEl.classList.add('hidden');
 
-    const thresholdRaw = dialog.querySelector('#m-dunning_threshold_days_override').value.trim();
     const updated = {
       ...(entity || {}),
       id:             entity?.id || genId(),
@@ -124,7 +114,6 @@ function openModal(root, entity, onSave) {
       email:          dialog.querySelector('#m-email').value.trim() || null,
       address:        dialog.querySelector('#m-address').value.trim() || null,
       commercial_terms:                  dialog.querySelector('#m-commercial_terms').value || null,
-      dunning_threshold_days_override:   thresholdRaw ? Number(thresholdRaw) : null,
     };
 
     await onSave(updated);

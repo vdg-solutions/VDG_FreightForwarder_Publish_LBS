@@ -176,11 +176,11 @@ async function _deferredInit(user, db, driveApi, repo) {
     const { initErrorLog } = await import('../sync/error-log.js');
     initErrorLog(driveApi, () => window.__vdg_auth?.getCurrentUser?.(), () => APP_VERSION);
 
-    // Dunning
-    const { initDunningLog } = await import('../sync/dunning-log.js');
-    initDunningLog(driveApi);
-    const { initDunningScheduler } = await import('../sync/dunning-scheduler.js');
-    initDunningScheduler(repo);
+    // Payment due-soon checker (F-48-01) — tier 3/4 main-thread badge/notify, one shared
+    // compute_due_soon call, 100% local (no Drive/token). Tiers 1/2 registration lives in
+    // sw-register.js (already wired at boot's service-worker registration call).
+    const { initDueSoonChecker } = await import('../sync/due-soon-checker.js');
+    initDueSoonChecker();
 
     // Ledger + user repos — wrap so every injected findWorkspaceRootFn resolves the
     // registry-bound name (F-17-03: findWorkspaceRoot takes a required explicit name).

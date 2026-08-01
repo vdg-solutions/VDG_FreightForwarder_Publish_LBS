@@ -18,7 +18,7 @@ class VdgTopbar extends LitElement {
     route:           { type: String,  state: true },
     _exceptionCount: { type: Number,  state: true },
     _approvalCount:  { type: Number,  state: true },
-    _notifCount:     { type: Number,  state: true },
+    _notifCount:     { type: Number,  state: true },  _dueSoonCount: { type: Number, state: true }, // F-48-01
     _menuOpen:       { type: Boolean, state: true },
     _outboxCount:    { type: Number,  state: true },
     _swUpdate:       { type: Boolean, state: true },
@@ -44,7 +44,7 @@ class VdgTopbar extends LitElement {
     super();
     this.route = location.hash.slice(1) || '/dashboard';
     this._exceptionCount = 0;  this._approvalCount = 0;
-    this._notifCount = 0;   this._menuOpen = false;   this._outboxCount = 0;
+    this._notifCount = 0;   this._menuOpen = false;   this._outboxCount = 0;   this._dueSoonCount = 0;
     this._swUpdate = false; this._locale = currentLocale(); this._mobile = window.innerWidth < 768;
     this._quotaWarn = false; this._lastSyncMs = 0;
     this._retrying = false; this._retryStreak = 0; this._backoff429 = false;
@@ -67,7 +67,7 @@ class VdgTopbar extends LitElement {
     this._onException     = (e) => { this._exceptionCount = e.detail.count; };
     this._onApproval      = (e) => { this._approvalCount  = e.detail?.count ?? 0; };
     this._onNotifCount    = (e) => { this._notifCount     = e.detail?.count ?? 0; };
-    this._onDocClick      = (e) => { if (!this.contains(e.target)) this._menuOpen = false; };
+    this._onDueSoonCount  = (e) => { this._dueSoonCount   = e.detail?.count ?? 0; }; this._onDocClick = (e) => { if (!this.contains(e.target)) this._menuOpen = false; };
     this._onOutbox        = (e) => { this._outboxCount = e.detail?.count ?? 0; };
     this._onSwUpdate      = () => { if (!sessionStorage.getItem(SW_DISMISS_KEY)) this._swUpdate = true; };
     this._onLocaleChanged = (e) => { this._locale = e.detail?.locale ?? currentLocale(); this._computeBreadcrumb(); };
@@ -90,7 +90,7 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:navigate',            this._onNav);
     window.addEventListener('vdg:exceptions',          this._onException);
     window.addEventListener('vdg:approval-count',      this._onApproval);
-    window.addEventListener('vdg:notif-count',         this._onNotifCount);
+    window.addEventListener('vdg:notif-count',         this._onNotifCount); window.addEventListener('vdg:due-soon-count', this._onDueSoonCount);
     window.addEventListener('vdg:outbox-changed',      this._onOutbox);
     window.addEventListener('vdg:sw-update-available', this._onSwUpdate);
     window.addEventListener('vdg:locale-changed',      this._onLocaleChanged);
@@ -111,7 +111,7 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:navigate',            this._onNav);
     window.removeEventListener('vdg:exceptions',          this._onException);
     window.removeEventListener('vdg:approval-count',      this._onApproval);
-    window.removeEventListener('vdg:notif-count',         this._onNotifCount);
+    window.removeEventListener('vdg:notif-count',         this._onNotifCount); window.removeEventListener('vdg:due-soon-count', this._onDueSoonCount);
     window.removeEventListener('vdg:outbox-changed',      this._onOutbox);
     window.removeEventListener('vdg:sw-update-available', this._onSwUpdate);
     window.removeEventListener('vdg:locale-changed',      this._onLocaleChanged);
@@ -146,7 +146,7 @@ class VdgTopbar extends LitElement {
   _dismissSwBanner() { sessionStorage.setItem(SW_DISMISS_KEY, '1'); this._swUpdate = false; }
   _handleBellClick() {
     window.dispatchEvent(new CustomEvent('vdg:open-notif-drawer'));
-    navigate('/manager/notifications');
+    navigate(isManager() ? '/manager/notifications' : '/sales/me'); // F-48-01: non-manager has no notif-center route
   }
   async _handleLocale(locale) {
     await loadLocale(locale);
@@ -264,7 +264,7 @@ class VdgTopbar extends LitElement {
 
   render() {
     const badge = badgeLabel(this._exceptionCount + this._approvalCount);
-    const notifBadge = badgeLabel(this._notifCount);
+    const notifBadge = badgeLabel(this._notifCount + this._dueSoonCount); // F-48-01: additive, independent sources
     const user = window.__vdg_auth?.getCurrentUser?.();
     const salesId = currentSalesRepId();
     const now = Date.now();
@@ -323,8 +323,8 @@ class VdgTopbar extends LitElement {
               </button>`)}
           </div>
           <button @click="${() => this._handleBellClick()}"
-                  title="${t('topbar.aria.notif_title', { n: this._notifCount })}"
-                  aria-label="${t('topbar.aria.notif_label', { n: this._notifCount })}"
+                  title="${t('topbar.aria.notif_title', { n: this._notifCount + this._dueSoonCount })}"
+                  aria-label="${t('topbar.aria.notif_label', { n: this._notifCount + this._dueSoonCount })}"
                   class="relative w-9 h-9 py-0 border-0 box-border rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition">
             <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">

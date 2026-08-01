@@ -7,10 +7,12 @@ import { mdToHtml } from './help-md.js';
 
 const TABS = ['manager', 'accountant', 'sales'];
 
-const TAB_DOC = {
-  manager:    '/docs/onboarding/guide-manager.md',
-  accountant: '/docs/onboarding/guide-accountant.md',
-  sales:      '/docs/onboarding/guide-sales.md',
+// relative (no leading slash) — resolved against document.baseURI below, same as
+// sw-register.js / wasm-loader.js reach assets under a GitHub Pages sub-path
+export const TAB_DOC = {
+  manager:    'docs/onboarding/guide-manager.md',
+  accountant: 'docs/onboarding/guide-accountant.md',
+  sales:      'docs/onboarding/guide-sales.md',
 };
 
 const TAB_LABEL_KEY = {
@@ -35,6 +37,13 @@ function resolveDefaultTab() {
 }
 
 // ── fetch doc ─────────────────────────────────────────────────────────────────
+
+// Resolve a doc path under the deployed base path (F-53-01) — bare '/docs/...' 404s on
+// GitHub Pages once the app is served under a sub-path. Root base ('http://host/') resolves
+// unchanged; a sub-path base ('https://host/Tenant/') prefixes it, no double slash.
+export function resolveGuideUrl(baseURI, docPath) {
+  return new URL(docPath, baseURI).href;
+}
 
 async function fetchDoc(url) {
   try {
@@ -83,7 +92,7 @@ export async function render(root) {
 
     if (!_cache[tab]) {
       contentEl.innerHTML = `<div class="text-xs text-slate-400">${t('loading')}</div>`;
-      const md = await fetchDoc(TAB_DOC[tab]);
+      const md = await fetchDoc(resolveGuideUrl(document.baseURI, TAB_DOC[tab]));
       _cache[tab] = mdToHtml(md);
     }
     contentEl.innerHTML = _cache[tab];

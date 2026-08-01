@@ -50,8 +50,6 @@ const STATIC_ROUTES = [
   { pattern: /^#\/manager\/masters\/carriers$/,     group: 'nav.group.manager',   viewKey: 'nav.manager.carrier_master' },
   { pattern: /^#\/manager\/masters\/users$/,        group: 'nav.group.manager',   viewKey: 'nav.manager.user_master' },
   { pattern: /^#\/manager\/errors$/,                group: 'nav.group.manager',   viewKey: 'nav.manager.errors' },
-  { pattern: /^#\/manager\/dunning$/,               group: 'nav.group.manager',   viewKey: 'nav.manager.dunning' },
-  { pattern: /^#\/manager\/dunning-templates$/,     group: 'nav.group.manager',   viewKey: 'nav.manager.dunning_templates' },
 ];
 
 export const ROUTES = [...I18N_ROUTES, ...STATIC_ROUTES];

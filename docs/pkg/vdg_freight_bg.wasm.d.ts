@@ -18,6 +18,7 @@ export const commission_resolve_rule: (a: number, b: number, c: number, d: numbe
 export const commission_rules_ingest: (a: number, b: number, c: number) => void;
 export const commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
 export const compute_chargeable_kg: (a: number, b: number, c: number, d: number) => number;
+export const compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
 export const compute_freight: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
 export const create_document_wasm: (a: number, b: number, c: number) => void;
 export const customerindex_add_customer: (a: number, b: number, c: number) => number;
@@ -65,8 +66,8 @@ export const wasmentityrepo_get: (a: number, b: number, c: number, d: number, e:
 export const wasmentityrepo_list: (a: number, b: number, c: number) => number;
 export const wasmentityrepo_new: (a: number) => number;
 export const wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-export const __wasm_bindgen_func_elem_6650: (a: number, b: number, c: number, d: number) => void;
-export const __wasm_bindgen_func_elem_6663: (a: number, b: number, c: number, d: number) => void;
+export const __wasm_bindgen_func_elem_6687: (a: number, b: number, c: number, d: number) => void;
+export const __wasm_bindgen_func_elem_6700: (a: number, b: number, c: number, d: number) => void;
 export const __wbindgen_export: (a: number, b: number) => number;
 export const __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_export3: (a: number) => void;
