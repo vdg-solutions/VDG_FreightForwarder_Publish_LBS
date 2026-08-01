@@ -1,5 +1,9 @@
 // F-33-01 — minimal markdown → HTML for the in-app guide (no external dep per OQ-4).
 // Split out of help.js to keep the view file focused on tab chrome/wiring.
+// F-56-01 — root-absolute asset srcs (/docs/...) 404 once served under a GitHub Pages
+// sub-path; route them through the same base resolver F-53 uses for the guide fetch.
+
+import { resolveGuideUrl } from './help.js';
 
 export function mdToHtml(md) {
   const lines = md.split('\n');
@@ -51,12 +55,21 @@ export function mdToHtml(md) {
   return out.join('\n');
 }
 
+// A root-absolute path ('/docs/...') resolves against the ORIGIN, dropping any GitHub
+// Pages sub-path — feed it to resolveGuideUrl as a relative path (strip the leading '/')
+// so it lands under document.baseURI same as the guide fetch itself (F-53). Non-absolute
+// srcs (relative paths, http(s):// links) are left untouched.
+function resolveAssetSrc(src) {
+  if (!src.startsWith('/')) return src;
+  return resolveGuideUrl(document.baseURI, src.slice(1));
+}
+
 function inline(s) {
   return s
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code class="font-mono bg-slate-100 px-1 rounded text-xs">$1</code>')
     // image BEFORE link — "![alt](src)" would otherwise leave a stray "!" once the link
     // regex below eats the "[alt](src)" tail.
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" class="max-w-full rounded border border-slate-200 my-2" />')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline">$1</a>');
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, src) => `<img src="${resolveAssetSrc(src)}" alt="${alt}" loading="lazy" class="max-w-full rounded border border-slate-200 my-2" />`)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, href) => `<a href="${resolveAssetSrc(href)}" class="text-blue-600 hover:underline">${text}</a>`);
 }

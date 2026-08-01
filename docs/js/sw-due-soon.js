@@ -44,29 +44,37 @@ async function _loadWasm() {
  * unaffected.
  */
 export async function runDueSoonCheck(scope, injectedDb, loadWasm = _loadWasm) {
+  // Caller owns an injected connection (test/DI path) — only a self-opened
+  // connection gets closed here, else the SW-held handle deadlocks the
+  // page's next indexedDB.open (CHORE-25 D-1).
+  const ownDb = !injectedDb;
   const db = injectedDb ?? await openVdgDb();
 
-  const guard = await idbGet(db, META_STORE, GUARD_KEY);
-  const today = todayStr();
-  if (guard?.value === today) {
-    return { skipped: true, reason: 'already-checked-today' };
+  try {
+    const guard = await idbGet(db, META_STORE, GUARD_KEY);
+    const today = todayStr();
+    if (guard?.value === today) {
+      return { skipped: true, reason: 'already-checked-today' };
+    }
+
+    const billing = await idbGetAllByIndex(db, ENTITY_STORE, 'by_kind', 'billing');
+
+    const wasmMod = await loadWasm();
+    const grouped = wasmMod.compute_due_soon(JSON.stringify(billing), today, PAYMENT_DUE_WARN_DAYS);
+
+    let groupsNotified = 0;
+    for (const [salesRep, rows] of Object.entries(grouped)) {
+      if (!rows.length) continue;
+      const body = rows
+        .map((r) => `${r.customerId} — ${fmtVnd(r.amountVnd)} VND (${r.daysUntilDue}d)`)
+        .join('\n');
+      await scope.registration.showNotification(NOTIF_TITLE, { body, tag: `${NOTIF_TAG_PREFIX}${salesRep}` });
+      groupsNotified += 1;
+    }
+
+    await idbPut(db, META_STORE, { key: GUARD_KEY, value: today });
+    return { skipped: false, groupsNotified };
+  } finally {
+    if (ownDb) db.close();
   }
-
-  const billing = await idbGetAllByIndex(db, ENTITY_STORE, 'by_kind', 'billing');
-
-  const wasmMod = await loadWasm();
-  const grouped = wasmMod.compute_due_soon(JSON.stringify(billing), today, PAYMENT_DUE_WARN_DAYS);
-
-  let groupsNotified = 0;
-  for (const [salesRep, rows] of Object.entries(grouped)) {
-    if (!rows.length) continue;
-    const body = rows
-      .map((r) => `${r.customerId} — ${fmtVnd(r.amountVnd)} VND (${r.daysUntilDue}d)`)
-      .join('\n');
-    await scope.registration.showNotification(NOTIF_TITLE, { body, tag: `${NOTIF_TAG_PREFIX}${salesRep}` });
-    groupsNotified += 1;
-  }
-
-  await idbPut(db, META_STORE, { key: GUARD_KEY, value: today });
-  return { skipped: false, groupsNotified };
 }
