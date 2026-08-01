@@ -8,6 +8,7 @@ import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
 import { loadWorkspaceSettings, saveWorkspaceSettings, SECOND_EYES_FIELD } from '../../operators/manager/workspace-settings.js';
+import { safeMasterLoad } from '../../util/master-load.js';
 
 const DEFAULT_FX_SOURCE = 'Manual';
 const FX_SOURCE_OPTIONS = ['Vietcombank', 'SBV', 'Manual'];
@@ -64,9 +65,13 @@ export async function render(root) {
 
   const api  = getApi();
   const ws   = activeWorkspaceName();
-  let settings = { fx_source: DEFAULT_FX_SOURCE, [SECOND_EYES_FIELD]: false };
-  try { settings = await loadWorkspaceSettings(api, ws); }
-  catch { /* use default */ }
+  const defaultSettings = { fx_source: DEFAULT_FX_SOURCE, [SECOND_EYES_FIELD]: false };
+  // F-52-01 AC-06/07: bounded + cache-first — mirrors air-rates.js:149-152. A stalled Drive
+  // read must not stack onto mountView's ceiling; a prior successful load renders instantly.
+  const settingsRes = api
+    ? await safeMasterLoad(() => loadWorkspaceSettings(api, ws), 'settings:load')
+    : { ok: true, value: defaultSettings };
+  let settings = window.__vdg_workspace_settings ?? (settingsRes.ok ? settingsRes.value : defaultSettings);
   window.__vdg_workspace_settings = settings;
 
   mount.innerHTML = `

@@ -9,6 +9,7 @@ import { inviteSales } from '../operators/user-provisioning.js';
 import { bootstrapAclTargetFolders } from '../operators/manager/workspace-bootstrap.js';
 import { t } from '../i18n/index.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
+import { safeMasterLoad } from '../util/master-load.js';
 
 export async function renderOnboardingWizard(container, onDone) {
   container.innerHTML = `
@@ -39,11 +40,19 @@ export async function renderOnboardingWizard(container, onDone) {
   const doneBtn   = container.querySelector('#btn-done');
 
   const driveApi = window.__vdg_drive_api || (await import('../auth/drive-api.js'));
-  const rootId   = await findWorkspaceRoot(activeWorkspaceName());
+  let rootId;
 
+  // F-52-01 AC-08/09: each Drive call individually bounded — a stalled findWorkspaceRoot or
+  // bootstrapAclTargetFolders resolves to the existing _runStep ✗ + inline error affordance
+  // instead of leaving render() pending past mountView's ceiling.
   // Idempotent (getOrCreateFolder dedups) — safe to re-run every time a manager visits this view.
   await _runStep(stepsEl, t('onboarding.create_structure'), async () => {
-    await bootstrapAclTargetFolders(driveApi, rootId);
+    const rootRes = await safeMasterLoad(() => findWorkspaceRoot(activeWorkspaceName()), 'onboarding:root');
+    if (!rootRes.ok) throw rootRes.error;
+    rootId = rootRes.value;
+
+    const bootstrapRes = await safeMasterLoad(() => bootstrapAclTargetFolders(driveApi, rootId), 'onboarding:bootstrap');
+    if (!bootstrapRes.ok) throw bootstrapRes.error;
   });
 
   inviteDiv.classList.remove('hidden');
