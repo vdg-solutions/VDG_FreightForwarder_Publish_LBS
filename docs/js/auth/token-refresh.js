@@ -20,8 +20,19 @@ let _checkTimer = null;
 // GIS error, a bound timeout, a raw resp.error — is still RECONNECT, unchanged.
 export const REFRESH_FAILURE_ACTION = Object.freeze({ RECONNECT: 'needs-reconnect', PENDING: 'pending-gesture' });
 const POPUP_BLOCKED_PREFIX = 'popup-blocked:'; // matches the tag access-token.js sets on a blocked popup
-export function refreshFailureAction(errorMessage) {
-  return typeof errorMessage === 'string' && errorMessage.startsWith(POPUP_BLOCKED_PREFIX)
+
+// F-51-01 — PENDING is only honest while the token is still inside its own validity window; a
+// popup-blocked tick on an already-expired token is a real reconnect need, not a calm pause.
+const TOKEN_VALIDITY_GRACE_MS = 0; // strict: exp exactly at now is NOT still valid
+export function isTokenStillValid(expMs, now, graceMs = TOKEN_VALIDITY_GRACE_MS) {
+  return expMs > 0 && (expMs - now) > -graceMs;
+}
+
+// F-51-01 AC-01/02/03/04 — tokenStillValid must be affirmatively true for the calm path; omitted
+// or false never gets PENDING by default, so the existing no-arg corrupt-token call site at
+// _check() keeps returning RECONNECT unchanged.
+export function refreshFailureAction(errorMessage, tokenStillValid) {
+  return typeof errorMessage === 'string' && errorMessage.startsWith(POPUP_BLOCKED_PREFIX) && tokenStillValid === true
     ? REFRESH_FAILURE_ACTION.PENDING
     : REFRESH_FAILURE_ACTION.RECONNECT;
 }
@@ -54,8 +65,11 @@ function _onGestureRefresh() {
     })
     .catch((err) => {
       // F-50-01 AC-01/02/05 — classify even inside a real gesture: a structural popup-blocked
-      // failure stays calm instead of flashing red.
-      if (refreshFailureAction(err?.message) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+      // failure stays calm instead of flashing red. F-51-01 — same access-token exp bucket as
+      // _accessCheck, since this gesture's GIS call is sharedSilentRefresh() = the access flow.
+      const expMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+      const tokenStillValid = isTokenStillValid(expMs, Date.now());
+      if (refreshFailureAction(err?.message, tokenStillValid) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
       else _dispatchAuthPending();
     });
 }
@@ -96,8 +110,11 @@ function _silentPrompt() {
     })
     .catch((err) => {
       // AC-01/02/07: classify — an idle-tab popup-blocked failure is expected and structural,
-      // never a blind reconnect purge; a real failure still surfaces exactly as before.
-      if (refreshFailureAction(err?.message) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+      // never a blind reconnect purge; a real failure still surfaces exactly as before. F-51-01 —
+      // recompute validity from the id-token's own exp, the same source _check() used to decide
+      // this tick was due, at the moment of failure (not a snapshot from when the tick started).
+      const tokenStillValid = isTokenStillValid(_getExpMs(), Date.now());
+      if (refreshFailureAction(err?.message, tokenStillValid) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
       else _dispatchAuthPending();
     });
 }
@@ -197,8 +214,12 @@ function _accessCheck() {
     })
     .catch((err) => {
       // AC-01/02/07: classify — an idle-tab popup-blocked failure is expected and structural,
-      // never a blind reconnect purge; a real failure still surfaces exactly as before.
-      if (refreshFailureAction(err?.message) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
+      // never a blind reconnect purge; a real failure still surfaces exactly as before. F-51-01 —
+      // recompute validity from ACCESS_TOKEN_EXP_KEY at the moment of failure, not the value read
+      // when the tick started.
+      const freshExpMs = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+      const tokenStillValid = isTokenStillValid(freshExpMs, Date.now());
+      if (refreshFailureAction(err?.message, tokenStillValid) === REFRESH_FAILURE_ACTION.RECONNECT) _dispatchNeedsReconnect();
       else _dispatchAuthPending();
     });
 }
