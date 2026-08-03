@@ -22,6 +22,12 @@ const REASON_REDIRECTED = 'nav.access.redirected';
 // No match => 'allow' (any authenticated user) — matches the F-24-05 route map exactly.
 const ROUTE_ROLE_MAP = [
   { prefix: '/admin',      roles: [ROLE_MANAGER],                    reason: REASON_DENIED },
+  // F-57-01: 20 of the 52 routes in app-views.js live under /manager, and the prefix had no
+  // entry here at all — `_matchRoute` returned null, which means 'allow' for every signed-in
+  // role. Most manager views compensated with their own `if (!isManager())` bounce, but
+  // /manager/manifest and /manager/air-invoice never did. One line covers all 20 and demotes
+  // the per-view checks from sole defence to redundant backstop.
+  { prefix: '/manager',    roles: [ROLE_MANAGER],                    reason: REASON_DENIED },
   { prefix: '/accounting', roles: [ROLE_ACCOUNTANT, ROLE_MANAGER],    reason: REASON_REDIRECTED },
   { prefix: '/sales',      roles: [ROLE_SALES_REP, ROLE_MANAGER],     reason: REASON_REDIRECTED },
 ];

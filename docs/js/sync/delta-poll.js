@@ -9,7 +9,12 @@ const DELTA_POLL_MS       = 30_000;
 const BACKOFF_STEPS_MS    = [30_000, 60_000, 120_000];
 const CHANGES_FIELDS      = 'nextPageToken,newStartPageToken,changes(fileId,removed,file(name,parents,modifiedTime))';
 const KIND_FOLDER_RE      = /\/([^/]+)\/\d{4}-\d{2}\.jsonl$/; // .../kind/YYYY-MM.jsonl
-const BUNDLE_NAME_RE      = /^(\d{4}-\d{2})\.jsonl$/;
+// F-57-01: `all.jsonl` (team masters, shared/masters/<kind>/) must match too. The old
+// month-only pattern meant a change to customers / carriers / air-rates / local-charges /
+// ocean-tariff was pulled from the changes feed and then dropped — no IDB write and, more
+// visibly, no vdg:entity-changed, so an open grid never learned the master had changed and
+// showed the stale row until the user navigated away and back.
+const BUNDLE_NAME_RE      = /^(\d{4}-\d{2}|all)\.jsonl$/;
 const QUOTA_PIGGYBACK_TICK = 120; // check quota once per ~60min (120 × 30s ticks)
 
 export class DeltaPoller {
@@ -89,7 +94,12 @@ export class DeltaPoller {
       this._reportState();
     } else {
       this._paused = false;
-      this._tick().then(() => this._schedule(DELTA_POLL_MS));
+      // F-57-01: no trailing _schedule() here. _tick() already schedules itself — DELTA_POLL_MS
+      // on success, the current backoff step on failure. The old `.then(() => this._schedule(
+      // DELTA_POLL_MS))` overwrote that unconditionally, so a poller that had backed off to 120 s
+      // against repeated Drive errors snapped back to 30 s the moment the user switched tabs —
+      // exactly the wrong direction against a 429.
+      this._tick();
     }
   }
 

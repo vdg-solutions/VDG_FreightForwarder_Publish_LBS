@@ -1,13 +1,20 @@
 import { findMatch } from './master-deduper.js';
+import { todayLocal } from '../util/today-local.js';
+import { pnlLineId } from '../util/pnl-line-id.js';
 
 const KIND_SHIPMENT         = 'shipment';
 const KIND_LINE             = 'pnl_line';
 const KIND_CUSTOMER         = 'customers';
-const KIND_CARRIER          = 'carrier';
+// F-57-01: 'carriers' (plural) is the MASTER_REGISTRY key. The old singular 'carrier' was not a
+// registered kind, so _isTeamMaster() returned false and every import wrote the carrier master to
+// users/<prefix>/carrier/ instead of shared/masters/carriers/ — the dedupe list read back empty,
+// so each import re-created the same carriers and the quote form's dropdown never saw any of them.
+const KIND_CARRIER          = 'carriers';
 const KIND_COMMISSION_ENTRY = 'commission_entry';
 const KIND_COMMISSION_RULES = 'commission_rules';
 
-const SAVE_PROGRESS_EVENT = 'vdg:save-progress';
+const SAVE_PROGRESS_EVENT   = 'vdg:save-progress';
+const UNKNOWN_SHIPMENT_REF  = 'UNKNOWN'; // line arrived without a resolvable shipment_ref
 
 function _emitProgress(done, total, kind) {
   if (typeof window === 'undefined') return;
@@ -77,13 +84,20 @@ export async function commitPnlReport(report, repo) {
     _emitProgress(done, total, KIND_SHIPMENT);
   }
 
-  // Persist lines
-  let lineIdx = 0;
+  // Persist lines.
+  // F-57-01: index is now 1-based and PER SHIPMENT, via the same pnlLineId() helper the manual
+  // form uses. The old counter ran across the whole report and restarted at 0 on the next
+  // import, so re-importing a corrected workbook with one fewer line on an earlier shipment
+  // shifted every later shipment's ids and stranded the previous import's tail. The old
+  // zero-padded `-L000` shape was also invisible to the manual path's overwrite cleanup,
+  // which double-counted the shipment's revenue after a single edit.
+  const seqByRef = new Map();
   for (const line of lines) {
-    const ref = line.shipment_ref || line.ShipmentRef || 'UNKNOWN';
-    const id  = `${ref}-L${String(lineIdx).padStart(3, '0')}`;
-    await repo.put(KIND_LINE, id, { ...line, id, _imported_at: Date.now() });
-    lineIdx++;
+    const ref = line.shipment_ref || line.ShipmentRef || UNKNOWN_SHIPMENT_REF;
+    const seq = (seqByRef.get(ref) || 0) + 1;
+    seqByRef.set(ref, seq);
+    const id  = pnlLineId(ref, seq);
+    await repo.put(KIND_LINE, id, { ...line, id, shipment_ref: ref, _imported_at: Date.now() });
     done++;
     _emitProgress(done, total, KIND_LINE);
   }
@@ -126,7 +140,7 @@ export async function computeAndPersistSalesCommission(shipment, pnlLines, repo)
     assignment = await repo.get(KIND_COMMISSION_RULES, salesId);
   } catch { /* ignore */ }
 
-  const now = new Date().toISOString().slice(0, 10);
+  const now = todayLocal();
 
   const comKh   = commLines.filter((c) => c.kind === 'CustomerRebate')
                     .reduce((s, c) => s + Number(c.net_after_tax || 0), 0);

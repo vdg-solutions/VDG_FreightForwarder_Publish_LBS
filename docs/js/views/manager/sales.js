@@ -3,6 +3,7 @@
 import '../../components/sparkline.js';
 import { isManager }           from '../../auth/auth-gate.js';
 import { navigate }            from '../../router.js';
+import { todayLocal } from '../../util/today-local.js';
 import {
   computeCommissions, computeSparkline, buildPeriodKey,
   SPARKLINE_MONTHS, KIND_SHIPMENT, KIND_PNL_LINE,
@@ -203,7 +204,7 @@ export function renderDrillTab(container, idx, ships) {
 }
 
 function exportCsv(rows, periodKey) {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = todayLocal();
   const lines = [CSV_COLS,
     ...rows.map((r) => [
       r.salesName, r.margin, r.tndn, r.comDeductions,

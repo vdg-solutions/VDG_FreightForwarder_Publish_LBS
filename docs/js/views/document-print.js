@@ -1,75 +1,30 @@
 // F-03-03 — browser print-to-PDF, no jsPDF/WASM rendering yet
-// Wire real WASM call once F-03-01 operator surface lands
+//
+// F-57-02 — MOCK_FIELDS is gone. docId was rendered in the header but never used to load
+// anything, so every shipment printed the same invented HBL/MBL/D-O/AN — same vessel MSC
+// OSCAR, same container TCNU1234567, same consignee — on company letterhead, and the only
+// "mock data" marker sat inside a `no-print` wrapper so the printed PDF said nothing. Same
+// defect and same fix as note-print.js: real shipment data, an explicit empty state, and a
+// draft banner that survives printing.
 import { t } from '../i18n/index.js';
+import { loadDocumentData, DOC_TYPES, DOC_TYPE_HBL } from './document-print-data.js';
 
-const DOC_TYPES = ['HBL', 'MBL', 'D/O', 'AN', 'Debit Note'];
-
-// Tab-selector display label — DOC_TYPES entries double as MOCK_FIELDS lookup keys and the
-// ?type= route param, so the underlying value stays English; only the visible tab text is VN.
+// Tab-selector display label — DOC_TYPES entries double as the field-builder lookup key and
+// the ?type= route param, so the underlying value stays English; only the tab text is VN.
 function docTypeLabel(docType) {
   return docType === 'Debit Note' ? t('note_print.title.debit_note') : docType;
 }
 
-// Mock per-type field templates. First tuple element is an i18n KEY (or a kept loanword-abbrev
-// like ETD/ETA/Container) resolved through t() in fieldTable — the visible field LABELS render
-// VN; the second element is sample DATA, kept verbatim. Prose labels shared across doc types
-// reuse one key (Shipper/Consignee/Port of Load/…) so each is translated once.
-const MOCK_FIELDS = {
-  HBL: [
-    ['sales_new.field.shipper',            'Acme Logistics Pte Ltd, 10 Tuas South Ave 2, Singapore 637367'],
-    ['sales_new.field.consignee',          'To Order of Acme Logistics'],
-    ['document_print.field.notify_party',  'Acme Logistics Pte Ltd'],
-    ['document_print.field.vessel_voy',    'MSC OSCAR / 0623E'],
-    ['document_print.field.port_of_load',  'Hochiminh City (VNSGN)'],
-    ['document_print.field.port_of_disch', 'Los Angeles (USLAX)'],
-    ['document_print.field.marks_nos',     'EX-260612-001 / TCNU1234567'],
-    ['document_print.field.description',   'CONSUMER ELECTRONICS — 1 × 40HC'],
-    ['document_print.field.gross_weight',  '14,500 KGS'],
-    ['document_print.field.measurement',   '67.3 CBM'],
-  ],
-  MBL: [
-    ['budget_print.field.carrier',         'Mediterranean Shipping Company S.A.'],
-    ['document_print.field.bl_number',     'MSCUSGN0623E001'],
-    ['sales_new.field.shipper',            'VDG Freight Services Co., Ltd'],
-    ['sales_new.field.consignee',          'MSC Agent — LAX'],
-    ['document_print.field.vessel_voy',    'MSC OSCAR / 0623E'],
-    ['document_print.field.port_of_load',  'Hochiminh City (VNSGN)'],
-    ['document_print.field.port_of_disch', 'Los Angeles (USLAX)'],
-    ['document_print.field.no_of_bls',     'THREE (3) ORIGINALS'],
-    ['document_print.field.freight',       'PREPAID'],
-  ],
-  'D/O': [
-    ['document_print.field.do_no',         'DO-VDG-2100-01'],
-    ['note_print.recipient.issued_to',     'Acme Logistics Pte Ltd'],
-    ['document_print.field.container_no',  'TCNU1234567 / 40HC'],
-    ['document_print.field.seal_no',       'VDG000123'],
-    ['document_print.field.terminal',      'Cai Mep International Terminal (CMIT)'],
-    ['document_print.field.free_time',     '7 days from discharge date'],
-    ['document_print.field.release_date',  '2026-07-18'],
-    ['document_print.field.remarks',       'Present original HBL to collect'],
-  ],
-  AN: [
-    ['document_print.field.an_no',         'AN-VDG-2100-01'],
-    ['sales_new.field.consignee',          'Acme Logistics Pte Ltd'],
-    ['sales_new.field.vessel',             'MSC OSCAR'],
-    ['document_print.field.voyage',        '0623E'],
-    ['ETD',                                '2026-06-23'],
-    ['ETA',                                '2026-07-18'],
-    ['document_print.field.port_of_disch', 'Los Angeles (USLAX)'],
-    ['Container',                          'TCNU1234567 / 40HC / 14,500 KGS'],
-    ['document_print.field.freight_status','PREPAID'],
-  ],
-  'Debit Note': [
-    ['document_print.field.debit_note_no', 'DN-VDG-2100-01'],
-    ['note_print.recipient.issued_to',     'Acme Logistics Pte Ltd'],
-    ['document_print.field.ref_shipment',  'EX-260612-001'],
-    ['sales_drop.preview.col.description', 'Ocean Freight — HCM → LAX — 1 × 40HC'],
-    ['quote_new.col.amount',               'USD 2,850.00'],
-    ['currency',                           'USD'],
-    ['document_print.field.due_date',      '2026-07-28'],
-    ['document_print.field.bank',          'Vietcombank — HCM Branch — Acc 0071001234567'],
-  ],
-};
+// PRINT-VISIBLE. Deliberately NOT `no-print` — that was the defect. No document here is
+// issued through the Document FSM yet, so every printed copy has to say so on the paper.
+function draftBanner() {
+  return `
+    <div class="mb-6 border-2 border-red-500 rounded-lg p-3 text-center">
+      <div class="text-base font-bold uppercase tracking-wider text-red-600">${t('note_print.draft_watermark')}</div>
+      <div class="text-xs text-red-500 mt-0.5">${t('note_print.draft_explain')}</div>
+    </div>
+  `;
+}
 
 function docHeader(docId, docType) {
   return `
@@ -127,47 +82,62 @@ function docTypeSelector(activeType, docId) {
   return `<div class="flex gap-2 mb-6 no-print">${tabs}</div>`;
 }
 
+// No shipment behind this id — render the reason and NO document. Printing letterhead with an
+// empty field table is the same failure as printing an invented one.
+function emptyState(docId) {
+  return `
+    <div class="bg-white rounded-xl border border-slate-200 p-10 text-center">
+      <div class="text-sm font-semibold text-slate-900">${t('document_print.empty.no_shipment')}</div>
+      <div class="text-xs text-slate-500 mt-1">${docId}</div>
+      <a href="#/documents" class="inline-block mt-4 text-xs text-blue-600 hover:underline">← ${t('common.back')}</a>
+    </div>
+  `;
+}
+
+function chrome(docId, docType, hasDoc) {
+  return `
+    <div class="flex items-center justify-between mb-4 no-print">
+      <div>
+        <div class="text-xs text-slate-500">F-03-03 · ${t('document_print.preview_caption')}</div>
+        <div class="text-base font-semibold text-slate-900">${docId}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="#/documents" class="text-xs text-slate-500 hover:underline no-print">← ${t('common.back')}</a>
+        ${hasDoc ? `<vdg-print-button doc-id="${docId}" doc-type="${docType}"></vdg-print-button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
 export async function render(root, docId) {
   // Type from query param or default HBL
   const params  = new URLSearchParams(location.hash.split('?')[1] || '');
-  const docType = params.get('type') || 'HBL';
-  const fields  = MOCK_FIELDS[docType] || MOCK_FIELDS.HBL;
+  const docType = params.get('type') || DOC_TYPE_HBL;
+  const data    = await loadDocumentData(docId, docType);
 
   // Minimal chrome — sidebar/topbar are already hidden by @media print
   root.innerHTML = `
     <div class="p-6 max-w-[900px] mx-auto">
-      <div class="flex items-center justify-between mb-4 no-print">
-        <div>
-          <div class="text-xs text-slate-500">F-03-03 · ${t('document_print.preview_caption')}</div>
-          <div class="text-base font-semibold text-slate-900">${docId}</div>
-        </div>
-        <div class="flex items-center gap-2">
-          <a href="#/documents" class="text-xs text-slate-500 hover:underline no-print">← ${t('common.back')}</a>
-          <vdg-print-button doc-id="${docId}" doc-type="${docType}"></vdg-print-button>
-        </div>
-      </div>
-
+      ${chrome(docId, docType, Boolean(data.shipment))}
       ${docTypeSelector(docType, docId)}
-
+      ${data.shipment ? `
       <div class="print-doc bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
+        ${draftBanner()}
         ${docHeader(docId, docType)}
-        ${fieldTable(fields)}
+        ${fieldTable(data.fields)}
         ${signatureBlock(docType)}
-        <div class="mt-6 pt-4 border-t border-slate-200 text-[10px] text-slate-400 no-print">
-          ${t('common.mock_data_notice')}
-        </div>
-      </div>
+      </div>` : emptyState(docId)}
     </div>
   `;
 
   // Re-init print button after innerHTML injection
-  await customElements.whenDefined('vdg-print-button');
+  if (data.shipment) await customElements.whenDefined('vdg-print-button');
 
   // Handle tab clicks without full re-navigate — update query param
   root.querySelectorAll('[href*="?type="]').forEach((a) => {
     a.addEventListener('click', async (e) => {
       e.preventDefault();
-      const newType = new URL(a.href, location.href).searchParams.get('type') || 'HBL';
+      const newType = new URL(a.href, location.href).searchParams.get('type') || DOC_TYPE_HBL;
       location.hash = `/document/${docId}/print?type=${encodeURIComponent(newType)}`;
     });
   });

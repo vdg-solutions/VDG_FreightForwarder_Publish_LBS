@@ -3,6 +3,7 @@
 import { activeWorkspaceName } from './workspace-registry.js';
 import { MASTER_REGISTRY } from '../data/master-registry.js';
 import { t } from '../i18n/index.js';
+import { todayLocal } from '../util/today-local.js';
 
 const JSZIP_CDN          = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
 // F-28-01: derived from the registry instead of a hand-maintained list — the old 3-item
@@ -89,7 +90,7 @@ export async function exportWorkspace(repo, driveApi, onProgress = () => {}) {
 
   onProgress(85, t('backup.progress.packing'));
   const blob     = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-  const date     = new Date().toISOString().slice(0, 10);
+  const date     = todayLocal();
   const filename = `${ZIP_FILE_PREFIX}${date}.zip`;
 
   onProgress(95, t('backup.progress.downloading'));

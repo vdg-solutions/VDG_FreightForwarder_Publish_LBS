@@ -24,7 +24,24 @@ const AUDIT_KIND           = 'audit_log';
 const CENSUS_EVENT         = 'master-scope-migration';
 const USERS_ROOT           = 'users';
 
-export const MASTER_SCOPE_MIGRATION_KINDS = ['local-charges', 'units-of-measure'];
+// An entry is either a kind string (scope flip — same kind, old per-user folder → shared) or
+// { read, write } (F-57-01 kind RENAME — records were written under a kind string that was never
+// registered, so they must be read from the old folder and replayed under the correct kind).
+export const MASTER_SCOPE_MIGRATION_KINDS = [
+  'local-charges',
+  'units-of-measure',
+  // F-57-01: manager-set commission splits were per-user, so the rep never resolved them.
+  'commission_rules',
+  // F-57-01: 'carrier' was never a registered kind — every Excel import stranded its carrier
+  // masters in users/{prefix}/carrier/ while the real master stayed empty.
+  { read: 'carrier', write: 'carriers' },
+];
+
+// Normalizes either entry form to { readKind, writeKind }.
+function _resolveKindSpec(spec) {
+  if (typeof spec === 'string') return { readKind: spec, writeKind: spec };
+  return { readKind: spec.read, writeKind: spec.write };
+}
 
 /**
  * @param {object}   repo              WasmEntityRepo — get(kind,id) / put(kind,id,body)
@@ -43,20 +60,25 @@ export async function migrateMasterScope(
   kinds = MASTER_SCOPE_MIGRATION_KINDS, _ms = SAFE_AWAIT_DEFAULT_MS,
 ) {
   const results = [];
-  for (const kind of kinds) {
-    results.push(await _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, kind, _ms));
+  for (const spec of kinds) {
+    results.push(await _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, spec, _ms));
   }
   return results;
 }
 
-async function _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, kind, _ms) {
-  const flagKey = MIGRATED_META_PREFIX + kind;
+async function _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, spec, _ms) {
+  // readKind names the OLD per-user folder; writeKind names the registered kind the records
+  // belong under. They differ only for a rename entry — for a scope flip both are the same.
+  const { readKind, writeKind } = _resolveKindSpec(spec);
+  const kind    = writeKind;              // reported/audited under the destination kind
+  const flagKey = MIGRATED_META_PREFIX + readKind; // keyed by source folder — a rename and a
+                                                   // flip of the same name never share a flag
   const flagRes = await safeAwait(idbGet(db, STORE_META, flagKey), _ms, null, `master-scope-migrator:flag:${kind}`);
   if (flagRes.ok && flagRes.value?.migrated) return { kind, found: 0, merged: 0, conflicted: 0, skipped: true };
 
   const readRes = await safeAwait(
-    _readOldPerUserRecords(driveApi, findWorkspaceRoot, prefix, kind),
-    _ms, () => ({ records: [], files: [] }), `master-scope-migrator:read:${kind}`,
+    _readOldPerUserRecords(driveApi, findWorkspaceRoot, prefix, readKind),
+    _ms, () => ({ records: [], files: [] }), `master-scope-migrator:read:${readKind}`,
   );
   const { records, files } = readRes.ok ? readRes.value : { records: [], files: [] };
   if (!readRes.ok) return { kind, found: 0, merged: 0, conflicted: 0 }; // couldn't read — retry next boot
@@ -88,7 +110,7 @@ async function _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, kind,
 
   if (allConfirmed) {
     const markRes = await safeAwait(
-      idbPut(db, STORE_META, { key: flagKey, migrated: true, kind, found: records.length, merged, at: new Date().toISOString() }),
+      idbPut(db, STORE_META, { key: flagKey, migrated: true, kind, source_kind: readKind, found: records.length, merged, at: new Date().toISOString() }),
       _ms, null, `master-scope-migrator:mark:${kind}`,
     );
     if (markRes.ok) await _clearOldCopy(driveApi, files, _ms); // never drop the old copy before shared is confirmed

@@ -1,6 +1,7 @@
 // Route prefetch — L2 preload for dashboard + audit scroll-load
 
 import { idbGetAllByIndex, STORE_ENTITIES } from './idb-cache.js';
+import { toLocalDateStr } from '../util/today-local.js';
 
 const PREFETCH_DAYS_BACK = 30;
 const AUDIT_INITIAL_ROWS = 100;
@@ -11,7 +12,7 @@ export async function prefetchDashboard(repo) {
   try {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - PREFETCH_DAYS_BACK);
-    const cutoffIso = cutoff.toISOString().slice(0, 10);
+    const cutoffIso = toLocalDateStr(cutoff);
     await repo.list('shipment', (r) => (r.etd || '') >= cutoffIso);
   } catch (err) {
     console.warn('[route-prefetch] dashboard prefetch failed:', err.message); // DEV

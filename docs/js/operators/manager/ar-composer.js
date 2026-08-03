@@ -1,5 +1,7 @@
 // Operator — AR aging + AP payables + receivable timeline. Pure, no I/O.
 
+import { toLocalDateStr } from '../../util/today-local.js';
+
 const AR_CURRENT_DAYS              = 30;
 const AR_BUCKET_31_60              = 60;
 const AR_BUCKET_61_90              = 90;
@@ -133,7 +135,7 @@ export function composeAP({ pnlLines }) {
   for (const [, r] of carrierMap) {
     const count = r.shipment_refs.size;
     const oldest = r.dates.length > 0
-      ? new Date(Math.min(...r.dates)).toISOString().slice(0, 10)
+      ? toLocalDateStr(Math.min(...r.dates))
       : '—';
     rows.push({
       carrier:           r.carrier,

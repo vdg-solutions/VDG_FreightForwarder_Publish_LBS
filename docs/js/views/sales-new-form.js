@@ -2,6 +2,7 @@
 
 import { t } from '../i18n/index.js';
 import { saveDraft } from './sales-new/draft-manager.js';
+import { todayLocal } from '../util/today-local.js';
 export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
 import { sectionAHtml, wireHeaderSection } from './sales-new-form/section-header.js';
 import { sectionBHtml, wireLinesSection, collectLines, sumVndPay, sumVndCollect }
@@ -21,7 +22,7 @@ export async function renderForm(root, opts = {}) {
           mode = 'create', fxRepo = null, jobNo = null } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
-  const docDate   = draft?.transaction_date || new Date().toISOString().slice(0, 10);
+  const docDate   = draft?.transaction_date || todayLocal();
   const isManager = window.__vdg_current_user?.role === 'Manager';
   const d = draft ? { ...draft } : {};
   if (!d.sales_rep && salesRepId) d.sales_rep = salesRepId;

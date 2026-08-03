@@ -22,7 +22,11 @@ const V1_ITEMS = [
   // F-24-09: allowRoles matches route-guard's /sales prefix map (SalesRep | Manager).
   { group: 'sales',     route: '/sales/me/pnl/new',           labelKey: 'nav.sales.create_pnl',       icon: 'tag',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_pnl',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  { group: 'reports',   route: '/manager/reports/pnl', labelKey: 'nav.reports.pnl_report',     icon: 'dollar' },
+  // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
+  // ReadOnly — the view's own isManager() check then bounced them to /dashboard with no
+  // explanation. A visible menu item that always fails. Now matches the /manager route-guard
+  // prefix (nav-gates KEEP-CONSISTENT-WITH-route-guard).
+  { group: 'reports',   route: '/manager/reports/pnl', labelKey: 'nav.reports.pnl_report',     icon: 'dollar', managerOnly: true, allowRoles: [ROLE_MANAGER] },
   // F-23-04: accountant ledger browse — reuses the reports group (R-5 minimal change).
   // F-24-05: allowRoles opens this to Accountant too; managerOnly kept for the F-23-04
   // CDP button-count fixture (27-sidebar-v1-trim.js), superseded by allowRoles below.
@@ -254,7 +258,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build d39d805">v0.1.72</span>
+        <span class="font-mono whitespace-nowrap" title="build ebac869">v0.1.73</span>
       </div>
     `;
   }

@@ -2,6 +2,7 @@
 // Browse chart of accounts -> per-account legs, filter, running balance, CSV export.
 
 import { t, currentLocale }  from '../../i18n/index.js';
+import { todayLocal } from '../../util/today-local.js';
 import {
   groupChartByType, filterLegs, computeRunningBalances, buildLedgerCSV,
 } from '../../operators/manager/ledger-composer.js';
@@ -33,7 +34,7 @@ function defaultFilter() {
   const year = new Date().getFullYear();
   return {
     dateFrom: `${year}-01-01`,
-    dateTo:   new Date().toISOString().slice(0, 10),
+    dateTo:   todayLocal(),
     minAmount: '', maxAmount: '', search: '',
   };
 }
@@ -289,7 +290,7 @@ function exportCsv() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `vdg-ledger-${_selectedAccount.code}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `vdg-ledger-${_selectedAccount.code}-${todayLocal()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 }

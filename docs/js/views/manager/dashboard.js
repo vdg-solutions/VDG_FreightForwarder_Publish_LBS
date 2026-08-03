@@ -7,6 +7,7 @@ import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { getActiveSalesReps } from '../../operators/sales-registry.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { t } from '../../i18n/index.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const DEFAULT_WIDGET_LAYOUT = [
   { id: 'revenue-chart',  span: 2 }, { id: 'carrier-donut', span: 1 },
@@ -86,7 +87,7 @@ function exportWidgetCsv(slug, rows, headers) {
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  const date = new Date().toISOString().slice(0, 10);
+  const date = todayLocal();
   a.href     = url;
   a.download = `vdg-${slug}-${date}.csv`;
   a.click();

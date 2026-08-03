@@ -1,18 +1,21 @@
 // submit-orchestrator.js — validate, persist; buildShipment delegated to shipment-builder.js
 
 import { t } from '../../i18n/index.js';
-import { genShipmentRef, nextSeq } from '../../operators/shipment-ref-gen.js';
+import { genShipmentRef, nextSeq, recordSeq } from '../../operators/shipment-ref-gen.js';
 import { buildShipment } from './shipment-builder.js';
 import { ensureShipmentStateAliases } from '../../util/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../operators/fsm-ingest.js';
 import { ensureRepCode } from '../../operators/rep-code-registry.js';
 import { assignJobNo } from '../../operators/job-no-gen.js';
+import { pnlLineId, deletePnlLinesFor } from '../../util/pnl-line-id.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const KIND_USER = 'user';
 const WARN_PNL_LINES_MISSING = 'pnl_lines_empty';
 // AC-08: max number of CE keys to attempt deletion during commission overwrite
 const MAX_CE_CLEANUP = 20;
 const INITIAL_LEDGER_VERSION = 1; // F-23-03 pm-decisions.md Q3: envelope-only field
+const MAX_REF_MINT_ATTEMPTS  = 50;  // F-57-01: bound the free-ref search; 50 shipments/rep/day
 
 // window is undefined under node:test (this module is imported there directly) — guard
 // instead of a bare `window.__vdg_ledger_repo` default so the browser global stays lazy.
@@ -69,22 +72,25 @@ export function highlightErrors(root, errors) {
   }
 }
 
-const MAX_PL_CLEANUP = 50; // max pnl_line rows to attempt deletion on overwrite
-
 // The Shipments list + sales analytics aggregate from `pnl_line` entities (only the Excel-import
 // path created them). Manual P&Ls had only embedded shipment.pnl_lines → 0 revenue in the list
 // ("thiếu doanh thu"). Materialize one pnl_line per embedded line, keyed `${ref}-L<n>`, so both
 // entry paths agree. Fields already match (selling_vnd_collect / buying_vnd_pay from buildShipment).
+// F-57-01: id now comes from the shared pnlLineId() helper — the import path mints the identical
+// shape, so cleanup below reaches lines from either entry path.
 async function _writePnlLines(repo, ref, shipment, version) {
   const lines = shipment.pnl_lines || [];
   for (let i = 0; i < lines.length; i++) {
-    const id = `${ref}-L${i + 1}`;
+    const id = pnlLineId(ref, i + 1);
     await repo.put('pnl_line', id, { ...lines[i], id, shipment_ref: ref, _ledger_version: version });
   }
 }
 
+// F-57-01: enumerate-and-delete, replacing a fixed `${ref}-L1`..`-L50` probe that could not see
+// the import path's zero-padded `-L000` ids — those survived the overwrite and double-counted
+// the shipment's revenue in the grid and in sales analytics.
 async function _deletePnlLines(repo, ref) {
-  for (let i = 1; i <= MAX_PL_CLEANUP; i++) await repo.delete('pnl_line', `${ref}-L${i}`);
+  await deletePnlLinesFor(repo, ref);
 }
 
 // F-18-11: seed-if-unseeded + load once per call — resolver input for buildShipment's state
@@ -126,6 +132,30 @@ async function _resolveJobNo(state, repo, salesRepId, priorJobNo = null, ownRef 
   return assignJobNo(repo, await _repCodeFor(repo, salesRepId));
 }
 
+// F-57-01: mint a shipment_ref and confirm it is actually free before writing to it.
+// nextSeq() derives the sequence from repo.list('shipment') plus an in-memory session map, so
+// a cleared session map, a resumed tab or a clock the user rolled back could hand back a
+// sequence already on disk — and repo.put() would then blind-overwrite a real shipment. Mirrors
+// the _jobNoTaken precedent above: check, then step forward rather than trusting the generator.
+//
+// KNOWN LIMIT (not fixable here): `shipment` is a per-user kind, so repo.list only ever sees
+// THIS rep's shipments. Two reps creating an export shipment on the same day both compute
+// repoMax = 0 and both mint EX-YYMMDD-001. Nothing overwrites — the records live in different
+// Drive folders — but manager-level aggregation across reps can conflate them. Closing that
+// needs the rep code inside the ref, which changes REF_REGEX and every already-issued document
+// number: a product decision, not a bug fix.
+async function _mintFreeShipmentRef(repo, dir) {
+  const now = Date.now();
+  let seq = await nextSeq(repo, dir, now);
+  for (let attempt = 0; attempt < MAX_REF_MINT_ATTEMPTS; attempt++) {
+    const ref = genShipmentRef(dir, now, seq);
+    const taken = await repo.get('shipment', ref).catch(() => null);
+    if (!taken) { recordSeq(dir, now, seq); return ref; }
+    seq++;
+  }
+  throw new Error(`Could not allocate a free shipment_ref after ${MAX_REF_MINT_ATTEMPTS} attempts`);
+}
+
 // validate → buildShipment → repo.put → commission_entries → post ledger → return
 // { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every repo.put this
 // call made (compensating delete, not a real transaction — pm-decisions.md Q3).
@@ -135,8 +165,7 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   const publish = opts.publish !== false;
 
   const dir = directionPrefix(state.direction);
-  const seq = await nextSeq(repo, dir, Date.now());
-  const ref = genShipmentRef(dir, Date.now(), seq);
+  const ref = await _mintFreeShipmentRef(repo, dir);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
   const jobNo = await _resolveJobNo(state, repo, salesRepId);
@@ -161,7 +190,7 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
       const record = {
         ...commLines[i],
         shipment_ref:      ref,
-        occurred_at:       new Date().toISOString().slice(0, 10),
+        occurred_at:       todayLocal(),
         created_by:        salesRepId || null,
         _ledger_version:   INITIAL_LEDGER_VERSION,
       };
@@ -221,7 +250,7 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
     const record = {
       ...commLines[i],
       shipment_ref:    ref,
-      occurred_at:     new Date().toISOString().slice(0, 10),
+      occurred_at:     todayLocal(),
       created_by:      salesRepId || null,
       _ledger_version: shipment._ledger_version,
     };

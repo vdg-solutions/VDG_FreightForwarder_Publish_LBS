@@ -6,6 +6,7 @@ import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../operators/manager/user-audit-log-composer.js';
+import { todayLocal } from '../../util/today-local.js';
 
 function getUserAuditLog() { return window.__vdg_user_audit_log; }
 
@@ -83,7 +84,7 @@ function handleExportCsv() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `vdg-user-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `vdg-user-audit-log-${todayLocal()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 }

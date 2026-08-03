@@ -8,6 +8,7 @@ import { isManager }  from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t } from '../../i18n/index.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const SHEETJS_CDN      = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
 const MONTH_COUNT_BACK = 12;
@@ -119,7 +120,7 @@ async function handleExport(period) {
   if (!window.XLSX) { window.print(); return; }
 
   const XLSX    = window.XLSX;
-  const date    = new Date().toISOString().slice(0, 10);
+  const date    = todayLocal();
   const snapshot = rec?.checklist_snapshot || [];
 
   const ws1Data = [

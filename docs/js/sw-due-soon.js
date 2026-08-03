@@ -8,6 +8,7 @@
 
 import { openVdgDb, idbGet, idbPut, idbGetAllByIndex } from './cache/idb-cache.js';
 import { PAYMENT_DUE_WARN_DAYS } from './util/payment-due-constants.js';
+import { todayLocal } from './util/today-local.js';
 
 const META_STORE       = 'meta';
 const ENTITY_STORE     = 'entities';
@@ -19,7 +20,7 @@ const NOTIF_TAG_PREFIX  = 'due-soon-';
 const NOTIF_TITLE = 'Sắp tới hạn thanh toán';
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return todayLocal();
 }
 
 function fmtVnd(n) {

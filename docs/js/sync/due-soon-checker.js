@@ -9,6 +9,7 @@
 
 import { currentSalesRepId } from '../auth/auth-gate.js';
 import { PAYMENT_DUE_WARN_DAYS } from '../util/payment-due-constants.js';
+import { todayLocal } from '../util/today-local.js';
 
 const NOTIF_TITLE = 'Sắp tới hạn thanh toán';
 
@@ -17,7 +18,7 @@ const NOTIF_TITLE = 'Sắp tới hạn thanh toán';
 const _notifiedIds = new Set();
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return todayLocal();
 }
 
 /** Shared compute call — sales-me.js's list render and this module's badge/notify tick both
@@ -56,4 +57,11 @@ async function _check() {
 export function initDueSoonChecker() {
   window.addEventListener('vdg:wasm-ready', _check);
   window.addEventListener('vdg:entity-changed', (e) => { if (e.detail?.kind === 'billing') _check(); });
+  // F-57-01: run once immediately. This module is imported from _deferredInit, which runs AFTER
+  // repo-init-steps.js already dispatched vdg:wasm-ready on the critical path — so the listener
+  // above was registered for an event that had fired several awaits earlier and tier 3 never ran
+  // at boot. The badge only appeared once the user happened to write a billing entity, i.e. the
+  // reminder reached someone already working on billing but never someone who just signed in.
+  // WASM is guaranteed initialized by the time _deferredInit runs; _check() no-ops safely if not.
+  _check();
 }

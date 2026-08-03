@@ -10,6 +10,7 @@ import { kindI18nLabel }                     from '../../util/kind-i18n.js';
 import { formatDrillDimDesc }                 from '../../util/pnl-dim-i18n.js';
 import { resolveSalesRepLabel }               from '../../util/sales-rep-i18n.js';
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const PERIODS = ['MTD', 'QTD', 'YTD', 'Last12M'];
 const SHEETJS_CDN = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
@@ -218,7 +219,7 @@ async function exportExcel() {
   }
   const wb   = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'PnL Report');
-  const date = new Date().toISOString().slice(0, 10);
+  const date = todayLocal();
   XLSX.writeFile(wb, `vdg-pnl-${_period.toLowerCase()}-${date}.xlsx`);
 }
 

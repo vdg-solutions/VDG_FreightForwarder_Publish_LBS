@@ -9,6 +9,7 @@ import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
 import { shipmentLane } from '../../util/shipment-lane.js';
 import { t } from '../../i18n/index.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const SEA_KANBAN_STATES = ['Created','BookingConfirmed','InTransit','Arrived','Delivered','Closed'];
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
@@ -272,7 +273,7 @@ export async function render(root) {
       ...selected.map((s) => `${s.shipment_ref || s.id},${s.customer || ''},${s.lane || ''},${s.state || ''},${s.etd || ''}`)].join('\n');
     const a = Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
-      download: `vdg-pipeline-${new Date().toISOString().slice(0, 10)}.csv`,
+      download: `vdg-pipeline-${todayLocal()}.csv`,
     });
     a.click();
   });

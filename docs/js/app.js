@@ -125,35 +125,52 @@ window.addEventListener('vdg:outbox-drop', (e) => {
   }));
 });
 
-// Lightweight toast renderer — listens vdg:toast, auto-dismiss
+// Lightweight toast renderer — listens vdg:toast, auto-dismiss.
+//
+// F-57-02: toasts now go INTO #vdg-toast-container. The container was created here and then
+// never used — every toast was appended straight to <body> with its own `fixed bottom-4
+// right-4`, so two toasts landed on the exact same pixel and only the last one was readable.
+// The flex column + gap the container already declared is the whole fix; individual toasts
+// just have to stop positioning themselves. This got more visible once F-57-01 added the
+// /manager route guard, which raises how often a denial toast fires.
 (function initToastRenderer() {
-  const TOAST_DEFAULT_MS = 4_000;
+  const TOAST_DEFAULT_MS  = 4_000;
+  const TOAST_FADE_MS     = 300;  // must match `duration-300` below
+  const TOAST_MAX_VISIBLE = 4;    // beyond this the oldest is retired early, never a wall of toasts
+
   const container = document.createElement('div');
   container.id        = 'vdg-toast-container';
   container.className = 'fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none';
   document.body.appendChild(container);
 
+  const COLORS = {
+    success: 'bg-green-600',
+    error:   'bg-red-600',
+    warn:    'bg-amber-500',
+    info:    'bg-slate-800',
+  };
+
+  function dismiss(el) {
+    if (!el.isConnected) return;
+    el.classList.add('opacity-0');
+    setTimeout(() => el.remove(), TOAST_FADE_MS);
+  }
+
   window.addEventListener('vdg:toast', (e) => {
-    const { message, type = 'info', duration = 3000 } = e.detail;
-    const colors = {
-      success: 'bg-green-600',
-      error:   'bg-red-600',
-      warn:    'bg-amber-500',
-      info:    'bg-slate-800'
-    };
-    const bg = colors[type] || colors.info;
+    const { message, type = 'info', duration = TOAST_DEFAULT_MS } = e.detail || {};
+    if (!message) return;
+
     const el = document.createElement('div');
-    el.className = `fixed bottom-4 right-4 ${bg} text-white px-4 py-3 rounded shadow-lg z-[9999] opacity-0 transition-opacity duration-300`;
+    // No `fixed`/`bottom`/`right` here — the container owns placement, the toast owns looks.
+    el.className = `${COLORS[type] || COLORS.info} text-white px-4 py-3 rounded shadow-lg `
+                 + 'opacity-0 transition-opacity duration-300';
     el.textContent = message;
-    document.body.appendChild(el);
-    
-    // Fade in
+    container.appendChild(el);
+
+    while (container.childElementCount > TOAST_MAX_VISIBLE) dismiss(container.firstElementChild);
+
     requestAnimationFrame(() => el.classList.remove('opacity-0'));
-    
-    setTimeout(() => {
-      el.classList.add('opacity-0');
-      setTimeout(() => el.remove(), 300);
-    }, duration);
+    setTimeout(() => dismiss(el), duration);
   });
 
 }());

@@ -1,12 +1,14 @@
 // pnl-vertical-autofill.js — shipment↔4-section form draft converters (AC-06)
 
 // AC-09: prefer shipment.commission_lines; fall back to old CR1 entry as 1 Line row
+import { todayLocal } from '../../util/today-local.js';
+
 function _resolveCommissionLines(shipment, ce) {
   if (shipment.commission_lines?.length > 0) return shipment.commission_lines;
   if (ce?.gross_amount > 0) {
     // F-29-02 §5: same importFxDate pattern the legacy vertical-import path used (etd ||
     // today) — VND-locked shim still gets a sane fx_date.
-    const importFxDate = shipment.etd || new Date().toISOString().slice(0, 10);
+    const importFxDate = shipment.etd || todayLocal();
     return [{
       kind:          'Line',
       amount_fx:     ce.gross_amount          || 0,

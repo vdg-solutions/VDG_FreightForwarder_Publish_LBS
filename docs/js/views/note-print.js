@@ -1,34 +1,23 @@
 // F-06-03 — Debit/Credit Note print view — window.print(), no jsPDF
+//
+// F-57-01 — this view used to print a FABRICATED document. `shipmentRef` was shown in the
+// header but never used to load anything: every shipment printed the same three hardcoded
+// charges (Ocean Freight 2850.00 / BAF 320.00 / Doc Fee 75.00) and the same hardcoded
+// recipient, on a page carrying the company's real bank account, SWIFT and signature block.
+// The only markers saying "preview"/"mock data" both sat inside `no-print` wrappers, so the
+// printed PDF had no indication at all. Note numbers came from an in-memory `++_dnSeq` that
+// reset on every reload, so DN-<year>-0008 was re-issued to every customer on every page load.
+//
+// Now: lines come from the shipment's own pnl_line rows, the recipient from its customer, and
+// the note number is derived from the shipment_ref so it is stable and never re-minted. There
+// is no issuance FSM behind this view yet, so the printed page always carries a PRINT-VISIBLE
+// draft banner — removing it is a deliberate act once notes are wired to the Billing FSM.
+
 import { t } from '../i18n/index.js';
+import { todayLocal } from '../util/today-local.js';
+import { loadNoteData, NOTE_TYPE_DEBIT, NOTE_TYPE_CREDIT } from './note-print-data.js';
 
-const DN_PREFIX = 'DN';
-const CN_PREFIX = 'CN';
-const CURRENT_YEAR = new Date().getFullYear();
 const PAYMENT_TERM_DAYS = 30;
-
-// Mock counter — replace with real sequence once billing entity lands
-let _dnSeq = 7;
-let _cnSeq = 3;
-
-function nextNoteNumber(type) {
-  if (type === 'debit') {
-    return `${DN_PREFIX}-${CURRENT_YEAR}-${String(++_dnSeq).padStart(4, '0')}`;
-  }
-  return `${CN_PREFIX}-${CURRENT_YEAR}-${String(++_cnSeq).padStart(4, '0')}`;
-}
-
-// Mock line items per note type
-const MOCK_LINES = {
-  debit: [
-    { description: 'Ocean Freight — HCM → LAX — 1 × 40HC', qty: 1, currency: 'USD', unit_amount: 2850.00, total: 2850.00 },
-    { description: 'Fuel Surcharge (BAF)',                    qty: 1, currency: 'USD', unit_amount: 320.00,  total: 320.00  },
-    { description: 'Documentation Fee',                       qty: 1, currency: 'USD', unit_amount: 75.00,   total: 75.00   },
-  ],
-  credit: [
-    { description: 'Rate adjustment — agreed contract rate',  qty: 1, currency: 'USD', unit_amount: -200.00, total: -200.00 },
-    { description: 'Over-declared weight refund',             qty: 1, currency: 'USD', unit_amount: -85.00,  total: -85.00  },
-  ],
-};
 
 const BANK_DETAILS = {
   bank: 'Vietcombank — Ho Chi Minh City Branch',
@@ -37,15 +26,26 @@ const BANK_DETAILS = {
   beneficiary: 'VDG Freight Services Co., Ltd',
 };
 
+// PRINT-VISIBLE. Deliberately NOT `no-print` — that was the defect. Until a note can be
+// formally issued through the Billing FSM, every printed copy must say so on the paper.
+function draftBanner() {
+  return `
+    <div class="mb-6 border-2 border-red-500 rounded-lg p-3 text-center">
+      <div class="text-base font-bold uppercase tracking-wider text-red-600">${t('note_print.draft_watermark')}</div>
+      <div class="text-xs text-red-500 mt-0.5">${t('note_print.draft_explain')}</div>
+    </div>
+  `;
+}
+
 function noteHeader(noteNo, type, shipmentRef) {
-  const label = type === 'debit' ? t('note_print.title.debit_note') : t('note_print.title.credit_note');
+  const label = type === NOTE_TYPE_DEBIT ? t('note_print.title.debit_note') : t('note_print.title.credit_note');
   return `
     <div class="flex justify-between items-start mb-6">
       <div>
         <div class="text-2xl font-bold tracking-tight text-slate-900 uppercase">${label}</div>
         <div class="text-sm text-slate-500 mt-0.5">${t('note_print.label.note_no')} <span class="font-semibold text-slate-700">${noteNo}</span></div>
         <div class="text-sm text-slate-500">${t('note_print.label.ref_shipment')} <span class="font-semibold text-slate-700">${shipmentRef}</span></div>
-        <div class="text-sm text-slate-500">${t('note_print.label.date')}: <span class="font-semibold text-slate-700">${new Date().toISOString().slice(0, 10)}</span></div>
+        <div class="text-sm text-slate-500">${t('note_print.label.date')}: <span class="font-semibold text-slate-700">${todayLocal()}</span></div>
       </div>
       <div class="text-right text-xs text-slate-500">
         <div class="text-base font-bold text-slate-900 mb-1">VDG FREIGHT SERVICES CO., LTD</div>
@@ -59,18 +59,22 @@ function noteHeader(noteNo, type, shipmentRef) {
   `;
 }
 
-function billedToBlock(type) {
+// F-57-01: recipient comes from the shipment's customer, not a hardcoded "Acme Logistics".
+function billedToBlock(type, customer) {
+  const name    = customer?.name    || t('note_print.recipient.unknown');
+  const address = customer?.address || '';
+  const attn    = customer?.contact || '';
   return `
     <div class="mb-6 p-4 bg-slate-50 rounded-lg text-sm">
-      <div class="font-semibold text-slate-700 mb-1">${type === 'debit' ? t('note_print.recipient.bill_to') : t('note_print.recipient.issued_to')}</div>
-      <div class="text-slate-900 font-medium">Acme Logistics Pte Ltd</div>
-      <div class="text-slate-600">10 Tuas South Ave 2, Singapore 637367</div>
-      <div class="text-slate-600">Attn: Finance Department</div>
+      <div class="font-semibold text-slate-700 mb-1">${type === NOTE_TYPE_DEBIT ? t('note_print.recipient.bill_to') : t('note_print.recipient.issued_to')}</div>
+      <div class="text-slate-900 font-medium">${name}</div>
+      ${address ? `<div class="text-slate-600">${address}</div>` : ''}
+      ${attn ? `<div class="text-slate-600">${attn}</div>` : ''}
     </div>
   `;
 }
 
-function lineTable(lines) {
+function lineTable(lines, currency) {
   const rows = lines.map((l) => `
     <tr class="border-b border-slate-100">
       <td class="py-2 pr-4">${l.description}</td>
@@ -82,7 +86,6 @@ function lineTable(lines) {
   `).join('');
 
   const grandTotal = lines.reduce((s, l) => s + l.total, 0);
-  const currency = lines[0]?.currency ?? 'USD';
 
   return `
     <table class="w-full text-sm mb-6">
@@ -134,48 +137,77 @@ function signatureBlock() {
   `;
 }
 
-export async function render(root, shipmentRef, type) {
-  const noteType  = (type === 'credit') ? 'credit' : 'debit';
-  const noteNo    = nextNoteNumber(noteType);
-  const lines     = MOCK_LINES[noteType];
-  const typeLabel = noteType === 'debit' ? t('note_print.title.debit_note') : t('note_print.title.credit_note');
+// No shipment, or no billable lines on it. Renders an explanation and NO document — printing a
+// letterheaded page with an empty or invented line table is exactly what this card removed.
+function emptyState(messageKey, shipmentRef) {
+  return `
+    <div class="bg-white rounded-xl border border-slate-200 p-10 text-center">
+      <div class="text-sm font-semibold text-slate-900">${t(messageKey)}</div>
+      <div class="text-xs text-slate-500 mt-1">${shipmentRef}</div>
+      <a href="#/documents" class="inline-block mt-4 text-xs text-blue-600 hover:underline">← ${t('common.back')}</a>
+    </div>
+  `;
+}
 
-  root.innerHTML = `
-    <div class="p-6 max-w-[900px] mx-auto">
-      <div class="flex items-center justify-between mb-4 no-print">
-        <div>
-          <div class="text-xs text-slate-500">F-06-03 · ${typeLabel} · ${t('note_print.preview_suffix')}</div>
-          <div class="text-base font-semibold text-slate-900">${shipmentRef}</div>
-        </div>
-        <div class="flex items-center gap-3">
-          <a href="#/documents" class="text-xs text-slate-500 hover:underline">← ${t('common.back')}</a>
-          <a href="#/note/${shipmentRef}/debit"
-             class="px-3 py-1.5 text-xs rounded font-medium border transition
-                    ${noteType === 'debit' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}">
-            ${t('note_print.title.debit_note')}
-          </a>
-          <a href="#/note/${shipmentRef}/credit"
-             class="px-3 py-1.5 text-xs rounded font-medium border transition
-                    ${noteType === 'credit' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}">
-            ${t('note_print.title.credit_note')}
-          </a>
-          <button onclick="window.print()"
-                  class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded font-medium hover:bg-blue-700 transition">
-            ${t('print')} / PDF
-          </button>
-        </div>
+function toolbar(shipmentRef, noteType, canPrint) {
+  const tab = (type, label) => `
+    <a href="#/note/${shipmentRef}/${type}"
+       class="px-3 py-1.5 text-xs rounded font-medium border transition
+              ${noteType === type ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}">
+      ${label}
+    </a>`;
+  return `
+    <div class="flex items-center justify-between mb-4 no-print">
+      <div>
+        <div class="text-xs text-slate-500">F-06-03 · ${t('note_print.preview_suffix')}</div>
+        <div class="text-base font-semibold text-slate-900">${shipmentRef}</div>
       </div>
-
-      <div class="print-doc bg-white rounded-xl border border-slate-200 p-10 shadow-sm">
-        ${noteHeader(noteNo, noteType, shipmentRef)}
-        ${billedToBlock(noteType)}
-        ${lineTable(lines)}
-        ${paymentTerms()}
-        ${signatureBlock()}
-        <div class="mt-4 pt-4 border-t border-slate-100 text-[10px] text-slate-400 no-print">
-          ${t('common.mock_data_notice')}
-        </div>
+      <div class="flex items-center gap-3">
+        <a href="#/documents" class="text-xs text-slate-500 hover:underline">← ${t('common.back')}</a>
+        ${tab(NOTE_TYPE_DEBIT, t('note_print.title.debit_note'))}
+        ${tab(NOTE_TYPE_CREDIT, t('note_print.title.credit_note'))}
+        ${canPrint ? `<button id="note-print-btn"
+                class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded font-medium hover:bg-blue-700 transition">
+          ${t('print')} / PDF
+        </button>` : ''}
       </div>
     </div>
   `;
+}
+
+export async function render(root, shipmentRef, type) {
+  const noteType = (type === NOTE_TYPE_CREDIT) ? NOTE_TYPE_CREDIT : NOTE_TYPE_DEBIT;
+  const data     = await loadNoteData(shipmentRef, noteType);
+
+  if (!data.shipment) {
+    root.innerHTML = `<div class="p-6 max-w-[900px] mx-auto">
+      ${toolbar(shipmentRef, noteType, false)}
+      ${emptyState('note_print.empty.no_shipment', shipmentRef)}
+    </div>`;
+    return;
+  }
+
+  if (data.lines.length === 0) {
+    root.innerHTML = `<div class="p-6 max-w-[900px] mx-auto">
+      ${toolbar(shipmentRef, noteType, false)}
+      ${emptyState('note_print.empty.no_lines', shipmentRef)}
+    </div>`;
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="p-6 max-w-[900px] mx-auto">
+      ${toolbar(shipmentRef, noteType, true)}
+      <div class="print-doc bg-white rounded-xl border border-slate-200 p-10 shadow-sm">
+        ${draftBanner()}
+        ${noteHeader(data.noteNo, noteType, shipmentRef)}
+        ${billedToBlock(noteType, data.customer)}
+        ${lineTable(data.lines, data.currency)}
+        ${paymentTerms()}
+        ${signatureBlock()}
+      </div>
+    </div>
+  `;
+
+  root.querySelector('#note-print-btn')?.addEventListener('click', () => window.print());
 }

@@ -3,6 +3,7 @@
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const AUDIT_LOG_L2_MAX       = 500;
 const AUDIT_LOG_SCROLL_BATCH = 50;
@@ -200,7 +201,7 @@ function handleExportCsv() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `vdg-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `vdg-audit-log-${todayLocal()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 }

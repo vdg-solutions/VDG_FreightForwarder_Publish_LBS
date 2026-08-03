@@ -2,6 +2,7 @@
 // 3-tab accountant view: same data-tab pattern as manager/cash-flow.js.
 
 import { t, fmtNumber, currentLocale } from '../../i18n/index.js';
+import { todayLocal } from '../../util/today-local.js';
 import {
   trialBalance, pnl, pnlMonthlyBreakdown, balanceSheet,
 } from '../../operators/manager/ledger-aggregator.js';
@@ -16,7 +17,7 @@ const TABS    = [
 ];
 const INTEGRITY_TOLERANCE = 0.01; // float-safe equality for dr===cr / assets===liab+equity
 
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() { return todayLocal(); }
 
 let _tab              = TAB_TB;
 let _chart             = [];

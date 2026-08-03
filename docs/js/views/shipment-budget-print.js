@@ -2,6 +2,7 @@
 import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';
 import { t } from '../i18n/index.js';
+import { todayLocal } from '../util/today-local.js';
 
 const COMPANY_NAME    = 'VDG FREIGHT SERVICES CO., LTD';
 const COMPANY_ADDRESS = '123 Nguyen Hue, District 1, Ho Chi Minh City, Vietnam';
@@ -41,7 +42,7 @@ function headerBlock(s) {
       <td class="py-0.5 text-[11px] text-slate-900 font-medium">${value}</td>
     </tr>`;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
   const salesRep = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
   const currencyLabel = t('currency');

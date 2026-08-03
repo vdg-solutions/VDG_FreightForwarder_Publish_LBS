@@ -1,7 +1,14 @@
 import { loadWasm } from '../wasm-loader.js';
 import { t } from '../i18n/index.js';
+import { runImport } from './upload-report.js';
 
 const CSV_HEADER = 'Row,Column,Field,Category,Message';
+
+// F-57-02: the errors currently on screen. Was a hardcoded sampleErrors() list rendered
+// unconditionally at mount and never replaced — so the page showed five invented failures
+// ("Row 4, Col D: Origin port is required") before any file existed, and kept showing exactly
+// those five after a real upload succeeded. Export-to-CSV then wrote the fake rows to disk.
+let _errors = [];
 
 // F-31-04: desc resolved via t() at call time — a locale switch re-renders the templates panel.
 function templates() {
@@ -12,18 +19,33 @@ function templates() {
   ];
 }
 
-// F-31-04: message/category resolved via t() at call time — a locale switch re-renders the error table.
-function sampleErrors() {
-  const missingRequired = t('upload.sample_err.cat.missing_required');
-  const invalidFormat   = t('upload.sample_err.cat.invalid_format');
-  const businessRule    = t('upload.sample_err.cat.business_rule');
-  return [
-    { row: 4, col: 'D', field: 'origin', code: 'MISSING_REQUIRED', message: t('upload.sample_err.msg.origin_required'), category: missingRequired },
-    { row: 7, col: 'F', field: 'etd', code: 'INVALID_FORMAT', message: t('upload.sample_err.msg.etd_iso8601'), category: invalidFormat },
-    { row: 7, col: 'G', field: 'eta', code: 'BUSINESS_RULE', message: t('upload.sample_err.msg.eta_after_etd'), category: businessRule },
-    { row: 12, col: 'B', field: 'shipment_ref', code: 'INVALID_FORMAT', message: t('upload.sample_err.msg.ref_format'), category: invalidFormat },
-    { row: 19, col: 'D', field: 'origin', code: 'MISSING_REQUIRED', message: t('upload.sample_err.msg.origin_required'), category: missingRequired },
-  ];
+// No file dropped yet — say so, rather than filling the panel with invented failures.
+function idleResultPanel() {
+  return `
+    <div class="bg-white rounded-xl border border-slate-200 p-5">
+      <div class="text-sm text-slate-500">${t('upload.result.idle')}</div>
+    </div>
+  `;
+}
+
+// Parsed with zero errors — an explicit success state, not an empty table.
+function cleanResultPanel(result) {
+  return `
+    <div class="bg-white rounded-xl border border-emerald-200 bg-emerald-50/40 p-5">
+      <div class="text-sm font-semibold text-emerald-800">${t('upload.result.clean', { n: result.rowsOk })}</div>
+      <div class="text-xs text-emerald-700 mt-0.5">${t('upload.result.sheet', { sheet: result.sheet })}</div>
+    </div>
+  `;
+}
+
+// No importer recognized the workbook's headers.
+function unrecognizedPanel() {
+  return `
+    <div class="bg-white rounded-xl border border-amber-200 bg-amber-50/40 p-5">
+      <div class="text-sm font-semibold text-amber-800">${t('upload.result.unrecognized')}</div>
+      <div class="text-xs text-amber-700 mt-0.5">${t('upload.result.unrecognized_hint')}</div>
+    </div>
+  `;
 }
 
 function errorTable(errors) {
@@ -102,6 +124,19 @@ function templatesPanel() {
   `;
 }
 
+// Renders whatever the last parse produced into #upload-result.
+function paintResult(result) {
+  const host = document.getElementById('upload-result');
+  if (!host) return;
+  if (!result)                    { host.innerHTML = idleResultPanel();  return; }
+  if (result.parseError)          { host.innerHTML = unrecognizedPanel(); return; }
+  if (result.errors.length === 0) { host.innerHTML = cleanResultPanel(result); return; }
+
+  host.innerHTML = errorTable(result.errors);
+  host.querySelector('#export-errors-csv')
+      ?.addEventListener('click', () => exportErrorsCsv(_errors));
+}
+
 function exportErrorsCsv(errors) {
   const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const rows   = errors.map((e) => [e.row, e.col, e.field, e.category, e.message].map(escape).join(','));
@@ -122,14 +157,27 @@ async function handleFile(file, statusEl) {
   if (!wasm) {
     // dev-only fallback — only reachable when wasm-pack hasn't been built; never shown in the
     // built/deployed app (R-rebuild-dist-before-qa), so this stays English (see whitelist).
-    statusEl.innerHTML = `<span class="text-amber-600">WASM not built yet — run <code class="font-mono bg-amber-50 px-1.5 py-0.5 rounded">make build-wasm</code>. Showing mock errors below.</span>`;
+    statusEl.innerHTML = `<span class="text-amber-600">WASM not built yet — run <code class="font-mono bg-amber-50 px-1.5 py-0.5 rounded">make build-wasm</code>.</span>`;
     return;
   }
   try {
-    const report = wasm.process_excel_file(bytes);
-    const sheetSummary = report.sheets.map((s) => `${s.name} (${s.row_count} rows)`).join(', ');
-    statusEl.innerHTML = `<span class="text-emerald-600">${t('upload.status.parsed', { n: report.sheets.length, summary: sheetSummary })}</span>`;
+    // F-57-02: run the real import workflow, not process_excel_file(). The latter clears
+    // last_errors and only summarizes sheets — the parser never populates errors, so the
+    // companion get_validation_errors() was always empty. Validation lives in the importers.
+    const result = runImport(bytes, wasm);
+    _errors = result.errors;
+    paintResult(result);
+
+    if (result.parseError) {
+      statusEl.innerHTML = `<span class="text-amber-600">${t('upload.status.unrecognized')}</span>`;
+    } else {
+      statusEl.innerHTML = `<span class="text-emerald-600">${t('upload.status.imported', {
+        sheet: result.sheet, ok: result.rowsOk, total: result.rowsTotal,
+      })}</span>`;
+    }
   } catch (err) {
+    _errors = [];
+    paintResult(null);
     statusEl.innerHTML = `<span class="text-red-600">${t('upload.status.wasm_error', { error: err.message })}</span>`;
   }
 }
@@ -145,7 +193,7 @@ export async function render(root) {
             <upload-zone></upload-zone>
             <div id="upload-status" class="mt-3 text-xs text-slate-600"></div>
           </div>
-          ${errorTable(sampleErrors())}
+          <div id="upload-result"></div>
         </div>
         <div class="space-y-4">
           ${templatesPanel()}
@@ -159,12 +207,13 @@ export async function render(root) {
     </div>
   `;
 
+  _errors = [];
+  paintResult(null); // idle until a file actually arrives
+
   const status = document.getElementById('upload-status');
   document.querySelector('upload-zone').addEventListener('vdg:file', (e) => {
     handleFile(e.detail.file, status);
   });
-
-  document.getElementById('export-errors-csv').addEventListener('click', () => {
-    exportErrorsCsv(sampleErrors());
-  });
+  // The CSV button lives inside the error table, so it is wired in paintResult() — binding it
+  // here would only ever find the button from a previous render, or none at all.
 }

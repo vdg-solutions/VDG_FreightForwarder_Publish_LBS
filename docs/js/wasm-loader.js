@@ -30,7 +30,15 @@ export const BRIDGE_EXPORTS = [
 // The single loop every boot path MUST run after setting window.__vdg_wasm — a
 // path that skips this leaves window.permission_can_merge / window.proposal_reject
 // etc. undefined even though window.__vdg_wasm.<name> resolves fine (F-28-12 D-1).
+//
+// F-57-01: also adopts `mod` as this module's cache. boot/repo-init-steps.js imports and
+// initializes the wasm module itself and never populated `cached`, so a later loadWasm()
+// from /upload or sales-new-form/section-header.js re-ran the whole body and dispatched a
+// SECOND vdg:wasm-ready. Harmless today (generated __wbg_init short-circuits on re-entry,
+// and license-gate.js listens {once:true}) but it is a duplicate lifecycle event waiting for
+// a non-idempotent listener. Every boot path already calls this function — one line closes it.
 export function globalizeBridgeExports(mod) {
+  cached = mod;
   for (const name of BRIDGE_EXPORTS) {
     if (typeof mod[name] === 'function') {
       window[name] = mod[name];

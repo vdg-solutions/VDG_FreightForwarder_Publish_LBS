@@ -2,6 +2,7 @@
 // Extracted from submit-orchestrator to enable unit testing without i18n deps (AC-08)
 
 import { resolveShipmentState } from '../../util/shipment-state-resolver.js';
+import { todayLocal } from '../../util/today-local.js';
 
 const SOURCE_ORIGIN  = 'form-entry';
 const PARSER_ID      = 'form-v1';
@@ -37,8 +38,8 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     sales_rep_id:          salesRepId || null,
     state:                 resolvedState,
     publish_state:         publishState,
-    open_date:             new Date().toISOString().slice(0, 10),
-    transaction_date:      new Date().toISOString().slice(0, 10),
+    open_date:             todayLocal(),
+    transaction_date:      todayLocal(),
     job_file_no:           state.job_file_no           || null,
     customer:              state.customer               || null,
     shipper:               state.shipper               || null,
