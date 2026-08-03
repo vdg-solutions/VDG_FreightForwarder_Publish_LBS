@@ -2,7 +2,7 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v89d7aad';
+const STATIC_CACHE     = 'vdg-static-v9ed629a';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 
@@ -140,6 +140,13 @@ const NETWORK_FIRST_TIMEOUT_MS = 3500;
 function isHashedImmutable(pathname) { return IMMUTABLE_HASH_RE.test(pathname); }
 function isSameOrigin(url)          { return url === APP_ORIGIN || url.startsWith(APP_ORIGIN + '/'); }
 
+// Only http(s) requests belong in the Cache API. A chrome-extension:, blob:, or data: request
+// (e.g. a wallet extension's inpage.js) throws "Request scheme … is unsupported" in Cache.put,
+// so the SW must step aside for anything that isn't http(s).
+const HTTP_SCHEMES = ['http:', 'https:'];
+
+function isHttpScheme(url) { return HTTP_SCHEMES.includes(new URL(url).protocol); }
+
 // Cross-origin AND host-matched: a same-origin URL (all of js/**, the app shell) can
 // never be a Google auth endpoint, no matter what its path looks like. Same-origin must
 // always fall through to the normal network-first-then-cache strategy so it's servable
@@ -220,6 +227,10 @@ self.addEventListener('sync', (ev) => {
 self.addEventListener('fetch', (ev) => {
   const { request } = ev;
   const url = request.url;
+
+  // Non-http(s) schemes (chrome-extension:, blob:, data:) can't go through the Cache API —
+  // step aside so cache.put never throws "scheme unsupported".
+  if (!isHttpScheme(url)) return;
 
   // Pass through: real Google auth endpoints only (never same-origin app files)
   if (isGoogleAuthEndpoint(url)) return;
