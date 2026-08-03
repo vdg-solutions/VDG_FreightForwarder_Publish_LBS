@@ -9,21 +9,24 @@
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 
+// F-34-03: under drive.file scope Google never exposes My Drive's real root, so a
+// GET /files/root always 404s (F-24-16) — probing it is pure waste. Log the degrade
+// once per boot, not once per findWorkspaceRoot caller (~20 call sites).
+let _rootAliasNoticed = false;
+
 // 'root' is a Drive API alias — files.list resolves it server-side but a file's own
 // `parents` field always carries the real folder id, never the literal string. Owner-wide
 // classification needs the real id to compare against.
-// F-24-16: /files/root returns 404 under drive.file scope when the app hasn't touched My
-// Drive's real root. Fall back to null so callers can degrade gracefully — dedupe then
-// treats all matches as "unclassifiable" and picks the first as best-effort.
+// F-24-16 / F-34-03: /files/root is structurally unresolvable under drive.file scope —
+// short-circuit straight to null with zero driveFetch calls. Dedupe then treats all
+// matches as "unclassifiable" and picks the lowest-id as best-effort (unchanged).
 export async function resolveRealParentId(driveFetch, parentId) {
   if (parentId !== 'root') return parentId;
-  try {
-    const res = await driveFetch('GET', '/files/root?fields=id');
-    return res?.id ?? null;
-  } catch (err) {
-    console.warn('[drive-folder-dedup] /files/root not visible under drive.file scope; degrading:', err.message); // DEV
-    return null;
+  if (!_rootAliasNoticed) {
+    _rootAliasNoticed = true;
+    console.warn('[drive-folder-dedup] /files/root not visible under drive.file scope; degrading'); // DEV
   }
+  return null;
 }
 
 export async function globalOwnerQuery(driveFetch, name) {

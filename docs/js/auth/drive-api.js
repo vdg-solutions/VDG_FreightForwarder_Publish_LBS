@@ -25,6 +25,12 @@ const FOLDER_MIME             = 'application/vnd.google-apps.folder';
 const RATE_LIMIT_BASE_MS      = 1_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
 
+// F-34-03 AC-04: 429 (rate-limit) + 503 (transient Drive unavailability) both back off and
+// retry the same bounded way — a persistent 503 falls through to the existing !res.ok /
+// non-ok-status handling and surfaces as a typed DriveApiError after the bound, never an
+// unbounded stall.
+const RETRYABLE_STATUSES = new Set([429, 503]);
+
 // single-flight guard — prevents multiple reloads on concurrent 401s
 let _reauthInflight = false;
 
@@ -72,7 +78,7 @@ export async function driveFetch(method, path, body = undefined, attempt = 0) {
     throw new DriveApiError(0, `Drive network error: ${netErr.message}`);
   }
 
-  if (res.status === 429 && attempt < RATE_LIMIT_MAX_ATTEMPTS) {
+  if (RETRYABLE_STATUSES.has(res.status) && attempt < RATE_LIMIT_MAX_ATTEMPTS) {
     await _sleep(RATE_LIMIT_BASE_MS * Math.pow(2, attempt));
     return driveFetch(method, path, body, attempt + 1);
   }
@@ -122,12 +128,13 @@ export async function driveFetchRaw(method, path, body = undefined, extraHeaders
 
   const res = await fetch(url, opts);
 
-  if (res.status === 429 && attempt < RATE_LIMIT_MAX_ATTEMPTS) {
+  if (RETRYABLE_STATUSES.has(res.status) && attempt < RATE_LIMIT_MAX_ATTEMPTS) {
     await _sleep(RATE_LIMIT_BASE_MS * Math.pow(2, attempt));
     return driveFetchRaw(method, path, body, extraHeaders, attempt + 1);
   }
 
-  return res; // caller checks status
+  return res; // caller checks status — a persistent 503 falls through here and getFile's
+              // !res.ok branch throws DriveApiError(503) after the bound
 }
 
 // ── folder helpers ────────────────────────────────────────────────────────────

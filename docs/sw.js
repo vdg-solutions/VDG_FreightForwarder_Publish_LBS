@@ -2,9 +2,16 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vebac869';
+const STATIC_CACHE     = 'vdg-static-v89d7aad';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
+
+// F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
+// OS notifications from a ready-made payload, or relays a wake to a live client. No import,
+// no wasm, in the SW realm — see sync/due-soon-checker.js.
+const DUE_SOON_NOTIFY_MSG = 'DUE_SOON_NOTIFY';
+const DUE_SOON_WAKE_MSG   = 'DUE_SOON_WAKE';
+const DUE_SOON_SYNC_TAG   = 'due-soon-check';   // matches sw-register.js DUE_SOON_SYNC_TAG
 
 // Scope-relative so the shell precaches at the real deploy subpath (GitHub Pages project
 // site), resolved against self.registration.scope in install. No leading '/' (that would
@@ -19,9 +26,6 @@ const SHELL_ASSETS = [
   'css/styles.css',
   'pkg/vdg_freight.js',
   'pkg/vdg_freight_bg.wasm',
-  // F-48-01: dynamically imported by _runDueSoonCheck() below — precached so tier-1
-  // periodicsync (tab fully closed) can still resolve it without a live network fetch.
-  'js/sw-due-soon.js',
 ];
 
 // app.js's SYNCHRONOUS static-import closure — the modules eval'd before the app is interactive.
@@ -179,33 +183,36 @@ self.addEventListener('activate', (ev) => {
 // Client-triggered activation: sent only after the user clicks the update banner.
 self.addEventListener('message', (ev) => {
   if (ev.data?.type === 'SKIP_WAITING') self.skipWaiting();
-  // F-48-01 tier 2(a): main-thread active tick relays a check request — same shared
-  // _runDueSoonCheck() tier 1 uses (AC-04d).
-  if (ev.data?.type === 'DUE_SOON_CHECK') {
-    const p = _runDueSoonCheck();
+  // F-34-01: main thread already computed the due-soon payload — the SW only shows it.
+  if (ev.data?.type === DUE_SOON_NOTIFY_MSG) {
+    const { title, groups = [] } = ev.data;
+    const p = Promise.all(groups.map((g) =>
+      self.registration.showNotification(title, { body: g.body, tag: g.tag })));
     if (ev.waitUntil) ev.waitUntil(p);
   }
 });
 
-// ── payment due-soon (F-48-01 tiers 1/2) ────────────────────────────────────────
-// One shared check behind both delivery mechanisms — never a second copy of the
-// date-window/guard/notify logic (AC-05d). Body lives in sw-due-soon.js (split precedent:
-// js_bridge_fx.rs/js_bridge_commission.rs off js_bridge.rs — 350-line cap).
-async function _runDueSoonCheck() {
-  const { runDueSoonCheck } = await import('./js/sw-due-soon.js');
-  return runDueSoonCheck(self);
+// ── payment due-soon (F-34-01, notify-only) ─────────────────────────────────────
+// The SW never computes, never opens IndexedDB, never imports — it only shows notifications
+// from a payload the main thread already built, or wakes a live client to run its own
+// compute (sync/due-soon-checker.js). A closed-tab wakeup with no client is a no-op, never a
+// throw (AC-04).
+async function _wakeClientsForDueSoon() {
+  const cs = await self.clients.matchAll({ type: 'window' });
+  cs.forEach((c) => c.postMessage({ type: DUE_SOON_WAKE_MSG }));
 }
 
 // Tier 1 — SW Periodic Background Sync (needs installed PWA + granted permission; nice-to-
-// have per F-54, registration lives in sw-register.js).
+// have per F-54, registration lives in sw-register.js). Under Option A this degrades to a
+// closed-tab no-op (no client to wake) — accepted per F-2/AC-04.
 self.addEventListener('periodicsync', (ev) => {
-  if (ev.tag === 'due-soon-check') ev.waitUntil(_runDueSoonCheck());
+  if (ev.tag === DUE_SOON_SYNC_TAG) ev.waitUntil(_wakeClientsForDueSoon());
 });
 
 // Tier 2(b) — opportunistic one-off Background Sync (Chromium-only, no PWA/PBS permission
 // needed).
 self.addEventListener('sync', (ev) => {
-  if (ev.tag === 'due-soon-check') ev.waitUntil(_runDueSoonCheck());
+  if (ev.tag === DUE_SOON_SYNC_TAG) ev.waitUntil(_wakeClientsForDueSoon());
 });
 
 // ── fetch ─────────────────────────────────────────────────────────────────────
