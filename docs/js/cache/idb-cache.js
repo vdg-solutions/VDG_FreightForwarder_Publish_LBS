@@ -26,12 +26,20 @@ export class IdbUnavailableError extends Error {
 
 // ── DB open ───────────────────────────────────────────────────────────────────
 
+// Single shared connection. 6 callers + the repo-init retry loop must NOT each open a fresh
+// indexedDB connection: concurrent opens of the same DB jam each other (no success/error/blocked
+// event fires), openVdgDb times out at 8s, repo-init retries and opens AGAIN -> worse jam ->
+// "Khởi tạo workspace quá lâu". Memoize so exactly one open ever runs; reset on real failure so
+// a later attempt can genuinely retry.
+let _dbPromise = null;
 export function openVdgDb() {
-  return new Promise((resolve, reject) => {
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
     let req;
     try {
       req = indexedDB.open(IDB_DB_NAME, IDB_DB_VERSION);
     } catch (err) {
+      _dbPromise = null;
       reject(new IdbUnavailableError(err.message));
       return;
     }
@@ -128,9 +136,10 @@ export function openVdgDb() {
     };
 
     req.onsuccess = (ev) => resolve(ev.target.result);
-    req.onerror   = () => reject(new IdbUnavailableError(req.error?.message || 'IDB open failed'));
-    req.onblocked = () => reject(new IdbUnavailableError('IDB open blocked'));
+    req.onerror   = () => { _dbPromise = null; reject(new IdbUnavailableError(req.error?.message || 'IDB open failed')); };
+    req.onblocked = () => { _dbPromise = null; reject(new IdbUnavailableError('IDB open blocked')); };
   });
+  return _dbPromise;
 }
 
 // ── IDB helpers ───────────────────────────────────────────────────────────────
