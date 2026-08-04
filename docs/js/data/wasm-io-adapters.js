@@ -37,6 +37,40 @@ export class WasmIoPort {
     this.driveApi = driveApi;
     this.userEmail = userEmail;
     this.folderIds = new Map();
+    this.fileIndex = new Map();        // folderId -> Map(fileName -> fileId): folder listed once
+    this._listingInflight = new Map(); // folderId -> in-flight listing promise (dedupe concurrency)
+  }
+
+  // List a folder's files ONCE and cache name->id. A per-period bundle read used to fire a
+  // `name='<period>.jsonl'` query per month per kind — on multi-year data that fanned out
+  // hundreds of Drive list queries (Drive 503-rate-limits, browser ERR_INSUFFICIENT_RESOURCES).
+  // Now N reads share ONE list per folder; concurrent readers await the same in-flight promise.
+  async _folderIndex(folderId) {
+    const cached = this.fileIndex.get(folderId);
+    if (cached) return cached;
+    let inflight = this._listingInflight.get(folderId);
+    if (!inflight) {
+      const q = `'${folderId}' in parents and trashed=false`;
+      inflight = this.driveApi
+        .driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&pageSize=1000`)
+        .then((res) => {
+          const map = new Map();
+          for (const f of res?.files ?? []) map.set(f.name, f.id);
+          this.fileIndex.set(folderId, map);
+          this._listingInflight.delete(folderId);
+          return map;
+        })
+        .catch((err) => { this._listingInflight.delete(folderId); throw err; });
+      this._listingInflight.set(folderId, inflight);
+    }
+    return inflight;
+  }
+
+  // Drop a folder's cached listing after a write so the next read re-resolves the current id
+  // (a create adds a file; an id may rotate).
+  _invalidateFolderIndex(folderId) {
+    this.fileIndex.delete(folderId);
+    this._listingInflight.delete(folderId);
   }
 
   async idb_get(kind, id) {
@@ -126,19 +160,17 @@ export class WasmIoPort {
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
-    
-    const q = `name='${fileName}' and '${folderId}' in parents and trashed=false`;
-    const res = await this.driveApi.driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`);
-    const fileEntry = res.files?.[0] ?? null;
+    const index    = await this._folderIndex(folderId);
+    const fileId   = index.get(fileName) ?? null;
 
-    if (!fileEntry) {
+    if (!fileId) {
       return { etag: null, content: '', fileId: null, folderId, fileName };
     }
 
-    const data = await this.driveApi.getFile(fileEntry.id);
-    if (!data) return { etag: null, content: '', fileId: fileEntry.id, folderId, fileName };
-    
-    return { etag: data.etag, content: data.content, fileId: fileEntry.id, folderId, fileName };
+    const data = await this.driveApi.getFile(fileId);
+    if (!data) return { etag: null, content: '', fileId, folderId, fileName };
+
+    return { etag: data.etag, content: data.content, fileId, folderId, fileName };
   }
 
   async drive_write_bundle(kind, period, newContent, etag) {
@@ -146,15 +178,14 @@ export class WasmIoPort {
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
+    const index    = await this._folderIndex(folderId);
+    const fileId   = index.get(fileName) ?? null;
 
-    const q = `name='${fileName}' and '${folderId}' in parents and trashed=false`;
-    const res = await this.driveApi.driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`);
-    const fileEntry = res.files?.[0] ?? null;
+    const uploadId = fileId ? fileId : folderId;
 
-    const uploadId = fileEntry ? fileEntry.id : folderId;
-    
     try {
-      const result = await this.driveApi.uploadFile(uploadId, fileName, newContent, etag, { isUpdate: Boolean(fileEntry) });
+      const result = await this.driveApi.uploadFile(uploadId, fileName, newContent, etag, { isUpdate: Boolean(fileId) });
+      this._invalidateFolderIndex(folderId); // a create adds a file / an update may rotate the id
       return { etag: result.etag };
     } catch (err) {
       if (err.status === 412) {

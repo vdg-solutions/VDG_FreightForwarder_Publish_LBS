@@ -2,7 +2,7 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v9ed629a';
+const STATIC_CACHE     = 'vdg-static-vfb1b331';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 
@@ -238,13 +238,15 @@ self.addEventListener('fetch', (ev) => {
   // Pass through: Drive file content (IDB is content cache)
   if (DRIVE_CONTENT_RE.test(url)) return;
 
+  // Only GET responses are cacheable — a POST (Drive upload/create) must never reach _swr or
+  // _cacheFirst, where cache.put throws "Request method 'POST' is unsupported".
+  if (request.method !== 'GET') return;
+
   // Stale-while-revalidate: Drive metadata
   if (url.startsWith(DRIVE_META_HOST)) {
     ev.respondWith(_swr(request));
     return;
   }
-
-  if (request.method !== 'GET') return;
 
   // Cross-origin CDN libs are version-pinned in the URL → immutable → cache-first (offline-capable)
   if (!isSameOrigin(url)) {

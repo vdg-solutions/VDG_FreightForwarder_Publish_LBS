@@ -190,7 +190,8 @@ class VdgTopbar extends LitElement {
       
       let count = 0;
       for (const item of data) {
-        await repo.save('shipment', item);
+        if (!item?.id) throw new Error('Import item missing "id" field.');
+        await repo.put('shipment', item.id, item); // entity-repo contract: put(kind, id, body)
         count++;
         if (count % 500 === 0) {
           window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.import.progress', { count, total: data.length }) } }));
