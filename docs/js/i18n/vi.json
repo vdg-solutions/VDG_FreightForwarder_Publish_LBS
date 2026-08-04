@@ -49,6 +49,7 @@
   "move_to": "Chuyển sang",
   "sign_out": "Đăng xuất",
   "loading": "Đang tải…",
+  "migration.syncing": "Đang đồng bộ dữ liệu, vui lòng đợi…",
   "no_data": "Không có dữ liệu",
   "error_sync": "Đồng bộ thất bại — đang thử lại…",
   "whats_new": "Có gì mới",

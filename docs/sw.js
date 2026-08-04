@@ -2,7 +2,7 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vdcacea3';
+const STATIC_CACHE     = 'vdg-static-v554a6da';
 const DRIVE_META_CACHE = 'vdg-drive-meta-v1';
 const DRIVE_META_TTL_MS = 30_000;
 
@@ -53,6 +53,7 @@ const BOOT_GRAPH = [
   'js/auth/window-open-guard.js',
   'js/auth/workspace-root.js',
   'js/boot/license-boot-gate.js',
+  'js/boot/migration-overlay.js',
   'js/boot/repo-bootstrap.js',
   'js/boot/repo-diag.js',
   'js/boot/repo-init-fallback.js',

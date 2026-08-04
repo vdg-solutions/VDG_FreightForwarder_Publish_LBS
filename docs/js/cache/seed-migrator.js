@@ -12,6 +12,7 @@
 //   - KHÔNG đè user edit: dòng nào có `_seed_locked` (user đã sửa) thì giữ nguyên.
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
+import { beginMigration, endMigration } from '../boot/migration-overlay.js';
 
 const MIGRATION_KIND = '_seed_migrations';
 
@@ -35,6 +36,8 @@ export async function runSeedMigrations(repo, migrations, _ms = SAFE_AWAIT_DEFAU
   const applied = [];
   const skipped = [];
 
+  beginMigration(); // show the "syncing data" overlay while a (possibly slow, cold-cache) seed runs
+  try {
   for (const mig of migrations) {
     const markRes = await safeAwait(repo.get(MIGRATION_KIND, mig.id), _ms, null, 'seed-migrator:mark-check');
     if (markRes.ok && markRes.value) { skipped.push(mig.id); continue; }
@@ -66,5 +69,6 @@ export async function runSeedMigrations(repo, migrations, _ms = SAFE_AWAIT_DEFAU
       skipped.push(mig.id);
     }
   }
+  } finally { endMigration(); }
   return { applied, skipped };
 }

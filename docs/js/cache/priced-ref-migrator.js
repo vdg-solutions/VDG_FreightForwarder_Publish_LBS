@@ -9,6 +9,7 @@
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { MASTER_REGISTRY } from '../data/master-registry.js';
+import { beginMigration, endMigration } from '../boot/migration-overlay.js';
 
 const PRICED_TIER          = 'priced';
 const TEAM_AUDIENCE        = 'team';
@@ -34,9 +35,12 @@ export function pricedRefKinds(registry = MASTER_REGISTRY) {
  */
 export async function migratePricedRefs(repo, pricedRepos, kinds = pricedRefKinds(), _ms = SAFE_AWAIT_DEFAULT_MS) {
   const results = [];
-  for (const kind of kinds) {
-    results.push(await _migrateKind(repo, pricedRepos?.[kind], kind, _ms));
-  }
+  beginMigration(); // show the "syncing data" overlay while priced-ref bundles materialize
+  try {
+    for (const kind of kinds) {
+      results.push(await _migrateKind(repo, pricedRepos?.[kind], kind, _ms));
+    }
+  } finally { endMigration(); }
   return results;
 }
 

@@ -29,6 +29,7 @@ import { initTokenRefresh, initAccessTokenRefresh } from './auth/token-refresh.j
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
 import { renderRepoInitTimeoutBanner } from './boot/repo-init-fallback.js';
+import { initMigrationOverlay } from './boot/migration-overlay.js';
 import './sync/job-tracker.js'; // Start background job tracker
 
 // F-14-16 breakpoint constants
@@ -244,6 +245,7 @@ export function bootApp(user, db) {
 }
 
 async function main() {
+  initMigrationOverlay(); // "syncing data" overlay listens for migration start/done events
   // SW registration lives solely in sw-register.js (invoked from index.html).
   // Init OAuth + silent token refresh (F-15-02)
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
