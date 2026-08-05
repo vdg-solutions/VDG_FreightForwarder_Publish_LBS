@@ -66,11 +66,13 @@
     integrity="sha384-tgbB5AKnszdcfwcZtTfuhR3Ko1XZdlDfsLtkxiiAZiVkkXCkFmp+FQFh+V/UTo54"
     crossorigin="anonymous"
   ></script>
-  <!-- Google Identity Services — hash stable across fetches; private Cache-Control means Google controls versioning -->
+  <!-- Google Identity Services — loaded as a PLAIN no-cors script (no integrity/crossorigin).
+       gsi/client is a DYNAMIC endpoint (private Cache-Control, Google controls versioning), so an
+       SRI hash can't be pinned and `crossorigin="anonymous"` forces a CORS fetch that Google does
+       NOT answer with an Access-Control-Allow-Origin header → the "blocked by CORS policy" console
+       error. Google's own snippet uses neither attribute. -->
   <script
     src="https://accounts.google.com/gsi/client"
-    integrity="sha384-OC4PPN5bAduJ2NPdQoTS4IqDk6UfQrtv7+YcLVr5oRdnkt1PvOTR2YaBkh6yzT8i"
-    crossorigin="anonymous"
     async
     defer
   ></script>
