@@ -17,6 +17,8 @@ import { LicenseGate, prefsLicenseStore } from '../operators/license-gate.js';
 import { runFirstRunProvision, runLicenseGate } from './license-boot-gate.js';
 import { globalizeBridgeExports } from '../wasm-loader.js';
 import { rehydrateFsmStates } from '../operators/fsm-ingest.js';
+import { createBootFsm, BootEvent } from './boot-fsm.js';
+import { renderBootPhase } from './boot-fsm-view.js';
 
 const IDB_OP_TIMEOUT_MS  = 8000;
 const META_STORE         = 'meta';
@@ -43,6 +45,13 @@ const PRICED_REFS = ['local-charges', 'air-rates', 'ocean-tariff'];
 export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const _hangMs = parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || '0', 10);
 
+  // Event-driven boot FSM (E-36 F-36-06): every transition is driven by a REAL platform event
+  // (IDB open onsuccess/onerror, wasm resolve/reject, license-gate outcome, render) — never a
+  // blind wall-clock. It owns the boot-phase display (#view-loading names the live phase, not a
+  // dumb spinner) and classifies failures. The 30s race in repo-bootstrap stays ONLY as a
+  // last-resort anti-hang backstop, not the mechanism that decides a step's success.
+  const fsm = createBootFsm(renderBootPhase);
+
   // 1. Import DriveApi module (fast, SW cached)
   stepRef.value = STEP_DRIVE_IMPORT;
   const useMock = new URLSearchParams(location.search).get('mock') === '1'
@@ -60,12 +69,14 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
     else {
       resetVdgDbMemo(); // a jammed open must not poison the retry — drop the memo so a re-run re-opens
       if (currentSalesRepId() !== 'NOT_PROVISIONED') {
+        fsm.dispatch(BootEvent.DB_FAILED); // → ERROR(storage): the retry banner, classified
         const e = new Error(`IDB open failed: ${dbResult.error?.message}`); // fatal outside onboarding — WASM repo needs it
         e.name = 'IdbOpenFailedError'; // app.js routes this to the repo-init retry banner (not a raw error)
         throw e;
       }
     }
   }
+  if (db) fsm.dispatch(BootEvent.DB_OPENED); // real event: IDB connection is live → LOADING_WASM
   window.__vdg_db = db;
 
   // 3. Load WASM — mandatory, no fallback. Must run BEFORE any license check (both branches
@@ -85,6 +96,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 4. NOT_PROVISIONED → first-run manager provisioning, then reload into the ordinary licence
   // gate below (F-17-03: a bundled licence has no per-role provisioning screen left to show).
   if (currentSalesRepId() === 'NOT_PROVISIONED') {
+    fsm.dispatch(BootEvent.NEEDS_PROVISION); // wasm loaded but role needs first-run setup → PROVISIONING
     stepRef.value = STEP_WORKSPACE_CHK;
     await runFirstRunProvision(driveApi, activeWorkspaceName());
     // Workspace + admin/ now exist — the NOT_PROVISIONED role cached before creation would
@@ -93,6 +105,8 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
     location.reload(); // admin/ now exists -> this user resolves Manager on reload, then hits
     return null;        // the normal licence gate below like any other boot (F-17-03)
   }
+
+  fsm.dispatch(BootEvent.WASM_READY); // real event: wasm module instantiated → BUILDING_REPO
 
   // AC-03 test seam
   if (_hangMs > 0) await new Promise((r) => setTimeout(r, _hangMs));
@@ -117,15 +131,18 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   };
 
   // 7. License gate — enforced for EVERY role, no branch (AC-01..07).
+  fsm.dispatch(BootEvent.REPO_BUILT); // repo stack live → GATING_LICENSE
   stepRef.value = STEP_LICENSE_GATE;
   const gate = new LicenseGate(prefsLicenseStore(db));
   const app  = document.getElementById('app');
   const gateResult = await runLicenseGate({ gate, container: app });
-  if (!gateResult.proceed) return null;
+  if (!gateResult.proceed) { fsm.dispatch(BootEvent.LICENSE_GATE); return null; } // gate screen owns the DOM
 
   // 8. RENDER — everything past this point is non-blocking
+  fsm.dispatch(BootEvent.LICENSE_OK); // → RENDERING
   stepRef.value = STEP_BOOT_APP;
   bootFn(user, db);
+  fsm.dispatch(BootEvent.RENDERED); // → READY (terminal): real view owns the DOM now
 
   // 9. Deferred init (fire-and-forget)
   _deferredInit(user, db, driveApi, repo);

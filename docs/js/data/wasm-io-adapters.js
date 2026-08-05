@@ -1,4 +1,4 @@
-import { idbGet, idbPut, idbGetAllByIndex, idbDelete, STORE_ENTITIES, STORE_META, STORE_OUTBOX } from '../cache/idb-cache.js';
+import { idbGet, idbPut, idbGetAll, idbGetAllByIndex, idbDelete, STORE_ENTITIES, STORE_META, STORE_OUTBOX } from '../cache/idb-cache.js';
 import { getFile, uploadFile, getOrCreateFolder, findWorkspaceRoot } from '../auth/drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { MASTER_REGISTRY } from './master-registry.js';
@@ -80,27 +80,15 @@ export class WasmIoPort {
   }
 
   async idb_list(kind) {
-    if (kind === 'outbox') {
-      const tx = this.db.transaction(STORE_OUTBOX, 'readonly');
-      const req = tx.objectStore(STORE_OUTBOX).getAll();
-      return new Promise((res, rej) => {
-        req.onsuccess = () => res(req.result || []);
-        req.onerror = () => rej(req.error);
-      });
-    }
+    // outbox path routes through the serialized idb-cache helper (was a raw inline tx that
+    // bypassed the global IDB queue — part of the concurrent storm that deadlocked the runner).
+    if (kind === 'outbox') return idbGetAll(this.db, STORE_OUTBOX);
     return (await idbGetAllByIndex(this.db, STORE_ENTITIES, 'by_kind', kind)).map(_restoreDomainKind);
   }
 
   async idb_put(kind, id, body) {
-    if (kind === 'outbox') {
-      // Put outbox with out-of-line string key
-      return new Promise((res, rej) => {
-        const tx = this.db.transaction(STORE_OUTBOX, 'readwrite');
-        const req = tx.objectStore(STORE_OUTBOX).put(body, id);
-        req.onsuccess = () => res();
-        req.onerror = () => rej(req.error);
-      });
-    }
+    // outbox: out-of-line string key, via the serialized helper (not a raw inline tx)
+    if (kind === 'outbox') return idbPut(this.db, STORE_OUTBOX, body, id);
     // STORE_ENTITIES keyPath is ['kind','id'] — inject both so IndexedDB can derive the key
     // (raw body lacks `kind` → "key path did not yield a value" DataError). Stash a colliding
     // domain `kind` as `_domain_kind`; _restoreDomainKind() puts it back on read.
@@ -111,14 +99,7 @@ export class WasmIoPort {
   }
 
   async idb_delete(kind, id) {
-    if (kind === 'outbox') {
-      return new Promise((res, rej) => {
-        const tx = this.db.transaction(STORE_OUTBOX, 'readwrite');
-        const req = tx.objectStore(STORE_OUTBOX).delete(id);
-        req.onsuccess = () => res();
-        req.onerror = () => rej(req.error);
-      });
-    }
+    if (kind === 'outbox') return idbDelete(this.db, STORE_OUTBOX, id);
     return await idbDelete(this.db, STORE_ENTITIES, [kind, id]);
   }
 

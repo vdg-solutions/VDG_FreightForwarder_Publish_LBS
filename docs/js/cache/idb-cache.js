@@ -1,24 +1,16 @@
 // IndexedDB L2 — CachedEntityRepo wrapper + openVdgDb
 
 import { EntityRepo } from '../abstractions/entity-repo.js';
-import { OUTBOX_INDEX_KIND_ID_OP, idbUpsertOutboxRecord, dedupeOutboxStore, purgeStaleFailedOutboxRows } from './outbox-dedupe.js';
+import { idbUpsertOutboxRecord } from './outbox-dedupe.js';
 import { emitOutboxChanged } from './outbox-count.js';
 import { runBackgroundPull } from './background-pull.js';
+import {
+  IDB_DB_NAME, IDB_DB_VERSION, META_SYNC_KEY,
+  STORE_ENTITIES, STORE_META, STORE_OUTBOX, STORE_NOTIFICATIONS, STORE_KIND_WMA,
+  applyUpgrade,
+} from './idb-schema.js';
 
-const IDB_DB_NAME         = 'vdg-workspace';
-const IDB_DB_VERSION      = 6;  // v6: ensure entities indexes exist
-const STORE_NOTIFICATIONS = 'notifications';
-const STORE_KIND_WMA      = 'kind_wma';
 const FULL_PULL_VALID_MS = 30_000;
-const STORE_ENTITIES     = 'entities';
-const STORE_META         = 'meta';
-const STORE_OUTBOX       = 'outbox';
-const META_SYNC_KEY      = 'sync_state';
-
-const DEFAULT_WIDGET_LAYOUT = [
-  'kpi', 'leaderboard', 'exceptions', 'ar', 'bar',
-  'donut', 'activity', 'timeline', 'pipeline', 'top-customers',
-];
 
 export class IdbUnavailableError extends Error {
   constructor(msg) { super(msg); this.name = 'IdbUnavailableError'; }
@@ -46,98 +38,7 @@ export function openVdgDb() {
       reject(new IdbUnavailableError(err.message));
       return;
     }
-
-    req.onupgradeneeded = (ev) => {
-      const db = ev.target.result;
-
-      if (!db.objectStoreNames.contains(STORE_ENTITIES)) {
-        const s = db.createObjectStore(STORE_ENTITIES, { keyPath: ['kind', 'id'] });
-        s.createIndex('by_kind',             'kind',                         { unique: false });
-        s.createIndex('by_kind_sales_rep',   ['kind', 'sales_rep'],          { unique: false });
-        s.createIndex('by_kind_customer_id', ['kind', 'customer_id'],        { unique: false });
-        s.createIndex('by_updated_at',       'updated_at',                   { unique: false });
-      }
-
-      if (!db.objectStoreNames.contains(STORE_META)) {
-        const m = db.createObjectStore(STORE_META, { keyPath: 'key' });
-        m.transaction.oncomplete = () => {
-          const tx = db.transaction(STORE_META, 'readwrite');
-          tx.objectStore(STORE_META).add({
-            key: META_SYNC_KEY, last_change_token: null, last_full_pull_ms: 0, user_role: null,
-          });
-        };
-      }
-
-      if (!db.objectStoreNames.contains(STORE_OUTBOX)) {
-        db.createObjectStore(STORE_OUTBOX, { autoIncrement: true });
-      }
-
-      // v2: notifications store
-      if (ev.oldVersion < 2 && !db.objectStoreNames.contains(STORE_NOTIFICATIONS)) {
-        const n = db.createObjectStore(STORE_NOTIFICATIONS, { keyPath: 'id' });
-        n.createIndex('by_read',    'read',       { unique: false });
-        n.createIndex('by_type',    'type',       { unique: false });
-        n.createIndex('by_created', 'created_at', { unique: false });
-      }
-
-      // v3: per-rep kind WMA store
-      if (ev.oldVersion < 3 && !db.objectStoreNames.contains(STORE_KIND_WMA)) {
-        db.createObjectStore(STORE_KIND_WMA, { keyPath: 'key' });
-      }
-
-      // v4: outbox dedupe index + one-time collapse of duplicate rows (F-24-12 snowball fix)
-      if (ev.oldVersion < 4 && db.objectStoreNames.contains(STORE_OUTBOX)) {
-        const outboxStore = ev.target.transaction.objectStore(STORE_OUTBOX);
-        if (!outboxStore.indexNames.contains(OUTBOX_INDEX_KIND_ID_OP)) {
-          outboxStore.createIndex(OUTBOX_INDEX_KIND_ID_OP, ['kind', 'id', 'op'], { unique: false });
-        }
-        dedupeOutboxStore(outboxStore);
-      }
-
-      // v5: purge outbox rows failed >7d ago — a stale row predates whatever
-      // fix would have unstuck it (e.g. F-15-57 pnl_lines rename) and would
-      // otherwise sit as a permanent poison record (F-24-17).
-      if (ev.oldVersion < 5 && db.objectStoreNames.contains(STORE_OUTBOX)) {
-        const outboxStore = ev.target.transaction.objectStore(STORE_OUTBOX);
-        purgeStaleFailedOutboxRows(outboxStore);
-      }
-
-      // v6: ensure entities store indexes exist (fix missing by_kind index)
-      if (ev.oldVersion < 6 && db.objectStoreNames.contains(STORE_ENTITIES)) {
-        const s = ev.target.transaction.objectStore(STORE_ENTITIES);
-        if (!s.indexNames.contains('by_kind')) {
-          s.createIndex('by_kind',             'kind',                         { unique: false });
-          s.createIndex('by_kind_sales_rep',   ['kind', 'sales_rep'],          { unique: false });
-          s.createIndex('by_kind_customer_id', ['kind', 'customer_id'],        { unique: false });
-          s.createIndex('by_updated_at',       'updated_at',                   { unique: false });
-        }
-      }
-
-      // v2 migration: by_kind_etd index + preferences seed
-      if (ev.oldVersion < 2 && db.objectStoreNames.contains(STORE_ENTITIES)) {
-        const s = ev.target.transaction.objectStore(STORE_ENTITIES);
-        if (!s.indexNames.contains('by_kind_etd')) {
-          s.createIndex('by_kind_etd', ['kind', 'etd'], { unique: false });
-        }
-        ev.target.transaction.oncomplete = () => {
-          const tx = db.transaction(STORE_META, 'readwrite');
-          const ms = tx.objectStore(STORE_META);
-          ms.get('preferences').onsuccess = (ge) => {
-            if (!ge.target.result) {
-              ms.add({
-                key: 'preferences',
-                widget_layout: DEFAULT_WIDGET_LAYOUT,
-                locale: 'vi',
-                theme: 'light',
-                pipeline_view_mode: 'board',
-                dismissed_credit_alerts: [],
-              });
-            }
-          };
-        };
-      }
-    };
-
+    req.onupgradeneeded = applyUpgrade;
     req.onsuccess = (ev) => resolve(ev.target.result);
     req.onerror   = () => { _dbPromise = null; reject(new IdbUnavailableError(req.error?.message || 'IDB open failed')); };
     req.onblocked = () => { _dbPromise = null; reject(new IdbUnavailableError('IDB open blocked')); };
@@ -147,15 +48,49 @@ export function openVdgDb() {
 
 // ── IDB helpers ───────────────────────────────────────────────────────────────
 
+// Global IDB serialization + per-op backstop. Root cause of the origin-wide "connection wedged"
+// freeze (proven live: even opening a brand-new UNRELATED db stops firing events): the boot storm
+// — full Drive pull + seed/master-scope/priced-ref migrators + delta-poll + route-prefetch, each
+// spawn_local'ing IDB futures through WASM — fired dozens of concurrent transactions that deadlock
+// Chromium/Edge's per-origin IDB task runner. Funnel EVERY op through one chain so at most one
+// transaction is ever in flight; the storm can't form, the runner never deadlocks. Each op keeps a
+// 5s backstop so a genuinely wedged op fails fast, nulls the memo, and frees the chain — a stalled
+// op can't block every queued op behind it. A LOCAL read/write is milliseconds, so past 5s the
+// connection is dead: this is a dead-connection detector, not a network-latency guess.
+const IDB_READ_TIMEOUT_MS = 5000;
+
+let _idbChain = Promise.resolve();
+function _serialize(op) {
+  const run = _idbChain.then(op, op);
+  _idbChain = run.then(() => {}, () => {}); // keep the chain alive; one op's outcome never poisons the next
+  return run;
+}
+
+// Run a single bounded, serialized IDB op. executor gets (resolve, reject) and wires the request/tx
+// events; the backstop rejects + drops the memo if nothing fires.
+function _boundedTx(executor) {
+  return _serialize(() => new Promise((res, rej) => {
+    let settled = false;
+    const done = (fn, arg) => { if (!settled) { settled = true; clearTimeout(timer); fn(arg); } };
+    const timer = setTimeout(() => { _dbPromise = null; done(rej, new IdbUnavailableError('IDB op timed out — connection wedged')); }, IDB_READ_TIMEOUT_MS);
+    try { executor((v) => done(res, v), (e) => done(rej, e)); }
+    catch (e) { done(rej, e); }
+  }));
+}
+
 export async function idbGet(db, store, key) {
-  return (await _boundedRead(() => db.transaction(store, 'readonly').objectStore(store).get(key))) ?? null;
+  return (await _boundedTx((res, rej) => {
+    const req = db.transaction(store, 'readonly').objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  })) ?? null;
 }
 
 // key is required for out-of-line-keyed stores (e.g. STORE_OUTBOX) when updating
 // an existing row in place — omitting it makes the key generator mint a fresh
 // key, silently leaving the old row behind (root cause of the F-24-12 snowball).
 export function idbPut(db, store, value, key) {
-  return new Promise((res, rej) => {
+  return _boundedTx((res, rej) => {
     const objectStore = db.transaction(store, 'readwrite').objectStore(store);
     const req = key === undefined ? objectStore.put(value) : objectStore.put(value, key);
     req.onsuccess = () => res(req.result);
@@ -164,7 +99,7 @@ export function idbPut(db, store, value, key) {
 }
 
 export function idbGetAll(db, store) {
-  return new Promise((res, rej) => {
+  return _boundedTx((res, rej) => {
     const req = db.transaction(store, 'readonly').objectStore(store).getAll();
     req.onsuccess = () => res(req.result || []);
     req.onerror   = () => rej(req.error);
@@ -173,9 +108,8 @@ export function idbGetAll(db, store) {
 
 // cursor-based: attaches autoIncrement key as __key on each record
 export function idbGetAllWithKeys(db, store) {
-  return new Promise((res, rej) => {
-    const tx  = db.transaction(store, 'readonly');
-    const req = tx.objectStore(store).openCursor();
+  return _boundedTx((res, rej) => {
+    const req = db.transaction(store, 'readonly').objectStore(store).openCursor();
     const out = [];
     req.onsuccess = (ev) => {
       const cursor = ev.target.result;
@@ -186,33 +120,16 @@ export function idbGetAllWithKeys(db, store) {
   });
 }
 
-// A LOCAL IndexedDB read completes in milliseconds. But a transaction opened on a wedged/closing
-// connection is CREATED yet its request never fires success OR error — it hangs the caller forever
-// (the "Đang tải dữ liệu…" that never resolves, because repo.list awaits idb_list awaits this).
-// There is no event to react to on a dead connection, so a short backstop is the ONLY signal: past
-// it, the connection is dead — reject with a typed error and drop the memo so the next open re-opens,
-// instead of an unbounded hang. This is NOT a network-latency guess; it is a dead-connection detector.
-const IDB_READ_TIMEOUT_MS = 5000;
-
-function _boundedRead(makeReq) {
-  return new Promise((res, rej) => {
-    let settled = false;
-    const done = (fn, arg) => { if (!settled) { settled = true; clearTimeout(timer); fn(arg); } };
-    const timer = setTimeout(() => { _dbPromise = null; done(rej, new IdbUnavailableError('IDB read timed out — connection wedged')); }, IDB_READ_TIMEOUT_MS);
-    let req;
-    try { req = makeReq(); }
-    catch (e) { done(rej, e); return; }
-    req.onsuccess = () => done(res, req.result);
-    req.onerror   = () => done(rej, req.error);
-  });
-}
-
 export async function idbGetAllByIndex(db, store, indexName, key) {
-  return (await _boundedRead(() => db.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key))) || [];
+  return (await _boundedTx((res, rej) => {
+    const req = db.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  })) || [];
 }
 
 export function idbDelete(db, store, key) {
-  return new Promise((res, rej) => {
+  return _boundedTx((res, rej) => {
     const req = db.transaction(store, 'readwrite').objectStore(store).delete(key);
     req.onsuccess = () => res();
     req.onerror   = () => rej(req.error);
