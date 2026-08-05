@@ -147,12 +147,8 @@ export function openVdgDb() {
 
 // ── IDB helpers ───────────────────────────────────────────────────────────────
 
-export function idbGet(db, store, key) {
-  return new Promise((res, rej) => {
-    const req = db.transaction(store, 'readonly').objectStore(store).get(key);
-    req.onsuccess = () => res(req.result ?? null);
-    req.onerror   = () => rej(req.error);
-  });
+export async function idbGet(db, store, key) {
+  return (await _boundedRead(() => db.transaction(store, 'readonly').objectStore(store).get(key))) ?? null;
 }
 
 // key is required for out-of-line-keyed stores (e.g. STORE_OUTBOX) when updating
@@ -190,13 +186,29 @@ export function idbGetAllWithKeys(db, store) {
   });
 }
 
-export function idbGetAllByIndex(db, store, indexName, key) {
+// A LOCAL IndexedDB read completes in milliseconds. But a transaction opened on a wedged/closing
+// connection is CREATED yet its request never fires success OR error — it hangs the caller forever
+// (the "Đang tải dữ liệu…" that never resolves, because repo.list awaits idb_list awaits this).
+// There is no event to react to on a dead connection, so a short backstop is the ONLY signal: past
+// it, the connection is dead — reject with a typed error and drop the memo so the next open re-opens,
+// instead of an unbounded hang. This is NOT a network-latency guess; it is a dead-connection detector.
+const IDB_READ_TIMEOUT_MS = 5000;
+
+function _boundedRead(makeReq) {
   return new Promise((res, rej) => {
-    const tx  = db.transaction(store, 'readonly');
-    const req = tx.objectStore(store).index(indexName).getAll(key);
-    req.onsuccess = () => res(req.result || []);
-    req.onerror   = () => rej(req.error);
+    let settled = false;
+    const done = (fn, arg) => { if (!settled) { settled = true; clearTimeout(timer); fn(arg); } };
+    const timer = setTimeout(() => { _dbPromise = null; done(rej, new IdbUnavailableError('IDB read timed out — connection wedged')); }, IDB_READ_TIMEOUT_MS);
+    let req;
+    try { req = makeReq(); }
+    catch (e) { done(rej, e); return; }
+    req.onsuccess = () => done(res, req.result);
+    req.onerror   = () => done(rej, req.error);
   });
+}
+
+export async function idbGetAllByIndex(db, store, indexName, key) {
+  return (await _boundedRead(() => db.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key))) || [];
 }
 
 export function idbDelete(db, store, key) {
