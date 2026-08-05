@@ -41,8 +41,31 @@ async function sharedWorkspaceQuery(name) {
 // workspace folder — the duplicate-folder class dedupeGlobalOwnerFolders exists to clean up.
 // No catch: errors propagate. (dedupeGlobalOwnerFolders keeps its own narrow, documented
 // /files/root-404 degradation — that is a specific classify step, not an error swallow.)
-export async function findWorkspaceRoot(name) {
-  if (!name) return null;
+// Session-memoized. The root's id is stable for the whole session, but resolving it costs 2-3
+// Drive round-trips (globalOwnerQuery + dedupe + shared fallback). It was UNCACHED and called on
+// every kind's first folder-resolve (WasmIoPort._resolveFolder), so a cold boot re-resolved the
+// SAME root a dozen times over → dozens of sequential Drive calls → repo reads (fsm-rehydrate,
+// seed-migrator, the shipments view) all blew their 8/12s bounds at once. Cache a single in-flight
+// promise per name; only a REAL hit is kept — a null (not-yet-provisioned) or an error re-resolves
+// so a just-created / transiently-unreachable workspace is still picked up.
+const _rootCache = new Map(); // name → Promise<rootId|null>
+export function findWorkspaceRoot(name) {
+  if (!name) return Promise.resolve(null);
+  const cached = _rootCache.get(name);
+  if (cached) return cached;
+  const p = _resolveWorkspaceRoot(name).then(
+    (id)  => { if (!id) _rootCache.delete(name); return id; },
+    (err) => { _rootCache.delete(name); throw err; },
+  );
+  _rootCache.set(name, p);
+  return p;
+}
+
+// Test/boot seam: after first-run provisioning creates the workspace, drop the cached null so the
+// post-provision reload resolves the freshly-created root.
+export function resetWorkspaceRootCache() { _rootCache.clear(); }
+
+async function _resolveWorkspaceRoot(name) {
   const found  = await globalOwnerQuery(driveFetch, name);
   const winner = await dedupeGlobalOwnerFolders(driveFetch, found, DRIVE_ROOT_PARENT_ID);
   if (winner) return winner.id;
