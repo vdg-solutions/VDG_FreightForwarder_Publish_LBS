@@ -80,7 +80,6 @@ export class WasmIoPort {
   }
 
   async idb_list(kind) {
-    console.log(`[trace] idb_list(${kind}) start @${Math.round(performance.now())}`); // DIAG
     if (kind === 'outbox') {
       const tx = this.db.transaction(STORE_OUTBOX, 'readonly');
       const req = tx.objectStore(STORE_OUTBOX).getAll();
@@ -89,9 +88,7 @@ export class WasmIoPort {
         req.onerror = () => rej(req.error);
       });
     }
-    const _r = (await idbGetAllByIndex(this.db, STORE_ENTITIES, 'by_kind', kind)).map(_restoreDomainKind);
-    console.log(`[trace] idb_list(${kind}) done n=${_r.length} @${Math.round(performance.now())}`); // DIAG
-    return _r;
+    return (await idbGetAllByIndex(this.db, STORE_ENTITIES, 'by_kind', kind)).map(_restoreDomainKind);
   }
 
   async idb_put(kind, id, body) {
@@ -177,21 +174,15 @@ export class WasmIoPort {
     let fileName = _isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
-    const _tag = `[trace] drive_read_bundle(${kind}/${period})`;
-    console.log(`${_tag} resolveFolder start @${Math.round(performance.now())}`); // DIAG
     const folderId = await this._resolveFolder(kind);
-    console.log(`${_tag} resolveFolder done ${folderId} @${Math.round(performance.now())}`); // DIAG
     const index    = await this._folderIndex(folderId);
-    console.log(`${_tag} folderIndex done n=${index.size} @${Math.round(performance.now())}`); // DIAG
     const fileId   = index.get(fileName) ?? null;
 
     if (!fileId) {
       return { etag: null, content: '', fileId: null, folderId, fileName };
     }
 
-    console.log(`${_tag} getFile start ${fileId} @${Math.round(performance.now())}`); // DIAG
     const data = await this.driveApi.getFile(fileId);
-    console.log(`${_tag} getFile done len=${data && data.content ? data.content.length : 'null'} @${Math.round(performance.now())}`); // DIAG
     if (!data) return { etag: null, content: '', fileId, folderId, fileName };
 
     return { etag: data.etag, content: data.content, fileId, folderId, fileName };
