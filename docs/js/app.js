@@ -265,8 +265,10 @@ async function main() {
       renderLoadingBanner(document.getElementById('app'));
       return;
     }
-    // AC-03: repo-init hang → actionable banner with Retry
-    if (err?.name === 'RepoInitTimeoutError') {
+    // AC-03: repo-init hang → actionable banner with Retry. A jammed IDB open (IdbOpenFailedError
+    // from repo-init-steps) routes to the SAME banner — the slow-storage copy fits — instead of
+    // falling through to a raw error; the memo was already reset so Retry genuinely re-opens.
+    if (err?.name === 'RepoInitTimeoutError' || err?.name === 'IdbOpenFailedError') {
       const mount = _resolveBootFallbackMount();
       renderRepoInitTimeoutBanner(mount, () => {
         const user = window.__vdg_auth?.getCurrentUser?.();

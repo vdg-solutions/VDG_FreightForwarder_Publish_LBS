@@ -32,6 +32,9 @@ export class IdbUnavailableError extends Error {
 // "Khởi tạo workspace quá lâu". Memoize so exactly one open ever runs; reset on real failure so
 // a later attempt can genuinely retry.
 let _dbPromise = null;
+// Drop the memoized (jammed) open so the next openVdgDb() re-opens — else the dead promise is
+// replayed to every retry. Nulls the memo only: no timer/connection (that jamTimer closed handles).
+export function resetVdgDbMemo() { _dbPromise = null; }
 export function openVdgDb() {
   if (_dbPromise) return _dbPromise;
   _dbPromise = new Promise((resolve, reject) => {

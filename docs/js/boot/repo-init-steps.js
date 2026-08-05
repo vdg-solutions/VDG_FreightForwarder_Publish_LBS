@@ -7,7 +7,7 @@
 
 import { currentSalesRepId, clearRoleCache, isManager } from '../auth/auth-gate.js';
 import { safeAwait } from '../util/safe-await.js';
-import { openVdgDb, idbGet } from '../cache/idb-cache.js';
+import { openVdgDb, idbGet, resetVdgDbMemo } from '../cache/idb-cache.js';
 import { WasmIoPort } from '../data/wasm-io-adapters.js';
 import { resolveUserRole } from '../operators/manager/route-guard.js';
 import { loadLocale } from '../i18n/index.js';
@@ -57,8 +57,13 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   if (!db) {
     const dbResult = await safeAwait(openVdgDb(), IDB_OP_TIMEOUT_MS, null, 'repo-init:openVdgDb');
     if (dbResult.ok) { db = dbResult.value; onDbOpen?.(db); }
-    else if (currentSalesRepId() !== 'NOT_PROVISIONED') {
-      throw new Error(`IDB open failed: ${dbResult.error?.message}`); // fatal outside onboarding — WASM repo needs it
+    else {
+      resetVdgDbMemo(); // a jammed open must not poison the retry — drop the memo so a re-run re-opens
+      if (currentSalesRepId() !== 'NOT_PROVISIONED') {
+        const e = new Error(`IDB open failed: ${dbResult.error?.message}`); // fatal outside onboarding — WASM repo needs it
+        e.name = 'IdbOpenFailedError'; // app.js routes this to the repo-init retry banner (not a raw error)
+        throw e;
+      }
     }
   }
   window.__vdg_db = db;
