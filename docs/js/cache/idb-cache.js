@@ -138,7 +138,17 @@ export function openVdgDb() {
       }
     };
 
-    req.onsuccess = (ev) => resolve(ev.target.result);
+    req.onsuccess = (ev) => {
+      const db = ev.target.result;
+      // Standard IDB pattern (was MISSING — the root cause of the wedged-DB hang): if another
+      // context requests a versionchange — a 2nd tab after a deploy that bumps IDB_DB_VERSION, a
+      // deleteDatabase, or browser storage eviction — CLOSE our connection so it can proceed. A
+      // held connection with no handler blocks that op forever, and then EVERY later open fires no
+      // event at all (open-NO-EVENT) → openVdgDb + repo.list hang → "Khởi tạo workspace quá lâu" /
+      // "Không tải được dữ liệu". Drop the memo so the next access re-opens (at the new version).
+      db.onversionchange = () => { try { db.close(); } catch { /* connection already closing */ } resetVdgDbMemo(); };
+      resolve(db);
+    };
     req.onerror   = () => { _dbPromise = null; reject(new IdbUnavailableError(req.error?.message || 'IDB open failed')); };
     req.onblocked = () => { _dbPromise = null; reject(new IdbUnavailableError('IDB open blocked')); };
   });
