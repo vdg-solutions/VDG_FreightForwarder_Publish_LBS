@@ -62,7 +62,15 @@ function _wireUpdatePrompt(reg) {
     }
   };
 
-  if (reg.waiting) notify();                     // a worker was already waiting when we registered
+  // A worker already waiting at registration has nothing to interrupt — the document just
+  // booted, no mid-edit state for the reload to lose (the risk F-44-01's banner exists for).
+  // Take it live NOW instead of parking behind a banner the user may never click, which is what
+  // lets a stale/poisoned worker keep controlling the tab across deploys (the manual-Unregister
+  // trap). A worker that becomes ready DURING the session still goes through notify()'s banner.
+  if (shouldPromptUpdate({ hasWaiting: !!reg.waiting, hasController: !!navigator.serviceWorker.controller })) {
+    rearmReloadGuard(sessionStorage);            // fresh cycle — allow the post-activation reload
+    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
   reg.addEventListener('updatefound', () => {
     const installing = reg.installing;
     if (!installing) return;

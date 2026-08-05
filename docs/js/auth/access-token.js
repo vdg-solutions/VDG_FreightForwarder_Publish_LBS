@@ -3,13 +3,20 @@
 // f-29-13-bounded-silent-refresh.test.mjs) keeps resolving unchanged.
 
 import { ensureWindowOpen } from './window-open-guard.js';
+import { SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 
 const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
 export const ACCESS_TOKEN_ISSUED_KEY = 'vdg.auth.access_token_issued'; // F-50-01 — mint time, feeds eagerRefreshDue
 const TOKEN_EXPIRY_BUFFER_MS   = 60_000; // refresh 60s before expiry
-const SILENT_REFRESH_TIMEOUT_MS = 10_000;   // AC-03 — GIS prompt:'' can no-op forever; bound it
+// MUST stay below SAFE_AWAIT_DEFAULT_MS (the per-Drive-op safeAwait bound). On a static deploy
+// silent refresh can never succeed (F-50-01: no server, no gesture) and GIS can hang without
+// ever firing error_callback — this timer is the only exit. If it fires AFTER the op's 8s
+// safeAwait gives up, every boot migrator op eats a full 8s before the shared-refresh rejection
+// primes the 30s negative cache: a dozen ops => minutes on the "syncing" overlay. Firing first
+// (< 8s) lets ONE op settle the refresh, prime the cache, and the rest fast-fail in ~0ms.
+const SILENT_REFRESH_TIMEOUT_MS = Math.max(1_000, SAFE_AWAIT_DEFAULT_MS - 2_000); // 6s, guaranteed < op bound
 const REFRESH_NEGATIVE_CACHE_MS = 30_000;   // AC-03 — a known-expired session fast-fails this long instead of re-firing GIS
 
 // F-35-01 AC-02 — GIS error_callback types that mean "popup blocked", per Google's error guide.

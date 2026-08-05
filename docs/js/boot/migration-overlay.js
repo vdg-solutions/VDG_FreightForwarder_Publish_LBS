@@ -1,7 +1,11 @@
-// migration-overlay.js — a full-screen "syncing data" overlay shown WHILE seed/master
-// migrations run. On a cold cache the first load pulls + seeds master data from Drive (slow);
-// without this the views just time out into "Không tải được… Thử lại". Now the user sees a clear
-// loading state and the app reveals itself once the migration finishes.
+// migration-overlay.js — a small, NON-BLOCKING "syncing data" chip shown WHILE seed/master
+// migrations run. On a cold cache the first load seeds master data from Drive (slow, many
+// round-trips); the chip tells the user a background sync is in flight without freezing the app.
+//
+// It is deliberately NOT a full-screen modal: the migrations are fire-and-forget background work
+// (repo-init-steps.js runs them after the view renders), so blocking the whole UI on them made
+// every tab switch look stuck on "Đang đồng bộ…" for the minutes the cold-cache seed takes. A
+// corner chip with pointer-events:none keeps dashboard/shipments/etc. fully usable meanwhile.
 //
 // Driven by `vdg:migration` CustomEvents (detail.delta = +1 when a migration starts, -1 when it
 // ends). A short debounce means a fast no-op migration (everything already seeded) never flashes.
@@ -40,14 +44,19 @@ function _ensureEl() {
   _el.id = 'vdg-migration-overlay';
   _el.setAttribute('role', 'status');
   _el.setAttribute('aria-live', 'polite');
+  // Corner chip, NOT a full-screen modal. pointer-events:none so it never intercepts a click —
+  // the app stays fully usable while a background seed/master migration runs (see file header).
   _el.style.cssText = [
-    'position:fixed', 'inset:0', 'z-index:9999', 'display:none',
-    'flex-direction:column', 'align-items:center', 'justify-content:center', 'gap:16px',
-    'background:rgba(248,250,252,0.94)', 'color:#334155',
-    'font:500 15px/1.5 system-ui,-apple-system,sans-serif',
+    'position:fixed', 'right:16px', 'bottom:16px', 'z-index:9999', 'display:none',
+    'flex-direction:row', 'align-items:center', 'gap:10px',
+    'padding:10px 14px', 'border-radius:10px',
+    'background:rgba(255,255,255,0.98)', 'color:#334155',
+    'border:1px solid #e2e8f0', 'box-shadow:0 4px 16px rgba(15,23,42,0.15)',
+    'pointer-events:none',
+    'font:500 13px/1.4 system-ui,-apple-system,sans-serif',
   ].join(';');
   _el.innerHTML =
-    '<div style="width:36px;height:36px;border:3px solid #cbd5e1;border-top-color:#3b82f6;' +
+    '<div style="width:18px;height:18px;border:2px solid #cbd5e1;border-top-color:#3b82f6;' +
     'border-radius:50%;animation:vdg-mig-spin .8s linear infinite"></div>' +
     '<div data-mig-label></div>';
   document.body.appendChild(_el);
@@ -78,6 +87,13 @@ export function initMigrationOverlay() {
   if (typeof window === 'undefined') return;
   window.addEventListener(MIGRATION_EVENT, (ev) => {
     _active = Math.max(0, _active + (Number(ev.detail?.delta) || 0));
+    _render();
+  });
+  // Drive is unreachable → the reconnect chip is about to show. A "syncing" overlay over a
+  // doomed migration is worse than nothing (it hides an already-rendered dashboard). Yield to
+  // the reconnect UI: force it down now. A genuine post-reconnect sync re-fires beginMigration.
+  window.addEventListener('vdg:auth-needs-reconnect', () => {
+    _active = 0;
     _render();
   });
 }
