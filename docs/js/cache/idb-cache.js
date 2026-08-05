@@ -146,7 +146,21 @@ export function openVdgDb() {
       // held connection with no handler blocks that op forever, and then EVERY later open fires no
       // event at all (open-NO-EVENT) → openVdgDb + repo.list hang → "Khởi tạo workspace quá lâu" /
       // "Không tải được dữ liệu". Drop the memo so the next access re-opens (at the new version).
-      db.onversionchange = () => { try { db.close(); } catch { /* connection already closing */ } resetVdgDbMemo(); };
+      db.onversionchange = () => {
+        try { db.close(); } catch { /* connection already closing */ }
+        resetVdgDbMemo();
+        // Closing is only HALF the pattern. Our WASM-repo/view code still holds THIS now-dead
+        // connection, so every later read (repo.list on the shipments view, etc.) fails silently
+        // and the view hangs on "Đang tải" forever. Reload to re-boot against the DB's new
+        // generation (post delete/upgrade). Guarded to once/5s so a delete+recreate can't loop;
+        // absent in node/tests (no location).
+        if (typeof location !== 'undefined' && typeof location.reload === 'function'
+            && typeof sessionStorage !== 'undefined') {
+          const RELOAD_KEY = 'vdg.idb.versionchange.reload';
+          const last = Number(sessionStorage.getItem(RELOAD_KEY) || '0');
+          if (Date.now() - last > 5000) { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); location.reload(); }
+        }
+      };
       resolve(db);
     };
     req.onerror   = () => { _dbPromise = null; reject(new IdbUnavailableError(req.error?.message || 'IDB open failed')); };
