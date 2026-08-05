@@ -4,7 +4,14 @@
 import { runRepoInitBounded } from './repo-init-steps.js';
 import { pushDiag, DIAG_KIND_REPO_INIT_OK, DIAG_KIND_REPO_INIT_TIMEOUT } from './repo-diag.js';
 
-export const REPO_INIT_TIMEOUT_MS = 8000; // AC-01: only occurrence of this magic number in boot/
+// Total budget for the render-critical boot chain. 8s was too tight: on a COLD cache the
+// wasm-init step downloads the ~2.1MB vdg_freight_bg.wasm and compiles it, then hits Drive for
+// the first time — legitimately > 8s on a slow pilot link, so 8s rendered a FALSE "phản hồi
+// chậm, thử lại" over a boot that was merely downloading. The #view-loading spinner shows for the
+// whole wait, so a longer budget is honest, not a hang. Local/fast steps that SHOULD be quick
+// keep their own inner bounds (openVdgDb: IDB_OP_TIMEOUT_MS), so a real jam still fails fast — this
+// budget only needs to cover the one legitimately network-bound step.
+export const REPO_INIT_TIMEOUT_MS = 30000; // AC-01: only occurrence of this magic number in boot/
 
 export class RepoInitTimeoutError extends Error {
   constructor(step, elapsedMs) {
