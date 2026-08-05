@@ -39,6 +39,8 @@ export class WasmIoPort {
     this.folderIds = new Map();
     this.fileIndex = new Map();        // folderId -> Map(fileName -> fileId): folder listed once
     this._listingInflight = new Map(); // folderId -> in-flight listing promise (dedupe concurrency)
+    this._pathSegment = new Map();     // `${parentId}/${name}` -> folderId: resolve each nested segment ONCE
+    this._segInflight = new Map();     // same key -> in-flight getOrCreateFolder (dedupe concurrent boot migrators)
   }
 
   // List a folder's files ONCE and cache name->id. A per-period bundle read used to fire a
@@ -145,12 +147,25 @@ export class WasmIoPort {
     return folderId;
   }
 
+  // Resolve each path segment ONCE per session. The boot migrators (seed/master-scope/priced-ref)
+  // all resolve masters/<kind>, re-doing getOrCreateFolder for the shared 'masters' segment every
+  // time — dozens of sequential Drive round-trips that blew their 8s bounds on a cold cache. Cache
+  // per (parentId,name), and dedupe concurrent resolves of the same segment onto one in-flight call.
   async _ensureNestedFolder(rootId, path) {
-    const parts = path.split('/');
     let current = rootId;
-    for (const part of parts) {
-      const folder = await getOrCreateFolder(current, part);
-      current = folder.id;
+    for (const part of path.split('/')) {
+      const key = `${current}/${part}`;
+      let id = this._pathSegment.get(key);
+      if (!id) {
+        let inflight = this._segInflight.get(key);
+        if (!inflight) {
+          inflight = getOrCreateFolder(current, part).then((f) => f.id).finally(() => this._segInflight.delete(key));
+          this._segInflight.set(key, inflight);
+        }
+        id = await inflight;
+        this._pathSegment.set(key, id);
+      }
+      current = id;
     }
     return current;
   }

@@ -233,15 +233,11 @@ export function bootApp(user, db) {
   const initialRoute = location.hash.slice(1) || defaultRoute;
   renderView(initialRoute);
 
-  // Background pre-fetch AI model for semantic search (delay 2s to prioritize UI render)
-  setTimeout(async () => {
-    try {
-      const { preloadModel } = await import('./cache/semantic-search.js');
-      preloadModel();
-    } catch (e) {
-      console.warn('[SemanticSearch] Preload failed:', e); // DEV
-    }
-  }, 2000);
+  // NOTE: no eager AI-model pre-fetch here. The semantic-search model is ~100MB from HuggingFace;
+  // pre-fetching it 2s after render saturated the connection right as the boot's Drive data reads
+  // (seed/master-scope/priced-ref migrators) ran, starving them into 8s timeouts on a slow link.
+  // getEmbedding() lazy-loads the model on first real use (a PNL form's semantic search), so the
+  // feature still works — it just no longer competes with boot for bandwidth.
 }
 
 async function main() {
