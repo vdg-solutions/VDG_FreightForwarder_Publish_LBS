@@ -69,26 +69,51 @@ function _serialize(op) {
   return run;
 }
 
-// Run a single bounded IDB op. executor gets (resolve, reject) and wires the request/tx events;
-// the backstop rejects + drops the memo if nothing fires. WRITES serialize (serial=true) so the
-// boot storm can't fire a concurrent write burst; READS run immediately (serial=false) — IDB
-// handles concurrent reads fine, and a read must never queue behind a stalled write, or an open
-// grid shows "Đang tải…" for 8s while a background seed/delta write retries. Reads stay bounded so
-// a genuinely dead connection still fails fast.
-function _boundedOp(executor, serial) {
-  const make = () => new Promise((res, rej) => {
+// One bounded attempt against a specific connection: rejects at the backstop if nothing fires.
+function _attempt(db, build) {
+  return new Promise((res, rej) => {
     let settled = false;
     const done = (fn, arg) => { if (!settled) { settled = true; clearTimeout(timer); fn(arg); } };
-    const timer = setTimeout(() => { _dbPromise = null; done(rej, new IdbUnavailableError('IDB op timed out — connection wedged')); }, IDB_READ_TIMEOUT_MS);
-    try { executor((v) => done(res, v), (e) => done(rej, e)); }
+    const timer = setTimeout(() => done(rej, new IdbUnavailableError('IDB op timed out — connection wedged')), IDB_READ_TIMEOUT_MS);
+    try { build(db, (v) => done(res, v), (e) => done(rej, e)); }
     catch (e) { done(rej, e); }
   });
-  return serial ? _serialize(make) : make();
+}
+
+// A wedged connection is never healed, only REPLACED: close the dead handle, drop the memo, reopen
+// a fresh one (a fresh connection is not wedged), and re-point the global handle. This is the piece
+// that was missing — before, a timed-out op only nulled the memo but the app kept reusing the dead
+// window.__vdg_db, so every subsequent op wedged too.
+async function _recoverConnection(dead) {
+  try { dead?.close(); } catch { /* already closing — nothing to do */ }
+  resetVdgDbMemo();
+  const fresh = await openVdgDb();
+  if (typeof window !== 'undefined') window.__vdg_db = fresh; // keep direct-handle callers current
+  return fresh;
+}
+
+// Run a bounded IDB op. First attempt uses the passed connection; on a wedge (backstop fires),
+// REPLACE the connection and retry ONCE on the fresh one. If recovery itself can't reopen, surface
+// the original wedge. WRITES serialize (serial=true) so the boot storm can't fire a concurrent
+// write burst; READS run immediately — IDB handles concurrent reads, and a read must never queue
+// behind a stalled write, or an open grid shows "Đang tải…" while a background write retries.
+function _boundedOp(db, build, serial) {
+  const run = async () => {
+    try { return await _attempt(db, build); }
+    catch (e) {
+      if (!(e instanceof IdbUnavailableError)) throw e; // a real IDB error, not a wedge
+      let fresh;
+      try { fresh = await _recoverConnection(db); }
+      catch { throw e; }                                // can't reopen — surface the original wedge
+      return await _attempt(fresh, build);              // retry once on a healthy connection
+    }
+  };
+  return serial ? _serialize(run) : run();
 }
 
 export async function idbGet(db, store, key) {
-  return (await _boundedOp((res, rej) => {
-    const req = db.transaction(store, 'readonly').objectStore(store).get(key);
+  return (await _boundedOp(db, (d, res, rej) => {
+    const req = d.transaction(store, 'readonly').objectStore(store).get(key);
     req.onsuccess = () => res(req.result);
     req.onerror   = () => rej(req.error);
   }, false)) ?? null;
@@ -98,8 +123,8 @@ export async function idbGet(db, store, key) {
 // an existing row in place — omitting it makes the key generator mint a fresh
 // key, silently leaving the old row behind (root cause of the F-24-12 snowball).
 export function idbPut(db, store, value, key) {
-  return _boundedOp((res, rej) => {
-    const objectStore = db.transaction(store, 'readwrite').objectStore(store);
+  return _boundedOp(db, (d, res, rej) => {
+    const objectStore = d.transaction(store, 'readwrite').objectStore(store);
     const req = key === undefined ? objectStore.put(value) : objectStore.put(value, key);
     req.onsuccess = () => res(req.result);
     req.onerror   = () => rej(req.error);
@@ -107,8 +132,8 @@ export function idbPut(db, store, value, key) {
 }
 
 export function idbGetAll(db, store) {
-  return _boundedOp((res, rej) => {
-    const req = db.transaction(store, 'readonly').objectStore(store).getAll();
+  return _boundedOp(db, (d, res, rej) => {
+    const req = d.transaction(store, 'readonly').objectStore(store).getAll();
     req.onsuccess = () => res(req.result || []);
     req.onerror   = () => rej(req.error);
   }, false);
@@ -116,8 +141,8 @@ export function idbGetAll(db, store) {
 
 // cursor-based: attaches autoIncrement key as __key on each record
 export function idbGetAllWithKeys(db, store) {
-  return _boundedOp((res, rej) => {
-    const req = db.transaction(store, 'readonly').objectStore(store).openCursor();
+  return _boundedOp(db, (d, res, rej) => {
+    const req = d.transaction(store, 'readonly').objectStore(store).openCursor();
     const out = [];
     req.onsuccess = (ev) => {
       const cursor = ev.target.result;
@@ -129,16 +154,16 @@ export function idbGetAllWithKeys(db, store) {
 }
 
 export async function idbGetAllByIndex(db, store, indexName, key) {
-  return (await _boundedOp((res, rej) => {
-    const req = db.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key);
+  return (await _boundedOp(db, (d, res, rej) => {
+    const req = d.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key);
     req.onsuccess = () => res(req.result);
     req.onerror   = () => rej(req.error);
   }, false)) || [];
 }
 
 export function idbDelete(db, store, key) {
-  return _boundedOp((res, rej) => {
-    const req = db.transaction(store, 'readwrite').objectStore(store).delete(key);
+  return _boundedOp(db, (d, res, rej) => {
+    const req = d.transaction(store, 'readwrite').objectStore(store).delete(key);
     req.onsuccess = () => res();
     req.onerror   = () => rej(req.error);
   }, true);
@@ -154,8 +179,8 @@ function _restoreDomainKind(r) {
 
 // Atomic entity + outbox write in one transaction (serialized — a write)
 export function idbPutWithOutbox(db, entityRecord, outboxRecord) {
-  return _boundedOp((res, rej) => {
-    const tx       = db.transaction([STORE_ENTITIES, STORE_OUTBOX], 'readwrite');
+  return _boundedOp(db, (d, res, rej) => {
+    const tx       = d.transaction([STORE_ENTITIES, STORE_OUTBOX], 'readwrite');
     const entities = tx.objectStore(STORE_ENTITIES);
     const outbox   = tx.objectStore(STORE_OUTBOX);
     entities.put(entityRecord);
