@@ -1,6 +1,7 @@
 // Cache utility — bulk IDB patch + legacy bulkPut + BulkOrchestrator
 
 import { idbUpsertOutboxRecord } from './outbox-dedupe.js';
+import { idbRun } from './idb-cache.js';
 
 const BULK_CHUNK_SIZE       = 50;
 const STORE_ENTITIES        = 'entities';
@@ -22,8 +23,8 @@ export async function bulkPut(repo, kind, entities) {
 }
 
 async function _patchChunk(db, kind, ids, patchFn) {
-  return new Promise((resolve, reject) => {
-    const tx       = db.transaction([STORE_ENTITIES, STORE_OUTBOX], 'readwrite');
+  return idbRun(db, (h) => (resolve, reject) => {
+    const tx       = h.transaction([STORE_ENTITIES, STORE_OUTBOX], 'readwrite');
     const entities = tx.objectStore(STORE_ENTITIES);
     const outbox   = tx.objectStore(STORE_OUTBOX);
 
@@ -47,7 +48,7 @@ async function _patchChunk(db, kind, ids, patchFn) {
 
     tx.oncomplete = () => resolve();
     tx.onerror    = () => reject(tx.error);
-  });
+  }, { write: true });
 }
 
 /**
@@ -103,13 +104,13 @@ export class BulkOrchestrator {
   }
 
   async _writeBatch(kind, records) {
-    return new Promise((resolve, reject) => {
-      const tx    = this._db.transaction(STORE_ENTITIES, 'readwrite');
+    return idbRun(this._db, (h) => (resolve, reject) => {
+      const tx    = h.transaction(STORE_ENTITIES, 'readwrite');
       const store = tx.objectStore(STORE_ENTITIES);
       for (const r of records) store.put({ ...r, kind });
-      tx.oncomplete = resolve;
+      tx.oncomplete = () => resolve();
       tx.onerror    = () => reject(tx.error);
-    });
+    }, { write: true });
   }
 
   _emitProgress(kind, n, total, done = false) {

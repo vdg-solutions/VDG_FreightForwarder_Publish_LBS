@@ -287,8 +287,8 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly __wasm_bindgen_func_elem_6695: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_6708: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6677: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_6687: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -1,148 +1,60 @@
-// IndexedDB L2 — CachedEntityRepo wrapper + openVdgDb
+// IndexedDB L2 — CachedEntityRepo wrapper + store helpers
+// Connection lifecycle, wedge recovery and the concurrency gate live in idb-conn.js.
 
 import { EntityRepo } from '../abstractions/entity-repo.js';
 import { idbUpsertOutboxRecord } from './outbox-dedupe.js';
 import { emitOutboxChanged } from './outbox-count.js';
 import { runBackgroundPull } from './background-pull.js';
+import { boundedOp } from './idb-conn.js';
 import {
-  IDB_DB_NAME, IDB_DB_VERSION, META_SYNC_KEY,
+  META_SYNC_KEY,
   STORE_ENTITIES, STORE_META, STORE_OUTBOX, STORE_NOTIFICATIONS, STORE_KIND_WMA,
-  applyUpgrade,
 } from './idb-schema.js';
+
+export { openVdgDb, resetVdgDbMemo, IdbUnavailableError, __resetIdbGuards } from './idb-conn.js';
 
 const FULL_PULL_VALID_MS = 30_000;
 
-export class IdbUnavailableError extends Error {
-  constructor(msg) { super(msg); this.name = 'IdbUnavailableError'; }
-}
-
-// ── DB open ───────────────────────────────────────────────────────────────────
-
-// Single shared connection. 6 callers + the repo-init retry loop must NOT each open a fresh
-// indexedDB connection: concurrent opens of the same DB jam each other (no success/error/blocked
-// event fires), openVdgDb times out at 8s, repo-init retries and opens AGAIN -> worse jam ->
-// "Khởi tạo workspace quá lâu". Memoize so exactly one open ever runs; reset on real failure so
-// a later attempt can genuinely retry.
-let _dbPromise = null;
-// Drop the memoized (jammed) open so the next openVdgDb() re-opens — else the dead promise is
-// replayed to every retry. Nulls the memo only: no timer/connection (that jamTimer closed handles).
-export function resetVdgDbMemo() { _dbPromise = null; }
-export function openVdgDb() {
-  if (_dbPromise) return _dbPromise;
-  _dbPromise = new Promise((resolve, reject) => {
-    let req;
-    try {
-      req = indexedDB.open(IDB_DB_NAME, IDB_DB_VERSION);
-    } catch (err) {
-      _dbPromise = null;
-      reject(new IdbUnavailableError(err.message));
-      return;
-    }
-    req.onupgradeneeded = applyUpgrade;
-    req.onsuccess = (ev) => resolve(ev.target.result);
-    req.onerror   = () => { _dbPromise = null; reject(new IdbUnavailableError(req.error?.message || 'IDB open failed')); };
-    req.onblocked = () => { _dbPromise = null; reject(new IdbUnavailableError('IDB open blocked')); };
-  });
-  return _dbPromise;
-}
-
 // ── IDB helpers ───────────────────────────────────────────────────────────────
+//
+// Every op funnels through boundedOp: bounded (a wedged connection errors instead of hanging),
+// gated (the boot storm can't fire dozens of concurrent transactions), and self-healing (a wedge
+// closes + reopens the connection and retries once on the fresh handle). Executors take the db as
+// a parameter rather than closing over it — recovery swaps the handle between the two attempts.
 
 // Global IDB serialization + per-op backstop. Root cause of the origin-wide "connection wedged"
-// freeze (proven live: even opening a brand-new UNRELATED db stops firing events): the boot storm
-// — full Drive pull + seed/master-scope/priced-ref migrators + delta-poll + route-prefetch, each
-// spawn_local'ing IDB futures through WASM — fired dozens of concurrent transactions that deadlock
-// Chromium/Edge's per-origin IDB task runner. Funnel EVERY op through one chain so at most one
-// transaction is ever in flight; the storm can't form, the runner never deadlocks. Each op keeps a
-// 5s backstop so a genuinely wedged op fails fast, nulls the memo, and frees the chain — a stalled
-// op can't block every queued op behind it. A LOCAL read/write is milliseconds, so past 5s the
-// connection is dead: this is a dead-connection detector, not a network-latency guess.
-const IDB_READ_TIMEOUT_MS = 5000;
-
-let _idbChain = Promise.resolve();
-function _serialize(op) {
-  const run = _idbChain.then(op, op);
-  // The chain must always resolve to stay alive — a rejected link would poison every queued op.
-  // The rejection still reaches the CALLER via the returned `run` (awaited writes surface through
-  // safeAwait); log here too so a fire-and-forget write (no caller await) is never silently dropped.
-  _idbChain = run.then(() => {}, (e) => { console.warn('[idb] serialized write failed:', e?.message || e); }); // DEV
-  return run;
-}
-
-// One bounded attempt against a specific connection: rejects at the backstop if nothing fires.
-function _attempt(db, build) {
-  return new Promise((res, rej) => {
-    let settled = false;
-    const done = (fn, arg) => { if (!settled) { settled = true; clearTimeout(timer); fn(arg); } };
-    const timer = setTimeout(() => done(rej, new IdbUnavailableError('IDB op timed out — connection wedged')), IDB_READ_TIMEOUT_MS);
-    try { build(db, (v) => done(res, v), (e) => done(rej, e)); }
-    catch (e) { done(rej, e); }
-  });
-}
-
-// A wedged connection is never healed, only REPLACED: close the dead handle, drop the memo, reopen
-// a fresh one (a fresh connection is not wedged), and re-point the global handle. This is the piece
-// that was missing — before, a timed-out op only nulled the memo but the app kept reusing the dead
-// window.__vdg_db, so every subsequent op wedged too.
-async function _recoverConnection(dead) {
-  try { dead?.close(); } catch { /* already closing — nothing to do */ }
-  resetVdgDbMemo();
-  const fresh = await openVdgDb();
-  if (typeof window !== 'undefined') window.__vdg_db = fresh; // keep direct-handle callers current
-  return fresh;
-}
-
-// Run a bounded IDB op. First attempt uses the passed connection; on a wedge (backstop fires),
-// REPLACE the connection and retry ONCE on the fresh one. If recovery itself can't reopen, surface
-// the original wedge. WRITES serialize (serial=true) so the boot storm can't fire a concurrent
-// write burst; READS run immediately — IDB handles concurrent reads, and a read must never queue
-// behind a stalled write, or an open grid shows "Đang tải…" while a background write retries.
-function _boundedOp(db, build, serial) {
-  const run = async () => {
-    try { return await _attempt(db, build); }
-    catch (e) {
-      if (!(e instanceof IdbUnavailableError)) throw e; // a real IDB error, not a wedge
-      let fresh;
-      try { fresh = await _recoverConnection(db); }
-      catch { throw e; }                                // can't reopen — surface the original wedge
-      return await _attempt(fresh, build);              // retry once on a healthy connection
-    }
-  };
-  return serial ? _serialize(run) : run();
-}
-
 export async function idbGet(db, store, key) {
-  return (await _boundedOp(db, (d, res, rej) => {
-    const req = d.transaction(store, 'readonly').objectStore(store).get(key);
+  return (await boundedOp((h) => (res, rej) => {
+    const req = h.transaction(store, 'readonly').objectStore(store).get(key);
     req.onsuccess = () => res(req.result);
     req.onerror   = () => rej(req.error);
-  }, false)) ?? null;
+  }, { db })) ?? null;
 }
 
 // key is required for out-of-line-keyed stores (e.g. STORE_OUTBOX) when updating
 // an existing row in place — omitting it makes the key generator mint a fresh
 // key, silently leaving the old row behind (root cause of the F-24-12 snowball).
 export function idbPut(db, store, value, key) {
-  return _boundedOp(db, (d, res, rej) => {
-    const objectStore = d.transaction(store, 'readwrite').objectStore(store);
+  return boundedOp((h) => (res, rej) => {
+    const objectStore = h.transaction(store, 'readwrite').objectStore(store);
     const req = key === undefined ? objectStore.put(value) : objectStore.put(value, key);
     req.onsuccess = () => res(req.result);
     req.onerror   = () => rej(req.error);
-  }, true);
+  }, { db, write: true });
 }
 
 export function idbGetAll(db, store) {
-  return _boundedOp(db, (d, res, rej) => {
-    const req = d.transaction(store, 'readonly').objectStore(store).getAll();
+  return boundedOp((h) => (res, rej) => {
+    const req = h.transaction(store, 'readonly').objectStore(store).getAll();
     req.onsuccess = () => res(req.result || []);
     req.onerror   = () => rej(req.error);
-  }, false);
+  }, { db });
 }
 
 // cursor-based: attaches autoIncrement key as __key on each record
 export function idbGetAllWithKeys(db, store) {
-  return _boundedOp(db, (d, res, rej) => {
-    const req = d.transaction(store, 'readonly').objectStore(store).openCursor();
+  return boundedOp((h) => (res, rej) => {
+    const req = h.transaction(store, 'readonly').objectStore(store).openCursor();
     const out = [];
     req.onsuccess = (ev) => {
       const cursor = ev.target.result;
@@ -150,23 +62,31 @@ export function idbGetAllWithKeys(db, store) {
       else res(out);
     };
     req.onerror = () => rej(req.error);
-  }, false);
+  }, { db });
 }
 
 export async function idbGetAllByIndex(db, store, indexName, key) {
-  return (await _boundedOp(db, (d, res, rej) => {
-    const req = d.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key);
+  return (await boundedOp((h) => (res, rej) => {
+    const req = h.transaction(store, 'readonly').objectStore(store).index(indexName).getAll(key);
     req.onsuccess = () => res(req.result);
     req.onerror   = () => rej(req.error);
-  }, false)) || [];
+  }, { db })) || [];
 }
 
 export function idbDelete(db, store, key) {
-  return _boundedOp(db, (d, res, rej) => {
-    const req = d.transaction(store, 'readwrite').objectStore(store).delete(key);
+  return boundedOp((h) => (res, rej) => {
+    const req = h.transaction(store, 'readwrite').objectStore(store).delete(key);
     req.onsuccess = () => res();
     req.onerror   = () => rej(req.error);
-  }, true);
+  }, { db, write: true });
+}
+
+// Run a caller-supplied transaction through the same gate. For the sites that hand-roll a
+// transaction (notifications, tombstone-reconcile, bulk import, the auth-gate row count): raw
+// db.transaction() calls are unbounded AND ungated, so they hang forever on a wedge and add
+// uncounted concurrency to the very storm the gate exists to prevent.
+export function idbRun(db, executor, { write = false } = {}) {
+  return boundedOp(executor, { db, write });
 }
 
 // D-3: IDB stores entity-type in 'kind' (keyPath); domain 'kind' is stashed as '_domain_kind'.
@@ -177,17 +97,17 @@ function _restoreDomainKind(r) {
   return { ...rest, kind: _domain_kind };
 }
 
-// Atomic entity + outbox write in one transaction (serialized — a write)
+// Atomic entity + outbox write in one transaction (serial lane — a write)
 export function idbPutWithOutbox(db, entityRecord, outboxRecord) {
-  return _boundedOp(db, (d, res, rej) => {
-    const tx       = d.transaction([STORE_ENTITIES, STORE_OUTBOX], 'readwrite');
+  return boundedOp((h) => (res, rej) => {
+    const tx       = h.transaction([STORE_ENTITIES, STORE_OUTBOX], 'readwrite');
     const entities = tx.objectStore(STORE_ENTITIES);
     const outbox   = tx.objectStore(STORE_OUTBOX);
     entities.put(entityRecord);
     idbUpsertOutboxRecord(outbox, outboxRecord);
     tx.oncomplete = () => res();
     tx.onerror    = () => rej(tx.error);
-  }, true);
+  }, { db, write: true });
 }
 
 // ── CachedEntityRepo ─────────────────────────────────────────────────────────
@@ -321,4 +241,5 @@ export class CachedEntityRepo extends EntityRepo {
   }
 }
 
-export { IDB_DB_NAME, IDB_DB_VERSION, META_SYNC_KEY, STORE_ENTITIES, STORE_META, STORE_OUTBOX, STORE_NOTIFICATIONS, STORE_KIND_WMA };
+export { META_SYNC_KEY, STORE_ENTITIES, STORE_META, STORE_OUTBOX, STORE_NOTIFICATIONS, STORE_KIND_WMA };
+export { IDB_DB_NAME, IDB_DB_VERSION } from './idb-schema.js';

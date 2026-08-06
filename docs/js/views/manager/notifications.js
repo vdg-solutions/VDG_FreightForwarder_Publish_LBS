@@ -3,7 +3,7 @@
 import { NOTIFICATION_TYPES } from '../../operators/manager/notification-composer.js';
 import { isManager }  from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
-import { idbGet, idbPut } from '../../cache/idb-cache.js';
+import { idbGet, idbPut, idbRun } from '../../cache/idb-cache.js';
 import { t } from '../../i18n/index.js';
 
 const NOTIF_DRAWER_WIDTH_PX = 380;
@@ -36,8 +36,8 @@ async function _loadFromIdb() {
   const db = getDb();
   if (!db) return [];
   try {
-    return await new Promise((res, rej) => {
-      const req = db.transaction(NOTIF_STORE, 'readonly').objectStore(NOTIF_STORE).getAll();
+    return await idbRun(db, (h) => (res, rej) => {
+      const req = h.transaction(NOTIF_STORE, 'readonly').objectStore(NOTIF_STORE).getAll();
       req.onsuccess = () => res(req.result || []);
       req.onerror   = () => rej(req.error);
     });
@@ -48,11 +48,11 @@ async function _saveNotif(notif) {
   const db = getDb();
   if (!db) return;
   try {
-    await new Promise((res, rej) => {
-      const req = db.transaction(NOTIF_STORE, 'readwrite').objectStore(NOTIF_STORE).put(notif);
+    await idbRun(db, (h) => (res, rej) => {
+      const req = h.transaction(NOTIF_STORE, 'readwrite').objectStore(NOTIF_STORE).put(notif);
       req.onsuccess = () => res();
       req.onerror   = () => rej(req.error);
-    });
+    }, { write: true });
   } catch (err) { console.warn('[notifs] idb save:', err.message); } // DEV
 }
 
@@ -60,10 +60,13 @@ async function _bulkUpdateNotifs(updates) {
   const db = getDb();
   if (!db) return;
   try {
-    const tx = db.transaction(NOTIF_STORE, 'readwrite');
-    const st = tx.objectStore(NOTIF_STORE);
-    updates.forEach((n) => st.put(n));
-    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    await idbRun(db, (h) => (res, rej) => {
+      const tx = h.transaction(NOTIF_STORE, 'readwrite');
+      const st = tx.objectStore(NOTIF_STORE);
+      updates.forEach((n) => st.put(n));
+      tx.oncomplete = () => res();
+      tx.onerror    = () => rej(tx.error);
+    }, { write: true });
   } catch (err) { console.warn('[notifs] idb bulk update:', err.message); } // DEV
 }
 

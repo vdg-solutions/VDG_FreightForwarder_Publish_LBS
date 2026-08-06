@@ -2,7 +2,7 @@
 // clause-for-clause (see sync_reconcile.rs and its parity fixture). Bias: never resurrect a
 // delete when uncertain. Consulted by DeltaPoller._applyChange before every idbPut.
 
-import { STORE_OUTBOX } from '../cache/idb-cache.js';
+import { idbRun, STORE_OUTBOX } from '../cache/idb-cache.js';
 
 // Should a pull skip overwriting the local record with the incoming remote one?
 // Clause order matters — first match wins.
@@ -26,8 +26,8 @@ export function reconcileKeepLocal(local, incoming, hasPending) {
 export async function pendingOutboxKeys(db) {
   const set = new Set();
   if (!db) return set;
-  const rows = await new Promise((res, rej) => {
-    const req = db.transaction(STORE_OUTBOX, 'readonly').objectStore(STORE_OUTBOX).getAll();
+  const rows = await idbRun(db, (h) => (res, rej) => {
+    const req = h.transaction(STORE_OUTBOX, 'readonly').objectStore(STORE_OUTBOX).getAll();
     req.onsuccess = () => res(req.result || []);
     req.onerror   = () => rej(req.error);
   });

@@ -11,7 +11,7 @@ import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
-import { openVdgDb, STORE_ENTITIES } from '../cache/idb-cache.js';
+import { openVdgDb, idbRun, STORE_ENTITIES } from '../cache/idb-cache.js';
 
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
@@ -178,16 +178,16 @@ function _readCachedIdentityRaw() {
 // safe fall-through AC-03 already exercises.
 async function _hasCachedWorkspace() {
   const result = await safeAwait((async () => {
+    // openVdgDb is MEMOIZED — this is the shared singleton, not a private connection. The old
+    // `finally { db.close() }` closed it while leaving the memo set, so every later caller
+    // (repo-init, window.__vdg_db, CachedEntityRepo) was handed a closed handle for the rest of
+    // the session. Never close it here; the count goes through the gate like any other read.
     const db = await openVdgDb();
-    try {
-      return await new Promise((resolve, reject) => {
-        const req = db.transaction(STORE_ENTITIES, 'readonly').objectStore(STORE_ENTITIES).count();
-        req.onsuccess = () => resolve(req.result > 0);
-        req.onerror   = () => reject(req.error);
-      });
-    } finally {
-      db.close?.();
-    }
+    return await idbRun(db, (h) => (resolve, reject) => {
+      const req = h.transaction(STORE_ENTITIES, 'readonly').objectStore(STORE_ENTITIES).count();
+      req.onsuccess = () => resolve(req.result > 0);
+      req.onerror   = () => reject(req.error);
+    });
   })(), SAFE_AWAIT_DEFAULT_MS, false, 'auth-gate:hasCachedWorkspace');
   return result.ok ? result.value : false;
 }

@@ -66,8 +66,8 @@ export const wasmentityrepo_get: (a: number, b: number, c: number, d: number, e:
 export const wasmentityrepo_list: (a: number, b: number, c: number) => number;
 export const wasmentityrepo_new: (a: number) => number;
 export const wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-export const __wasm_bindgen_func_elem_6695: (a: number, b: number, c: number, d: number) => void;
-export const __wasm_bindgen_func_elem_6708: (a: number, b: number, c: number, d: number) => void;
+export const __wasm_bindgen_func_elem_6677: (a: number, b: number, c: number, d: number) => void;
+export const __wasm_bindgen_func_elem_6687: (a: number, b: number, c: number, d: number) => void;
 export const __wbindgen_export: (a: number, b: number) => number;
 export const __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_export3: (a: number) => void;

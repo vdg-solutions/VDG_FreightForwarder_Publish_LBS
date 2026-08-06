@@ -3,6 +3,7 @@
 
 import { html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { t } from '../i18n/index.js';
+import { idbRun } from '../cache/idb-cache.js';
 
 const BADGE_MAX = 99;
 
@@ -12,16 +13,26 @@ export function badgeLabel(count) {
   return count > BADGE_MAX ? `${BADGE_MAX}+` : String(count);
 }
 
+// The red count bubble on the bell. Was written out twice in topbar.js — the same 130-char class
+// string for the notification count and the due-soon count — which is what pushed that file over
+// the 350-line cap. Falsy label renders nothing.
+export function renderBadge(label) {
+  if (!label) return '';
+  return html`<span class="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none flex items-center justify-center ring-2 ring-white">${label}</span>`;
+}
+
 // Persist a preferences patch into the `meta` IDB store. Non-critical → swallow errors.
 export function idbSavePref(patch) {
   const db = window.__vdg_db;
   if (!db) return;
-  try {
-    const tx = db.transaction('meta', 'readwrite');
+  idbRun(db, (h) => (res, rej) => {
+    const tx = h.transaction('meta', 'readwrite');
     const st = tx.objectStore('meta');
     const gr = st.get('preferences');
     gr.onsuccess = () => { st.put({ ...(gr.result || { key: 'preferences' }), ...patch }); };
-  } catch { /* non-critical: preferences persistence is best-effort */ }
+    tx.oncomplete = () => res();
+    tx.onerror    = () => rej(tx.error);
+  }, { write: true }).catch(() => { /* non-critical: preferences persistence is best-effort */ });
 }
 
 // User avatar: picture if present, else initials chip.

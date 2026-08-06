@@ -7,7 +7,7 @@ import { loadLocale, currentLocale, t } from '../i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
 import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION } from './topbar-sync-chip.js';
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
-import { renderAvatar, idbSavePref, badgeLabel } from './topbar-helpers.js';
+import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 
 const SW_DISMISS_KEY            = 'vdg.sw.update.dismissed';
 const SUPPORTED_LOCALES         = ['vi', 'en'];
@@ -332,8 +332,7 @@ class VdgTopbar extends LitElement {
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
             </svg>
-            ${notifBadge ? html`<span class="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none flex items-center justify-center ring-2 ring-white">${notifBadge}</span>`
-              : (badge ? html`<span class="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none flex items-center justify-center ring-2 ring-white">${badge}</span>` : '')}
+            ${renderBadge(notifBadge || badge)}
           </button>
           <div class="relative flex items-center h-9 pl-3 ml-1 border-l border-slate-200">
             <button @click="${() => { this._menuOpen = !this._menuOpen; }}"
