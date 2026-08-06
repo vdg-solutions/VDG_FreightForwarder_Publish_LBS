@@ -2,6 +2,7 @@ import '../components/detail-panel.js';
 import { resolveShipmentState } from '../util/shipment-state-resolver.js';
 import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
+import { safeAwait } from '../util/safe-await.js';
 import { shipmentLane } from '../util/shipment-lane.js';
 import { t, fmtNumber } from '../i18n/index.js';
 import { agGridLocaleText } from '../i18n/ag-grid-locale.js';
@@ -157,13 +158,26 @@ export function toolbar(total, isLarge) {
 // concurrently, each shielded to its own fallback BEFORE combining, so Promise.all's fail-fast
 // on first rejection can never actually see one (a slow/failing source degrades alone, the grid
 // still mounts with the other two).
+//
+// `.catch(()=>[])` only guarded REJECTIONS — a SLOW source (a cold `pnl_line` that blocks on a
+// Drive full-pull while the boot migrators rate-limit Drive) stayed pending and hung the whole
+// Promise.all, so the render tripped view-render's 12s bound → "Không mở được màn hình" even though
+// the shipments were already cached. Bound each source: past 2.5s it degrades to its fallback and
+// the grid mounts from cache now, the slow source populating later. (Interim — the real scaling
+// fix is a paginated query engine, not loading every row per mount.)
+const VIEW_SOURCE_MS = 2500;
+const _bounded = async (p, fallback) => {
+  const r = await safeAwait(p, VIEW_SOURCE_MS, null, 'shipments:load');
+  return r.ok ? r.value : fallback;
+};
+
 export async function loadRealData() {
   const repo = window.__vdg_repo;
   if (!repo) return [];
   const [allShipments, allLines, aliasRows] = await Promise.all([
-    repo.list('shipment', null).catch(() => []),          // was unguarded — AC-04 gap
-    repo.list('pnl_line').catch(() => []),                 // unchanged
-    ensureShipmentStateAliases(repo),                      // already never rejects
+    _bounded(repo.list('shipment', null), []),
+    _bounded(repo.list('pnl_line'), []),
+    _bounded(ensureShipmentStateAliases(repo), []),
   ]);
   const linesByRef = {};
   for (const l of allLines) {
