@@ -62,7 +62,10 @@ const IDB_READ_TIMEOUT_MS = 5000;
 let _idbChain = Promise.resolve();
 function _serialize(op) {
   const run = _idbChain.then(op, op);
-  _idbChain = run.then(() => {}, () => {}); // keep the chain alive; one op's outcome never poisons the next
+  // The chain must always resolve to stay alive — a rejected link would poison every queued op.
+  // The rejection still reaches the CALLER via the returned `run` (awaited writes surface through
+  // safeAwait); log here too so a fire-and-forget write (no caller await) is never silently dropped.
+  _idbChain = run.then(() => {}, (e) => { console.warn('[idb] serialized write failed:', e?.message || e); }); // DEV
   return run;
 }
 
