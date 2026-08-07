@@ -158,12 +158,38 @@ async function _fetchUserinfo(accessToken) {
       headers: { Authorization: 'Bearer ' + accessToken },
       signal:  controller.signal,
     });
+    if (!res.ok) throw new Error(`userinfo ${res.status}`); // 401 = token dead — never mint from an error body
     return await res.json();
   } catch (err) {
     throw err?.name === 'AbortError' ? new UserinfoFetchTimeoutError() : err;
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Session revive WITHOUT GIS (owner model: token lives in ONE place, use it until 401). The
+// synthetic id_token expires/purges on its own clock while the ACCESS token may still be
+// perfectly valid — declaring "hết hạn" from the id-token clock alone painted a red chip over a
+// working session. Reality check instead: hit /userinfo with the stored Bearer (plain HTTP, no
+// popup). 200 → re-mint the synthetic id_token, session resumes; anything else → null, caller
+// decides (cached render / login). exp gets a floor because Google just validated the token NOW —
+// a stale stored exp must not make buildUser discard a session Google itself accepted.
+const REVIVED_SESSION_MIN_TTL_MS = 10 * 60 * 1000;
+export async function rebuildSessionFromStoredToken() {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return null;
+  try {
+    const info = await _fetchUserinfo(token);
+    if (!info?.sub) return null;
+    const storedExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
+    const expMs = Math.max(storedExp, Date.now() + REVIVED_SESSION_MIN_TTL_MS);
+    localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken({
+      email: info.email, name: info.name, picture: info.picture, sub: info.sub,
+      exp: Math.floor(expMs / 1000),
+    }));
+    _currentUser = null;
+    return getCurrentUser();
+  } catch { return null; } /* dead/unreachable token — caller falls back to cache or login */
 }
 
 // F-19-84 — full hydrate from a fresh OAuth2 token response. Shared by sign-in, reconnect
@@ -191,9 +217,13 @@ export async function hydrateSessionFromToken(resp) {
 //                   visible feedback (AC-09) — not a silent no-op.
 export function requestDriveScopeGrant(onGranted, onDenied) {
   if (!window.google?.accounts?.oauth2) { onDenied(new Error('GIS oauth2 not loaded')); return; }
+  // Same-account re-consent: pin the chooser to the signed-in user (multi-account browsers must
+  // not re-consent a different account).
+  const sessionEmail = getCurrentUser()?.email;
   const client = window.google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope:     DRIVE_SCOPE,
+    ...(sessionEmail ? { login_hint: sessionEmail } : {}),
     callback:  (resp) => {
       if (resp.error) { onDenied(new Error(resp.error)); return; }
       _persistAccessToken(resp);

@@ -5,7 +5,7 @@
 //   - probe folder users/<email-prefix>/ → 200 OK = that sales rep
 //   - none → not provisioned (admin must invite)
 
-import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn } from './google-oauth.js';
+import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
@@ -194,12 +194,19 @@ export async function requireAuth(onSignedIn) {
     return;
   }
 
-  // Owner model ("lúc 401 mới cần") — id_token missing/expired: NEVER fire a proactive GIS bootstrap
-  // here; that popped a Google sign-in on every cold load. If a synced local workspace already
-  // exists, degrade to a cached render and let the reconnect chip re-mint on the user's gesture;
-  // otherwise fall through to login. Token re-mint happens ONLY via the sign-in button or the 401
-  // reactive path in drive-api.
+  // Owner model ("lúc 401 mới cần") — id_token missing/expired is a CLOCK claim, not reality.
+  // Reality check first: ask Google whether the stored access token still works (/userinfo with
+  // the stored Bearer — plain HTTP, no GIS, no popup). 200 → session revives, normal boot, NO red
+  // chip, NO sign-in screen. Only a genuinely-dead token degrades: synced local workspace → cached
+  // render + true red chip; otherwise login. Re-mint happens ONLY via the sign-in button or the
+  // 401 reactive path in drive-api — never proactively here.
   if (wasPreviouslySignedIn()) {
+    const revived = await rebuildSessionFromStoredToken();
+    if (revived) {
+      await _detectRoleOrThrow(revived, 'auth-gate:requireAuth-revive');
+      await onSignedIn(revived);
+      return;
+    }
     // F-57-01 AC-04: cached identity + a synced local workspace → degrade to a local render instead
     // of a blind sign-out. AC-03: no cached identity or no cached workspace falls through to login.
     const cachedIdentity = _readCachedIdentityRaw();
@@ -207,7 +214,7 @@ export async function requireAuth(onSignedIn) {
       _resolvedRole = cachedIdentity.role; // best-effort — same source detectRoleViaDrive would cache
       const degradedUser = { email: cachedIdentity.email, name: '', picture: '', sub: '', id_token: null };
       await onSignedIn(degradedUser);
-      window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); // chip — user re-mints on gesture
+      window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); // token verified dead — true red
       return;
     }
     // nothing local to degrade into — fall through to login
