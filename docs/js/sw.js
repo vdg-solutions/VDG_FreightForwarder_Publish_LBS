@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vb63edc1';
+const STATIC_CACHE     = 'vdg-static-vb5839f7';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-vb63edc1';
+const DRIVE_META_CACHE = 'vdg-drive-meta-vb5839f7';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -63,9 +63,7 @@ const BOOT_GRAPH = [
   'js/boot/repo-init-fallback.js',
   'js/boot/repo-init-steps.js',
   'js/cache/seed-migrator.js',
-  'js/cache/sqlite-conn.js',
-  'js/cache/sqlite-schema.js',
-  'js/cache/sqlite-store.js',
+  'js/cache/store-client.js',
   'js/components/breadcrumb-resolver.js',
   'js/components/cmd-palette.js',
   'js/components/cutoff-timer.js',
@@ -88,7 +86,7 @@ const BOOT_GRAPH = [
   'js/components/vdg-confirm-dialog.js',
   'js/components/wizard-stepper.js',
   'js/data/master-registry.js',
-  'js/data/sqlite-io-adapters.js',
+  'js/data/store-io-adapters.js',
   'js/data/wasm-io-adapters.js',
   'js/helpers/show-confirm.js',
   'js/i18n/index.js',
@@ -135,11 +133,15 @@ const DRIVE_CONTENT_RE = /\/drive\/v3\/files\/[^?]+\?alt=media/;
 const AUTH_HOSTS = ['accounts.google.com', 'oauth2.googleapis.com'];
 
 const APP_ORIGIN               = self.location.origin;
-// A content-hash in the filename makes an asset immutable under that name → cache-first
-// forever. wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — same
-// stable name, new bytes every build — so it is mutable app code served network-first;
-// a rebuilt wasm is never served stale.
+// A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
+// wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
+// versioned with STATIC_CACHE (a redeploy bumps b5839f7 → activate drops the old cache →
+// install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
+// wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
+// thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a
+// dead 503 ("compile … HTTP status not ok"). Cache-first has no timeout and stays fresh via the version.
+const PKG_BUNDLE_RE            = /\/pkg\/vdg_freight(?:_bg\.wasm|\.js)$/;
 const NETWORK_FIRST_TIMEOUT_MS = 3500;
 
 function isHashedImmutable(pathname) { return IMMUTABLE_HASH_RE.test(pathname); }
@@ -262,6 +264,13 @@ self.addEventListener('fetch', (ev) => {
   // Content-hash-named asset → cache-first (a rebuild changes the name, so never stale)
   const { pathname } = new URL(url);
   if (isHashedImmutable(pathname)) {
+    ev.respondWith(_cacheFirst(request));
+    return;
+  }
+
+  // wasm bundle → cache-first (precached + version-bumped). Never network-first: the 3.5s abort
+  // can 503 the multi-MB wasm and break the SQLite worker's compile. See PKG_BUNDLE_RE note above.
+  if (PKG_BUNDLE_RE.test(pathname)) {
     ev.respondWith(_cacheFirst(request));
     return;
   }

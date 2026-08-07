@@ -1,10 +1,12 @@
 // DeltaPoller — 30s Drive changes feed, page-visibility pause/resume
 
-import { META_SYNC_KEY } from '../cache/sqlite-schema.js';
 import { parseJsonlBundle } from '../auth/drive-api.js';
 import { checkDriveQuota } from './drive-quota.js';
 import { reconcileKeepLocal, pendingOutboxKeys } from './tombstone-reconcile.js';
 
+// The single meta row the sync layer read-modify-writes (change token + last_full_pull_ms). The
+// meta table itself + its DDL live in Rust (data_repo/sqlite_engine.rs); this is just the row key.
+const META_SYNC_KEY       = 'sync_state';
 const DELTA_POLL_MS       = 30_000;
 const BACKOFF_STEPS_MS    = [30_000, 60_000, 120_000];
 const CHANGES_FIELDS      = 'nextPageToken,newStartPageToken,changes(fileId,removed,file(name,parents,modifiedTime))';
@@ -122,7 +124,7 @@ export class DeltaPoller {
 
   async _poll() {
     if (!this._store) return; // store unavailable — skip
-    const meta  = await this._store.idb_get_meta(META_SYNC_KEY);
+    const meta  = await this._store.cache_get_meta(META_SYNC_KEY);
     const token = meta?.last_change_token ?? null;
 
     if (!token) {
@@ -141,8 +143,8 @@ export class DeltaPoller {
 
     const nextToken = resp.nextPageToken ?? resp.newStartPageToken;
     if (nextToken) {
-      const current = await this._store.idb_get_meta(META_SYNC_KEY) || { key: META_SYNC_KEY };
-      await this._store.idb_put_meta(META_SYNC_KEY, { ...current, last_change_token: nextToken });
+      const current = await this._store.cache_get_meta(META_SYNC_KEY) || { key: META_SYNC_KEY };
+      await this._store.cache_put_meta(META_SYNC_KEY, { ...current, last_change_token: nextToken });
     }
   }
 
@@ -151,7 +153,7 @@ export class DeltaPoller {
     const resp      = await this._api.driveFetch('GET', '/changes/startPageToken');
     const initToken = resp.startPageToken;
     const current   = meta || { key: META_SYNC_KEY };
-    await this._store.idb_put_meta(META_SYNC_KEY, {
+    await this._store.cache_put_meta(META_SYNC_KEY, {
       ...current,
       last_change_token: initToken,
       last_full_pull_ms: Date.now(),
@@ -191,10 +193,10 @@ export class DeltaPoller {
 
     for (const entity of incoming) {
       if (!entity.id) continue;
-      const local      = await this._store.idb_get(kind, entity.id);
+      const local      = await this._store.cache_get(kind, entity.id);
       const hasPending = pending.has(`${kind}:${entity.id}`);
       if (reconcileKeepLocal(local, entity, hasPending)) continue;
-      await this._store.idb_put(kind, entity.id, entity);
+      await this._store.cache_put(kind, entity.id, entity);
       window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind, id: entity.id } }));
     }
   }

@@ -65,8 +65,8 @@ export class WasmIoPort {
     this._listingInflight.delete(folderId);
   }
 
-  // Storage methods (idb_get/idb_list/idb_put/idb_delete/idb_get_meta/idb_put_meta) live in the
-  // SqliteIoPort subclass now — this base keeps only the Drive/event/ledger half the port shares.
+  // Storage methods (cache_get/cache_list/cache_put/cache_delete/cache_get_meta/cache_put_meta) live in the
+  // StoreIoPort subclass now — this base keeps only the Drive/event/ledger half the port shares.
 
   async _resolveFolder(kind) {
     if (this.folderIds.has(kind)) return this.folderIds.get(kind);

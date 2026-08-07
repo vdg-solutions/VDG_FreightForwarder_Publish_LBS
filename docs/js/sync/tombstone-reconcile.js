@@ -24,7 +24,7 @@ export function reconcileKeepLocal(local, incoming, hasPending) {
 export async function pendingOutboxKeys(store) {
   const set = new Set();
   if (!store) return set;
-  const rows = await store.idb_list('outbox');
+  const rows = await store.cache_list('outbox');
   for (const rec of rows) set.add(`${rec.kind}:${rec.id}`);
   return set;
 }

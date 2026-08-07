@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <title>vdg auth</title>
+</head>
+<body>
+<script>
+  // Same-origin silent-auth callback. Google 302-redirects the hidden iframe here with the token
+  // (or error) in the URL fragment; we hand that fragment to the parent app via postMessage. The
+  // parent lives on this same origin, so postMessage targetOrigin is our own origin and the parent
+  // verifies event.origin — a cross-origin frame can neither forge nor read this. No token ever
+  // leaves the browser; there is no server round-trip.
+  (function () {
+    var hash = window.location.hash || '';
+    var target = (window.parent && window.parent !== window) ? window.parent : window.opener;
+    if (target) target.postMessage({ __vdg_silent_token: hash }, window.location.origin);
+  })();
+</script>
+</body>
+</html>

@@ -9,7 +9,6 @@ const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
 export const ACCESS_TOKEN_ISSUED_KEY = 'vdg.auth.access_token_issued'; // F-50-01 — mint time, feeds eagerRefreshDue
-const TOKEN_EXPIRY_BUFFER_MS   = 60_000; // refresh 60s before expiry
 // MUST stay below SAFE_AWAIT_DEFAULT_MS (the per-Drive-op safeAwait bound). On a static deploy
 // silent refresh can never succeed (F-50-01: no server, no gesture) and GIS can hang without
 // ever firing error_callback — this timer is the only exit. If it fires AFTER the op's 8s
@@ -39,14 +38,27 @@ function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:a
 export async function getAccessToken() {
   const exp   = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  if (token && Date.now() + TOKEN_EXPIRY_BUFFER_MS < exp) return token;
+  // Owner model: refresh ONLY when the token is actually expired ("lúc 401 mới cần"), never eagerly.
+  // A browser SPA gets no refresh token; the proactive-refresh-before-expiry attempt just fires a
+  // silent re-auth that structurally fails off-gesture and flashed the reconnect chip. Use the token
+  // while ANY validity remains; a real op that outlives it 401s and drive-api re-auths reactively.
+  if (token && Date.now() < exp) return token;
 
-  // Silent refresh — first-time consent already granted at sign-in
+  // Silent re-authorization — a browser SPA is a Public Client, so Google issues NO refresh token;
+  // GIS just re-mints a fresh access token when the user is still signed in. On this static deploy
+  // that re-mint needs a real gesture (popup) and CANNOT run in the background (CDP-proven: prompt=none
+  // returns interaction_required even with a live session), so this call structurally fails off-gesture.
   try {
     if (Date.now() < _refreshFailUntil) throw new Error('silent-refresh-negative-cache');
     return await sharedSilentRefresh();
   } catch (err) {
-    _dispatchNeedsReconnect();          // was signOut()+vdg:auth-expired — no blind sign-out
+    // F-50-01 false-red fix (owner: "chip reconnect hiện hoài"). We only reach here inside the 60s
+    // eager-refresh buffer or the 30s negative-cache window, so the CURRENT token is usually STILL
+    // VALID — keep using it and stay calm; the reconnect chip must NOT flash while a working token
+    // remains (a live op that truly 401s is handled by drive-api's own re-auth, and the gesture-armed
+    // refresh re-mints on the user's next click). Only a genuinely-expired token is a real reconnect.
+    if (token && Date.now() < exp) return token;
+    _dispatchNeedsReconnect();          // token actually expired — real reconnect, no blind sign-out
     throw err;
   }
 }

@@ -72,7 +72,7 @@ async function _migrateKind(repo, driveApi, store, findWorkspaceRoot, prefix, sp
   const kind    = writeKind;              // reported/audited under the destination kind
   const flagKey = MIGRATED_META_PREFIX + readKind; // keyed by source folder — a rename and a
                                                    // flip of the same name never share a flag
-  const flagRes = await safeAwait(store.idb_get_meta(flagKey), _ms, null, `master-scope-migrator:flag:${kind}`);
+  const flagRes = await safeAwait(store.cache_get_meta(flagKey), _ms, null, `master-scope-migrator:flag:${kind}`);
   if (flagRes.ok && flagRes.value?.migrated) return { kind, found: 0, merged: 0, conflicted: 0, skipped: true };
 
   const readRes = await safeAwait(
@@ -109,7 +109,7 @@ async function _migrateKind(repo, driveApi, store, findWorkspaceRoot, prefix, sp
 
   if (allConfirmed) {
     const markRes = await safeAwait(
-      store.idb_put_meta(flagKey, { migrated: true, kind, source_kind: readKind, found: records.length, merged, at: new Date().toISOString() }),
+      store.cache_put_meta(flagKey, { migrated: true, kind, source_kind: readKind, found: records.length, merged, at: new Date().toISOString() }),
       _ms, null, `master-scope-migrator:mark:${kind}`,
     );
     if (markRes.ok) await _clearOldCopy(driveApi, files, _ms); // never drop the old copy before shared is confirmed

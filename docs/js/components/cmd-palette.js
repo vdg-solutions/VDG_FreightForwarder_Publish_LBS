@@ -112,7 +112,7 @@ class VdgCmdPalette extends LitElement {
   async _loadRecent() {
     if (!this._store) return paletteActions().slice(0, PALETTE_MAX_RESULTS);
     try {
-      const prefs  = await this._store.idb_get_meta(PALETTE_PREFS_KEY);
+      const prefs  = await this._store.cache_get_meta(PALETTE_PREFS_KEY);
       const recent = prefs?.palette_recent || [];
       return [...recent.slice(0, PALETTE_RECENT_MAX), ...paletteActions()]
         .slice(0, PALETTE_MAX_RESULTS);
@@ -194,11 +194,11 @@ class VdgCmdPalette extends LitElement {
   async _saveRecent(item) {
     if (!this._store) return;
     try {
-      const prefs  = (await this._store.idb_get_meta(PALETTE_PREFS_KEY)) || { key: PALETTE_PREFS_KEY };
+      const prefs  = (await this._store.cache_get_meta(PALETTE_PREFS_KEY)) || { key: PALETTE_PREFS_KEY };
       const recent = (prefs.palette_recent || []).filter((r) => r.label !== item.label);
       recent.unshift({ label: item.label, kind: item.kind, id: item.id, action: null, shortcut: item.shortcut });
       prefs.palette_recent = recent.slice(0, PALETTE_RECENT_MAX);
-      await this._store.idb_put_meta(PALETTE_PREFS_KEY, prefs);
+      await this._store.cache_put_meta(PALETTE_PREFS_KEY, prefs);
     } catch { /* non-critical */ }
   }
 

@@ -153,8 +153,8 @@ function updateBulkToolbar(root) {
 async function saveViewMode(store, mode) {
   if (!store) return;
   try {
-    const prefs = (await store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
-    await store.idb_put_meta(PREFS_META_KEY, { ...prefs, [PIPELINE_VIEW_KEY]: mode });
+    const prefs = (await store.cache_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+    await store.cache_put_meta(PREFS_META_KEY, { ...prefs, [PIPELINE_VIEW_KEY]: mode });
   } catch { /* pref — non-critical */ }
 }
 
@@ -169,7 +169,7 @@ export async function render(root) {
 
   const store = window.__vdg_store || null;
   try {
-    const prefs = store ? await store.idb_get_meta(PREFS_META_KEY) : null;
+    const prefs = store ? await store.cache_get_meta(PREFS_META_KEY) : null;
     if (prefs?.[PIPELINE_VIEW_KEY]) _viewMode = prefs[PIPELINE_VIEW_KEY];
   } catch { /* prefs optional */ }
 

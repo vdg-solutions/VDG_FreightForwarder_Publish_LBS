@@ -10,7 +10,7 @@ export async function loadDraft() {
   try {
     const store = getStore();
     if (store) {
-      const rec = await store.idb_get_meta(DRAFT_META_KEY);
+      const rec = await store.cache_get_meta(DRAFT_META_KEY);
       if (rec?.state) return rec.state;
     }
   } catch { /* fall through */ }
@@ -25,7 +25,7 @@ export async function saveDraft(state) {
   try {
     const store = getStore();
     if (store) {
-      await store.idb_put_meta(DRAFT_META_KEY, { state, last_modified: Date.now() });
+      await store.cache_put_meta(DRAFT_META_KEY, { state, last_modified: Date.now() });
       return;
     }
   } catch { /* fall through */ }
@@ -37,7 +37,7 @@ export async function saveDraft(state) {
 export async function clearDraft() {
   try {
     const store = getStore();
-    if (store) await store.idb_delete_meta(DRAFT_META_KEY);
+    if (store) await store.cache_delete_meta(DRAFT_META_KEY);
   } catch { /* non-critical */ }
   try { localStorage.removeItem(DRAFT_LS_KEY); }
   catch { /* ignore */ }

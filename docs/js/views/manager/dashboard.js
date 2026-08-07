@@ -153,8 +153,8 @@ function prependActivity(text) {
 async function saveLayout(layout) {
   if (!_store) return;
   try {
-    const prefs = (await _store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
-    await _store.idb_put_meta(PREFS_META_KEY, { ...prefs, widget_layout: layout });
+    const prefs = (await _store.cache_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+    await _store.cache_put_meta(PREFS_META_KEY, { ...prefs, widget_layout: layout });
   } catch { /* layout pref — non-critical */ }
 }
 
@@ -210,7 +210,7 @@ export async function render(root) {
   let layout = DEFAULT_WIDGET_LAYOUT;
   if (_store) {
     try {
-      const prefs = await _store.idb_get_meta(PREFS_META_KEY);
+      const prefs = await _store.cache_get_meta(PREFS_META_KEY);
       if (prefs?.widget_layout) layout = prefs.widget_layout;
     } catch { /* fallback to default */ }
   }

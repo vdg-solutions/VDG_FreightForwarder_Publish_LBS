@@ -25,8 +25,8 @@ export function idbSavePref(patch) {
   const store = window.__vdg_store;
   if (!store) return;
   (async () => {
-    const prefs = (await store.idb_get_meta('preferences')) || { key: 'preferences' };
-    await store.idb_put_meta('preferences', { ...prefs, ...patch });
+    const prefs = (await store.cache_get_meta('preferences')) || { key: 'preferences' };
+    await store.cache_put_meta('preferences', { ...prefs, ...patch });
   })().catch(() => { /* non-critical: preferences persistence is best-effort */ });
 }
 

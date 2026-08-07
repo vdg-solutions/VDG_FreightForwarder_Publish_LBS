@@ -7,7 +7,7 @@
 
 import { currentSalesRepId, clearRoleCache, isManager } from '../auth/auth-gate.js';
 import { safeAwait } from '../util/safe-await.js';
-import { SqliteIoPort } from '../data/sqlite-io-adapters.js';
+import { StoreIoPort } from '../data/store-io-adapters.js';
 import { resolveUserRole } from '../operators/manager/route-guard.js';
 import { loadLocale } from '../i18n/index.js';
 import { APP_VERSION } from '../version.js';
@@ -100,10 +100,10 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 5. Build repo — WASM only, storage on SQLite/OPFS (worker). The port keeps the idb_* method
   // names the Rust side imports; the substrate under them is SQL now (immune to the IDB wedge).
   stepRef.value = STEP_BUILD_REPO;
-  const ioPort = new SqliteIoPort(driveApi, user.email);
+  const ioPort = new StoreIoPort(driveApi, user.email);
   // Warm the SQLite worker off the critical path so the first repo read doesn't pay the cold
   // module-fetch + VFS-install latency inline. Non-blocking, bounded, failure is non-fatal here.
-  safeAwait(ioPort.idb_get_meta('__warm'), IDB_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
+  safeAwait(ioPort.cache_get_meta('__warm'), IDB_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
   const repo   = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo      = repo;
   window.__vdg_drive_api = driveApi;
@@ -150,7 +150,7 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     // Locale from user prefs (may switch from 'vi' to user pref)
     if (store) {
       const prefsResult = await safeAwait(
-        store.idb_get_meta(PREFS_META_KEY),
+        store.cache_get_meta(PREFS_META_KEY),
         IDB_OP_TIMEOUT_MS, null, 'deferred:prefs',
       );
       const locale = prefsResult.ok ? (prefsResult.value?.locale || 'vi') : 'vi';

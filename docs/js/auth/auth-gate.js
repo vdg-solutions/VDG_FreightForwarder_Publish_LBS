@@ -11,7 +11,7 @@ import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
-import { sqlSelectValue } from '../cache/sqlite-conn.js';
+import { sqlCountEntities } from '../cache/store-client.js';
 
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
@@ -172,15 +172,15 @@ function _readCachedIdentityRaw() {
 }
 
 // F-57-01 AC-04: does the local SQLite workspace already hold at least one synced entity row
-// (any kind)? Runs before repo-init, straight to the sqlite-conn singleton (which opens the worker
+// (any kind)? Runs before repo-init, straight to the store-client singleton (which opens the worker
 // + creates the schema on first op). Bounded via safeAwait — any failure (no OPFS, timeout) reads
 // as "no cache", the same safe fall-through AC-03 already exercises.
 async function _hasCachedWorkspace() {
   // Runs before repo-init, so window.__vdg_store isn't set yet — go straight to the SQLite
-  // singleton (sqlite-conn spawns/opens the worker on first op, creating the schema). A count of
+  // singleton (store-client spawns/opens the worker on first op, creating the schema). A count of
   // the entities table answers "does this browser already hold a workspace?".
   const result = await safeAwait(
-    sqlSelectValue('SELECT count(*) FROM entities'),
+    sqlCountEntities(),
     SAFE_AWAIT_DEFAULT_MS, 0, 'auth-gate:hasCachedWorkspace',
   );
   return result.ok ? (result.value ?? 0) > 0 : false;

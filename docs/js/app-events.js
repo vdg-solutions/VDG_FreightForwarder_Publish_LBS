@@ -77,7 +77,7 @@ export function initImportProgress() {
 export async function checkVersionBanner(store) {
   if (!store) return;
   try {
-    const prefs = await store.idb_get_meta(PREFS_META_KEY);
+    const prefs = await store.cache_get_meta(PREFS_META_KEY);
     if (!prefs) return;
     if (prefs.last_seen_version === APP_VERSION) return;
     if (prefs.banner_dismissed_at) {
@@ -97,7 +97,7 @@ export async function checkVersionBanner(store) {
     });
     banner.querySelector('#banner-dismiss').addEventListener('click', async () => {
       banner.remove();
-      await store.idb_put_meta(PREFS_META_KEY, {
+      await store.cache_put_meta(PREFS_META_KEY, {
         ...prefs, last_seen_version: APP_VERSION, banner_dismissed_at: new Date().toISOString(),
       });
     });

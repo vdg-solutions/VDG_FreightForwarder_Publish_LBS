@@ -16,7 +16,7 @@ export function prefsLicenseStore(store) {
   return {
     async load() {
       const result = await safeAwait(
-        store.idb_get_meta(PREFS_META_KEY),
+        store.cache_get_meta(PREFS_META_KEY),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.load',
       );
       if (!result.ok) return null; // timeout/error — never throw on the empty-license case
@@ -24,26 +24,26 @@ export function prefsLicenseStore(store) {
     },
     async save(licenseStr) {
       const readResult = await safeAwait(
-        store.idb_get_meta(PREFS_META_KEY),
+        store.cache_get_meta(PREFS_META_KEY),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.save-read',
       );
       const prefs = (readResult.ok ? readResult.value : null) || { key: PREFS_META_KEY };
       const writeResult = await safeAwait(
-        store.idb_put_meta(PREFS_META_KEY, { ...prefs, [PREFS_LICENSE_FIELD]: licenseStr }),
+        store.cache_put_meta(PREFS_META_KEY, { ...prefs, [PREFS_LICENSE_FIELD]: licenseStr }),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.save-write',
       );
       if (!writeResult.ok) throw writeResult.error;
     },
     async clear() {
       const readResult = await safeAwait(
-        store.idb_get_meta(PREFS_META_KEY),
+        store.cache_get_meta(PREFS_META_KEY),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.clear-read',
       );
       const prefs = readResult.ok ? readResult.value : null;
       if (!prefs) return;
       const { [PREFS_LICENSE_FIELD]: _drop, ...rest } = prefs;
       const writeResult = await safeAwait(
-        store.idb_put_meta(PREFS_META_KEY, rest),
+        store.cache_put_meta(PREFS_META_KEY, rest),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.clear-write',
       );
       if (!writeResult.ok) throw writeResult.error;

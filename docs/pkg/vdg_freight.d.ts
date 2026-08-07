@@ -93,6 +93,11 @@ export function create_document_wasm(cmd_json: string): any;
 export function drain_events(): any;
 
 /**
+ * Run one or more statements with no result rows (DDL / INSERT / UPDATE / DELETE, no bind params).
+ */
+export function exec(sql: string): void;
+
+/**
  * Look up cached FX rate. JS must ingest relevant months first.
  * Returns FxRateEntry as JsValue on success.
  */
@@ -192,6 +197,46 @@ export function proposal_reject(proposal_json: string, actor_role: string, reaso
  */
 export function register_entity(entity_id: string, state: string): void;
 
+/**
+ * Prepared write with text/null params — INSERT/UPDATE/DELETE that need bind params.
+ */
+export function run(sql: string, params_json: string): void;
+
+/**
+ * Generic select export — kept for the one remaining ad-hoc caller path; returns a JSON array of
+ * row objects. Business queries go through `sqlite_store`, not this.
+ */
+export function select(sql: string, params_json: string): string;
+
+/**
+ * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
+ */
+export function sqlite_init(): Promise<void>;
+
+export function store_count_entities(): any;
+
+export function store_delete(kind: string, id: string): void;
+
+export function store_delete_meta(key: string): void;
+
+export function store_get(kind: string, id: string): any;
+
+export function store_get_meta(key: string): any;
+
+export function store_get_wma(key: string): any;
+
+export function store_list(kind: string): any;
+
+export function store_list_notifications(): any;
+
+export function store_put(kind: string, id: string, body: any): void;
+
+export function store_put_meta(key: string, body: any): void;
+
+export function store_put_notification(notif: any): void;
+
+export function store_put_wma(key: string, body: any): void;
+
 export function validate_airport_iata(s: string): boolean;
 
 export function validate_awb_no(s: string): boolean;
@@ -246,6 +291,7 @@ export interface InitOutput {
     readonly customerindex_new: () => number;
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly drain_events: (a: number) => void;
+    readonly exec: (a: number, b: number, c: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -268,6 +314,21 @@ export interface InitOutput {
     readonly proposal_propose: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly sqlite_init: () => number;
+    readonly store_count_entities: (a: number) => void;
+    readonly store_delete: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly store_delete_meta: (a: number, b: number, c: number) => void;
+    readonly store_get: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly store_get_meta: (a: number, b: number, c: number) => void;
+    readonly store_get_wma: (a: number, b: number, c: number) => void;
+    readonly store_list: (a: number, b: number, c: number) => void;
+    readonly store_list_notifications: (a: number) => void;
+    readonly store_put: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly store_put_meta: (a: number, b: number, c: number, d: number) => void;
+    readonly store_put_notification: (a: number, b: number) => void;
+    readonly store_put_wma: (a: number, b: number, c: number, d: number) => void;
     readonly validate_airport_iata: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
     readonly validate_carrier_iata: (a: number, b: number) => number;
@@ -287,8 +348,18 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly __wasm_bindgen_func_elem_6695: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_6708: (a: number, b: number, c: number, d: number) => void;
+    readonly rust_sqlite_wasm_abort: () => void;
+    readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
+    readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
+    readonly rust_sqlite_wasm_malloc: (a: number) => number;
+    readonly rust_sqlite_wasm_free: (a: number) => void;
+    readonly rust_sqlite_wasm_getentropy: (a: number, b: number) => number;
+    readonly rust_sqlite_wasm_localtime: (a: number) => number;
+    readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
+    readonly sqlite3_os_end: () => number;
+    readonly sqlite3_os_init: () => number;
+    readonly __wasm_bindgen_func_elem_9718: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9720: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

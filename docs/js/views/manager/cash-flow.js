@@ -218,8 +218,8 @@ async function showCreditAlert(root, customerName, newState) {
     div.remove();
     if (_store) {
       try {
-        const prefs = (await _store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
-        await _store.idb_put_meta(PREFS_META_KEY, {
+        const prefs = (await _store.cache_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+        await _store.cache_put_meta(PREFS_META_KEY, {
           ...prefs,
           dismissed_credit_alerts: _dismissedIds,
         });
@@ -236,7 +236,7 @@ export async function render(root) {
 
   try {
     _store = window.__vdg_store || null;
-    const prefs = _store ? await _store.idb_get_meta(PREFS_META_KEY) : null;
+    const prefs = _store ? await _store.cache_get_meta(PREFS_META_KEY) : null;
     _dismissedIds = prefs?.dismissed_credit_alerts || [];
   } catch { _store = null; }
 

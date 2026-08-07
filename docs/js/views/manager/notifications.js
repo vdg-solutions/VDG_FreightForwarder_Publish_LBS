@@ -33,21 +33,21 @@ function getStore() { return window.__vdg_store || null; }
 async function _loadFromIdb() {
   const store = getStore();
   if (!store) return [];
-  try { return await store.idb_list_notifications(); }
+  try { return await store.cache_list_notifications(); }
   catch { return []; }
 }
 
 async function _saveNotif(notif) {
   const store = getStore();
   if (!store) return;
-  try { await store.idb_put_notification(notif); }
+  try { await store.cache_put_notification(notif); }
   catch (err) { console.warn('[notifs] save:', err.message); } // DEV
 }
 
 async function _bulkUpdateNotifs(updates) {
   const store = getStore();
   if (!store) return;
-  try { for (const n of updates) await store.idb_put_notification(n); }
+  try { for (const n of updates) await store.cache_put_notification(n); }
   catch (err) { console.warn('[notifs] bulk update:', err.message); } // DEV
 }
 
@@ -130,7 +130,7 @@ export async function render(root) {
   // Load prefs
   if (_store) {
     try {
-      const meta = await _store.idb_get_meta(PREFS_META_KEY);
+      const meta = await _store.cache_get_meta(PREFS_META_KEY);
       _prefs = meta || {};
     } catch { _prefs = {}; }
   }
@@ -267,8 +267,8 @@ export async function render(root) {
 
     if (_store) {
       try {
-        const meta = (await _store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
-        await _store.idb_put_meta(PREFS_META_KEY, { ...meta, ..._prefs });
+        const meta = (await _store.cache_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+        await _store.cache_put_meta(PREFS_META_KEY, { ...meta, ..._prefs });
       } catch (err) { console.warn('[notifs] prefs save:', err.message); } // DEV
     }
 
