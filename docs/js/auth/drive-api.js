@@ -3,12 +3,11 @@
 import { clearDriveScopeGrant } from './google-oauth.js';
 import { globalOwnerQuery, dedupeGlobalOwnerFolders, moveToParent } from './drive-folder-dedup.js';
 import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
-import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive, sharedSilentRefresh, silentBootstrapToken } from './access-token.js';
+import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive, sharedSilentRefresh } from './access-token.js';
 
 // F-19-72: token lifecycle moved to access-token.js (350-line cap) — re-exported here so
-// existing importers (token-refresh.js, f-29-13-bounded-silent-refresh.test.mjs) keep resolving.
-// F-19-84: sharedSilentRefresh + silentBootstrapToken re-exported the same way.
-export { refreshAccessTokenSilently, reconnectDriveInteractive, sharedSilentRefresh, silentBootstrapToken };
+// existing importers (token-refresh.js) keep resolving.
+export { refreshAccessTokenSilently, reconnectDriveInteractive, sharedSilentRefresh };
 
 // F-24-14: globalOwnerQuery re-exported so boot can re-count owner-owned folders after
 // findWorkspaceRoot resolves, to detect duplicates the F-24-13 auto-heal couldn't safely delete.

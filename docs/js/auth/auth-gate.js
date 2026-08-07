@@ -5,8 +5,8 @@
 //   - probe folder users/<email-prefix>/ → 200 OK = that sales rep
 //   - none → not provisioned (admin must invite)
 
-import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, hydrateSessionFromToken } from './google-oauth.js';
-import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError, silentBootstrapToken } from './drive-api.js';
+import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn } from './google-oauth.js';
+import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
@@ -194,34 +194,23 @@ export async function requireAuth(onSignedIn) {
     return;
   }
 
-  // F-19-84 AC-05 — id_token missing/expired but the underlying Google session may still be
-  // live: attempt a bounded silent bootstrap (re-mint id_token + userinfo, same hydrate as
-  // sign-in/reconnect) before dumping to login. Gated on the existing access_token_exp marker
-  // so a first-time visitor never triggers a GIS call.
+  // Owner model ("lúc 401 mới cần") — id_token missing/expired: NEVER fire a proactive GIS bootstrap
+  // here; that popped a Google sign-in on every cold load. If a synced local workspace already
+  // exists, degrade to a cached render and let the reconnect chip re-mint on the user's gesture;
+  // otherwise fall through to login. Token re-mint happens ONLY via the sign-in button or the 401
+  // reactive path in drive-api.
   if (wasPreviouslySignedIn()) {
-    try {
-      const resp  = await silentBootstrapToken();
-      const boot  = await hydrateSessionFromToken(resp);
-      if (boot) {
-        await _detectRoleOrThrow(boot, 'auth-gate:requireAuth-bootstrap');
-        await onSignedIn(boot);
-        return;
-      }
-    } catch {
-      // F-57-01 AC-04: bootstrap chain down (GIS/network/now-bounded userinfo fetch) but a
-      // synced local workspace already exists — degrade to a cached render instead of a blind
-      // sign-out. AC-03: no cached identity or no cached workspace still falls through to login,
-      // unchanged (revoked_session_falls_through_to_login must keep passing).
-      const cachedIdentity = _readCachedIdentityRaw();
-      if (cachedIdentity && await _hasCachedWorkspace()) {
-        _resolvedRole = cachedIdentity.role; // best-effort — same source detectRoleViaDrive would cache
-        const degradedUser = { email: cachedIdentity.email, name: '', picture: '', sub: '', id_token: null };
-        await onSignedIn(degradedUser);
-        window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); // F-29-13/F-50/F-51 chip — no new UI
-        return;
-      }
-      // live Google session gone/revoked, or nothing local to degrade into — fall through to login
+    // F-57-01 AC-04: cached identity + a synced local workspace → degrade to a local render instead
+    // of a blind sign-out. AC-03: no cached identity or no cached workspace falls through to login.
+    const cachedIdentity = _readCachedIdentityRaw();
+    if (cachedIdentity && await _hasCachedWorkspace()) {
+      _resolvedRole = cachedIdentity.role; // best-effort — same source detectRoleViaDrive would cache
+      const degradedUser = { email: cachedIdentity.email, name: '', picture: '', sub: '', id_token: null };
+      await onSignedIn(degradedUser);
+      window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); // chip — user re-mints on gesture
+      return;
     }
+    // nothing local to degrade into — fall through to login
   }
 
   // No user — defensive clear of any orphan auth/role keys (F-15-50 AC-05).

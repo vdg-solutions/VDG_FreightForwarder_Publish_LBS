@@ -33,34 +33,11 @@ function _isPopupBlockedError(type) { return type === GIS_ERROR_POPUP_FAILED || 
 let _silentRefreshInflight = null;
 let _refreshFailUntil      = 0;
 
-function _dispatchNeedsReconnect() { window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); }
-
 export async function getAccessToken() {
-  const exp   = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  // Owner model: refresh ONLY when the token is actually expired ("lúc 401 mới cần"), never eagerly.
-  // A browser SPA gets no refresh token; the proactive-refresh-before-expiry attempt just fires a
-  // silent re-auth that structurally fails off-gesture and flashed the reconnect chip. Use the token
-  // while ANY validity remains; a real op that outlives it 401s and drive-api re-auths reactively.
-  if (token && Date.now() < exp) return token;
-
-  // Silent re-authorization — a browser SPA is a Public Client, so Google issues NO refresh token;
-  // GIS just re-mints a fresh access token when the user is still signed in. On this static deploy
-  // that re-mint needs a real gesture (popup) and CANNOT run in the background (CDP-proven: prompt=none
-  // returns interaction_required even with a live session), so this call structurally fails off-gesture.
-  try {
-    if (Date.now() < _refreshFailUntil) throw new Error('silent-refresh-negative-cache');
-    return await sharedSilentRefresh();
-  } catch (err) {
-    // F-50-01 false-red fix (owner: "chip reconnect hiện hoài"). We only reach here inside the 60s
-    // eager-refresh buffer or the 30s negative-cache window, so the CURRENT token is usually STILL
-    // VALID — keep using it and stay calm; the reconnect chip must NOT flash while a working token
-    // remains (a live op that truly 401s is handled by drive-api's own re-auth, and the gesture-armed
-    // refresh re-mints on the user's next click). Only a genuinely-expired token is a real reconnect.
-    if (token && Date.now() < exp) return token;
-    _dispatchNeedsReconnect();          // token actually expired — real reconnect, no blind sign-out
-    throw err;
-  }
+  // Owner model ("lúc 401 mới cần"): the token lives in ONE place (localStorage). Read it and hand
+  // it over — NEVER re-mint here, never fire GIS on a read. A live Drive op that outlives the token
+  // 401s, and drive-api re-auths exactly once, reactively. No proactive/eager/scheduled refresh.
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
 // F-19-84 AC-01/AC-03 — single-flight coalescer around refreshAccessTokenSilently, shared by
@@ -124,6 +101,5 @@ function _requestAccessToken(prompt, timeoutMs, { returnResp = false } = {}) {
 }
 
 function _silentRefresh() { return _requestAccessToken('', SILENT_REFRESH_TIMEOUT_MS); }          // AC-03 bounded
-export function refreshAccessTokenSilently() { return _silentRefresh(); }                          // scheduler + getAccessToken + 401
-export function reconnectDriveInteractive()  { return _requestAccessToken('consent', 0, { returnResp: true }); }               // AC-03/AC-06 interactive, full resp for rehydrate
-export function silentBootstrapToken()       { return _requestAccessToken('', SILENT_REFRESH_TIMEOUT_MS, { returnResp: true }); } // AC-05 reload bootstrap, full resp for rehydrate
+export function refreshAccessTokenSilently() { return _silentRefresh(); }                          // drive-api 401 re-mint ONLY
+export function reconnectDriveInteractive()  { return _requestAccessToken('consent', 0, { returnResp: true }); }               // reconnect-chip click, full resp for rehydrate

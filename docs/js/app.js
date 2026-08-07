@@ -25,7 +25,7 @@ import { mountView }           from './util/mount-view.js';
 import { freshViewRoot }       from './util/view-root.js';
 import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
 import { checkVersionBanner, initBreakpointListener, initWmaListener } from './app-events.js';
-import { initTokenRefresh, initAccessTokenRefresh } from './auth/token-refresh.js';
+import { initAccessTokenRefresh } from './auth/token-refresh.js';
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
 import { renderRepoInitTimeoutBanner } from './boot/repo-init-fallback.js';
@@ -245,8 +245,7 @@ async function main() {
   // SW registration lives solely in sw-register.js (invoked from index.html).
   // Init OAuth + silent token refresh (F-15-02)
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
-  initTokenRefresh();
-  initAccessTokenRefresh();                          // F-29-13: proactive access-token scheduler + reconnect listener
+  initAccessTokenRefresh();                          // reconnect-chip listener only (no proactive refresh)
 
   // Load locale before requireAuth so fallback banners render with real text.
   try { await loadLocale('vi'); }
