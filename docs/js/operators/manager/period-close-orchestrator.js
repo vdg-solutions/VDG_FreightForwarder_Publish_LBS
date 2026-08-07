@@ -1,4 +1,4 @@
-// Operator — Period close/reopen logic + pre-close checks. Pure except IDB patch.
+// Operator — Period close/reopen logic + pre-close checks. Writes flow through the repo.
 
 import { bulkPatch } from '../../cache/bulk-orchestrator.js';
 
@@ -122,7 +122,7 @@ export async function runPreCloseChecks(repo, period) {
 /**
  * Closes a period: writes PeriodClose entity, patches shipments, updates localStorage.
  */
-export async function closePeriod(repo, db, period, user, checklistSnapshot) {
+export async function closePeriod(repo, period, user, checklistSnapshot) {
   const id  = `pc-${period}-${Date.now()}`;
   const rec = {
     id,
@@ -134,10 +134,10 @@ export async function closePeriod(repo, db, period, user, checklistSnapshot) {
 
   await repo.put(PERIOD_CLOSE_KIND, id, rec);
 
-  if (db) {
+  if (repo) {
     const shipments = await repo.list('shipment', null);
     const ids       = _shipmentsInPeriod(shipments, period).map((s) => s.id);
-    await bulkPatch(db, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: true }));
+    await bulkPatch(repo, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: true }));
     window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: 'shipment' } }));
   }
 
@@ -151,7 +151,7 @@ export async function closePeriod(repo, db, period, user, checklistSnapshot) {
 /**
  * Reopens a period: writes PeriodReopen entity, patches shipments, clears lock.
  */
-export async function reopenPeriod(repo, db, period, reason, user) {
+export async function reopenPeriod(repo, period, reason, user) {
   if (!reason || reason.length > REASON_MAX_CHARS) throw new Error('Reason required (max 500 chars)');
 
   const id    = `pr-${period}-${Date.now()}`;
@@ -167,10 +167,10 @@ export async function reopenPeriod(repo, db, period, reason, user) {
 
   await repo.put(PERIOD_REOPEN_KIND, id, rec);
 
-  if (db) {
+  if (repo) {
     const shipments = await repo.list('shipment', null);
     const ids       = _shipmentsInPeriod(shipments, period).map((s) => s.id);
-    await bulkPatch(db, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: false }));
+    await bulkPatch(repo, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: false }));
     window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: 'shipment' } }));
   }
 

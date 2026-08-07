@@ -1,13 +1,11 @@
 // app-events.js — global event listeners wired at bootstrap
 
-import { idbGet, idbPut } from './cache/idb-cache.js';
 import { APP_VERSION } from './version.js';
 import { onEvent } from './sync/wma-engine.js';
 import { loadKindWmaState, saveKindWmaState } from './sync/wma-store.js';
 
 const NEW_FEATURE_BANNER_DAYS = 7;
 const BREAKPOINT_TABLET_PX    = 768;
-const META_STORE              = 'meta';
 const PREFS_META_KEY          = 'preferences';
 
 // F-14-18-3: conflict modal
@@ -76,10 +74,10 @@ export function initImportProgress() {
 }
 
 // F-14-20-3: version banner
-export async function checkVersionBanner(db) {
-  if (!db) return;
+export async function checkVersionBanner(store) {
+  if (!store) return;
   try {
-    const prefs = await idbGet(db, META_STORE, PREFS_META_KEY);
+    const prefs = await store.idb_get_meta(PREFS_META_KEY);
     if (!prefs) return;
     if (prefs.last_seen_version === APP_VERSION) return;
     if (prefs.banner_dismissed_at) {
@@ -99,7 +97,7 @@ export async function checkVersionBanner(db) {
     });
     banner.querySelector('#banner-dismiss').addEventListener('click', async () => {
       banner.remove();
-      await idbPut(db, META_STORE, {
+      await store.idb_put_meta(PREFS_META_KEY, {
         ...prefs, last_seen_version: APP_VERSION, banner_dismissed_at: new Date().toISOString(),
       });
     });
@@ -111,14 +109,14 @@ export function initWmaListener() {
   window.addEventListener('vdg:shipment-committed', async (e) => {
     const { rep_id, lines } = e.detail || {};
     if (!rep_id || !lines?.length) return;
-    const db = window.__vdg_db;
-    if (!db) return;
+    const store = window.__vdg_store;
+    if (!store) return;
     for (const ln of lines) {
       if (!ln.observed_kind) continue;
       try {
-        const state = await loadKindWmaState(db, rep_id, ln.row_idx);
+        const state = await loadKindWmaState(store, rep_id, ln.row_idx);
         onEvent(state, ln.observed_kind, ln.predicted_kind || null);
-        await saveKindWmaState(db, rep_id, ln.row_idx, state);
+        await saveKindWmaState(store, rep_id, ln.row_idx, state);
       } catch (err) {
         console.warn('[wma] on_event failed:', err.message); // DEV
       }

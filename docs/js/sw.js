@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vd910b3f';
+const STATIC_CACHE     = 'vdg-static-vb63edc1';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-vd910b3f';
+const DRIVE_META_CACHE = 'vdg-drive-meta-vb63edc1';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -41,7 +41,6 @@ const BOOT_GRAPH = [
   // app.js's transitive static-import closure: modules eval'd synchronously before the app is
   // interactive. Missing any one 503s offline and hangs boot at "Loading view". Lazy import()
   // views are excluded on purpose (network-first online, actionable offline fallback).
-  'js/abstractions/entity-repo.js',
   'js/app-events.js',
   'js/app-router-ext.js',
   'js/app-views.js',
@@ -63,13 +62,10 @@ const BOOT_GRAPH = [
   'js/boot/repo-diag.js',
   'js/boot/repo-init-fallback.js',
   'js/boot/repo-init-steps.js',
-  'js/cache/background-pull.js',
-  'js/cache/idb-cache.js',
-  'js/cache/idb-conn.js',
-  'js/cache/idb-schema.js',
-  'js/cache/outbox-count.js',
-  'js/cache/outbox-dedupe.js',
   'js/cache/seed-migrator.js',
+  'js/cache/sqlite-conn.js',
+  'js/cache/sqlite-schema.js',
+  'js/cache/sqlite-store.js',
   'js/components/breadcrumb-resolver.js',
   'js/components/cmd-palette.js',
   'js/components/cutoff-timer.js',
@@ -92,6 +88,7 @@ const BOOT_GRAPH = [
   'js/components/vdg-confirm-dialog.js',
   'js/components/wizard-stepper.js',
   'js/data/master-registry.js',
+  'js/data/sqlite-io-adapters.js',
   'js/data/wasm-io-adapters.js',
   'js/helpers/show-confirm.js',
   'js/i18n/index.js',

@@ -3,11 +3,9 @@
 import { NOTIFICATION_TYPES } from '../../operators/manager/notification-composer.js';
 import { isManager }  from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
-import { idbGet, idbPut, idbRun } from '../../cache/idb-cache.js';
 import { t } from '../../i18n/index.js';
 
 const NOTIF_DRAWER_WIDTH_PX = 380;
-const NOTIF_STORE           = 'notifications';
 const PREFS_META_KEY        = 'preferences';
 const NOTIF_TYPE_KEY_PREFIX = 'notifications.type.'; // 1:1 with NOTIFICATION_TYPES tokens (F-31-02)
 const NOTIF_ICON_MAP = {
@@ -23,51 +21,34 @@ let _drawerOpen    = false;
 let _settingsOpen  = false;
 let _notifications = [];
 let _prefs         = {};
-let _db            = null;
+let _store         = null;
 let _onEntity;
 let _onOpenDrawer;
 
 function getRepo()  { return window.__vdg_repo; }
-function getDb()    { return window.__vdg_db || null; }
+function getStore() { return window.__vdg_store || null; }
 
-// ── IDB helpers ───────────────────────────────────────────────────────────────
+// ── store helpers ─────────────────────────────────────────────────────────────
 
 async function _loadFromIdb() {
-  const db = getDb();
-  if (!db) return [];
-  try {
-    return await idbRun(db, (h) => (res, rej) => {
-      const req = h.transaction(NOTIF_STORE, 'readonly').objectStore(NOTIF_STORE).getAll();
-      req.onsuccess = () => res(req.result || []);
-      req.onerror   = () => rej(req.error);
-    });
-  } catch { return []; }
+  const store = getStore();
+  if (!store) return [];
+  try { return await store.idb_list_notifications(); }
+  catch { return []; }
 }
 
 async function _saveNotif(notif) {
-  const db = getDb();
-  if (!db) return;
-  try {
-    await idbRun(db, (h) => (res, rej) => {
-      const req = h.transaction(NOTIF_STORE, 'readwrite').objectStore(NOTIF_STORE).put(notif);
-      req.onsuccess = () => res();
-      req.onerror   = () => rej(req.error);
-    }, { write: true });
-  } catch (err) { console.warn('[notifs] idb save:', err.message); } // DEV
+  const store = getStore();
+  if (!store) return;
+  try { await store.idb_put_notification(notif); }
+  catch (err) { console.warn('[notifs] save:', err.message); } // DEV
 }
 
 async function _bulkUpdateNotifs(updates) {
-  const db = getDb();
-  if (!db) return;
-  try {
-    await idbRun(db, (h) => (res, rej) => {
-      const tx = h.transaction(NOTIF_STORE, 'readwrite');
-      const st = tx.objectStore(NOTIF_STORE);
-      updates.forEach((n) => st.put(n));
-      tx.oncomplete = () => res();
-      tx.onerror    = () => rej(tx.error);
-    }, { write: true });
-  } catch (err) { console.warn('[notifs] idb bulk update:', err.message); } // DEV
+  const store = getStore();
+  if (!store) return;
+  try { for (const n of updates) await store.idb_put_notification(n); }
+  catch (err) { console.warn('[notifs] bulk update:', err.message); } // DEV
 }
 
 function _unreadCount(items) { return items.filter((n) => !n.read && !n.dismissed).length; }
@@ -141,15 +122,15 @@ export async function render(root) {
   if (_onEntity)     window.removeEventListener('vdg:entity-changed', _onEntity);
   if (_onOpenDrawer) window.removeEventListener('vdg:open-notif-drawer', _onOpenDrawer);
 
-  _db            = getDb();
+  _store         = getStore();
   _notifications = await _loadFromIdb();
   _drawerOpen    = false;
   _settingsOpen  = false;
 
   // Load prefs
-  if (_db) {
+  if (_store) {
     try {
-      const meta = await idbGet(_db, 'meta', PREFS_META_KEY);
+      const meta = await _store.idb_get_meta(PREFS_META_KEY);
       _prefs = meta || {};
     } catch { _prefs = {}; }
   }
@@ -284,10 +265,10 @@ export async function render(root) {
     ns[type] = { ...(ns[type] || {}), enabled };
     _prefs = { ..._prefs, notification_settings: ns };
 
-    if (_db) {
+    if (_store) {
       try {
-        const meta = (await idbGet(_db, 'meta', PREFS_META_KEY)) || { key: PREFS_META_KEY };
-        await idbPut(_db, 'meta', { ...meta, ..._prefs });
+        const meta = (await _store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+        await _store.idb_put_meta(PREFS_META_KEY, { ...meta, ..._prefs });
       } catch (err) { console.warn('[notifs] prefs save:', err.message); } // DEV
     }
 

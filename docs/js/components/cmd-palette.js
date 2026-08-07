@@ -2,7 +2,6 @@
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate }         from '../router.js';
-import { idbGet, idbPut }   from '../cache/idb-cache.js';
 import { t }                from '../i18n/index.js';
 
 const PALETTE_MAX_RESULTS = 8;
@@ -68,7 +67,7 @@ class VdgCmdPalette extends LitElement {
     this._query     = '';
     this._results   = [];
     this._activeIdx = 0;
-    this._db        = null;
+    this._store     = null;
 
     this._onOpen    = (e) => {
       if (e.detail?.action === 'open')  this.open();
@@ -85,7 +84,7 @@ class VdgCmdPalette extends LitElement {
     super.connectedCallback();
     window.addEventListener('vdg:cmd-palette', this._onOpen);
     window.addEventListener('keydown',         this._onKey);
-    this._db = window.__vdg_db || null;
+    this._store = window.__vdg_store || null;
   }
 
   disconnectedCallback() {
@@ -111,9 +110,9 @@ class VdgCmdPalette extends LitElement {
   }
 
   async _loadRecent() {
-    if (!this._db) return paletteActions().slice(0, PALETTE_MAX_RESULTS);
+    if (!this._store) return paletteActions().slice(0, PALETTE_MAX_RESULTS);
     try {
-      const prefs  = await idbGet(this._db, 'meta', PALETTE_PREFS_KEY);
+      const prefs  = await this._store.idb_get_meta(PALETTE_PREFS_KEY);
       const recent = prefs?.palette_recent || [];
       return [...recent.slice(0, PALETTE_RECENT_MAX), ...paletteActions()]
         .slice(0, PALETTE_MAX_RESULTS);
@@ -193,13 +192,13 @@ class VdgCmdPalette extends LitElement {
   }
 
   async _saveRecent(item) {
-    if (!this._db) return;
+    if (!this._store) return;
     try {
-      const prefs  = (await idbGet(this._db, 'meta', PALETTE_PREFS_KEY)) || { key: PALETTE_PREFS_KEY };
+      const prefs  = (await this._store.idb_get_meta(PALETTE_PREFS_KEY)) || { key: PALETTE_PREFS_KEY };
       const recent = (prefs.palette_recent || []).filter((r) => r.label !== item.label);
       recent.unshift({ label: item.label, kind: item.kind, id: item.id, action: null, shortcut: item.shortcut });
       prefs.palette_recent = recent.slice(0, PALETTE_RECENT_MAX);
-      await idbPut(this._db, 'meta', prefs);
+      await this._store.idb_put_meta(PALETTE_PREFS_KEY, prefs);
     } catch { /* non-critical */ }
   }
 

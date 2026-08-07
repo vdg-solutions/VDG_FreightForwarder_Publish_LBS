@@ -2,7 +2,6 @@
 // Rust is the brain: JS never parses/validates the JWT, only passes it through to WASM
 // and stores/loads the opaque string. VerifyResult shape mirrors the WASM contract exactly.
 
-import { idbGet, idbPut, STORE_META } from '../cache/idb-cache.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 
 export const PREFS_META_KEY        = 'preferences';
@@ -13,11 +12,11 @@ const IDB_LICENSE_READ_TIMEOUT_MS  = SAFE_AWAIT_DEFAULT_MS;
 // production store: read-modify-write STORE_META.preferences.license (merges, single writer).
 // F-17-04 consumes load() read-only (license_status(jwt, now) needs the raw JWT string) —
 // this lane remains the sole writer; the license is never mirrored to localStorage.
-export function prefsLicenseStore(db) {
+export function prefsLicenseStore(store) {
   return {
     async load() {
       const result = await safeAwait(
-        idbGet(db, STORE_META, PREFS_META_KEY),
+        store.idb_get_meta(PREFS_META_KEY),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.load',
       );
       if (!result.ok) return null; // timeout/error — never throw on the empty-license case
@@ -25,26 +24,26 @@ export function prefsLicenseStore(db) {
     },
     async save(licenseStr) {
       const readResult = await safeAwait(
-        idbGet(db, STORE_META, PREFS_META_KEY),
+        store.idb_get_meta(PREFS_META_KEY),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.save-read',
       );
       const prefs = (readResult.ok ? readResult.value : null) || { key: PREFS_META_KEY };
       const writeResult = await safeAwait(
-        idbPut(db, STORE_META, { ...prefs, [PREFS_LICENSE_FIELD]: licenseStr }),
+        store.idb_put_meta(PREFS_META_KEY, { ...prefs, [PREFS_LICENSE_FIELD]: licenseStr }),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.save-write',
       );
       if (!writeResult.ok) throw writeResult.error;
     },
     async clear() {
       const readResult = await safeAwait(
-        idbGet(db, STORE_META, PREFS_META_KEY),
+        store.idb_get_meta(PREFS_META_KEY),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.clear-read',
       );
       const prefs = readResult.ok ? readResult.value : null;
       if (!prefs) return;
       const { [PREFS_LICENSE_FIELD]: _drop, ...rest } = prefs;
       const writeResult = await safeAwait(
-        idbPut(db, STORE_META, rest),
+        store.idb_put_meta(PREFS_META_KEY, rest),
         IDB_LICENSE_READ_TIMEOUT_MS, null, 'license-gate:prefsLicenseStore.clear-write',
       );
       if (!writeResult.ok) throw writeResult.error;

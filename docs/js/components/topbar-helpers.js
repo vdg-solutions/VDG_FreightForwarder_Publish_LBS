@@ -3,7 +3,6 @@
 
 import { html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { t } from '../i18n/index.js';
-import { idbRun } from '../cache/idb-cache.js';
 
 const BADGE_MAX = 99;
 
@@ -21,18 +20,14 @@ export function renderBadge(label) {
   return html`<span class="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none flex items-center justify-center ring-2 ring-white">${label}</span>`;
 }
 
-// Persist a preferences patch into the `meta` IDB store. Non-critical → swallow errors.
+// Persist a preferences patch into the meta store. Non-critical → swallow errors.
 export function idbSavePref(patch) {
-  const db = window.__vdg_db;
-  if (!db) return;
-  idbRun(db, (h) => (res, rej) => {
-    const tx = h.transaction('meta', 'readwrite');
-    const st = tx.objectStore('meta');
-    const gr = st.get('preferences');
-    gr.onsuccess = () => { st.put({ ...(gr.result || { key: 'preferences' }), ...patch }); };
-    tx.oncomplete = () => res();
-    tx.onerror    = () => rej(tx.error);
-  }, { write: true }).catch(() => { /* non-critical: preferences persistence is best-effort */ });
+  const store = window.__vdg_store;
+  if (!store) return;
+  (async () => {
+    const prefs = (await store.idb_get_meta('preferences')) || { key: 'preferences' };
+    await store.idb_put_meta('preferences', { ...prefs, ...patch });
+  })().catch(() => { /* non-critical: preferences persistence is best-effort */ });
 }
 
 // User avatar: picture if present, else initials chip.

@@ -3,7 +3,6 @@
 import { compose, LAYOUT_DEBOUNCE_MS, ACTIVITY_FEED_MAX, TOP_CUSTOMERS_MAX } from '../../operators/manager/dashboard-composer.js';
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate } from '../../router.js';
-import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { getActiveSalesReps } from '../../operators/sales-registry.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { t } from '../../i18n/index.js';
@@ -35,7 +34,7 @@ let _salesFilter = null;
 let _mode        = DEFAULT_MODE;
 let _data        = null;
 let _charts      = {};
-let _db          = null;
+let _store       = null;
 let _debounce    = null;
 let _feedEl      = null;
 let _onEntityChanged;
@@ -152,10 +151,10 @@ function prependActivity(text) {
 }
 
 async function saveLayout(layout) {
-  if (!_db) return;
+  if (!_store) return;
   try {
-    const prefs = (await idbGet(_db, 'meta', PREFS_META_KEY)) || { key: PREFS_META_KEY };
-    await idbPut(_db, 'meta', { ...prefs, widget_layout: layout });
+    const prefs = (await _store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+    await _store.idb_put_meta(PREFS_META_KEY, { ...prefs, widget_layout: layout });
   } catch { /* layout pref — non-critical */ }
 }
 
@@ -206,12 +205,12 @@ export async function render(root) {
 
   _mode = readMode();
 
-  try { _db = window.__vdg_db || null; } catch { _db = null; }
+  try { _store = window.__vdg_store || null; } catch { _store = null; }
 
   let layout = DEFAULT_WIDGET_LAYOUT;
-  if (_db) {
+  if (_store) {
     try {
-      const prefs = await idbGet(_db, 'meta', PREFS_META_KEY);
+      const prefs = await _store.idb_get_meta(PREFS_META_KEY);
       if (prefs?.widget_layout) layout = prefs.widget_layout;
     } catch { /* fallback to default */ }
   }
@@ -304,5 +303,5 @@ export async function render(root) {
   window.addEventListener('vdg:mode-change',    _onModeChange);
 
   await recompose(root);
-  if (_db) { void saveLayout(layout); }
+  if (_store) { void saveLayout(layout); }
 }

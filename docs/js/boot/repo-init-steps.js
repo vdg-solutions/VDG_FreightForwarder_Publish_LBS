@@ -7,8 +7,7 @@
 
 import { currentSalesRepId, clearRoleCache, isManager } from '../auth/auth-gate.js';
 import { safeAwait } from '../util/safe-await.js';
-import { openVdgDb, idbGet, resetVdgDbMemo } from '../cache/idb-cache.js';
-import { WasmIoPort } from '../data/wasm-io-adapters.js';
+import { SqliteIoPort } from '../data/sqlite-io-adapters.js';
 import { resolveUserRole } from '../operators/manager/route-guard.js';
 import { loadLocale } from '../i18n/index.js';
 import { APP_VERSION } from '../version.js';
@@ -21,7 +20,6 @@ import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
 
 const IDB_OP_TIMEOUT_MS  = 8000;
-const META_STORE         = 'meta';
 const PREFS_META_KEY     = 'preferences';
 const ONBOARDING_ROUTE   = '/onboarding';
 const REPO_HANG_SEAM_KEY = 'vdg.test.repoHangMs'; // AC-03 test seam
@@ -60,24 +58,12 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
     ? await import('../implementations/mock-drive-backend.js')
     : await import('../auth/drive-api.js');
 
-  // 2. Open IDB (fast, local) — needed by the license cache regardless of role.
+  // 2. Storage is SQLite/OPFS in a worker (opened lazily + warmed at step 5). No blocking IDB open
+  // on the critical path — a wedged legacy IndexedDB can no longer stall or fail boot, which was
+  // the whole point of the migration. Kept as a step so the FSM's storage → wasm edge still fires.
   stepRef.value = STEP_OPEN_DB;
-  let db = existingDb || null;
-  if (!db) {
-    const dbResult = await safeAwait(openVdgDb(), IDB_OP_TIMEOUT_MS, null, 'repo-init:openVdgDb');
-    if (dbResult.ok) { db = dbResult.value; onDbOpen?.(db); }
-    else {
-      resetVdgDbMemo(); // a jammed open must not poison the retry — drop the memo so a re-run re-opens
-      if (currentSalesRepId() !== 'NOT_PROVISIONED') {
-        fsm.dispatch(BootEvent.DB_FAILED); // → ERROR(storage): the retry banner, classified
-        const e = new Error(`IDB open failed: ${dbResult.error?.message}`); // fatal outside onboarding — WASM repo needs it
-        e.name = 'IdbOpenFailedError'; // app.js routes this to the repo-init retry banner (not a raw error)
-        throw e;
-      }
-    }
-  }
-  if (db) fsm.dispatch(BootEvent.DB_OPENED); // real event: IDB connection is live → LOADING_WASM
-  window.__vdg_db = db;
+  const db = null;
+  fsm.dispatch(BootEvent.DB_OPENED); // storage layer available → LOADING_WASM
 
   // 3. Load WASM — mandatory, no fallback. Must run BEFORE any license check (both branches
   // below call into WASM to verify) — this fixed a latent hang on the NOT_PROVISIONED branch.
@@ -111,12 +97,17 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // AC-03 test seam
   if (_hangMs > 0) await new Promise((r) => setTimeout(r, _hangMs));
 
-  // 5. Build repo — WASM only, IDB-first reads
+  // 5. Build repo — WASM only, storage on SQLite/OPFS (worker). The port keeps the idb_* method
+  // names the Rust side imports; the substrate under them is SQL now (immune to the IDB wedge).
   stepRef.value = STEP_BUILD_REPO;
-  const ioPort = new WasmIoPort(db, driveApi, user.email);
+  const ioPort = new SqliteIoPort(driveApi, user.email);
+  // Warm the SQLite worker off the critical path so the first repo read doesn't pay the cold
+  // module-fetch + VFS-install latency inline. Non-blocking, bounded, failure is non-fatal here.
+  safeAwait(ioPort.idb_get_meta('__warm'), IDB_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
   const repo   = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo      = repo;
   window.__vdg_drive_api = driveApi;
+  window.__vdg_store     = ioPort._store; // on-demand views (prefs, drafts, wma, notifications) read SQLite here
 
   // F-19-88 AC-04/05: rehydrate the WASM FSM map from the repo (reload + pre-existing
   // rollback orphans) — non-fatal bound so a large shipment list never hangs boot.
@@ -133,7 +124,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 7. License gate — enforced for EVERY role, no branch (AC-01..07).
   fsm.dispatch(BootEvent.REPO_BUILT); // repo stack live → GATING_LICENSE
   stepRef.value = STEP_LICENSE_GATE;
-  const gate = new LicenseGate(prefsLicenseStore(db));
+  const gate = new LicenseGate(prefsLicenseStore(ioPort._store));
   const app  = document.getElementById('app');
   const gateResult = await runLicenseGate({ gate, container: app });
   if (!gateResult.proceed) { fsm.dispatch(BootEvent.LICENSE_GATE); return null; } // gate screen owns the DOM
@@ -145,7 +136,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   fsm.dispatch(BootEvent.RENDERED); // → READY (terminal): real view owns the DOM now
 
   // 9. Deferred init (fire-and-forget)
-  _deferredInit(user, db, driveApi, repo);
+  _deferredInit(user, db, driveApi, repo, ioPort._store);
 
   return { db, poller: null, auditLog: null };
 }
@@ -154,13 +145,13 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
 // Runs after bootFn → view is already rendered.
 // Errors are logged, never crash the app.
 
-async function _deferredInit(user, db, driveApi, repo) {
+async function _deferredInit(user, db, driveApi, repo, store) {
   try {
     // Locale from user prefs (may switch from 'vi' to user pref)
-    if (db) {
+    if (store) {
       const prefsResult = await safeAwait(
-        idbGet(db, META_STORE, PREFS_META_KEY),
-        IDB_OP_TIMEOUT_MS, null, 'deferred:idbGet-prefs',
+        store.idb_get_meta(PREFS_META_KEY),
+        IDB_OP_TIMEOUT_MS, null, 'deferred:prefs',
       );
       const locale = prefsResult.ok ? (prefsResult.value?.locale || 'vi') : 'vi';
       if (locale !== 'vi') await loadLocale(locale);
@@ -168,7 +159,7 @@ async function _deferredInit(user, db, driveApi, repo) {
 
     // Delta poller
     const { DeltaPoller } = await import('../sync/delta-poll.js');
-    const poller = new DeltaPoller(driveApi, db);
+    const poller = new DeltaPoller(driveApi, store);
     poller.start();
 
     // Outbox drain scheduler (F-19-80 AC-01/03/09) — wires vdg:sync-now / vdg:sync-force-retry
@@ -190,7 +181,7 @@ async function _deferredInit(user, db, driveApi, repo) {
     const { migrateMasterScope } = await import('../cache/master-scope-migrator.js');
     const masterScopePrefix = user.email.split('@')[0].toLowerCase();
     migrateMasterScope(
-      repo, driveApi, db,
+      repo, driveApi, store,
       () => driveApi.findWorkspaceRoot(activeWorkspaceName()), masterScopePrefix,
     ).catch((err) => console.warn('[VDG] master-scope migration error:', err.message)); // DEV
 

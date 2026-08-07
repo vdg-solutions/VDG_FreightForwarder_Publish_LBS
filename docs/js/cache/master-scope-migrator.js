@@ -16,7 +16,6 @@
 // skipped outright as a cheap short-circuit (no redundant put).
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
-import { idbGet, idbPut, STORE_META } from './idb-cache.js';
 import { parseJsonlBundle } from '../auth/drive-api.js';
 
 const MIGRATED_META_PREFIX = 'master-scope-migrated.'; // + kind
@@ -56,24 +55,24 @@ function _resolveKindSpec(spec) {
  * @returns {Promise<Array<{kind:string, found:number, merged:number, conflicted:number, skipped?:boolean}>>}
  */
 export async function migrateMasterScope(
-  repo, driveApi, db, findWorkspaceRoot, prefix,
+  repo, driveApi, store, findWorkspaceRoot, prefix,
   kinds = MASTER_SCOPE_MIGRATION_KINDS, _ms = SAFE_AWAIT_DEFAULT_MS,
 ) {
   const results = [];
   for (const spec of kinds) {
-    results.push(await _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, spec, _ms));
+    results.push(await _migrateKind(repo, driveApi, store, findWorkspaceRoot, prefix, spec, _ms));
   }
   return results;
 }
 
-async function _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, spec, _ms) {
+async function _migrateKind(repo, driveApi, store, findWorkspaceRoot, prefix, spec, _ms) {
   // readKind names the OLD per-user folder; writeKind names the registered kind the records
   // belong under. They differ only for a rename entry — for a scope flip both are the same.
   const { readKind, writeKind } = _resolveKindSpec(spec);
   const kind    = writeKind;              // reported/audited under the destination kind
   const flagKey = MIGRATED_META_PREFIX + readKind; // keyed by source folder — a rename and a
                                                    // flip of the same name never share a flag
-  const flagRes = await safeAwait(idbGet(db, STORE_META, flagKey), _ms, null, `master-scope-migrator:flag:${kind}`);
+  const flagRes = await safeAwait(store.idb_get_meta(flagKey), _ms, null, `master-scope-migrator:flag:${kind}`);
   if (flagRes.ok && flagRes.value?.migrated) return { kind, found: 0, merged: 0, conflicted: 0, skipped: true };
 
   const readRes = await safeAwait(
@@ -110,7 +109,7 @@ async function _migrateKind(repo, driveApi, db, findWorkspaceRoot, prefix, spec,
 
   if (allConfirmed) {
     const markRes = await safeAwait(
-      idbPut(db, STORE_META, { key: flagKey, migrated: true, kind, source_kind: readKind, found: records.length, merged, at: new Date().toISOString() }),
+      store.idb_put_meta(flagKey, { migrated: true, kind, source_kind: readKind, found: records.length, merged, at: new Date().toISOString() }),
       _ms, null, `master-scope-migrator:mark:${kind}`,
     );
     if (markRes.ok) await _clearOldCopy(driveApi, files, _ms); // never drop the old copy before shared is confirmed

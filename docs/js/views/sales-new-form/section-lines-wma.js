@@ -27,12 +27,12 @@ function injectBadge(kindSel, state) {
 
 export async function applyWmaToRow(row, repId, classifyKind) {
   const rowIdx  = parseInt(row.dataset.line, 10);
-  const db      = window.__vdg_db;
-  if (!db || !repId) return;
+  const store   = window.__vdg_store;
+  if (!store || !repId) return;
   const kindSel = row.querySelector('[name=kind]');
   if (!kindSel || kindSel.dataset.manuallySet === 'true' || kindSel.value) return;
   const desc    = row.querySelector('[name=desc]')?.value || '';
-  const state   = await loadKindWmaState(db, repId, rowIdx);
+  const state   = await loadKindWmaState(store, repId, rowIdx);
   const top     = predict(state, desc, classifyKind);
   if (!top) return;
   kindSel.value        = top;
@@ -65,11 +65,11 @@ export async function dismissWmaBadge(badge, repId) {
   badge.remove();
   delete row.dataset.wmaPredicted;
   if (predictedKind) {
-    const db = window.__vdg_db;
-    if (db) {
-      const state = await loadKindWmaState(db, repId, rowIdx);
+    const store = window.__vdg_store;
+    if (store) {
+      const state = await loadKindWmaState(store, repId, rowIdx);
       dismissPrediction(state, predictedKind);
-      await saveKindWmaState(db, repId, rowIdx, state);
+      await saveKindWmaState(store, repId, rowIdx, state);
     }
   }
   return true;

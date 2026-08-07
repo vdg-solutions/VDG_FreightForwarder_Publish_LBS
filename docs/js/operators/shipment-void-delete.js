@@ -1,6 +1,6 @@
 // Manager shipment void (soft-cancel) / hard-delete affordance — F-19-77.
 // Framework-free so both the vanilla grid (shipments.js) and the Lit drawer (detail-panel.js)
-// consume it. Reuses the existing tombstone delete path (idb-cache.js) — no parallel write path.
+// consume it. Reuses the existing repo tombstone delete path — no parallel write path.
 
 import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
 
@@ -30,7 +30,7 @@ export async function voidShipment(repo, shipment) {
   return ref;
 }
 
-// AC-02 — hard-delete: existing tombstone path (idb-cache.js delete()), no re-implementation.
+// AC-02 — hard-delete: existing repo tombstone path (repo.delete()), no re-implementation.
 export async function deleteShipment(repo, shipment) {
   const ref = shipment.shipment_ref || shipment.ref;
   await repo.delete('shipment', ref);

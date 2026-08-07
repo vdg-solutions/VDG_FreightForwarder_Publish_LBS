@@ -1,7 +1,7 @@
 // Diff-before-emit for stale-while-revalidate background pulls (F-45-01) — kills the
 // no-op vdg:entity-changed spam that made exceptions.js's chart flicker (also benefits
 // the other 11 views listening to the same event). Pure orchestration, DI'd IO — no
-// import of idb-cache.js, no circular dep.
+// direct store import, no circular dep.
 
 // canonical, key-order-independent equality for two entity rows (or undefined)
 function rowsEqual(a, b) {

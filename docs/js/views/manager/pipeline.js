@@ -4,7 +4,6 @@ import '../../components/kanban-board.js';
 import { VALID_NEXT } from '../../components/kanban-board.js';
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
-import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
 import { shipmentLane } from '../../util/shipment-lane.js';
@@ -151,11 +150,11 @@ function updateBulkToolbar(root) {
   }
 }
 
-async function saveViewMode(db, mode) {
-  if (!db) return;
+async function saveViewMode(store, mode) {
+  if (!store) return;
   try {
-    const prefs = (await idbGet(db, 'meta', PREFS_META_KEY)) || { key: PREFS_META_KEY };
-    await idbPut(db, 'meta', { ...prefs, [PIPELINE_VIEW_KEY]: mode });
+    const prefs = (await store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+    await store.idb_put_meta(PREFS_META_KEY, { ...prefs, [PIPELINE_VIEW_KEY]: mode });
   } catch { /* pref — non-critical */ }
 }
 
@@ -168,13 +167,11 @@ export async function render(root) {
 
   _mode = readMode();
 
-  let db = null;
+  const store = window.__vdg_store || null;
   try {
-    const { openVdgDb } = await import('../../cache/idb-cache.js');
-    db = await openVdgDb();
-    const prefs = await idbGet(db, 'meta', PREFS_META_KEY);
+    const prefs = store ? await store.idb_get_meta(PREFS_META_KEY) : null;
     if (prefs?.[PIPELINE_VIEW_KEY]) _viewMode = prefs[PIPELINE_VIEW_KEY];
-  } catch { /* IDB optional */ }
+  } catch { /* prefs optional */ }
 
   _shipments = enrichShipments(await loadShipments());
   root.setAttribute('data-mgr-pipeline', '1');
@@ -258,7 +255,7 @@ export async function render(root) {
     _viewMode = _viewMode === 'board' ? 'list' : 'board';
     root.querySelector('#view-toggle').textContent = _viewMode === 'board' ? t('list_view') : t('board_view');
     mountView();
-    await saveViewMode(db, _viewMode);
+    await saveViewMode(store, _viewMode);
   });
 
   root.querySelector('#bulk-clear').addEventListener('click', () => {

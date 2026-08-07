@@ -11,7 +11,7 @@ import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
-import { openVdgDb, idbRun, STORE_ENTITIES } from '../cache/idb-cache.js';
+import { sqlSelectValue } from '../cache/sqlite-conn.js';
 
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
@@ -171,25 +171,19 @@ function _readCachedIdentityRaw() {
   } catch { return null; }
 }
 
-// F-57-01 AC-04: does the local vdg-workspace IDB already hold at least one synced entity row
-// (any kind)? Short-lived connection — opened, counted, closed here; never joins repo-init's own
-// db singleton (that opens later, post-onSignedIn, at runRepoInitBounded's own openVdgDb call).
-// Bounded via safeAwait — any failure (no IDB, blocked, timeout) reads as "no cache", the same
-// safe fall-through AC-03 already exercises.
+// F-57-01 AC-04: does the local SQLite workspace already hold at least one synced entity row
+// (any kind)? Runs before repo-init, straight to the sqlite-conn singleton (which opens the worker
+// + creates the schema on first op). Bounded via safeAwait — any failure (no OPFS, timeout) reads
+// as "no cache", the same safe fall-through AC-03 already exercises.
 async function _hasCachedWorkspace() {
-  const result = await safeAwait((async () => {
-    // openVdgDb is MEMOIZED — this is the shared singleton, not a private connection. The old
-    // `finally { db.close() }` closed it while leaving the memo set, so every later caller
-    // (repo-init, window.__vdg_db, CachedEntityRepo) was handed a closed handle for the rest of
-    // the session. Never close it here; the count goes through the gate like any other read.
-    const db = await openVdgDb();
-    return await idbRun(db, (h) => (resolve, reject) => {
-      const req = h.transaction(STORE_ENTITIES, 'readonly').objectStore(STORE_ENTITIES).count();
-      req.onsuccess = () => resolve(req.result > 0);
-      req.onerror   = () => reject(req.error);
-    });
-  })(), SAFE_AWAIT_DEFAULT_MS, false, 'auth-gate:hasCachedWorkspace');
-  return result.ok ? result.value : false;
+  // Runs before repo-init, so window.__vdg_store isn't set yet — go straight to the SQLite
+  // singleton (sqlite-conn spawns/opens the worker on first op, creating the schema). A count of
+  // the entities table answers "does this browser already hold a workspace?".
+  const result = await safeAwait(
+    sqlSelectValue('SELECT count(*) FROM entities'),
+    SAFE_AWAIT_DEFAULT_MS, 0, 'auth-gate:hasCachedWorkspace',
+  );
+  return result.ok ? (result.value ?? 0) > 0 : false;
 }
 
 export async function requireAuth(onSignedIn) {

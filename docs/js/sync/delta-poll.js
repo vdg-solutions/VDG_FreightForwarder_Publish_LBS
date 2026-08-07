@@ -1,6 +1,6 @@
 // DeltaPoller — 30s Drive changes feed, page-visibility pause/resume
 
-import { idbGet, idbPut, META_SYNC_KEY, STORE_ENTITIES, STORE_META } from '../cache/idb-cache.js';
+import { META_SYNC_KEY } from '../cache/sqlite-schema.js';
 import { parseJsonlBundle } from '../auth/drive-api.js';
 import { checkDriveQuota } from './drive-quota.js';
 import { reconcileKeepLocal, pendingOutboxKeys } from './tombstone-reconcile.js';
@@ -18,9 +18,9 @@ const BUNDLE_NAME_RE      = /^(\d{4}-\d{2}|all)\.jsonl$/;
 const QUOTA_PIGGYBACK_TICK = 120; // check quota once per ~60min (120 × 30s ticks)
 
 export class DeltaPoller {
-  constructor(driveApi, db) {
+  constructor(driveApi, store) {
     this._api          = driveApi;
-    this._db           = db;
+    this._store        = store;
     this._timer        = null;
     this._paused       = false; // system visibility pause
     this._userPaused   = false; // user explicit pause
@@ -121,8 +121,8 @@ export class DeltaPoller {
   }
 
   async _poll() {
-    if (!this._db) return; // IDB unavailable — skip
-    const meta  = await idbGet(this._db, STORE_META, META_SYNC_KEY);
+    if (!this._store) return; // store unavailable — skip
+    const meta  = await this._store.idb_get_meta(META_SYNC_KEY);
     const token = meta?.last_change_token ?? null;
 
     if (!token) {
@@ -141,8 +141,8 @@ export class DeltaPoller {
 
     const nextToken = resp.nextPageToken ?? resp.newStartPageToken;
     if (nextToken) {
-      const current = await idbGet(this._db, STORE_META, META_SYNC_KEY) || { key: META_SYNC_KEY };
-      await idbPut(this._db, STORE_META, { ...current, last_change_token: nextToken });
+      const current = await this._store.idb_get_meta(META_SYNC_KEY) || { key: META_SYNC_KEY };
+      await this._store.idb_put_meta(META_SYNC_KEY, { ...current, last_change_token: nextToken });
     }
   }
 
@@ -151,7 +151,7 @@ export class DeltaPoller {
     const resp      = await this._api.driveFetch('GET', '/changes/startPageToken');
     const initToken = resp.startPageToken;
     const current   = meta || { key: META_SYNC_KEY };
-    await idbPut(this._db, STORE_META, {
+    await this._store.idb_put_meta(META_SYNC_KEY, {
       ...current,
       last_change_token: initToken,
       last_full_pull_ms: Date.now(),
@@ -159,7 +159,7 @@ export class DeltaPoller {
   }
 
   async _applyChange(change) {
-    if (!this._db) return;
+    if (!this._store) return;
     if (change.removed) {
       // fileId removed — evict from IDB (we don't know kind/id here without parsing)
       window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { fileId: change.fileId } }));
@@ -187,14 +187,14 @@ export class DeltaPoller {
 
     // F-19-80 AC-05 — read the outbox once per bundle so a pending put/delete for (kind,id)
     // (or a local delete tombstone) is never overwritten by this re-pull.
-    const pending = await pendingOutboxKeys(this._db);
+    const pending = await pendingOutboxKeys(this._store);
 
     for (const entity of incoming) {
       if (!entity.id) continue;
-      const local      = await idbGet(this._db, STORE_ENTITIES, [kind, entity.id]);
+      const local      = await this._store.idb_get(kind, entity.id);
       const hasPending = pending.has(`${kind}:${entity.id}`);
       if (reconcileKeepLocal(local, entity, hasPending)) continue;
-      await idbPut(this._db, STORE_ENTITIES, { ...entity, kind });
+      await this._store.idb_put(kind, entity.id, entity);
       window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind, id: entity.id } }));
     }
   }

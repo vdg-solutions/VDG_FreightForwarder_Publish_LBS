@@ -19,7 +19,6 @@ let _closedPeriods   = new Set();
 let _sheetJsLoaded   = false;
 
 function getRepo() { return window.__vdg_repo; }
-function getDb()   { return window.__vdg_db || null; }
 function currentUser() { return window.__vdg_auth?.getCurrentUser?.()?.email || 'manager'; }
 
 function _monthOptions() {
@@ -259,7 +258,7 @@ export async function render(root) {
     });
     if (!ok) return;
     try {
-      await closePeriod(repo, getDb(), _selectedPeriod, currentUser(), _checkResults);
+      await closePeriod(repo, _selectedPeriod, currentUser(), _checkResults);
       _closedPeriods.add(_selectedPeriod);
       renderPeriodSelect(root, months, _closedPeriods);
       renderLockBanner(root, _selectedPeriod);
@@ -284,7 +283,7 @@ export async function render(root) {
     if (e.target.id === 'btn-confirm-reopen') {
       const reason = root.querySelector('#reopen-reason')?.value?.trim();
       if (!reason) return;
-      reopenPeriod(repo, getDb(), _selectedPeriod, reason, currentUser()).then(() => {
+      reopenPeriod(repo, _selectedPeriod, reason, currentUser()).then(() => {
         _closedPeriods.delete(_selectedPeriod);
         renderPeriodSelect(root, months, _closedPeriods);
         renderLockBanner(root, _selectedPeriod);

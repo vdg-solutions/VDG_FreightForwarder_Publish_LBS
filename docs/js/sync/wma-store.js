@@ -1,23 +1,22 @@
-// wma-store.js — IDB read/write for STORE_KIND_WMA per (rep_id, row_idx) (F-15-63)
+// wma-store.js — SQLite read/write for the kind_wma store per (rep_id, row_idx) (F-15-63)
 
-import { idbGet, idbPut, STORE_KIND_WMA } from '../cache/idb-cache.js';
 import { safeAwait } from '../util/safe-await.js';
 import { defaultWmaState } from './wma-engine.js';
 
 const WMA_IDB_TIMEOUT_MS = 2000; // non-critical background store; short timeout
 
 /**
- * loadKindWmaState — fetch WMA state from IDB; returns default state if not found or DB absent.
- * @param {IDBDatabase} db
+ * loadKindWmaState — fetch WMA state from the store; default state if not found or store absent.
+ * @param {object} store  SqliteStore (idb_get_wma / idb_put_wma)
  * @param {string} repId
  * @param {number} rowIdx
  * @returns {Promise<{kind_weights:object, total_observations:number, last_decay_ts:string}>}
  */
-export async function loadKindWmaState(db, repId, rowIdx) {
-  if (!db) return defaultWmaState();
+export async function loadKindWmaState(store, repId, rowIdx) {
+  if (!store) return defaultWmaState();
   const key = `${repId}::${rowIdx}`;
   const { ok, value } = await safeAwait(
-    idbGet(db, STORE_KIND_WMA, key),
+    store.idb_get_wma(key),
     WMA_IDB_TIMEOUT_MS,
     null,
     'wma:load',
@@ -29,18 +28,18 @@ export async function loadKindWmaState(db, repId, rowIdx) {
 }
 
 /**
- * saveKindWmaState — persist WMA state to IDB. Fire-and-forget errors are swallowed
- * with a console warning; WMA is best-effort and must not block the UI.
- * @param {IDBDatabase} db
+ * saveKindWmaState — persist WMA state. Fire-and-forget errors are swallowed with a console
+ * warning; WMA is best-effort and must not block the UI.
+ * @param {object} store  SqliteStore
  * @param {string} repId
  * @param {number} rowIdx
  * @param {object} state
  */
-export async function saveKindWmaState(db, repId, rowIdx, state) {
-  if (!db) return;
+export async function saveKindWmaState(store, repId, rowIdx, state) {
+  if (!store) return;
   const key = `${repId}::${rowIdx}`;
   const { ok, error } = await safeAwait(
-    idbPut(db, STORE_KIND_WMA, { ...state, key }),
+    store.idb_put_wma(key, { ...state, key }),
     WMA_IDB_TIMEOUT_MS,
     null,
     'wma:save',

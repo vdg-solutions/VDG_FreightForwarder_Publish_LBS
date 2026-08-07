@@ -7,7 +7,6 @@ import {
 } from '../../operators/manager/ar-composer.js';
 import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
-import { idbGet, idbPut } from '../../cache/idb-cache.js';
 import { t } from '../../i18n/index.js';
 import { agGridLocaleText } from '../../i18n/ag-grid-locale.js';
 
@@ -26,7 +25,7 @@ let _billing       = [];
 let _pnlLines      = [];
 let _shipments     = [];
 let _dismissedIds  = [];
-let _db            = null;
+let _store         = null;
 let _onEntity;
 
 function getRepo() { return window.__vdg_repo; }
@@ -217,10 +216,10 @@ async function showCreditAlert(root, customerName, newState) {
   div.querySelector('[data-dismiss]').addEventListener('click', async () => {
     _dismissedIds.push(customerName);
     div.remove();
-    if (_db) {
+    if (_store) {
       try {
-        const prefs = (await idbGet(_db, 'meta', PREFS_META_KEY)) || { key: PREFS_META_KEY };
-        await idbPut(_db, 'meta', {
+        const prefs = (await _store.idb_get_meta(PREFS_META_KEY)) || { key: PREFS_META_KEY };
+        await _store.idb_put_meta(PREFS_META_KEY, {
           ...prefs,
           dismissed_credit_alerts: _dismissedIds,
         });
@@ -236,11 +235,10 @@ export async function render(root) {
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
 
   try {
-    const { openVdgDb } = await import('../../cache/idb-cache.js');
-    _db = await openVdgDb();
-    const prefs = await idbGet(_db, 'meta', PREFS_META_KEY);
+    _store = window.__vdg_store || null;
+    const prefs = _store ? await _store.idb_get_meta(PREFS_META_KEY) : null;
     _dismissedIds = prefs?.dismissed_credit_alerts || [];
-  } catch { _db = null; }
+  } catch { _store = null; }
 
   const repo = getRepo();
   if (repo) {

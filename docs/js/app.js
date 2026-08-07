@@ -203,7 +203,7 @@ export function bootApp(user, db) {
 
   initBreakpointListener();
   initKeyboardShortcuts();
-  checkVersionBanner(db);
+  checkVersionBanner(window.__vdg_store);
   initWmaListener();
   const _repId = currentSalesRepId() || ''; // AC-02: non-manager provisioned sales → /sales/me/pnl/new
   const defaultRoute = !isManager() && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER' ? '/sales/me/pnl/new' : DEFAULT_ROUTE;
