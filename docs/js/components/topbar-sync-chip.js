@@ -55,6 +55,12 @@ export function shouldShowCount({ pending, lastSyncMs, now }) {
   return (now - lastSyncMs) > SYNC_HEALTHY_RECENT_MS;
 }
 
+// Display timestamp = freshest of push drain (vdg:sync-complete) and pull heartbeat
+// (vdg:delta-synced). Display only — stuck detection stays push-based (pending is outbox).
+export function displayLastSyncMs(pushMs, pullMs) {
+  return Math.max(pushMs || 0, pullMs || 0);
+}
+
 // AC-02 — last-sync human label; returns '30s', '2m', or null when never synced
 export function formatLastSyncAgo(lastSyncMs, now) {
   if (!lastSyncMs) return null;

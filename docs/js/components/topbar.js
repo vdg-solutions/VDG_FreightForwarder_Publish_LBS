@@ -5,7 +5,7 @@ import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
-import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION } from './topbar-sync-chip.js';
+import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION, displayLastSyncMs } from './topbar-sync-chip.js';
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
 import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 
@@ -26,6 +26,7 @@ class VdgTopbar extends LitElement {
     _mobile:         { type: Boolean, state: true },
     _quotaWarn:      { type: Boolean, state: true },
     _lastSyncMs:     { type: Number,  state: true },
+    _lastPullMs:     { type: Number,  state: true },
     _retrying:       { type: Boolean, state: true },
     _retryStreak:    { type: Number,  state: true },
     _backoff429:     { type: Boolean, state: true },
@@ -46,7 +47,7 @@ class VdgTopbar extends LitElement {
     this._exceptionCount = 0;  this._approvalCount = 0;
     this._notifCount = 0;   this._menuOpen = false;   this._outboxCount = 0;   this._dueSoonCount = 0;
     this._swUpdate = false; this._locale = currentLocale(); this._mobile = window.innerWidth < 768;
-    this._quotaWarn = false; this._lastSyncMs = 0;
+    this._quotaWarn = false; this._lastSyncMs = 0; this._lastPullMs = 0;
     this._retrying = false; this._retryStreak = 0; this._backoff429 = false;
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
@@ -57,6 +58,8 @@ class VdgTopbar extends LitElement {
       this._lastSyncMs = e.detail?.ts ?? Date.now(); this._retryStreak = 0;
       this._retrying = false; this._lastError = null; this._lastNotifiedStuckEpisode = 0;
     };
+    // Pull heartbeat only — must NOT clear retry/error state (those are push-side signals)
+    this._onDeltaSynced   = (e) => { this._lastPullMs = e.detail?.ts ?? Date.now(); };
     this._onSyncError     = (e) => {
       this._retryStreak++; this._retrying = true;
       // F-19-20: known reason codes get a localized string; raw error text otherwise
@@ -98,6 +101,7 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:breakpoint-changed',  this._onBreakpt);
     window.addEventListener('vdg:quota-warning',       this._onQuotaWarn);
     window.addEventListener('vdg:sync-complete',       this._onSyncComplete);
+    window.addEventListener('vdg:delta-synced',        this._onDeltaSynced);
     window.addEventListener('vdg:sync-error',          this._onSyncError);
     window.addEventListener('online', this._onOnline); window.addEventListener('offline', this._onOffline);
     window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.addEventListener('vdg:auth-refresh-pending', this._onAuthPending);
@@ -119,6 +123,7 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:breakpoint-changed',  this._onBreakpt);
     window.removeEventListener('vdg:quota-warning',       this._onQuotaWarn);
     window.removeEventListener('vdg:sync-complete',       this._onSyncComplete);
+    window.removeEventListener('vdg:delta-synced',        this._onDeltaSynced);
     window.removeEventListener('vdg:sync-error',          this._onSyncError);
     window.removeEventListener('online', this._onOnline); window.removeEventListener('offline', this._onOffline);
     window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
@@ -302,7 +307,8 @@ class VdgTopbar extends LitElement {
         <div class="flex items-center gap-2">
           ${this._quotaWarn ? html`<a href="https://one.google.com/storage" target="_blank" rel="noreferrer" class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1 px-2.5 rounded-md text-[11px] font-medium text-red-700 hover:bg-red-50 ring-1 ring-red-200" title="${t('topbar.quota.title')}">⚠ ${t('topbar.quota.label')}</a>` : ''}
           ${renderSyncChip({
-            html, state, pending: this._outboxCount, lastSyncMs: this._lastSyncMs, now,
+            html, state, pending: this._outboxCount,
+            lastSyncMs: displayLastSyncMs(this._lastSyncMs, this._lastPullMs), now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
             onSyncNow: () => this._onChipClick(state),
