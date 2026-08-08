@@ -1,12 +1,35 @@
 // app-events.js — global event listeners wired at bootstrap
 
 import { APP_VERSION } from './version.js';
+import { t } from './i18n/index.js';
 import { onEvent } from './sync/wma-engine.js';
 import { loadKindWmaState, saveKindWmaState } from './sync/wma-store.js';
 
 const NEW_FEATURE_BANNER_DAYS = 7;
 const BREAKPOINT_TABLET_PX    = 768;
 const PREFS_META_KEY          = 'preferences';
+
+// SQLite locked by an old-build tab (vdg:store-locked, store-client.js): every store op is
+// doomed until that tab goes away — render the one actionable instruction instead of letting
+// the boot starve on silent timeouts. Full-screen on purpose: nothing behind it can work.
+export function initStoreLockedScreen() {
+  window.addEventListener('vdg:store-locked', () => {
+    if (document.getElementById('vdg-store-locked')) return;
+    const el = document.createElement('div');
+    el.id = 'vdg-store-locked';
+    el.className = 'fixed inset-0 z-[100] bg-white/95 flex items-center justify-center p-6';
+    el.innerHTML = `
+      <div class="max-w-md w-full bg-white rounded-xl shadow-2xl border border-slate-200 p-6 text-center">
+        <div class="text-3xl mb-3">🔒</div>
+        <div class="font-semibold text-slate-900 text-sm mb-2">${t('store_locked.title')}</div>
+        <div class="text-xs text-slate-600 leading-relaxed mb-4">${t('store_locked.body')}</div>
+        <button id="store-locked-retry"
+          class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t('store_locked.retry')}</button>
+      </div>`;
+    el.querySelector('#store-locked-retry').onclick = () => location.reload();
+    document.body.appendChild(el);
+  }, { once: true });
+}
 
 // F-14-18-3: conflict modal
 export function initConflictModal() {

@@ -29,6 +29,18 @@ export class SqliteUnavailableError extends Error {
   constructor(msg) { super(msg); this.name = 'SqliteUnavailableError'; }
 }
 
+// OPFS sahpool handles are exclusive: a tab still running an OLD build (pre leader-election)
+// holds them outside the bus protocol, so this tab's engine dies at install. Without this
+// classification the failure is a silent storm of op timeouts (QC hit it as a stuck license
+// gate). Surface it ONCE as vdg:store-locked so boot can render the close-old-tabs screen.
+const LOCKED_ERR_RE = /NoModificationAllowedError|createSyncAccessHandle|sahpool/i;
+let _lockedAnnounced = false;
+function _announceLockedIf(errMsg) {
+  if (_lockedAnnounced || !LOCKED_ERR_RE.test(String(errMsg || ''))) return;
+  _lockedAnnounced = true;
+  window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { reason: String(errMsg) } }));
+}
+
 const BUS_NAME    = 'vdg-sqlite-bus';
 const LEADER_LOCK = 'vdg-sqlite-leader';
 const RID_SEP     = '|'; // engine rid = `${tabId}|${localRid}` so concurrent tabs never collide
@@ -52,7 +64,10 @@ function _deliver(payload) {
   _pending.delete(rid);
   clearTimeout(p.timer);
   if (ok) p.resolve(result);
-  else    p.reject(new SqliteUnavailableError(err || 'sqlite worker error'));
+  else {
+    _announceLockedIf(err);
+    p.reject(new SqliteUnavailableError(err || 'sqlite worker error'));
+  }
 }
 
 function _spawnEngine() {

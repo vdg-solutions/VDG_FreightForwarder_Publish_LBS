@@ -24,7 +24,7 @@ import { loadView }            from './util/view-loader.js';
 import { mountView }           from './util/mount-view.js';
 import { freshViewRoot }       from './util/view-root.js';
 import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
-import { checkVersionBanner, initBreakpointListener, initWmaListener } from './app-events.js';
+import { checkVersionBanner, initBreakpointListener, initWmaListener, initConflictModal, initStoreLockedScreen } from './app-events.js';
 import { initAccessTokenRefresh } from './auth/token-refresh.js';
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
@@ -205,6 +205,7 @@ export function bootApp(user, db) {
   initKeyboardShortcuts();
   checkVersionBanner(window.__vdg_store);
   initWmaListener();
+  initConflictModal(); // F-14-18-3 modal was defined but never mounted — vdg:conflict-detected had zero listeners
   const _repId = currentSalesRepId() || ''; // AC-02: non-manager provisioned sales → /sales/me/pnl/new
   const defaultRoute = !isManager() && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER' ? '/sales/me/pnl/new' : DEFAULT_ROUTE;
   initRouter(defaultRoute);
@@ -242,6 +243,7 @@ export function bootApp(user, db) {
 
 async function main() {
   initMigrationOverlay(); // "syncing data" overlay listens for migration start/done events
+  initStoreLockedScreen(); // before any store op — an old-build tab holding OPFS must surface, not starve boot
   // SW registration lives solely in sw-register.js (invoked from index.html).
   // Init OAuth + silent token refresh (F-15-02)
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
