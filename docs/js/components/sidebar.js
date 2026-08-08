@@ -2,7 +2,7 @@ import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+e
 import { navigate } from '../router.js';
 import { isManager } from '../auth/auth-gate.js';
 import { t } from '../i18n/index.js';
-import { filterSidebarItems, currentUserRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
+import { filterSidebarItems, currentUserRole, normalizeRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
 import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed,
          toggleCollapsed, isGroupCollapsed, activeGroupKey,
          DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
@@ -16,7 +16,8 @@ const CHEVRON_COLLAPSED    = '▸';
 
 // Active v1 menu — 5 items, labelKey resolved via t() at render time.
 const V1_ITEMS = [
-  { group: 'workspace', route: '/dashboard',           labelKey: 'nav.workspace.dashboard',    icon: 'grid'   },
+  // #15: matches the /dashboard route-guard entry (nav-gates KEEP-CONSISTENT-WITH-route-guard)
+  { group: 'workspace', route: '/dashboard',           labelKey: 'nav.workspace.dashboard',    icon: 'grid',   allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
   { group: 'workspace', route: '/shipments',           labelKey: 'nav.workspace.shipments',    icon: 'ship'   },
 
   // F-24-09: allowRoles matches route-guard's /sales prefix map (SalesRep | Manager).
@@ -184,7 +185,9 @@ class VdgSidebar extends LitElement {
   // F-24-05: Manager keeps folder-probe isManager() as the source of truth (unchanged);
   // everyone else reads the admin/users.jsonl role populated at boot.
   _effectiveRole() {
-    return isManager() ? ROLE_MANAGER : currentUserRole();
+    // #15: normalize — boot stamps the rep prefix as role until users.jsonl resolves,
+    // which matched no allowRoles list and hid every gated item from a real rep.
+    return isManager() ? ROLE_MANAGER : normalizeRole(currentUserRole());
   }
 
   _renderItem(item) {
@@ -258,7 +261,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 0bad457">v0.3.9</span>
+        <span class="font-mono whitespace-nowrap" title="build 5a83986">v0.3.10</span>
       </div>
     `;
   }

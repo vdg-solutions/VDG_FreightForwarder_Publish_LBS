@@ -13,7 +13,7 @@ import './components/cmd-palette.js';
 import { initRouter, navigate } from './router.js';
 // WASM is loaded in boot/repo-init-steps.js critical path (before bootApp)
 import { requireAuth, currentSalesRepId, isManager } from './auth/auth-gate.js';
-import { enforceRouteGuard, currentUserRole, ROLE_MANAGER } from './operators/manager/route-guard.js';
+import { enforceRouteGuard, currentUserRole, normalizeRole, homeRouteForRole, ROLE_MANAGER } from './operators/manager/route-guard.js';
 import { initGoogleSignIn, requestDriveScopeGrant } from './auth/google-oauth.js';
 import { renderDriveAccessGateScreen, DRIVE_ACCESS_REASON_SCOPE, DRIVE_ACCESS_REASON_PERMISSION, DRIVE_ACCESS_REASON_TRANSIENT }
   from './views/auth/drive-access-gate-screen.js';
@@ -24,7 +24,7 @@ import { loadView }            from './util/view-loader.js';
 import { mountView }           from './util/mount-view.js';
 import { freshViewRoot }       from './util/view-root.js';
 import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
-import { checkVersionBanner, initBreakpointListener, initWmaListener, initConflictModal, initStoreLockedScreen } from './app-events.js';
+import { checkVersionBanner, initBreakpointListener, initWmaListener, initConflictModal, initMergeToast, initStoreLockedScreen } from './app-events.js';
 import { initAccessTokenRefresh } from './auth/token-refresh.js';
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
@@ -64,7 +64,8 @@ function _viewRoot() {
 async function renderView(route) {
   // F-24-05: role gate before any view dispatch — admin/accounting/sales prefixes
   // redirect roles that don't belong there (toast + navigate, real ACL is Drive-side).
-  const effectiveRole = isManager() ? ROLE_MANAGER : currentUserRole();
+  // #15: normalize — boot stamps the rep prefix as role until users.jsonl resolves.
+  const effectiveRole = isManager() ? ROLE_MANAGER : normalizeRole(currentUserRole());
   if (enforceRouteGuard(route, effectiveRole)) return;
 
   const printMatch = PRINT_ROUTE_RE.exec(route);
@@ -102,7 +103,9 @@ async function renderView(route) {
   if (await tryParamRoute(route)) return;
 
   const basePath = route.split('?')[0];
-  const path     = VIEWS[basePath] ? basePath : DEFAULT_ROUTE;
+  // #15: unmatched-route fallback is per-role — the old blanket DEFAULT_ROUTE ('/dashboard')
+  // handed the manager dashboard shell to roles the guard would never let navigate there.
+  const path     = VIEWS[basePath] ? basePath : homeRouteForRole(effectiveRole);
   const root     = _viewRoot();
   const mod      = await loadView(VIEWS[path], root, path);
   if (!mod) return;
@@ -206,8 +209,14 @@ export function bootApp(user, db) {
   checkVersionBanner(window.__vdg_store);
   initWmaListener();
   initConflictModal(); // F-14-18-3 modal was defined but never mounted — vdg:conflict-detected had zero listeners
+  initMergeToast();    // #14 — vdg:merge-autoresolved toast + undo
   const _repId = currentSalesRepId() || ''; // AC-02: non-manager provisioned sales → /sales/me/pnl/new
-  const defaultRoute = !isManager() && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER' ? '/sales/me/pnl/new' : DEFAULT_ROUTE;
+  // #15: non-manager without a rep fork boots straight to their role home (pending-access for
+  // ReadOnly) instead of the old blanket '/dashboard' — the guard would bounce them anyway,
+  // this just skips the denial toast on every cold boot.
+  const defaultRoute = !isManager() && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER'
+    ? '/sales/me/pnl/new'
+    : (isManager() ? DEFAULT_ROUTE : homeRouteForRole(normalizeRole(currentUserRole())));
   initRouter(defaultRoute);
 
   // WASM already initialized in repo-init-steps.js critical path

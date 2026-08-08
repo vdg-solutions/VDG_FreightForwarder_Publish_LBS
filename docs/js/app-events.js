@@ -31,52 +31,120 @@ export function initStoreLockedScreen() {
   }, { once: true });
 }
 
-// F-14-18-3: conflict modal
+// Serialize any field value for display — objects/arrays (pnl_lines…) as compact JSON.
+const CONFLICT_VAL_MAX_CHARS = 60;
+function _fieldValText(v) {
+  const s = typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v ?? '');
+  return s.slice(0, CONFLICT_VAL_MAX_CHARS);
+}
+
+function _fieldDiffRows(fields, extra = () => '') {
+  return fields.map((c) => `
+    <div class="mb-2">
+      <div class="text-slate-500 mb-1">${t('conflict_field', { field: c.field })}${extra(c)}</div>
+      <div class="flex gap-4">
+        <div class="flex-1 bg-blue-50 rounded p-2">
+          <div class="font-medium text-blue-700 mb-1">${t('your_value')}</div>
+          <div class="font-mono break-all">${_fieldValText(c.local_val)}</div>
+        </div>
+        <div class="flex-1 bg-amber-50 rounded p-2">
+          <div class="font-medium text-amber-700 mb-1">${t('their_value')}</div>
+          <div class="font-mono break-all">${_fieldValText(c.remote_val)}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// F-14-18-3 / #14: conflict modal — renders ONLY the contested money/governance fields
+// (detail.conflicts); everything auto-resolvable is already folded into detail.merged by the
+// Rust 3-way merge, and both buttons resolve on top of it.
 export function initConflictModal() {
   window.addEventListener('vdg:conflict-detected', (e) => {
-    const { kind, id, local, remote, conflicts } = e.detail || {};
+    const { kind, id, local, remote, merged, conflicts } = e.detail || {};
     const dlg = document.createElement('dialog');
     dlg.className = 'rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40';
-    // detail.conflicts = per-user-field diff computed in Rust (sync_engine::field_conflicts)
-    const rows = (conflicts?.length ? conflicts : [{ field: '(unknown)', local_val: '', remote_val: '' }])
-      .map((c) => `
-        <div class="mb-2">
-          <div class="text-slate-500 mb-1">Field: <code>${c.field}</code></div>
-          <div class="flex gap-4">
-            <div class="flex-1 bg-blue-50 rounded p-2">
-              <div class="font-medium text-blue-700 mb-1">Yours</div>
-              <div class="font-mono break-all">${String(c.local_val ?? '').slice(0, 60)}</div>
-            </div>
-            <div class="flex-1 bg-amber-50 rounded p-2">
-              <div class="font-medium text-amber-700 mb-1">Theirs</div>
-              <div class="font-mono break-all">${String(c.remote_val ?? '').slice(0, 60)}</div>
-            </div>
-          </div>
-        </div>`).join('');
+    const rows = _fieldDiffRows(conflicts?.length ? conflicts : [{ field: '(unknown)', local_val: '', remote_val: '' }]);
     dlg.innerHTML = `
       <div class="px-6 py-4 border-b border-slate-200">
-        <div class="font-semibold text-slate-900 text-sm">Data conflict · ${kind}:${id}</div>
+        <div class="font-semibold text-slate-900 text-sm">${t('conflict_title')} · ${kind}:${id}</div>
+        <div class="text-xs text-slate-500 mt-1">${t('conflict.money_note')}</div>
       </div>
       <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${rows}</div>
       <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
-        <button id="keep-mine" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">Keep mine</button>
-        <button id="use-theirs" class="px-4 py-2 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700">Use theirs</button>
+        <button id="keep-mine" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t('keep_mine')}</button>
+        <button id="use-theirs" class="px-4 py-2 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700">${t('use_theirs')}</button>
       </div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    // F-28-06: re-put the winning body directly — this re-enters the Rust rebase gate
-    // (apply_put). Stamp local's _rev to the remote _rev this conflict event just carried
-    // (the freshest known state, no extra fetch) so "keep mine" fast-forwards instead of
-    // conflicting again against its own stale base.
+    // F-28-06: re-put the winning body — re-enters the Rust rebase gate (apply_put). Base is
+    // detail.merged (auto-resolvable fields already policy-resolved); the buttons only decide
+    // the contested fields. _rev stamped to the remote _rev this event carried so the re-put
+    // fast-forwards instead of conflicting against its own stale base. merged is null when
+    // the row was deleted upstream — fall back to the raw sides.
     const repo = window.__vdg_repo;
+    const mergeBase = merged && typeof merged === 'object' ? merged : null;
     dlg.querySelector('#keep-mine').addEventListener('click', async () => {
-      await repo?.put(kind, id, { ...local, _rev: remote?._rev });
+      const mine = { ...(mergeBase ?? local), _rev: remote?._rev };
+      for (const c of conflicts || []) mine[c.field] = c.local_val;
+      await repo?.put(kind, id, mine);
       dlg.close(); dlg.remove();
     });
     dlg.querySelector('#use-theirs').addEventListener('click', async () => {
-      await repo?.put(kind, id, remote);
+      await repo?.put(kind, id, { ...(mergeBase ?? remote), _rev: remote?._rev });
       dlg.close(); dlg.remove();
     });
+  });
+}
+
+// #14 policy (a): normal-field both-sides edits were auto-resolved newest-wins in Rust —
+// never silently: this card names the record, "Xem" opens the per-field diff, and the user
+// can force their own values back (a normal re-put through the rebase gate).
+const MERGE_TOAST_DISMISS_MS = 12_000;
+export function initMergeToast() {
+  window.addEventListener('vdg:merge-autoresolved', (e) => {
+    const { kind, id, fields } = e.detail || {};
+    if (!fields?.length) return;
+    const card = document.createElement('div');
+    card.className = 'fixed bottom-4 right-4 z-[9999] bg-amber-500 text-white rounded-lg shadow-lg px-4 py-3 text-xs max-w-sm';
+    card.innerHTML = `
+      <div class="font-semibold mb-1">${t('merge.auto_title')}</div>
+      <div class="mb-2">${t('merge.auto_body', { id, n: fields.length })}</div>
+      <div class="flex justify-end gap-2">
+        <button id="merge-view" class="px-3 py-1 bg-white/20 rounded hover:bg-white/30">${t('merge.view')}</button>
+        <button id="merge-dismiss" class="px-3 py-1 bg-white/20 rounded hover:bg-white/30">${t('merge.close')}</button>
+      </div>`;
+    document.body.appendChild(card);
+    const timer = setTimeout(() => card.remove(), MERGE_TOAST_DISMISS_MS);
+    card.querySelector('#merge-dismiss').onclick = () => { clearTimeout(timer); card.remove(); };
+    card.querySelector('#merge-view').onclick = () => {
+      clearTimeout(timer); card.remove();
+      const dlg = document.createElement('dialog');
+      dlg.className = 'rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40';
+      const winnerLabel = (c) => ` · <span class="text-slate-400">${t(c.winner === 'local' ? 'merge.winner.local' : 'merge.winner.remote')}</span>`;
+      dlg.innerHTML = `
+        <div class="px-6 py-4 border-b border-slate-200">
+          <div class="font-semibold text-slate-900 text-sm">${t('merge.auto_title')} · ${kind}:${id}</div>
+        </div>
+        <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${_fieldDiffRows(fields, winnerLabel)}</div>
+        <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
+          <button id="merge-undo" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t('merge.use_mine')}</button>
+          <button id="merge-ok" class="px-4 py-2 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300">${t('merge.close')}</button>
+        </div>`;
+      document.body.appendChild(dlg);
+      dlg.showModal();
+      dlg.querySelector('#merge-ok').onclick = () => { dlg.close(); dlg.remove(); };
+      dlg.querySelector('#merge-undo').onclick = async () => {
+        // Fetch the freshest row (carries the post-merge _rev) and overlay this editor's
+        // values for the auto-resolved fields — a plain put through the rebase gate.
+        const repo = window.__vdg_repo;
+        const current = await repo?.get(kind, id);
+        if (current) {
+          for (const c of fields) current[c.field] = c.local_val;
+          await repo.put(kind, id, current);
+        }
+        dlg.close(); dlg.remove();
+      };
+    };
   });
 }
 

@@ -17,6 +17,7 @@ export const VIEWS = {
   '/masters/carriers': () => import('./views/masters-carriers.js'),
   '/masters/services': () => import('./views/masters-services.js'),
   '/help':             () => import('./views/help.js'),
+  '/pending-access':   () => import('./views/pending-access.js'),
   '/onboarding':       () => import('./views/onboarding-wizard.js'),
   '/background-jobs':  () => import('./views/background-jobs.js'),
   // Manager Workspace — E-14
