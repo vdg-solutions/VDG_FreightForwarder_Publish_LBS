@@ -68,6 +68,39 @@ export class WasmEntityRepo {
         wasm.__wbg_wasmentityrepo_free(ptr, 0);
     }
     /**
+     * @param {string} awb_json
+     * @returns {Promise<any>}
+     */
+    awb_append(awb_json) {
+        const ptr0 = passStringToWasm0(awb_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_awb_append(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} awb_no
+     * @param {string} ym
+     * @returns {Promise<any>}
+     */
+    awb_delete(awb_no, ym) {
+        const ptr0 = passStringToWasm0(awb_no, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(ym, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_awb_delete(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ym
+     * @returns {Promise<any>}
+     */
+    awb_list_by_month(ym) {
+        const ptr0 = passStringToWasm0(ym, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_awb_list_by_month(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
      * @param {string} kind
      * @param {string} id
      * @returns {Promise<any>}
@@ -161,6 +194,152 @@ export class WasmEntityRepo {
         return takeObject(ret);
     }
     /**
+     * @param {number} year
+     * @param {string} acc_code
+     * @param {string} leg_json
+     * @returns {Promise<any>}
+     */
+    lgr_append_leg(year, acc_code, leg_json) {
+        const ptr0 = passStringToWasm0(acc_code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(leg_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_append_leg(this.__wbg_ptr, year, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} file
+     * @param {string} record_json
+     * @returns {Promise<any>}
+     */
+    lgr_append_log(file, record_json) {
+        const ptr0 = passStringToWasm0(file, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(record_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_append_log(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} file_name
+     * @param {string} content
+     * @returns {Promise<any>}
+     */
+    lgr_ensure_seed_file(file_name, content) {
+        const ptr0 = passStringToWasm0(file_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(content, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_ensure_seed_file(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} acc_code
+     * @param {string} as_of
+     * @returns {Promise<any>}
+     */
+    lgr_get_balance(acc_code, as_of) {
+        const ptr0 = passStringToWasm0(acc_code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(as_of, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_get_balance(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} posted_index
+     * @returns {Promise<any>}
+     */
+    lgr_is_posted(posted_index) {
+        const ptr0 = passStringToWasm0(posted_index, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_is_posted(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} file
+     * @returns {Promise<any>}
+     */
+    lgr_last_log(file) {
+        const ptr0 = passStringToWasm0(file, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_last_log(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {number} year
+     * @param {string} entry_id
+     * @returns {Promise<any>}
+     */
+    lgr_list_entry_legs(year, entry_id) {
+        const ptr0 = passStringToWasm0(entry_id, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_list_entry_legs(this.__wbg_ptr, year, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {number} year
+     * @param {string} acc_code
+     * @param {string} from
+     * @param {string} to
+     * @returns {Promise<any>}
+     */
+    lgr_list_legs(year, acc_code, from, to) {
+        const ptr0 = passStringToWasm0(acc_code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(from, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(to, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_list_legs(this.__wbg_ptr, year, ptr0, len0, ptr1, len1, ptr2, len2);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} posted_index
+     * @param {string} entry_ids_json
+     * @returns {Promise<any>}
+     */
+    lgr_record_posted(posted_index, entry_ids_json) {
+        const ptr0 = passStringToWasm0(posted_index, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(entry_ids_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_record_posted(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {number} year
+     * @param {string} acc_code
+     * @param {string} leg_json
+     * @returns {Promise<any>}
+     */
+    lgr_replace_leg(year, acc_code, leg_json) {
+        const ptr0 = passStringToWasm0(acc_code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(leg_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_lgr_replace_leg(this.__wbg_ptr, year, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} chart_json
+     */
+    lgr_set_chart(chart_json) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(chart_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.wasmentityrepo_lgr_set_chart(retptr, this.__wbg_ptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
      * @param {string} kind
      * @returns {Promise<any>}
      */
@@ -178,6 +357,94 @@ export class WasmEntityRepo {
         this.__wbg_ptr = ret;
         WasmEntityRepoFinalization.register(this, this.__wbg_ptr, this);
         return this;
+    }
+    /**
+     * @param {string} ref_name
+     * @returns {Promise<any>}
+     */
+    pref_get_state(ref_name) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_get_state(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ref_name
+     * @returns {Promise<any>}
+     */
+    pref_list_pending(ref_name) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_list_pending(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ref_name
+     * @param {string} id
+     * @param {string} dto_json
+     * @returns {Promise<any>}
+     */
+    pref_move_closed(ref_name, id, dto_json) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(id, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(dto_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_move_closed(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ref_name
+     * @param {string} id
+     * @returns {Promise<any>}
+     */
+    pref_read_pending(ref_name, id) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(id, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_read_pending(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ref_name
+     * @param {string} records_json
+     * @returns {Promise<any>}
+     */
+    pref_seed_if_empty(ref_name, records_json) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(records_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_seed_if_empty(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ref_name
+     * @param {string} dto_json
+     * @returns {Promise<any>}
+     */
+    pref_write_pending(ref_name, dto_json) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(dto_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_write_pending(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ref_name
+     * @param {string} dto_json
+     * @returns {Promise<any>}
+     */
+    pref_write_state(ref_name, dto_json) {
+        const ptr0 = passStringToWasm0(ref_name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(dto_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_pref_write_state(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
     }
     /**
      * @param {string} kind
@@ -198,6 +465,63 @@ export class WasmEntityRepo {
      */
     sync_delta() {
         const ret = wasm.wasmentityrepo_sync_delta(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} email
+     * @param {string} name
+     * @returns {Promise<any>}
+     */
+    users_ensure_seeded(email, name) {
+        const ptr0 = passStringToWasm0(email, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(name, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_users_ensure_seeded(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} email
+     * @returns {Promise<any>}
+     */
+    users_get(email) {
+        const ptr0 = passStringToWasm0(email, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_users_get(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @returns {Promise<any>}
+     */
+    users_list() {
+        const ret = wasm.wasmentityrepo_users_list(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * @returns {Promise<any>}
+     */
+    users_list_all() {
+        const ret = wasm.wasmentityrepo_users_list_all(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} email
+     * @returns {Promise<any>}
+     */
+    users_remove(email) {
+        const ptr0 = passStringToWasm0(email, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_users_remove(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} user_json
+     * @returns {Promise<any>}
+     */
+    users_upsert(user_json) {
+        const ptr0 = passStringToWasm0(user_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_users_upsert(this.__wbg_ptr, ptr0, len0);
         return takeObject(ret);
     }
 }
@@ -1799,6 +2123,10 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).cache_put_meta(getStringFromWasm0(arg1, arg2), getObject(arg3));
             return addHeapObject(ret);
         }, arguments); },
+        __wbg_call_0e855b388e315e17: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).call(getObject(arg1), getObject(arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_call_5575218572ead796: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).call(getObject(arg1), getObject(arg2));
             return addHeapObject(ret);
@@ -2099,6 +2427,24 @@ function __wbg_get_imports() {
             const ret = new DataView(getObject(arg0), arg1 >>> 0, arg2 >>> 0);
             return addHeapObject(ret);
         },
+        __wbg_new_f85beb941dc6d8aa: function(arg0, arg1) {
+            try {
+                var state0 = {a: arg0, b: arg1};
+                var cb0 = (arg0, arg1) => {
+                    const a = state0.a;
+                    state0.a = 0;
+                    try {
+                        return __wasm_bindgen_func_elem_10449(a, state0.b, arg0, arg1);
+                    } finally {
+                        state0.a = a;
+                    }
+                };
+                const ret = new Promise(cb0);
+                return addHeapObject(ret);
+            } finally {
+                state0.a = 0;
+            }
+        },
         __wbg_new_typed_00a409eb4ec4f2d9: function(arg0, arg1) {
             try {
                 var state0 = {a: arg0, b: arg1};
@@ -2106,7 +2452,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_9948(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10449(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2239,6 +2585,10 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).then(getObject(arg1));
             return addHeapObject(ret);
         },
+        __wbg_toISOString_fe2430ea12ec15b5: function(arg0) {
+            const ret = getObject(arg0).toISOString();
+            return addHeapObject(ret);
+        },
         __wbg_truncate_76cd612e76bda8cb: function() { return handleError(function (arg0, arg1) {
             getObject(arg0).truncate(arg1);
         }, arguments); },
@@ -2257,6 +2607,10 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).write(getObject(arg1), getObject(arg2));
             return ret;
         }, arguments); },
+        __wbg_ws_delete_file_5cd94cfd14fc8801: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).ws_delete_file(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_ws_list_dir_50ee901a2888b2cd: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).ws_list_dir(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
@@ -2270,8 +2624,8 @@ function __wbg_get_imports() {
             return addHeapObject(ret);
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1584, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_9946);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1723, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10447);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -2308,10 +2662,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_9946(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_10447(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_9946(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_10447(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -2322,8 +2676,8 @@ function __wasm_bindgen_func_elem_9946(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_9948(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_9948(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_10449(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_10449(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')

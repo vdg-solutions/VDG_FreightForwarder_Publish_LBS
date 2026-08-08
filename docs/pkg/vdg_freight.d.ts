@@ -12,6 +12,9 @@ export class CustomerIndex {
 export class WasmEntityRepo {
     free(): void;
     [Symbol.dispose](): void;
+    awb_append(awb_json: string): Promise<any>;
+    awb_delete(awb_no: string, ym: string): Promise<any>;
+    awb_list_by_month(ym: string): Promise<any>;
     delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
     /**
@@ -27,10 +30,34 @@ export class WasmEntityRepo {
      */
     fx_months_to_ingest(): Promise<any>;
     get(kind: string, id: string): Promise<any>;
+    lgr_append_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
+    lgr_append_log(file: string, record_json: string): Promise<any>;
+    lgr_ensure_seed_file(file_name: string, content: string): Promise<any>;
+    lgr_get_balance(acc_code: string, as_of: string): Promise<any>;
+    lgr_is_posted(posted_index: string): Promise<any>;
+    lgr_last_log(file: string): Promise<any>;
+    lgr_list_entry_legs(year: number, entry_id: string): Promise<any>;
+    lgr_list_legs(year: number, acc_code: string, from: string, to: string): Promise<any>;
+    lgr_record_posted(posted_index: string, entry_ids_json: string): Promise<any>;
+    lgr_replace_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
+    lgr_set_chart(chart_json: string): void;
     list(kind: string): Promise<any>;
     constructor(io: any);
+    pref_get_state(ref_name: string): Promise<any>;
+    pref_list_pending(ref_name: string): Promise<any>;
+    pref_move_closed(ref_name: string, id: string, dto_json: string): Promise<any>;
+    pref_read_pending(ref_name: string, id: string): Promise<any>;
+    pref_seed_if_empty(ref_name: string, records_json: string): Promise<any>;
+    pref_write_pending(ref_name: string, dto_json: string): Promise<any>;
+    pref_write_state(ref_name: string, dto_json: string): Promise<any>;
     put(kind: string, id: string, body: any): Promise<any>;
     sync_delta(): Promise<any>;
+    users_ensure_seeded(email: string, name: string): Promise<any>;
+    users_get(email: string): Promise<any>;
+    users_list(): Promise<any>;
+    users_list_all(): Promise<any>;
+    users_remove(email: string): Promise<any>;
+    users_upsert(user_json: string): Promise<any>;
 }
 
 export function __wasm_init(): void;
@@ -355,6 +382,9 @@ export interface InitOutput {
     readonly wasm_build_entries_from_shipment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasm_build_reversal_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly wasm_compute_sales_analytics: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
     readonly wasmentityrepo_fx_apply_writes: (a: number, b: number, c: number) => number;
@@ -364,10 +394,34 @@ export interface InitOutput {
     readonly wasmentityrepo_fx_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_fx_months_to_ingest: (a: number) => number;
     readonly wasmentityrepo_get: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_append_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly wasmentityrepo_lgr_append_log: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_ensure_seed_file: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_get_balance: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_is_posted: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_lgr_last_log: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_lgr_list_entry_legs: (a: number, b: number, c: number, d: number) => number;
+    readonly wasmentityrepo_lgr_list_legs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly wasmentityrepo_lgr_record_posted: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_replace_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly wasmentityrepo_lgr_set_chart: (a: number, b: number, c: number, d: number) => void;
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
+    readonly wasmentityrepo_pref_get_state: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_pref_list_pending: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_pref_move_closed: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasmentityrepo_pref_read_pending: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_pref_seed_if_empty: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_pref_write_pending: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_pref_write_state: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
+    readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_users_list: (a: number) => number;
+    readonly wasmentityrepo_users_list_all: (a: number) => number;
+    readonly wasmentityrepo_users_remove: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -378,8 +432,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_9946: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9948: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10447: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10449: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -230,6 +230,11 @@ export class WasmIoPort {
     return { id: result.id, etag: result.etag ?? null };
   }
 
+  async ws_delete_file(fileId) {
+    await this.driveApi.driveFetch('DELETE', `/files/${fileId}`);
+    return null;
+  }
+
   async dispatch_event(eventName, detail) {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
   }
