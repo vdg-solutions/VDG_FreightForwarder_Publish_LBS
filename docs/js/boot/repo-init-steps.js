@@ -103,7 +103,13 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   const ioPort = new StoreIoPort(driveApi, user.email);
   // Warm the SQLite worker off the critical path so the first repo read doesn't pay the cold
   // module-fetch + VFS-install latency inline. Non-blocking, bounded, failure is non-fatal here.
-  safeAwait(ioPort.cache_get_meta('__warm'), IDB_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
+  // A TIMEOUT (vs an error) is the SILENT form of the old-tab lock — the engine never answers
+  // and every later op starves the same 8s way (QC 2026-08-08: boot limped into a timeout storm
+  // and froze at the license gate). Surface the same close-old-tabs screen, boot keeps degrading.
+  safeAwait(ioPort.cache_get_meta('__warm'), IDB_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm')
+    .then((r) => {
+      if (!r.ok) window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { reason: 'sqlite-warm timeout — engine unresponsive (another tab may hold the store)' } }));
+    });
   const repo   = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo      = repo;
   window.__vdg_drive_api = driveApi;

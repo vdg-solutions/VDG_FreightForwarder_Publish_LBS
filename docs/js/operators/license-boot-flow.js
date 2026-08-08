@@ -58,6 +58,12 @@ export async function resolveLicenseState({ gate }) {
   if (!fetched.found) return { kind: LICENSE_STATE_MISSING }; // AC-02
   if (!fetched.valid) return { kind: LICENSE_STATE_INVALID, error_kind: fetched.error_kind }; // AC-03/04/05
 
-  await gate.save(fetched.raw); // AC-06
+  // AC-06 — write-through cache only. The license verdict is already VALID (verified over
+  // WASM from the Drive fetch above); persisting the raw string locally is an optimization
+  // for the next offline boot. A store hiccup here (old tab holding the OPFS engine — every
+  // cache op times out) must NEVER kill a VALID verdict: QC 2026-08-08 froze the whole boot
+  // at "Đang kiểm tra giấy phép" on exactly this throw.
+  try { await gate.save(fetched.raw); }
+  catch { console.warn('[license-boot] license cache-save failed — continuing, verdict already VALID'); }
   return { kind: LICENSE_STATE_VALID, payload: fetched.payload };
 }
