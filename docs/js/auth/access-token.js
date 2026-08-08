@@ -120,13 +120,26 @@ function _requestAccessToken(prompt, timeoutMs, { returnResp = false } = {}) {
 function _silentRefresh() { return _requestAccessToken('', SILENT_REFRESH_TIMEOUT_MS); }          // AC-03 bounded
 export function refreshAccessTokenSilently() { return _silentRefresh(); }                          // drive-api 401 re-mint ONLY
 // Reconnect-chip click. prompt:'' + login_hint: an already-consented live session auto-closes the
-// popup in a flash on the CORRECT account (no full consent screen every reconnect). Only when
-// Google explicitly demands interaction does this escalate to prompt:'consent'.
+// popup in a flash on the CORRECT account (no full consent screen every reconnect). Escalation
+// ladder (owner model): wrong account minted → FORCE the account chooser so the user re-picks the
+// working account; wrong again → force the full sign-in screen ("phải bắt login nếu không chọn
+// được lại đúng account đang làm việc"). Other interaction demands escalate to prompt:'consent'.
 export async function reconnectDriveInteractive() {
   try {
     return await _requestAccessToken('', 0, { returnResp: true });
   } catch (err) {
-    if (String(err?.message || '').startsWith('popup-blocked:')) throw err; // no popup available — consent retry is equally doomed
+    const msg = String(err?.message || '');
+    if (msg.startsWith('popup-blocked:')) throw err; // no popup available — any retry is equally doomed
+    if (msg.startsWith('account-mismatch:')) {
+      try {
+        return await _requestAccessToken('select_account', 0, { returnResp: true });
+      } catch (err2) {
+        if (String(err2?.message || '').startsWith('account-mismatch:')) {
+          window.dispatchEvent(new CustomEvent('vdg:auth-signin-request')); // full login — pick the right account
+        }
+        throw err2;
+      }
+    }
     return _requestAccessToken('consent', 0, { returnResp: true });
   }
 }
