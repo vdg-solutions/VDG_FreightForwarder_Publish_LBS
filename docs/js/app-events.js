@@ -37,26 +37,27 @@ export function initConflictModal() {
     const { kind, id, local, remote, conflicts } = e.detail || {};
     const dlg = document.createElement('dialog');
     dlg.className = 'rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40';
-    const fieldLabel = conflicts?.[0]?.field || '(multiple fields)';
-    const localVal   = String(conflicts?.[0]?.local_val ?? '').slice(0, 60);
-    const remoteVal  = String(conflicts?.[0]?.remote_val ?? '').slice(0, 60);
+    // detail.conflicts = per-user-field diff computed in Rust (sync_engine::field_conflicts)
+    const rows = (conflicts?.length ? conflicts : [{ field: '(unknown)', local_val: '', remote_val: '' }])
+      .map((c) => `
+        <div class="mb-2">
+          <div class="text-slate-500 mb-1">Field: <code>${c.field}</code></div>
+          <div class="flex gap-4">
+            <div class="flex-1 bg-blue-50 rounded p-2">
+              <div class="font-medium text-blue-700 mb-1">Yours</div>
+              <div class="font-mono break-all">${String(c.local_val ?? '').slice(0, 60)}</div>
+            </div>
+            <div class="flex-1 bg-amber-50 rounded p-2">
+              <div class="font-medium text-amber-700 mb-1">Theirs</div>
+              <div class="font-mono break-all">${String(c.remote_val ?? '').slice(0, 60)}</div>
+            </div>
+          </div>
+        </div>`).join('');
     dlg.innerHTML = `
       <div class="px-6 py-4 border-b border-slate-200">
         <div class="font-semibold text-slate-900 text-sm">Data conflict · ${kind}:${id}</div>
-        <div class="text-xs text-slate-500 mt-0.5">Field: <code>${fieldLabel}</code></div>
       </div>
-      <div class="px-6 py-4 text-xs">
-        <div class="flex gap-4">
-          <div class="flex-1 bg-blue-50 rounded p-2">
-            <div class="font-medium text-blue-700 mb-1">Yours</div>
-            <div class="font-mono break-all">${localVal}</div>
-          </div>
-          <div class="flex-1 bg-amber-50 rounded p-2">
-            <div class="font-medium text-amber-700 mb-1">Theirs</div>
-            <div class="font-mono break-all">${remoteVal}</div>
-          </div>
-        </div>
-      </div>
+      <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${rows}</div>
       <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
         <button id="keep-mine" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">Keep mine</button>
         <button id="use-theirs" class="px-4 py-2 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700">Use theirs</button>

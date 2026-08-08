@@ -2434,7 +2434,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10449(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10492(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2452,7 +2452,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10449(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10492(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2625,7 +2625,7 @@ function __wbg_get_imports() {
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
             // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1723, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10447);
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10490);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -2662,10 +2662,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_10447(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_10490(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_10447(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_10490(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -2676,8 +2676,8 @@ function __wasm_bindgen_func_elem_10447(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_10449(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_10449(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_10492(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_10492(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')
