@@ -3,7 +3,7 @@
 // f-29-13-bounded-silent-refresh.test.mjs) keeps resolving unchanged.
 
 import { ensureWindowOpen } from './window-open-guard.js';
-import { parseIdToken } from './google-oauth.js';
+import { parseIdToken, ROLE_CACHE_KEY } from './google-oauth.js';
 import { SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 
 const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
@@ -46,7 +46,16 @@ export async function getAccessToken() {
 function _sessionEmail() {
   const token = localStorage.getItem(ID_TOKEN_KEY);
   const payload = token ? parseIdToken(token) : null;
-  return payload?.email || undefined;
+  if (payload?.email) return payload.email;
+  // Expired session: getCurrentUser() deletes the stale id_token, which used to erase the
+  // account anchor exactly when the reconnect mint needs it — Google then picked the browser's
+  // DEFAULT account and _verifySameAccount had nothing to check against (silent account flip
+  // on reconnect). The role cache {email, role} survives expiry; it IS the working account.
+  try {
+    const raw = localStorage.getItem(ROLE_CACHE_KEY);
+    const email = raw ? JSON.parse(raw)?.email : null;
+    return email || undefined;
+  } catch { return undefined; /* corrupt cache reads as no anchor — sign-in re-establishes it */ }
 }
 
 // Account guarantee (owner: "cần phải đảm bảo account"): login_hint pins the chooser, but a hint is

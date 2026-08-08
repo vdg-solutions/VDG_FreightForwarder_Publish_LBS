@@ -266,7 +266,12 @@ class VdgTopbar extends LitElement {
   render() {
     const badge = badgeLabel(this._exceptionCount + this._approvalCount);
     const notifBadge = badgeLabel(this._notifCount + this._dueSoonCount); // F-48-01: additive, independent sources
-    const user = window.__vdg_auth?.getCurrentUser?.();
+    // Degraded (expired-token) boot: getCurrentUser() is null but the cached working identity
+    // rode in via repo-init (__vdg_current_user). Show THAT account, so the avatar/menu never
+    // display a placeholder identity while the red reconnect chip is up.
+    const cached = window.__vdg_current_user;
+    const user = window.__vdg_auth?.getCurrentUser?.()
+      || (cached?.email ? { email: cached.email, name: '', picture: '', sub: '', id_token: null } : null);
     const salesId = currentSalesRepId();
     const now = Date.now();
     const state = computeChipState({

@@ -33,6 +33,13 @@ const RETRYABLE_STATUSES = new Set([429, 503]);
 // single-flight guard — prevents multiple reloads on concurrent 401s
 let _reauthInflight = false;
 
+// Real 401 + failed re-mint -> flip the app into reconnect state (topbar chip + auth-gate
+// listen). Was left dangling when the old token-refresh module was retired — every failed
+// re-mint threw ReferenceError instead of surfacing the reconnect chip.
+function _dispatchNeedsReconnect() {
+  window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect'));
+}
+
 export { FOLDER_MIME };
 
 export class DriveApiError extends Error {

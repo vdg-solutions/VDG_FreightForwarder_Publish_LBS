@@ -37,7 +37,10 @@ export function renderAvatar(user) {
       class="w-8 h-8 rounded-full object-cover ring-2 ring-slate-200"
       title="${user.name || user.email}" referrerpolicy="no-referrer" />`;
   }
-  const initials = user?.name ? user.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() : 'VU';
+  // Initials from name, else email — a hardcoded placeholder reads as someone's account
+  const initials = user?.name
+    ? user.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+    : (user?.email ? user.email.slice(0, 2).toUpperCase() : '?');
   return html`<div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-white text-xs font-semibold flex items-center justify-center"
     title="${user?.name || user?.email || ''}">${initials}</div>`;
 }
