@@ -157,10 +157,11 @@ async function _deferredInit(user, db, driveApi, repo, store) {
       if (locale !== 'vi') await loadLocale(locale);
     }
 
-    // Delta poller
-    const { DeltaPoller } = await import('../sync/delta-poll.js');
-    const poller = new DeltaPoller(driveApi, store);
-    poller.start();
+    // Delta tick — thin timer over the WASM delta engine (repo.sync_delta). All sync
+    // decisions live in Rust (data_repo/sync_delta.rs).
+    const { DeltaTick } = await import('../sync/delta-tick.js');
+    const deltaTick = new DeltaTick(driveApi, () => repo);
+    deltaTick.start();
 
     // Outbox drain scheduler (F-19-80 AC-01/03/09) — wires vdg:sync-now / vdg:sync-force-retry
     // / online / a bounded backoff interval to repo.drain_outbox(); without this the manual

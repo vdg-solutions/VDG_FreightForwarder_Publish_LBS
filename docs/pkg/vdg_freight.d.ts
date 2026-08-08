@@ -18,6 +18,7 @@ export class WasmEntityRepo {
     list(kind: string): Promise<any>;
     constructor(io: any);
     put(kind: string, id: string, body: any): Promise<any>;
+    sync_delta(): Promise<any>;
 }
 
 export function __wasm_init(): void;
@@ -348,6 +349,7 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -358,8 +360,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_9740: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9742: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9805: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9807: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -28,6 +28,7 @@ export class WasmIoPort {
     this.userEmail = userEmail;
     this.folderIds = new Map();
     this.fileIndex = new Map();        // folderId -> Map(fileName -> fileId): folder listed once
+    this._folderKind = new Map();      // folderId -> kind: reverse map for the wasm delta engine
     this._listingInflight = new Map(); // folderId -> in-flight listing promise (dedupe concurrency)
     this._pathSegment = new Map();     // `${parentId}/${name}` -> folderId: resolve each nested segment ONCE
     this._segInflight = new Map();     // same key -> in-flight getOrCreateFolder (dedupe concurrent boot migrators)
@@ -82,6 +83,7 @@ export class WasmIoPort {
       folderId = await this._ensureNestedFolder(rootId, `${USERS_PATH}/${prefix}/${kind}`);
     }
     this.folderIds.set(kind, folderId);
+    this._folderKind.set(folderId, kind);
     return folderId;
   }
 
@@ -146,6 +148,49 @@ export class WasmIoPort {
       }
       throw err;
     }
+  }
+
+  // ── Delta-engine adapters (delta-sync-model.md) — raw passthrough, kernel = ∅ ─────────
+  // JS fetches, Rust decides. No filtering, no reconcile, no kind inference here.
+
+  // One FRESH files.list of the kind's folder with the version axis included. Also refreshes
+  // the name->id index the read/write paths use, so a bundle created by another client
+  // becomes visible the moment the wasm engine re-lists.
+  async drive_list_bundles(kind) {
+    const folderId = await this._resolveFolder(kind);
+    const q = `'${folderId}' in parents and trashed=false`;
+    const res = await this.driveApi.driveFetch(
+      'GET',
+      `/files?q=${encodeURIComponent(q)}&fields=files(id,name,version,modifiedTime)&spaces=drive&pageSize=1000`,
+    );
+    const files = res?.files ?? [];
+    const map = new Map();
+    for (const f of files) map.set(f.name, f.id);
+    this.fileIndex.set(folderId, map);
+    this._listingInflight.delete(folderId);
+    return { folderId, files };
+  }
+
+  async drive_read_file(fileId) {
+    const data = await this.driveApi.getFile(fileId);
+    if (!data) return { found: false, content: '', etag: null };
+    return { found: true, content: data.content, etag: data.etag };
+  }
+
+  async drive_changes(pageToken) {
+    const fields = 'nextPageToken,newStartPageToken,changes(fileId,removed,file(id,name,version,parents))';
+    return await this.driveApi.driveFetch(
+      'GET',
+      `/changes?pageToken=${encodeURIComponent(pageToken)}&fields=${encodeURIComponent(fields)}&spaces=drive`,
+    );
+  }
+
+  async drive_start_page_token() {
+    return await this.driveApi.driveFetch('GET', '/changes/startPageToken');
+  }
+
+  async drive_folder_kind(folderId) {
+    return this._folderKind.get(folderId) ?? null;
   }
 
   async dispatch_event(eventName, detail) {

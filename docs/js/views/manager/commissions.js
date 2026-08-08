@@ -240,7 +240,7 @@ export async function render(root) {
   _onEntity = async (e) => {
     // View navigated away → drop the leaked window listener instead of touching a stale root.
     if (!root.isConnected) { window.removeEventListener('vdg:entity-changed', _onEntity); return; }
-    if (_loadInFlight) return; // AC-06: a bounded load is already running — delta-poll tick can't re-enter
+    if (_loadInFlight) return; // AC-06: a bounded load is already running — a delta tick can't re-enter
     const kind = e.detail?.kind;
     if (kind !== KIND_SHIPMENT && kind !== PAYOUT_KIND && kind !== KIND_COMMISSION_RULES) return;
     const ok = await loadData();
