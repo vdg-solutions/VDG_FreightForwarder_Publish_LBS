@@ -193,6 +193,43 @@ export class WasmIoPort {
     return this._folderKind.get(folderId) ?? null;
   }
 
+  // ── Generic workspace-file adapters (#11 _shared/{area} port) — raw passthrough,
+  // kernel = ∅. Path knowledge lives in the Rust stores; this only resolves segments
+  // (cached), lists, reads and writes. Empty fileId/etag = create / no CAS precondition.
+
+  async _resolveDir(dirPath) {
+    const rootId = await findWorkspaceRoot(activeWorkspaceName());
+    if (!rootId) throw new Error('Workspace root not found');
+    return this._ensureNestedFolder(rootId, dirPath);
+  }
+
+  async ws_list_dir(dirPath) {
+    const folderId = await this._resolveDir(dirPath);
+    const q = `'${folderId}' in parents and trashed=false`;
+    const res = await this.driveApi.driveFetch(
+      'GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&pageSize=1000`,
+    );
+    return { files: (res?.files ?? []).map((f) => ({ id: f.id, name: f.name })) };
+  }
+
+  async ws_read_file(dirPath, fileName) {
+    const folderId = await this._resolveDir(dirPath);
+    const index    = await this._folderIndex(folderId);
+    const fileId   = index.get(fileName) ?? null;
+    if (!fileId) return { found: false, id: null, etag: null, content: '' };
+    const data = await this.driveApi.getFile(fileId);
+    if (!data) return { found: false, id: fileId, etag: null, content: '' };
+    return { found: true, id: fileId, etag: data.etag ?? null, content: data.content ?? '' };
+  }
+
+  async ws_write_file(dirPath, fileName, content, fileId, etag) {
+    const folderId = await this._resolveDir(dirPath);
+    const uploadId = fileId ? fileId : folderId;
+    const result   = await this.driveApi.uploadFile(uploadId, fileName, content, etag || null, { isUpdate: Boolean(fileId) });
+    this._invalidateFolderIndex(folderId);
+    return { id: result.id, etag: result.etag ?? null };
+  }
+
   async dispatch_event(eventName, detail) {
     window.dispatchEvent(new CustomEvent(eventName, { detail }));
   }

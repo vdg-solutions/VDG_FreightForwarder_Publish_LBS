@@ -14,6 +14,18 @@ export class WasmEntityRepo {
     [Symbol.dispose](): void;
     delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
+    /**
+     * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
+     */
+    fx_apply_writes(writes_json: string): Promise<any>;
+    fx_delete_entry(valid_from: string, valid_to: string, pair: string): Promise<any>;
+    fx_invalidate_month(ym: string): void;
+    fx_list_all(): Promise<any>;
+    fx_list_by_month(ym: string): Promise<any>;
+    /**
+     * [{ym, content}] for every month not yet handed to the fx domain island.
+     */
+    fx_months_to_ingest(): Promise<any>;
     get(kind: string, id: string): Promise<any>;
     list(kind: string): Promise<any>;
     constructor(io: any);
@@ -345,6 +357,12 @@ export interface InitOutput {
     readonly wasm_compute_sales_analytics: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
+    readonly wasmentityrepo_fx_apply_writes: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_fx_delete_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasmentityrepo_fx_invalidate_month: (a: number, b: number, c: number) => void;
+    readonly wasmentityrepo_fx_list_all: (a: number) => number;
+    readonly wasmentityrepo_fx_list_by_month: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_fx_months_to_ingest: (a: number) => number;
     readonly wasmentityrepo_get: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
@@ -360,8 +378,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_9814: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9816: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9946: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9948: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

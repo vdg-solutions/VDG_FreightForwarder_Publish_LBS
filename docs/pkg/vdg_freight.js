@@ -88,6 +88,66 @@ export class WasmEntityRepo {
         return takeObject(ret);
     }
     /**
+     * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
+     * @param {string} writes_json
+     * @returns {Promise<any>}
+     */
+    fx_apply_writes(writes_json) {
+        const ptr0 = passStringToWasm0(writes_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_fx_apply_writes(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} valid_from
+     * @param {string} valid_to
+     * @param {string} pair
+     * @returns {Promise<any>}
+     */
+    fx_delete_entry(valid_from, valid_to, pair) {
+        const ptr0 = passStringToWasm0(valid_from, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(valid_to, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(pair, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_fx_delete_entry(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ym
+     */
+    fx_invalidate_month(ym) {
+        const ptr0 = passStringToWasm0(ym, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.wasmentityrepo_fx_invalidate_month(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
+     * @returns {Promise<any>}
+     */
+    fx_list_all() {
+        const ret = wasm.wasmentityrepo_fx_list_all(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
+     * @param {string} ym
+     * @returns {Promise<any>}
+     */
+    fx_list_by_month(ym) {
+        const ptr0 = passStringToWasm0(ym, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmentityrepo_fx_list_by_month(this.__wbg_ptr, ptr0, len0);
+        return takeObject(ret);
+    }
+    /**
+     * [{ym, content}] for every month not yet handed to the fx domain island.
+     * @returns {Promise<any>}
+     */
+    fx_months_to_ingest() {
+        const ret = wasm.wasmentityrepo_fx_months_to_ingest(this.__wbg_ptr);
+        return takeObject(ret);
+    }
+    /**
      * @param {string} kind
      * @param {string} id
      * @returns {Promise<any>}
@@ -2046,7 +2106,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_9816(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_9948(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2197,9 +2257,21 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).write(getObject(arg1), getObject(arg2));
             return ret;
         }, arguments); },
+        __wbg_ws_list_dir_50ee901a2888b2cd: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).ws_list_dir(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ws_read_file_aabc38dd74b784fd: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).ws_read_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ws_write_file_6297b6c08ff08616: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
+            const ret = getObject(arg0).ws_write_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getStringFromWasm0(arg7, arg8), getStringFromWasm0(arg9, arg10));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1554, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_9814);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1584, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_9946);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -2236,10 +2308,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_9814(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_9946(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_9814(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_9946(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -2250,8 +2322,8 @@ function __wasm_bindgen_func_elem_9814(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_9816(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_9816(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_9948(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_9948(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')
