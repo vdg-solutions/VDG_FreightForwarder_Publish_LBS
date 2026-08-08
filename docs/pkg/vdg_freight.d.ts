@@ -42,6 +42,8 @@ export class WasmEntityRepo {
     lgr_replace_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_set_chart(chart_json: string): void;
     list(kind: string): Promise<any>;
+    mint_quote_ref(salt: string): Promise<any>;
+    mint_shipment_ref(direction: string, salt: string): Promise<any>;
     constructor(io: any);
     pref_get_state(ref_name: string): Promise<any>;
     pref_list_pending(ref_name: string): Promise<any>;
@@ -406,6 +408,8 @@ export interface InitOutput {
     readonly wasmentityrepo_lgr_replace_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_set_chart: (a: number, b: number, c: number, d: number) => void;
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_mint_quote_ref: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_mint_shipment_ref: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_pref_get_state: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_pref_list_pending: (a: number, b: number, c: number) => number;
@@ -432,8 +436,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10490: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10492: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10521: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10523: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -1,7 +1,7 @@
 // submit-orchestrator.js — validate, persist; buildShipment delegated to shipment-builder.js
 
 import { t } from '../../i18n/index.js';
-import { genShipmentRef, nextSeq, recordSeq } from '../../operators/shipment-ref-gen.js';
+
 import { buildShipment } from './shipment-builder.js';
 import { ensureShipmentStateAliases } from '../../util/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../operators/fsm-ingest.js';
@@ -15,7 +15,6 @@ const WARN_PNL_LINES_MISSING = 'pnl_lines_empty';
 // AC-08: max number of CE keys to attempt deletion during commission overwrite
 const MAX_CE_CLEANUP = 20;
 const INITIAL_LEDGER_VERSION = 1; // F-23-03 pm-decisions.md Q3: envelope-only field
-const MAX_REF_MINT_ATTEMPTS  = 50;  // F-57-01: bound the free-ref search; 50 shipments/rep/day
 
 // window is undefined under node:test (this module is imported there directly) — guard
 // instead of a bare `window.__vdg_ledger_repo` default so the browser global stays lazy.
@@ -132,28 +131,13 @@ async function _resolveJobNo(state, repo, salesRepId, priorJobNo = null, ownRef 
   return assignJobNo(repo, await _repCodeFor(repo, salesRepId));
 }
 
-// F-57-01: mint a shipment_ref and confirm it is actually free before writing to it.
-// nextSeq() derives the sequence from repo.list('shipment') plus an in-memory session map, so
-// a cleared session map, a resumed tab or a clock the user rolled back could hand back a
-// sequence already on disk — and repo.put() would then blind-overwrite a real shipment. Mirrors
-// the _jobNoTaken precedent above: check, then step forward rather than trusting the generator.
-//
-// KNOWN LIMIT (not fixable here): `shipment` is a per-user kind, so repo.list only ever sees
-// THIS rep's shipments. Two reps creating an export shipment on the same day both compute
-// repoMax = 0 and both mint EX-YYMMDD-001. Nothing overwrites — the records live in different
-// Drive folders — but manager-level aggregation across reps can conflate them. Closing that
-// needs the rep code inside the ref, which changes REF_REGEX and every already-issued document
-// number: a product decision, not a bug fix.
-async function _mintFreeShipmentRef(repo, dir) {
-  const now = Date.now();
-  let seq = await nextSeq(repo, dir, now);
-  for (let attempt = 0; attempt < MAX_REF_MINT_ATTEMPTS; attempt++) {
-    const ref = genShipmentRef(dir, now, seq);
-    const taken = await repo.get('shipment', ref).catch(() => null);
-    if (!taken) { recordSeq(dir, now, seq); return ref; }
-    seq++;
-  }
-  throw new Error(`Could not allocate a free shipment_ref after ${MAX_REF_MINT_ATTEMPTS} attempts`);
+// #13 (owner 2026-08-08): shipment_ref = EX|IM-YYMMDD-{HASH8}, minted in WASM
+// (data_repo/ref_gen.rs) — entropy from (rep salt + time + nonce) plus a local same-id
+// regen guard. Replaces the counted sequence whose per-user cache made two reps mint the
+// same EX-YYMMDD-001 on the same day (the KNOWN LIMIT this comment block used to carry).
+async function _mintFreeShipmentRef(repo, dir, salesRepId) {
+  if (!repo?.mint_shipment_ref) throw new Error('WASM repo not ready');
+  return await repo.mint_shipment_ref(dir, String(salesRepId || ''));
 }
 
 // validate → buildShipment → repo.put → commission_entries → post ledger → return
@@ -165,7 +149,7 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   const publish = opts.publish !== false;
 
   const dir = directionPrefix(state.direction);
-  const ref = await _mintFreeShipmentRef(repo, dir);
+  const ref = await _mintFreeShipmentRef(repo, dir, salesRepId);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
   const jobNo = await _resolveJobNo(state, repo, salesRepId);

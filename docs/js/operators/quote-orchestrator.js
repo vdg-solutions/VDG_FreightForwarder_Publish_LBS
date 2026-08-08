@@ -1,6 +1,5 @@
 // Quote orchestrator — Draft creation, state transitions, validation
 
-const QUOTE_ID_PREFIX        = 'QT';
 const OVERRIDE_THRESHOLD_PCT = 0.15; // 15% lower → manager approval required
 const KIND_QUOTATIONS        = 'quotations';
 const KIND_SHIPMENT          = 'shipment';
@@ -16,12 +15,12 @@ function todayYMD() {
   return `${y}${m}${day}`;
 }
 
-export async function generateQuoteId(repo) {
-  const today = todayYMD();
-  const all = await repo.list(KIND_QUOTATIONS, null).catch(() => []);
-  const todayQuotes = all.filter((q) => (q.id || '').startsWith(`${QUOTE_ID_PREFIX}-${today}`));
-  const seq = String(todayQuotes.length + 1).padStart(3, '0');
-  return `${QUOTE_ID_PREFIX}-${today}-${seq}`;
+// #13 (owner 2026-08-08): Q-YYMMDD-{HASH8} minted in WASM (ref_gen.rs). Kills two bugs at
+// once: the old count-based seq re-issued a same-day id after any delete, and per-user
+// caches let two reps mint the same Q-... id. salesRepId salts the hash.
+export async function generateQuoteId(repo, salesRepId) {
+  if (!repo?.mint_quote_ref) throw new Error('WASM repo not ready');
+  return await repo.mint_quote_ref(String(salesRepId || ''));
 }
 
 // ── total amount ──────────────────────────────────────────────────────────────
@@ -50,7 +49,7 @@ async function lastAcceptedAmount(repo, customer, pol, pod) {
 
 export async function saveDraft(repo, salesRepId, formData) {
   const { customer, pol, pod, container_type, carrier, lines, validity_days, notes } = formData;
-  const id    = await generateQuoteId(repo);
+  const id    = await generateQuoteId(repo, salesRepId);
   const now   = Date.now();
   const validMs = Number(validity_days) * 86400000;
   const total = totalAmount(lines);
