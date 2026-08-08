@@ -1,10 +1,12 @@
 // store-client.js — MAIN-THREAD client for the SQLite/OPFS engine (replaces the IndexedDB stack).
 //
 // The engine + ALL storage logic run in Rust/wasm inside store-worker.js (a dedicated module
-// Worker) because the OPFS SAH Pool VFS needs createSyncAccessHandle, which is worker-only. This
-// module is a thin async client: spawn the worker, correlate requests by id over postMessage, bound
-// each op so a dead worker rejects instead of hanging, and expose the store surface the Rust IO port
-// (StoreIoPort) + on-demand UI consumers (window.__vdg_store) call. There is NO SQL here — every
+// Worker) because the OPFS SAH Pool VFS needs createSyncAccessHandle, which is worker-only. Tabs
+// reach that ONE engine through a SharedWorker router (store-router.js) — sahpool handles are
+// exclusive, so per-tab engines would leave every tab but the first with a dead store. This module
+// is a thin async client: connect the router port, correlate requests by rid over postMessage,
+// bound each op so a dead worker rejects instead of hanging, and expose the store surface the Rust
+// IO port (StoreIoPort) + on-demand UI consumers (window.__vdg_store) call. There is NO SQL here — every
 // query lives in Rust (data_repo/sqlite_store.rs). The worker's single message loop serializes every
 // statement → the IndexedDB concurrent-transaction wedge class is gone by construction.
 //
@@ -20,36 +22,54 @@ export class SqliteUnavailableError extends Error {
   constructor(msg) { super(msg); this.name = 'SqliteUnavailableError'; }
 }
 
-let _worker   = null;
+let _worker   = null;              // { post, close } transport wrapper (SharedWorker port or dedicated Worker)
 let _ready    = null;              // open handshake promise; null until first ensureReady()
 let _seq      = 0;
 const _pending = new Map();        // id -> { resolve, reject, timer }
 let _injected  = null;             // test seam: a fake store (no worker) so unit tests run without OPFS
 
+function _onMessage(ev) {
+  // rid = request-correlation id, deliberately NOT `id`: an op's payload carries the entity `id`
+  // (put/get/delete), so a bare `id` field would clobber the correlation key and every such op
+  // would hang unmatched. rid namespaces the transport apart from the payload.
+  const { rid, ok, result, err } = ev.data || {};
+  const p = _pending.get(rid);
+  if (!p) return;
+  _pending.delete(rid);
+  clearTimeout(p.timer);
+  if (ok) p.resolve(result);
+  else    p.reject(new SqliteUnavailableError(err || 'sqlite worker error'));
+}
+
+// A worker crash must fail every in-flight op and drop the handle so the next call respawns —
+// never leave a caller awaiting a promise the dead worker can no longer settle.
+function _onCrash(e) {
+  const dead = new SqliteUnavailableError('sqlite worker crashed: ' + (e?.message || 'unknown'));
+  for (const [, p] of _pending) { clearTimeout(p.timer); p.reject(dead); }
+  _pending.clear();
+  _worker = null;
+  _ready  = null;
+}
+
 function ensureWorker() {
   if (_worker) return _worker;
-  _worker = new Worker(new URL('./store-worker.js', import.meta.url), { type: 'module' });
-  _worker.onmessage = (ev) => {
-    // rid = request-correlation id, deliberately NOT `id`: an op's payload carries the entity `id`
-    // (put/get/delete), so a bare `id` field would clobber the correlation key and every such op
-    // would hang unmatched. rid namespaces the transport apart from the payload.
-    const { rid, ok, result, err } = ev.data || {};
-    const p = _pending.get(rid);
-    if (!p) return;
-    _pending.delete(rid);
-    clearTimeout(p.timer);
-    if (ok) p.resolve(result);
-    else    p.reject(new SqliteUnavailableError(err || 'sqlite worker error'));
-  };
-  // A worker crash must fail every in-flight op and drop the handle so the next call respawns —
-  // never leave a caller awaiting a promise the dead worker can no longer settle.
-  _worker.onerror = (e) => {
-    const dead = new SqliteUnavailableError('sqlite worker crashed: ' + (e?.message || 'unknown'));
-    for (const [, p] of _pending) { clearTimeout(p.timer); p.reject(dead); }
-    _pending.clear();
-    _worker = null;
-    _ready  = null;
-  };
+  // OPFS sahpool sync-access handles are EXCLUSIVE: one dedicated worker per tab means only the
+  // FIRST tab gets the database — every other tab fails install (NoModificationAllowedError) and
+  // looks like a blank machine (login screen again, views timing out, "đang đồng bộ" forever).
+  // A SharedWorker router (store-router.js) owns the ONE engine worker; all tabs share it.
+  if (typeof SharedWorker === 'function') {
+    try {
+      const sw = new SharedWorker(new URL('./store-router.js', import.meta.url), { type: 'module', name: 'vdg-sqlite' });
+      sw.port.onmessage = _onMessage;
+      sw.port.start();
+      _worker = { post: (m) => sw.port.postMessage(m), close: () => { try { sw.port.close(); } catch { /* port already gone */ } } };
+      return _worker;
+    } catch { /* SharedWorker construction failed — fall through to per-tab worker */ }
+  }
+  const w = new Worker(new URL('./store-worker.js', import.meta.url), { type: 'module' });
+  w.onmessage = _onMessage;
+  w.onerror   = _onCrash;
+  _worker = { post: (m) => w.postMessage(m), close: () => { try { w.terminate(); } catch { /* already gone */ } } };
   return _worker;
 }
 
@@ -63,7 +83,7 @@ function send(op, extra, timeoutMs) {
     }, timeoutMs);
     _pending.set(rid, { resolve, reject, timer });
     // rid first, then op/extra: extra may carry an entity `id` — it must never overwrite `rid`.
-    w.postMessage({ rid, op, ...extra });
+    w.post({ rid, op, ...extra });
   });
 }
 
@@ -103,7 +123,7 @@ export function sqlCountEntities() {
 
 // Drop the worker + memo so the next call respawns (mirrors resetVdgDbMemo).
 export function resetVdgSqliteMemo() {
-  if (_worker) { try { _worker.terminate(); } catch { /* already gone */ } }
+  if (_worker) _worker.close();
   _worker = null;
   _ready  = null;
   for (const [, p] of _pending) { clearTimeout(p.timer); p.reject(new SqliteUnavailableError('sqlite reset')); }
