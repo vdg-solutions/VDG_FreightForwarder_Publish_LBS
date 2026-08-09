@@ -1,6 +1,6 @@
 // F-12-11 — Master CRUD: Carriers
 
-import { isManager } from '../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { openMergeModal, mergeRecords, repointRefs } from '../operators/manager/merge-orchestrator.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { t } from '../i18n/index.js';
@@ -119,7 +119,7 @@ function rowHtml(e, isM) {
 // ── entry point ───────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  const isM  = isManager();
+  const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   let items  = [];
 

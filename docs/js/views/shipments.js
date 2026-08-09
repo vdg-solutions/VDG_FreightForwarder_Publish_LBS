@@ -6,7 +6,7 @@ import { safeAwait } from '../util/safe-await.js';
 import { shipmentLane } from '../util/shipment-lane.js';
 import { t, fmtNumber } from '../i18n/index.js';
 import { agGridLocaleText } from '../i18n/ag-grid-locale.js';
-import { isManager } from '../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { chooseShipmentAffordance, runShipmentAffordance } from '../operators/shipment-void-delete.js';
 
@@ -94,7 +94,7 @@ async function handleRowAffordance(row, api) {
   const result = await runShipmentAffordance({
     repo: window.__vdg_repo,
     shipment: row,
-    isManager: isManager(),
+    isManager: hasRole(ROLE_MANAGER),
     confirm: confirmAffordance,
   });
   if (!result.mutated) return;
@@ -120,7 +120,7 @@ export function buildColumnDefs() {
     { headerName: t(COLUMN_LABEL_KEY.pnl), field: 'pnl', width: 180, cellRenderer: pnlRenderer },
   ];
   // AC-05: only a manager gets the row action column at all.
-  if (isManager()) {
+  if (hasRole(ROLE_MANAGER)) {
     cols.push({
       headerName: '', field: 'actions', width: ACTIONS_COL_WIDTH, sortable: false, filter: false,
       cellRenderer: actionsRenderer,

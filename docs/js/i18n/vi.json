@@ -825,6 +825,8 @@
   "admin.users.title":                "Quản lý người dùng",
   "admin.users.add_button":           "+ Thêm người dùng",
   "admin.users.loading": "Đang tải danh sách người dùng…",
+  "admin.users.roles.hint": "Tick mọi vai trò người này đảm nhận — được chọn nhiều.",
+  "admin.users.error.role_required": "Phải chọn ít nhất một vai trò",
   "admin.users.column.email":         "Email",
   "admin.users.column.display_name":  "Tên hiển thị",
   "admin.users.column.role":          "Vai trò",

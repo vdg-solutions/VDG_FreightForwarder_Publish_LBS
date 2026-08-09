@@ -282,7 +282,8 @@ function _buildUserRecord(existing, email, role, userPrefix, extraRoles = []) {
   return {
     email,
     display_name: existing?.display_name || email,
-    role,
+    role,                                  // legacy readers — roles[0]
+    roles: [role, ...extraRoles].filter(Boolean),
     user_prefix: userPrefix,
     extra_roles: [...extraRoles],
     created_at:  existing?.created_at || new Date().toISOString(),

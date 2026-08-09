@@ -28,7 +28,7 @@ export async function runFirstRunProvision(driveApi, workspaceName) {
 }
 
 // AC-01..07: resolve licence state once, render the single outcome screen on any non-valid
-// state. Enforcement and the screen are identical for every role — no isManager() branch here.
+// state. Enforcement and the screen are identical for every role — no hasRole(ROLE_MANAGER) branch here.
 export async function runLicenseGate({ gate, container }) {
   const state = await resolveLicenseState({ gate });
   if (state.kind === LICENSE_STATE_VALID) return { proceed: true, payload: state.payload };

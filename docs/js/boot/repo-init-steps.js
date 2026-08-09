@@ -5,11 +5,12 @@
 // licence check (reverifyPersistedLicense needs it) — this was a latent hang on the
 // NOT_PROVISIONED branch before F-17-03 reordered it.
 
-import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
+import { currentSalesRepId, currentRoles, emailPrefix, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { safeAwait } from '../util/safe-await.js';
 import { StoreIoPort } from '../data/store-io-adapters.js';
 import { setStoreScope } from '../cache/store-client.js';
 import { resolveUserRole } from '../operators/manager/route-guard.js';
+import { rolesFromRecord } from '../auth/workspace-acl.js';
 import { loadLocale } from '../i18n/index.js';
 import { APP_VERSION } from '../version.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
@@ -114,11 +115,16 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   await safeAwait(rehydrateFsmStates(repo), IDB_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
 
   // 6. Initial user identity (no network, instant)
-  const initialRole = isManager() ? 'Manager' : (currentSalesRepId() || 'ReadOnly');
+  // #28: identity carries the ROLE SET. `role` stays as roles[0] purely so older readers and
+  // existing ledger records keep parsing — nothing gates on it any more.
+  // Every user owns a fork: user_prefix is no longer null-for-managers, so a manager doing sales
+  // work has somewhere to store it. The record's own prefix overrides this below once it loads.
+  const roles = currentRoles();
   window.__vdg_current_user = {
     email:       user.email,
-    role:        initialRole,
-    user_prefix: isManager() ? null : currentSalesRepId(),
+    role:        roles[0] || 'ReadOnly',
+    roles,
+    user_prefix: emailPrefix(user.email),
   };
 
   // 7. License gate — enforced for EVERY role, no branch (AC-01..07).
@@ -241,12 +247,15 @@ async function _deferredInit(user, db, driveApi, repo, store) {
 
     // Resolve actual user role (async, updates window.__vdg_current_user)
     userRepo.get(user.email).then((record) => {
-      window.__vdg_current_user.role        = resolveUserRole(record);
-      window.__vdg_current_user.user_prefix = record?.user_prefix ?? null;
+      const resolved = rolesFromRecord(record);
+      window.__vdg_current_user.roles       = resolved;
+      window.__vdg_current_user.role        = resolved[0] || resolveUserRole(record);
+      // #28: fall back to the email prefix, never null — every user owns a fork.
+      window.__vdg_current_user.user_prefix = record?.user_prefix || emailPrefix(user.email);
     }).catch(() => {});
 
     // Manager-specific background tasks
-    if (isManager()) {
+    if (hasRole(ROLE_MANAGER)) {
       await _deferredManagerInit(user, driveApi, ledgerRepo, userRepo, repo);
     }
   } catch (err) {

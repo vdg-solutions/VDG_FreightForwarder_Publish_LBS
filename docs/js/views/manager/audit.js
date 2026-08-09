@@ -1,6 +1,6 @@
 // Manager Audit Log — F-14-12
 
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { todayLocal } from '../../util/today-local.js';
@@ -209,7 +209,7 @@ function handleExportCsv() {
 // ── render ────────────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
   _gridApi   = null;

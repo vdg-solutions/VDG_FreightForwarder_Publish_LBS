@@ -825,6 +825,8 @@
   "admin.users.title":                "User Management",
   "admin.users.add_button":           "+ Add User",
   "admin.users.loading": "Loading users…",
+  "admin.users.roles.hint": "Tick every role this person holds — more than one is fine.",
+  "admin.users.error.role_required": "Pick at least one role",
   "admin.users.column.email":         "Email",
   "admin.users.column.display_name":  "Display Name",
   "admin.users.column.role":          "Role",

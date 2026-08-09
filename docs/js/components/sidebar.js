@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate } from '../router.js';
-import { isManager } from '../auth/auth-gate.js';
+import { hasRole } from '../auth/auth-gate.js';
 import { t } from '../i18n/index.js';
-import { filterSidebarItems, currentUserRole, normalizeRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
+import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
 import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed,
          toggleCollapsed, isGroupCollapsed, activeGroupKey,
          DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
@@ -24,7 +24,7 @@ const V1_ITEMS = [
   { group: 'sales',     route: '/sales/me/pnl/new',           labelKey: 'nav.sales.create_pnl',       icon: 'tag',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_pnl',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
-  // ReadOnly — the view's own isManager() check then bounced them to /dashboard with no
+  // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
   // explanation. A visible menu item that always fails. Now matches the /manager route-guard
   // prefix (nav-gates KEEP-CONSISTENT-WITH-route-guard).
   { group: 'reports',   route: '/manager/reports/pnl', labelKey: 'nav.reports.pnl_report',     icon: 'dollar', managerOnly: true, allowRoles: [ROLE_MANAGER] },
@@ -38,7 +38,7 @@ const V1_ITEMS = [
   // F-24-04: manager-only user CRUD — same reports group (R-5 minimal change, precedent above)
   { group: 'reports',   route: '/admin/users',         labelKey: 'nav.admin.users',       icon: 'db',  managerOnly: true },
   // Master data — customer list + future master entities. SalesRep is read-only in the
-  // page itself (masters-customers.js gates Add/Edit/Delete behind isManager()), so opening
+  // page itself (masters-customers.js gates Add/Edit/Delete behind hasRole(ROLE_MANAGER)), so opening
   // the nav to Sales just lets them find & browse; it doesn't grant CRUD.
   { group: 'masters',   route: '/masters/customers',   labelKey: 'nav.masters.customers', icon: 'db',  allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   { group: 'masters',   route: '/masters/local-charges',    labelKey: 'nav.masters.local_charges', icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
@@ -182,12 +182,14 @@ class VdgSidebar extends LitElement {
     window.removeEventListener(LOCALE_CHANGE_EVENT,      this._onLocaleChanged);
   }
 
-  // F-24-05: Manager keeps folder-probe isManager() as the source of truth (unchanged);
-  // everyone else reads the admin/users.jsonl role populated at boot.
-  _effectiveRole() {
-    // #15: normalize — boot stamps the rep prefix as role until users.jsonl resolves,
-    // which matched no allowRoles list and hid every gated item from a real rep.
-    return isManager() ? ROLE_MANAGER : normalizeRole(currentUserRole());
+  // #28: the role SET from admin/users.jsonl. A user holding several roles sees the union of
+  // their items — a manager who also does sales gets both menus.
+  _effectiveRoles() {
+    const roles = currentUserRoles();
+    if (roles.length) return roles;
+    // #15 boot window: the rep prefix is stamped as role until users.jsonl resolves, and it
+    // matches no allowRoles list — normalize it so a real rep is not shown an empty menu.
+    return [normalizeRole(currentUserRole())];
   }
 
   _renderItem(item) {
@@ -235,7 +237,7 @@ class VdgSidebar extends LitElement {
       </div>
       <nav class="flex-1 flex flex-col gap-0.5 overflow-y-auto pb-4">
         ${(() => {
-          const visible = filterSidebarItems(V1_ITEMS, this._effectiveRole());
+          const visible = filterSidebarItems(V1_ITEMS, this._effectiveRoles());
           const activeGroup = activeGroupKey(visible, this.activeRoute); // AC-04
           let shown = 0;
           return V1_GROUPS.map((g) => {
@@ -261,7 +263,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 84b8f46">v0.3.18</span>
+        <span class="font-mono whitespace-nowrap" title="build 345df33">v0.3.19</span>
       </div>
     `;
   }
@@ -290,7 +292,7 @@ class VdgSidebar extends LitElement {
 customElements.define('vdg-sidebar', VdgSidebar);
 
 // AC-07 test seam — fixture injection for managerOnly gate verification
-window._vdgSidebarTest = { v1Items: V1_ITEMS, isManager };
+window._vdgSidebarTest = { v1Items: V1_ITEMS, hasRole };
 
 // F-15-46 v2-restore: previous group blocks rendered inside _renderNav (Finance + Manager).
 // Kept verbatim so v2 can re-introduce these groups by unwrapping the comment.
@@ -302,7 +304,7 @@ window._vdgSidebarTest = { v1Items: V1_ITEMS, isManager };
   <div class="px-4 pt-6 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Finance</div>
   ${SECONDARY.map((i) => this._renderItem(i))}
 </div>
-${isManager() ? html`
+${hasRole(ROLE_MANAGER) ? html`
   <div data-nav-group="manager">
     <div class="px-4 pt-6 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Manager</div>
     ${MANAGER_ITEMS.map((i) => this._renderItem(i))}

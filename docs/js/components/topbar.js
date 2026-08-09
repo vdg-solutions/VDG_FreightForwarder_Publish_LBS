@@ -1,7 +1,7 @@
 // Topbar — route title, user avatar, sync chip, SW update banner
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
+import { currentSalesRepId, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
@@ -151,7 +151,7 @@ class VdgTopbar extends LitElement {
   _dismissSwBanner() { sessionStorage.setItem(SW_DISMISS_KEY, '1'); this._swUpdate = false; }
   _handleBellClick() {
     window.dispatchEvent(new CustomEvent('vdg:open-notif-drawer'));
-    navigate(isManager() ? '/manager/notifications' : '/sales/me'); // F-48-01: non-manager has no notif-center route
+    navigate(hasRole(ROLE_MANAGER) ? '/manager/notifications' : '/sales/me'); // F-48-01: non-manager has no notif-center route
   }
   async _handleLocale(locale) {
     await loadLocale(locale);
@@ -214,7 +214,7 @@ class VdgTopbar extends LitElement {
 
   _renderUserMenu(user, salesId) {
     if (!this._menuOpen) return html``;
-    const roleLabel = isManager() ? t('topbar.role.manager') : (salesId || t('topbar.role.sales'));
+    const roleLabel = hasRole(ROLE_MANAGER) ? t('topbar.role.manager') : (salesId || t('topbar.role.sales'));
     return html`
       <div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 z-50 py-1"
            @click="${(e) => e.stopPropagation()}">
@@ -222,7 +222,7 @@ class VdgTopbar extends LitElement {
           <div class="text-xs font-semibold text-slate-900 truncate">${user?.name || '—'}</div>
           <div class="text-[11px] text-slate-500 truncate mt-0.5">${user?.email || ''}</div>
           <div class="mt-1.5 inline-flex px-2 py-0.5 rounded text-[10px] font-medium
-                      ${isManager() ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                      ${hasRole(ROLE_MANAGER) ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
             ${roleLabel}
           </div>
         </div>
@@ -313,8 +313,8 @@ class VdgTopbar extends LitElement {
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
             onSyncNow: () => this._onChipClick(state),
           })}
-          ${isManager() && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}
-          ${isManager() ? '' : html`
+          ${hasRole(ROLE_MANAGER) && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}
+          ${hasRole(ROLE_MANAGER) ? '' : html`
             <button @click="${() => navigate('/sales/quote/new')}"
                     class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1.5 px-3 text-[13px] font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>

@@ -4,7 +4,7 @@ import {
   getCurrentPeriodLock, runPreCloseChecks, closePeriod, reopenPeriod, loadClosedPeriods,
   PERIOD_CLOSE_KIND, REASON_MAX_CHARS,
 } from '../../operators/manager/period-close-orchestrator.js';
-import { isManager }  from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t } from '../../i18n/index.js';
@@ -138,7 +138,7 @@ async function handleExport(period) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   const repo   = getRepo();
   const months = _monthOptions();

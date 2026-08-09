@@ -1,6 +1,6 @@
 // F-15-07 — Error log viewer (/manager/errors)
 
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t }         from '../../i18n/index.js';
@@ -114,7 +114,7 @@ function _showDetail(container, row) {
 // ── render ─────────────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   root.innerHTML = `
     <div class="p-6 max-w-[1400px] mx-auto">

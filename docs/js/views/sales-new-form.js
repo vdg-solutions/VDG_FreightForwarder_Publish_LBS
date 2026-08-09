@@ -23,7 +23,9 @@ export async function renderForm(root, opts = {}) {
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || todayLocal();
-  const isManager = window.__vdg_current_user?.role === 'Manager';
+  // #28: display toggle (which waterfall rows to show), reading the SET the auth gate resolved —
+  // not a single-field string compare, and not an authority gate (route-guard owns those).
+  const isManager = (window.__vdg_current_user?.roles || []).includes('Manager');
   const d = draft ? { ...draft } : {};
   if (!d.sales_rep && salesRepId) d.sales_rep = salesRepId;
 

@@ -4,7 +4,7 @@
 // only aliases/label_vi/label_en are editable, mirrors units-of-measure.js structurally minus
 // the add/delete affordances. Manager-only writers (Q3) also gates the migration trigger below.
 
-import { isManager } from '../../../auth/auth-gate.js';
+import { hasRole } from '../../../auth/auth-gate.js';
 import { currentUserRole, ROLE_MANAGER } from '../../../operators/manager/route-guard.js';
 import { MASTER_REGISTRY } from '../../../data/master-registry.js';
 import { runSeedMigrations } from '../../../cache/seed-migrator.js';
@@ -28,7 +28,7 @@ function escHtml(s) {
 
 // F-18-11 AC-04: registry-driven writer gate — mirrors units-of-measure.js/local-charges.js.
 function canWrite() {
-  const role = isManager() ? ROLE_MANAGER : currentUserRole();
+  const role = hasRole(ROLE_MANAGER) ? ROLE_MANAGER : currentUserRole();
   return MASTER_REGISTRY[KIND].writers.includes(role);
 }
 

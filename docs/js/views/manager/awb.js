@@ -1,7 +1,7 @@
 // AWB admin grid — F-16-02
 // Route: /manager/awb
 
-import { isManager }             from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }              from '../../router.js';
 import { t }                     from '../../i18n/index.js';
 import { AwbDriveRepo }          from '../../implementations/awb-drive-repo.js';
@@ -125,7 +125,7 @@ function renderGrid(container, entries, statusFilter) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   const ym   = new Date().toISOString().slice(0, 7);
   const repo = getRepo();

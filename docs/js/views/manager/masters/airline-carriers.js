@@ -1,7 +1,7 @@
 // Airline Carriers master CRUD grid — F-16-03
 // Route: /masters/airline-carriers
 
-import { isManager } from '../../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../../auth/auth-gate.js';
 import { t }         from '../../../i18n/index.js';
 import {
   validateAirlineIata, validateAirlineIcao, checkIataUnique,
@@ -103,7 +103,7 @@ function rowHtml(e, isM) {
 }
 
 export async function render(root) {
-  const isM  = isManager();
+  const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 

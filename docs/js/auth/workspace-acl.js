@@ -30,6 +30,15 @@ export function latestActiveRecord(lines, email) {
 // Role token for auth-gate's _resolvedRole. Manager keeps the sentinel; everyone else carries
 // their fork prefix — the existing employee contract, which route-guard's normalizeRole maps to
 // a real role once users.jsonl resolves post-boot.
+// #28: the record's ROLE SET. `roles` is the contract going forward; a legacy record carries a
+// single `role`, which reads back as a one-element set so nothing needs migrating. Returned in
+// file order — no primary/secondary ranking, a user simply holds N roles.
+export function rolesFromRecord(record) {
+  if (!record) return [];
+  const raw = Array.isArray(record.roles) ? record.roles : [record.role];
+  return raw.filter((r) => typeof r === 'string' && r.length > 0);
+}
+
 export function roleTokenFromRecord(record, managerId, emailPrefix) {
   if (!record) return null;
   if (record.role === ROLE_MANAGER) return managerId;

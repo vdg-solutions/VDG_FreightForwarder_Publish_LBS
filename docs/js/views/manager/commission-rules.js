@@ -1,4 +1,4 @@
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate } from '../../router.js';
 import { bulkPut } from '../../cache/bulk-orchestrator.js';
 import { t } from '../../i18n/index.js';
@@ -116,7 +116,7 @@ function renderGrid(container) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   await loadData();
 

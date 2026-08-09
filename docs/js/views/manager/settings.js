@@ -3,7 +3,7 @@
 // F-29-11: runtime FX auto-fetch retired. fx_source stays as the default
 // attribution label for a manually entered rate, not a fetch trigger.
 
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
@@ -58,7 +58,7 @@ function settingsFormHtml(settings) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   root.innerHTML = `<div class="p-6 max-w-2xl mx-auto"><div id="settings-mount">${t('loading')}</div></div>`;
   const mount = root.querySelector('#settings-mount');

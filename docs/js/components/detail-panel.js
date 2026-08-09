@@ -2,7 +2,7 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { guardMessage } from '../utils/guard-messages.js';
 import './timeline-entry.js';
 import { renderCommissionTab } from '../views/commission-tab.js';
-import { isManager } from '../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { t } from '../i18n/index.js';
 import { CANCELLED_STATE, chooseShipmentAffordance, runShipmentAffordance } from '../operators/shipment-void-delete.js';
@@ -269,7 +269,7 @@ class VdgDetailPanel extends LitElement {
   // for the same shipment (F-19-77 rework D-1): a published shipment always offers Void here,
   // never Delete.
   _renderVoidDelete(cur) {
-    if (!isManager()) return html``;
+    if (!hasRole(ROLE_MANAGER)) return html``;
     const affordance = chooseShipmentAffordance({ ...this.shipment, state: cur });
     if (affordance === 'none') return html``;
     const label = affordance === 'delete' ? t('common.action.delete') : t('shipments.action.void');
@@ -288,7 +288,7 @@ class VdgDetailPanel extends LitElement {
     const result = await runShipmentAffordance({
       repo: window.__vdg_repo,
       shipment: this.shipment,
-      isManager: isManager(),
+      isManager: hasRole(ROLE_MANAGER),
       confirm: (a) => showConfirm({
         destructive: true,
         title: t(a === 'delete' ? 'shipments.delete_confirm.title' : 'shipments.void_confirm.title'),

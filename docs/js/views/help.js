@@ -1,6 +1,6 @@
 // F-33-01 — In-app user guide, 3 role pages (manager / accountant / sales)
 
-import { isManager } from '../auth/auth-gate.js';
+import { hasRole } from '../auth/auth-gate.js';
 import { currentUserRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
 import { t } from '../i18n/index.js';
 import { mdToHtml } from './help-md.js';
@@ -25,10 +25,10 @@ const TAB_ACTIVE_CLASSES   = ['border-blue-600', 'text-blue-700'];
 const TAB_INACTIVE_CLASSES = ['border-transparent', 'text-slate-500', 'hover:text-slate-700'];
 const TAB_STATE_CLASSES_RE = /border-blue-600 text-blue-700|border-transparent text-slate-500 hover:text-slate-700/g;
 
-// role-correct default: isManager() (Drive-ACL role) wins first, then the boot-snapshot role
+// role-correct default: hasRole(ROLE_MANAGER) (Drive-ACL role) wins first, then the boot-snapshot role
 // (currentUserRole()) — Accountant/SalesRep/anything else falls back to sales.
 function resolveDefaultTab() {
-  if (isManager()) return 'manager';
+  if (hasRole(ROLE_MANAGER)) return 'manager';
   const role = currentUserRole();
   if (role === ROLE_MANAGER) return 'manager';
   if (role === ROLE_ACCOUNTANT) return 'accountant';

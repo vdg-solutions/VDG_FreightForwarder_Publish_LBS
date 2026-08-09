@@ -1,7 +1,7 @@
 // Admin Users view — F-24-04. Manager-only /admin/users: table + filter/search + Add/Edit/
 // Deactivate, wired to UserRepoPort (F-24-02) + RoleAssignmentService (F-24-03).
 
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { filterUsers, sortUsersByEmail } from '../../operators/manager/users-view-composer.js';
@@ -112,7 +112,7 @@ function bindFilterBar(root) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   _filter = { search: '', role: '', activeFilter: '' };
   root.innerHTML = shellHtml();

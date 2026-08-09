@@ -8,7 +8,7 @@
 
 import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
-import { readWorkspaceAcl, roleTokenFromRecord } from './workspace-acl.js';
+import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord } from './workspace-acl.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
@@ -33,8 +33,18 @@ export class RoleProbeTimeoutError extends Error {
   }
 }
 
-// Resolved role for current sign-in session
+// Resolved role token for the current sign-in session (fork id / sentinel — NOT an authority).
 let _resolvedRole = null;
+// #28: the actual authority — the role SET read from admin/users.jsonl. hasRole(ROLE_MANAGER) used to
+// answer "does the Drive probe sentinel equal __MANAGER__", i.e. it inferred authority from
+// which FOLDER the user could see. Permission is read from the ACL record now, and every caller
+// asks hasRole() for the specific role it needs.
+let _resolvedRoles = [];
+
+export const ROLE_MANAGER    = 'Manager';
+export const ROLE_SALES_REP  = 'SalesRep';
+export const ROLE_ACCOUNTANT = 'Accountant';
+export const ROLE_AUDITOR    = 'Auditor';
 
 // ── public helpers ────────────────────────────────────────────────────────────
 
@@ -42,8 +52,32 @@ export function currentSalesRepId() {
   return _resolvedRole;
 }
 
-export function isManager() {
-  return _resolvedRole === MANAGER_ID;
+/// The roles this session holds. Empty until the ACL record resolves — callers gate on a role,
+/// never on emptiness meaning "allow".
+export function currentRoles() {
+  return [..._resolvedRoles];
+}
+
+export function hasRole(role) {
+  return _resolvedRoles.includes(role);
+}
+
+/// Keeps the fork token and the role set in lockstep at every assignment point, so no path can
+/// set one and forget the other. Roles may be supplied explicitly (from the ACL record) or
+/// derived from the token when there is no record to read.
+function _setResolved(token, roles = null) {
+  _resolvedRole  = token;
+  _resolvedRoles = roles ?? _rolesForToken(token);
+  return token;
+}
+
+/// Token -> roles when no users.jsonl record is available. Mirrors route-guard's normalizeRole:
+/// a fork prefix means a provisioned users/{prefix} exists -> SalesRep; the sentinels mean no
+/// fork -> no role at all (ReadOnly is the absence of roles, not a role).
+function _rolesForToken(token) {
+  if (token === MANAGER_ID) return [ROLE_MANAGER];
+  if (!token || token === NOT_PROVISIONED_ID || token === UNKNOWN_ID) return [];
+  return [ROLE_SALES_REP];
 }
 
 export function emailPrefix(email) {
@@ -64,7 +98,7 @@ export async function detectRoleViaDrive(user, options = {}) {
   }
   if (options.force) clearRoleCache();
   const cached = readCachedRole(user.email);
-  if (cached) { _resolvedRole = cached; return cached; }
+  if (cached) { _setResolved(cached); return cached; }
 
   return Promise.race([
     _probeInner(user),
@@ -79,7 +113,7 @@ async function _probeInner(user) {
   // several workspaces in one Drive — F-17-05 multi-workspace case).
   const wsName = activeWorkspaceName();
   if (!wsName) {
-    _resolvedRole = NOT_PROVISIONED_ID;
+    _setResolved(NOT_PROVISIONED_ID);
     return NOT_PROVISIONED_ID;
   }
 
@@ -97,13 +131,14 @@ async function _probeInner(user) {
       if (adminFolder) {
         const acl = await readWorkspaceAcl(adminFolder.id, user.email);
         if (!acl.seeded) {                       // nobody provisioned yet — creator's first run
-          _resolvedRole = MANAGER_ID;
+          _setResolved(MANAGER_ID, [ROLE_MANAGER]);
           writeCachedRole(user.email, MANAGER_ID);
           return MANAGER_ID;
         }
         const role = roleTokenFromRecord(acl.record, MANAGER_ID, prefix);
         if (role) {
-          _resolvedRole = role;
+          // #28: authority comes from the record's role set, not from which token we minted.
+          _setResolved(role, rolesFromRecord(acl.record));
           writeCachedRole(user.email, role);
           return role;
         }
@@ -118,7 +153,7 @@ async function _probeInner(user) {
         const userFolder = await listChildFolder(usersRoot.id, prefix);
         if (userFolder) {
           const role = prefix.toUpperCase();
-          _resolvedRole = role;
+          _setResolved(role);
           writeCachedRole(user.email, role);
           return role;
         }
@@ -131,12 +166,12 @@ async function _probeInner(user) {
   const subfolderId = await findSharedSubfolder(prefix);
   if (subfolderId) {
     const role = prefix.toUpperCase();
-    _resolvedRole = role;
+    _setResolved(role);
     writeCachedRole(user.email, role);
     return role;
   }
 
-  _resolvedRole = NOT_PROVISIONED_ID;
+  _setResolved(NOT_PROVISIONED_ID);
   writeCachedRole(user.email, NOT_PROVISIONED_ID);
   return NOT_PROVISIONED_ID;
 }
@@ -159,7 +194,7 @@ function writeCachedRole(email, role) {
 
 export function clearRoleCache() {
   localStorage.removeItem(ROLE_CACHE_KEY);
-  _resolvedRole = null;
+  _setResolved(null);
 }
 
 // ── auth gate ─────────────────────────────────────────────────────────────────
@@ -228,7 +263,7 @@ export async function requireAuth(onSignedIn) {
     const cachedIdentity = _readCachedIdentityRaw();
     if (cachedIdentity) setStoreScope(cachedIdentity.email); // scope BEFORE the entity count reads it
     if (cachedIdentity && await _hasCachedWorkspace()) {
-      _resolvedRole = cachedIdentity.role; // best-effort — same source detectRoleViaDrive would cache
+      _setResolved(cachedIdentity.role); // best-effort — same source detectRoleViaDrive would cache
       const degradedUser = { email: cachedIdentity.email, name: '', picture: '', sub: '', id_token: null };
       await onSignedIn(degradedUser);
       window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); // token verified dead — true red

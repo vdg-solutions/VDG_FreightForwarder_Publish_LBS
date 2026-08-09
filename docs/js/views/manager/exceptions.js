@@ -1,6 +1,6 @@
 // Manager Exception Command Center — F-14-09
 
-import { isManager }        from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }         from '../../router.js';
 import {
   computeSortedExceptions, computeTrends, computeMttr, computePerSalesRate,
@@ -231,7 +231,7 @@ export function renderTrends(root, exceptions) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) { window.removeEventListener('vdg:entity-changed', _onEntity); _onEntity.cancel?.(); }
   if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
   _selectedIds.clear();

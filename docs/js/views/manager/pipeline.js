@@ -2,7 +2,7 @@
 
 import '../../components/kanban-board.js';
 import { VALID_NEXT } from '../../components/kanban-board.js';
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
@@ -159,7 +159,7 @@ async function saveViewMode(store, mode) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   if (_onEntity)     window.removeEventListener('vdg:entity-changed', _onEntity);
   if (_onFilter)     window.removeEventListener('vdg:filter-changed', _onFilter);

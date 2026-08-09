@@ -2,7 +2,7 @@
 // Route: /masters/units-of-measure
 // Sales-friendly: hiển thị label_vi + aliases; mã ISO 6346 chỉ ở cột phụ mờ.
 
-import { isManager } from '../../../auth/auth-gate.js';
+import { hasRole } from '../../../auth/auth-gate.js';
 import { currentUserRole, ROLE_MANAGER } from '../../../operators/manager/route-guard.js';
 import { MASTER_REGISTRY } from '../../../data/master-registry.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
@@ -39,7 +39,7 @@ function categoryLabels() {
 
 // F-28-08: registry-driven writer gate — mirrors app.js/sidebar.js's effectiveRole pattern.
 function canWrite() {
-  const role = isManager() ? ROLE_MANAGER : currentUserRole();
+  const role = hasRole(ROLE_MANAGER) ? ROLE_MANAGER : currentUserRole();
   return MASTER_REGISTRY[KIND].writers.includes(role);
 }
 

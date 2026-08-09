@@ -1,7 +1,7 @@
 // FX Rates admin grid — F-15-36 / F-29-11 (explicit valid_from/valid_to ranges)
 // Route: /manager/fx-rates
 
-import { isManager }                               from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }                                from '../../router.js';
 import { t }                                       from '../../i18n/index.js';
 import { FxRateDriveRepo }                         from '../../implementations/fx-rate-drive-repo.js';
@@ -142,7 +142,7 @@ function addFormHtml(defaultSource, prefill = {}) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   const repo  = getFxRepo();
   let entries = [], defSrc = 'Manual';

@@ -2,7 +2,7 @@
 
 import '../../components/approval-card.js';
 import { APPROVAL_SLA_HOURS } from '../../components/approval-card.js';
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t }         from '../../i18n/index.js';
@@ -125,7 +125,7 @@ function updateBulkBar(root) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
   _selectedIds.clear();

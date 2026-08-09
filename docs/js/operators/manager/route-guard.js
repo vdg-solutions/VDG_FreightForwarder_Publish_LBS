@@ -18,22 +18,23 @@ const TOAST_DURATION_MS = 4000;
 const REASON_DENIED     = 'nav.access.denied';
 const REASON_REDIRECTED = 'nav.access.redirected';
 
-// Prefix -> allowed roles + toast copy. Checked in order, first match wins.
-// No match => 'allow' (any authenticated user) — matches the F-24-05 route map exactly.
-const ROUTE_ROLE_MAP = [
-  { prefix: '/admin',      roles: [ROLE_MANAGER],                    reason: REASON_DENIED },
+// #28: the route -> roles TABLE moved to Rust (boundary/access_policy.rs). What stays here is the
+// toast copy per guarded area, which is presentation. Keep the prefixes in step with the Rust
+// table — the drift guard in f-28-access-policy.test.mjs fails if they diverge.
+const ROUTE_TOAST_MAP = [
+  { prefix: '/admin', reason: REASON_DENIED },
   // F-57-01: 20 of the 52 routes in app-views.js live under /manager, and the prefix had no
   // entry here at all — `_matchRoute` returned null, which means 'allow' for every signed-in
-  // role. Most manager views compensated with their own `if (!isManager())` bounce, but
+  // role. Most manager views compensated with their own `if (!hasRole(ROLE_MANAGER))` bounce, but
   // /manager/manifest and /manager/air-invoice never did. One line covers all 20 and demotes
   // the per-view checks from sole defence to redundant backstop.
-  { prefix: '/manager',    roles: [ROLE_MANAGER],                    reason: REASON_DENIED },
+  { prefix: '/manager', reason: REASON_DENIED },
   // #15: /dashboard (manager KPI shell) had no entry -> 'allow' for every role, so ReadOnly
   // landed on it and QC read it as "everyone is a manager". Data was already blocked; the
   // shell was not.
-  { prefix: '/dashboard',  roles: [ROLE_MANAGER, ROLE_ACCOUNTANT],   reason: REASON_REDIRECTED },
-  { prefix: '/accounting', roles: [ROLE_ACCOUNTANT, ROLE_MANAGER],    reason: REASON_REDIRECTED },
-  { prefix: '/sales',      roles: [ROLE_SALES_REP, ROLE_MANAGER],     reason: REASON_REDIRECTED },
+  { prefix: '/dashboard', reason: REASON_REDIRECTED },
+  { prefix: '/accounting', reason: REASON_REDIRECTED },
+  { prefix: '/sales', reason: REASON_REDIRECTED },
 ];
 
 // Role -> route to bounce a denied user back to. ReadOnly (and anything unknown) goes to the
@@ -46,21 +47,48 @@ const ROLE_HOME_ROUTE = {
   [ROLE_READ_ONLY]:  '/pending-access',
 };
 const DEFAULT_HOME_ROUTE = '/pending-access';
+const PENDING_ROUTE      = DEFAULT_HOME_ROUTE;
 
 function _matchRoute(route) {
-  return ROUTE_ROLE_MAP.find((e) => route === e.prefix || route.startsWith(e.prefix + '/')) ?? null;
+  return ROUTE_TOAST_MAP.find((e) => route === e.prefix || route.startsWith(e.prefix + '/')) ?? null;
 }
 
-export function homeRouteForRole(role) {
-  return ROLE_HOME_ROUTE[role] || DEFAULT_HOME_ROUTE;
+/** Landing route for a role set — resolved by Rust, DEFAULT_HOME_ROUTE only if wasm is absent. */
+export function homeRouteForRole(roles) {
+  const { homeRoute } = _access();
+  return typeof homeRoute === 'function' ? homeRoute(_rolesCsv(roles)) : DEFAULT_HOME_ROUTE;
 }
 
-/** Pure decision, no side effects. Returns 'allow' or { redirect, reason }. */
-export function routeGuard(route, role) {
+// The wasm access-policy bridge. globalizeBridgeExports puts these on window; __vdg_wasm is the
+// same module object. Absent = wasm not up yet, and boot blocks on that (boot-fsm), so reaching
+// here without it means something is very wrong — deny rather than guess.
+function _access() {
+  const w = typeof window !== 'undefined' ? window : {};
+  return {
+    canRoute:    w.access_can_route    ?? w.__vdg_wasm?.access_can_route,
+    homeRoute:   w.access_home_route   ?? w.__vdg_wasm?.access_home_route,
+    redirectFor: w.access_redirect_for ?? w.__vdg_wasm?.access_redirect_for,
+  };
+}
+
+function _rolesCsv(roles) {
+  return (Array.isArray(roles) ? roles : [roles]).filter(Boolean).join(',');
+}
+
+/** Decision comes from Rust; this only shapes it for the caller.
+ *  `roles` is the user's role SET (a bare string still works — one-element set). */
+export function routeGuard(route, roles) {
+  const { canRoute, redirectFor } = _access();
+  const csv = _rolesCsv(roles);
+  if (typeof canRoute !== 'function') {
+    return { redirect: PENDING_ROUTE, reason: REASON_DENIED }; // no policy engine → no access
+  }
+  if (canRoute(route, csv)) return 'allow';
   const match = _matchRoute(route);
-  if (!match) return 'allow';
-  if (match.roles.includes(role)) return 'allow';
-  return { redirect: homeRouteForRole(role), reason: match.reason };
+  return {
+    redirect: typeof redirectFor === 'function' ? redirectFor(route, csv) : PENDING_ROUTE,
+    reason:   match?.reason ?? REASON_DENIED,
+  };
 }
 
 /** Side-effecting wrapper for app.js::renderView — toast + navigate away.
@@ -79,10 +107,11 @@ export function enforceRouteGuard(route, role) {
 
 /** allowRoles wins when present; managerOnly (legacy, F-23-04/05) falls back to
  *  role === Manager; items with neither are always visible. */
-export function filterSidebarItems(items, role) {
+export function filterSidebarItems(items, roles) {
+  const held = Array.isArray(roles) ? roles : [roles].filter(Boolean);
   return items.filter((item) => {
-    if (item.allowRoles) return item.allowRoles.includes(role);
-    if (item.managerOnly) return role === ROLE_MANAGER;
+    if (item.allowRoles) return item.allowRoles.some((r) => held.includes(r));
+    if (item.managerOnly) return held.includes(ROLE_MANAGER);
     return true;
   });
 }
@@ -91,7 +120,25 @@ export function filterSidebarItems(items, role) {
 
 /** userRecord is whatever UserRepo.get(email) resolved (null when not provisioned yet). */
 export function resolveUserRole(userRecord) {
-  return userRecord?.role || ROLE_READ_ONLY;
+  return resolveUserRoles(userRecord)[0] || ROLE_READ_ONLY;
+}
+
+/** The record's role SET. Parsed by Rust so the shape rule lives in one place; falls back to the
+ *  record's own fields only when wasm is absent (boot blocks before that in practice). */
+export function resolveUserRoles(userRecord) {
+  if (!userRecord) return [];
+  const fn = typeof window !== 'undefined'
+    ? (window.access_roles_from_record ?? window.__vdg_wasm?.access_roles_from_record)
+    : undefined;
+  if (typeof fn === 'function') {
+    return fn(JSON.stringify(userRecord)).split(',').filter(Boolean);
+  }
+  return (Array.isArray(userRecord.roles) ? userRecord.roles : [userRecord.role]).filter(Boolean);
+}
+
+/** Reads the boot-populated snapshot (boot/repo-init-steps.js). */
+export function currentUserRoles() {
+  return window.__vdg_current_user?.roles || [];
 }
 
 // #15: boot stamps the rep PREFIX as role until users.jsonl resolves (repo-init-steps step 6:

@@ -2,7 +2,7 @@
 // admin/user-audit-log.jsonl with date-range filter + CSV export. Wired to UserAuditLog (F-24-06
 // sync/user-audit-log.js), same DI-off-window convention as users-view.js.
 
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../operators/manager/user-audit-log-composer.js';
@@ -90,7 +90,7 @@ function handleExportCsv() {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   _range = { from: '', to: '' };
   root.innerHTML = shellHtml();

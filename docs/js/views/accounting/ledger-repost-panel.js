@@ -1,5 +1,5 @@
 // ledger-repost-panel.js — F-29-24: manager-only stale-ledger repost trigger.
-// Mounted only when isManager() (checked by the caller, ledger-viewer.js) — mirrors
+// Mounted only when hasRole(ROLE_MANAGER) (checked by the caller, ledger-viewer.js) — mirrors
 // views/manager/masters/shipment-states.js's canWrite()-gated migration section.
 
 import { t } from '../../i18n/index.js';

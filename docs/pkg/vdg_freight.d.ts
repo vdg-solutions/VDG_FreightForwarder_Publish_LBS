@@ -64,6 +64,19 @@ export class WasmEntityRepo {
 
 export function __wasm_init(): void;
 
+export function access_can_route(route: string, roles: string): boolean;
+
+export function access_home_route(roles: string): string;
+
+export function access_redirect_for(route: string, roles: string): string;
+
+/**
+ * Roles carried by a users.jsonl record, as the comma-joined wire set. `roles` is the contract;
+ * a legacy record with a single `role` reads back as a one-element set, so nothing needs
+ * migrating. An unparsable record yields an EMPTY set — never a permissive default.
+ */
+export function access_roles_from_record(record_json: string): string;
+
 /**
  * Full air-rate result for the UI: chargeable weight, matched break tier, freight total.
  * `breaks_json` = `[{"min_kg":45,"rate_per_kg":3.5}, ...]`. Returns null when no tier applies.
@@ -314,6 +327,10 @@ export interface InitOutput {
     readonly __wasm_init: () => void;
     readonly __wbg_customerindex_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
+    readonly access_can_route: (a: number, b: number, c: number, d: number) => number;
+    readonly access_home_route: (a: number, b: number, c: number) => void;
+    readonly access_redirect_for: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly access_roles_from_record: (a: number, b: number, c: number) => void;
     readonly air_calc_result: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly apply_fsm_event: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly billing_ledger_drain_writes: (a: number) => void;
@@ -438,8 +455,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10543: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10545: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10568: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10570: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

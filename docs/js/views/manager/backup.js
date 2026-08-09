@@ -1,6 +1,6 @@
 // F-15-09 — Manager Backup / DR view — route /manager/backup
 
-import { isManager }       from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { exportWorkspace } from '../../operators/backup-exporter.js';
 import { t }               from '../../i18n/index.js';
 
@@ -53,7 +53,7 @@ function _html() {
 // ── wiring ────────────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!isManager()) {
+  if (!hasRole(ROLE_MANAGER)) {
     root.innerHTML = `<div class="p-8 text-sm text-slate-500">${t('nav.access.denied')}</div>`;
     return;
   }

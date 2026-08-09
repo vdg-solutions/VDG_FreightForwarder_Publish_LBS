@@ -1,7 +1,7 @@
 // Ocean Carriers master CRUD grid — E-26 F-26-04, mirrors airline-carriers.js
 // Route: /masters/ocean-carriers
 
-import { isManager } from '../../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../../auth/auth-gate.js';
 import { t }         from '../../../i18n/index.js';
 import { validateScac, checkScacUnique } from '../../../util/scac-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
@@ -98,7 +98,7 @@ function rowHtml(e, isM) {
 }
 
 export async function render(root) {
-  const isM  = isManager();
+  const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 

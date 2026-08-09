@@ -7,26 +7,28 @@ export const ROLE_ACCOUNTANT = 'Accountant';
 export const ROLE_AUDITOR    = 'Auditor';
 export const ROLE_VALUES     = [ROLE_MANAGER, ROLE_SALES_REP, ROLE_ACCOUNTANT, ROLE_AUDITOR];
 
-// #24: secondary hats sit alongside the primary role, never inside ROLE_VALUES — the role picker
-// must not offer Pricing as a role. A hat is a checkbox any user can carry on top of any role.
 export const ROLE_PRICING = 'Pricing';
-export const HAT_VALUES   = [ROLE_PRICING];
 
-/// Reads the ticked hats out of a modal. Scoped by the data-hat attribute rather than an id
-/// prefix, so the add and edit modals share one API and neither needs its own id vocabulary.
-export function hatsFromForm(overlay) {
-  return [...overlay.querySelectorAll('input[data-hat]')]
+// #28: roles are a FLAT SET — one person holds as many as the job needs (a manager who also sells;
+// a sales rep who also keeps the rate cards). ROLE_VALUES stays the filter-bar vocabulary;
+// ASSIGNABLE_ROLES is what the add/edit form offers as checkboxes.
+export const ASSIGNABLE_ROLES = [...ROLE_VALUES, ROLE_PRICING];
+
+/// Ticked roles, returned in ASSIGNABLE_ROLES order so the wire format is stable.
+export function rolesFromForm(overlay) {
+  const ticked = new Set([...overlay.querySelectorAll('input[data-role]')]
     .filter((el) => el.checked)
-    .map((el) => el.dataset.hat);
+    .map((el) => el.dataset.role));
+  return ASSIGNABLE_ROLES.filter((r) => ticked.has(r));
 }
 
-/// Hat checkbox markup shared by the add and edit modals.
-export function hatCheckboxesHtml(current = [], labelFor = (h) => h) {
+/// Checkbox list shared by the add and edit modals.
+export function roleCheckboxesHtml(current = [], labelFor = (r) => r) {
   const held = new Set(current || []);
-  return HAT_VALUES.map((h) => `
+  return ASSIGNABLE_ROLES.map((r) => `
     <label class="flex items-center gap-2 text-xs text-slate-600">
-      <input type="checkbox" data-hat="${h}" ${held.has(h) ? 'checked' : ''} class="rounded border-slate-300" />
-      ${labelFor(h)}
+      <input type="checkbox" data-role="${r}" ${held.has(r) ? 'checked' : ''} class="rounded border-slate-300" />
+      ${labelFor(r)}
     </label>`).join('');
 }
 

@@ -19,6 +19,12 @@ export const BRIDGE_EXPORTS = [
   'permission_can_merge',
   'permission_can_push_own_fork',
   'permission_resolve_grants',
+  // #28: route/nav authority — route-guard.js reads these; without globalizing them it falls back
+  // to window.__vdg_wasm and a boot path that skipped the loader would silently deny every route.
+  'access_can_route',
+  'access_home_route',
+  'access_redirect_for',
+  'access_roles_from_record',
   'proposal_propose',
   'proposal_merge',
   'proposal_reject',            // AC-04: reject round-trip needs the global bridge

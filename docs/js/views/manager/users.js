@@ -1,6 +1,6 @@
 // F-15-15 — Sales user management (/manager/users)
 
-import { isManager }     from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }      from '../../router.js';
 import {
   inviteSales, promoteToManager, disableUser, editProfile,
@@ -246,7 +246,7 @@ async function _renderRootSharingWarning(root) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   root.innerHTML = `
     <div class="p-6 max-w-[1400px] mx-auto space-y-4">

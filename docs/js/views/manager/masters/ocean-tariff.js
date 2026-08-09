@@ -5,7 +5,7 @@
 // Mirrors ocean-carriers.js's read-focused grid shape (no propose/merge panel here — that
 // contract is already exercised generically by priced-ref-repo.test.mjs).
 
-import { isManager } from '../../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../../auth/auth-gate.js';
 import { t }         from '../../../i18n/index.js';
 import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../util/master-load.js';
 
@@ -88,7 +88,7 @@ function rowHtml(row, carrierName, record) {
 }
 
 export async function render(root) {
-  const isM        = isManager();
+  const isM        = hasRole(ROLE_MANAGER);
   const repo       = window.__vdg_repo;
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
 

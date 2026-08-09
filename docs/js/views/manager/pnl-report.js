@@ -3,7 +3,7 @@
 import '../../components/pivot-table.js';
 import { compose, composeBuySellBreakdown, dimsMatch, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../operators/manager/pnl-composer.js';
 import { composeAir, AIR_DEFAULT_DIMS }     from '../../operators/manager/air-pnl-composer.js';
-import { isManager }                        from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }                         from '../../router.js';
 import { t }                                from '../../i18n/index.js';
 import { kindI18nLabel }                     from '../../util/kind-i18n.js';
@@ -224,7 +224,7 @@ async function exportExcel() {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   if (_onPivotClick) window.removeEventListener('vdg:pivot-cell-click', _onPivotClick);
   if (_onPivotDims)  window.removeEventListener('vdg:pivot-dims-changed', _onPivotDims);

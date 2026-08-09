@@ -8,7 +8,7 @@
 
 import { t } from '../../i18n/index.js';
 import {
-  ROLE_VALUES, ROLE_SALES_REP, ROLE_PRICING, deriveUserPrefix, isValidEmail, hatsFromForm, hatCheckboxesHtml,
+  deriveUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml,
 } from '../../operators/manager/users-view-composer.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
 
@@ -17,9 +17,9 @@ const ROLE_LABEL_KEYS = {
   SalesRep:   'admin.users.role.sales_rep',
   Accountant: 'admin.users.role.accountant',
   Auditor:    'admin.users.role.auditor',
+  Pricing:    'admin.users.hat.pricing',
 };
 
-const HAT_LABEL_KEYS = { [ROLE_PRICING]: 'admin.users.hat.pricing' };
 
 function getUserRepo()   { return window.__vdg_user_repo; }
 function getRoleService() { return window.__vdg_role_assignment_service; }
@@ -29,11 +29,6 @@ function showError(overlay, message) {
   const err = overlay.querySelector('#add-err');
   err.textContent = message;
   err.classList.remove('hidden');
-}
-
-function togglePrefixField(overlay) {
-  const role = overlay.querySelector('#add-role').value;
-  overlay.querySelector('#add-prefix-wrap').classList.toggle('hidden', role !== ROLE_SALES_REP);
 }
 
 /// AC-03: submit -> (SalesRep only) ensure Drive folder exists -> assignRole -> refresh.
@@ -49,17 +44,13 @@ export function openAddUserModal({ onAdded } = {}) {
                  class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
         <label class="block text-xs text-slate-600">${t('admin.users.column.display_name')}
           <input id="add-name" class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
-        <label class="block text-xs text-slate-600">${t('admin.users.column.role')}
-          <select id="add-role" class="mt-1 w-full border rounded px-3 py-1.5 text-xs">
-            ${ROLE_VALUES.map((r) => `<option value="${r}">${t(ROLE_LABEL_KEYS[r])}</option>`).join('')}
-          </select></label>
-        <label id="add-prefix-wrap" class="block text-xs text-slate-600 hidden">${t('admin.users.column.user_prefix')}
-          <input id="add-prefix" class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
-        <div id="add-hats" class="pt-1 border-t border-slate-100 space-y-1">
-          <div class="text-xs font-medium text-slate-700">${t('admin.users.hats.title')}</div>
-          <div class="text-[11px] text-slate-400">${t('admin.users.hats.hint')}</div>
-          ${hatCheckboxesHtml([], (h) => t(HAT_LABEL_KEYS[h]))}
+        <div class="space-y-1">
+          <div class="text-xs font-medium text-slate-700">${t('admin.users.column.role')}</div>
+          <div class="text-[11px] text-slate-400">${t('admin.users.roles.hint')}</div>
+          ${roleCheckboxesHtml([], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
+        <label id="add-prefix-wrap" class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
+          <input id="add-prefix" class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
       </div>
       <div id="add-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -78,7 +69,6 @@ export function openAddUserModal({ onAdded } = {}) {
     if (!prefixTouched) prefixInput.value = deriveUserPrefix(emailInput.value);
   });
 
-  overlay.querySelector('#add-role').addEventListener('change', () => togglePrefixField(overlay));
   overlay.querySelector('#add-cancel').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#add-submit').addEventListener('click', () => _onSubmit(overlay, onAdded));
 }
@@ -86,14 +76,17 @@ export function openAddUserModal({ onAdded } = {}) {
 async function _onSubmit(overlay, onAdded) {
   const email = overlay.querySelector('#add-email').value.trim();
   const name  = overlay.querySelector('#add-name').value.trim();
-  const role  = overlay.querySelector('#add-role').value;
+  const roles = rolesFromForm(overlay);
+  const role  = roles[0] || '';
   const prefixRaw = overlay.querySelector('#add-prefix').value.trim();
 
   if (!email) return showError(overlay, t('admin.users.error.email_required'));
   if (!isValidEmail(email)) return showError(overlay, t('admin.users.error.email_invalid'));
   if (!name) return showError(overlay, t('admin.users.error.name_required'));
 
-  const userPrefix = role === ROLE_SALES_REP ? (prefixRaw || deriveUserPrefix(email)) : null;
+  if (!roles.length) return showError(overlay, t('admin.users.error.role_required'));
+  // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
+  const userPrefix = prefixRaw || deriveUserPrefix(email);
   const roleService = getRoleService();
   const driveApi     = getDriveApi();
   const userRepo     = getUserRepo();
@@ -106,21 +99,22 @@ async function _onSubmit(overlay, onAdded) {
     // Record display_name up front so assignRole's own upsert (which defaults display_name to
     // the existing record) reproduces it verbatim instead of overwriting with the email.
     await userRepo.upsert({
-      email, display_name: name, role, user_prefix: userPrefix,
+      email, display_name: name, role, roles, user_prefix: userPrefix,
       active: true, created_at: new Date().toISOString(),
     });
 
     try {
       // F-24-07 partial: create the ACL folder first — assignRole's resolvePathToFolderId
-      // throws if users/{user_prefix} doesn't exist yet for a brand-new SalesRep.
-      if (role === ROLE_SALES_REP && userPrefix) {
+      // throws if users/{user_prefix} doesn't exist yet. #28: every user owns a fork now, so this
+      // runs for every role, not only SalesRep.
+      if (userPrefix) {
         const wsRoot = await driveApi.findWorkspaceRoot(activeWorkspaceName());
         if (!wsRoot) throw new Error('Workspace root not found');
         await driveApi.getOrCreateFolderPath(wsRoot, `users/${userPrefix}`);
       }
       // Returns { user, skipped } — skipped = ACL folders drive.file couldn't grant because
       // they hold non-app-created files (appNotAuthorizedToChild). Non-fatal; surfaced below.
-      const assignResult = await roleService.assignRole(email, role, userPrefix, hatsFromForm(overlay));
+      const assignResult = await roleService.assignRole(email, role, userPrefix, roles.slice(1));
       assignSkipped = assignResult?.skipped || [];
     } catch (err) {
       // F-24-08 D-03: assignRole failed after the user record was upserted above — soft-delete

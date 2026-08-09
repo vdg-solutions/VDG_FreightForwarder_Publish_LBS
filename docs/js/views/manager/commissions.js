@@ -1,7 +1,7 @@
 // Manager Commission Settlement — F-14-08
 
 import '../../components/commission-slip.js';
-import { isManager }          from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { renderSuggestionsBanner } from './commission/suggestions-banner.js';
 import { t }                  from '../../i18n/index.js';
 import { navigate }           from '../../router.js';
@@ -131,7 +131,7 @@ async function loadData() {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
 
   // Pre-select period from URL param

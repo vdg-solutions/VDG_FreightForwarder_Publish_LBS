@@ -5,7 +5,7 @@ import {
   AR_CURRENT_DAYS, AR_BUCKET_31_60, AR_BUCKET_61_90,
   CREDIT_UTILIZATION_WARN_PCT, CREDIT_UTILIZATION_EXCEEDED_PCT,
 } from '../../operators/manager/ar-composer.js';
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t } from '../../i18n/index.js';
 import { agGridLocaleText } from '../../i18n/ag-grid-locale.js';
@@ -231,7 +231,7 @@ async function showCreditAlert(root, customerName, newState) {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
 
   try {

@@ -37,7 +37,7 @@ export async function deleteShipment(repo, shipment) {
   return ref;
 }
 
-// AC-05/06 — gated orchestrator. View injects isManager() result + a confirm thunk so the whole
+// AC-05/06 — gated orchestrator. View injects hasRole(ROLE_MANAGER) result + a confirm thunk so the whole
 // gate→confirm→repo seam is integ-testable without DOM. Reuses the real isManager/showConfirm.
 export async function runShipmentAffordance({ repo, shipment, isManager, confirm }) {
   if (!isManager) return { mutated: false, reason: 'not-manager' };        // AC-05

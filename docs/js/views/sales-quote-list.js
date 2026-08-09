@@ -1,6 +1,6 @@
 // F-12-10 — Quotation list view (all states, role-filtered)
 
-import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
+import { currentSalesRepId, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../operators/quote-orchestrator.js';
 import { navigate } from '../router.js';
 import { t } from '../i18n/index.js';
@@ -103,7 +103,7 @@ async function handleActions(e, root, repo) {
     const updated = await sendToCustomer(repo, quote);
     Object.assign(quote, updated);
     root.querySelector(`tr[data-qid="${id}"] .converted-cell`).innerHTML =
-      actionCell(updated, effectiveState(updated), isManager());
+      actionCell(updated, effectiveState(updated), hasRole(ROLE_MANAGER));
     root.querySelector(`tr[data-qid="${id}"] td:nth-child(5)`).innerHTML =
       stateBadge(effectiveState(updated));
   }
@@ -112,7 +112,7 @@ async function handleActions(e, root, repo) {
     const updated = await markAccepted(repo, quote);
     Object.assign(quote, updated);
     root.querySelector(`tr[data-qid="${id}"] .converted-cell`).innerHTML =
-      actionCell(updated, effectiveState(updated), isManager());
+      actionCell(updated, effectiveState(updated), hasRole(ROLE_MANAGER));
     root.querySelector(`tr[data-qid="${id}"] td:nth-child(5)`).innerHTML =
       stateBadge(effectiveState(updated));
   }
@@ -136,7 +136,7 @@ async function handleActions(e, root, repo) {
 
 export async function render(root) {
   const salesId = currentSalesRepId();
-  const isM = isManager();
+  const isM = hasRole(ROLE_MANAGER);
 
   root.innerHTML = `
     <div class="p-6 max-w-[1200px] mx-auto">

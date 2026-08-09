@@ -1,7 +1,7 @@
 // Manager Master Data Management — F-14-10
 
 import '../../components/dup-wizard.js';
-import { isManager }      from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }       from '../../router.js';
 import { findMatch }      from '../../operators/master-deduper.js';
 import { showConfirm }    from '../../helpers/show-confirm.js';
@@ -295,7 +295,7 @@ async function renderCarriersMaster(root) {
 }
 
 export async function render(root, param) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
 
   const route = param?.route || location.hash.slice(1);

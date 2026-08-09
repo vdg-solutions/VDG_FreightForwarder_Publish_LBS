@@ -12,8 +12,8 @@ import './components/orphan-folder-banner-element.js';
 import './components/cmd-palette.js';
 import { initRouter, navigate } from './router.js';
 // WASM is loaded in boot/repo-init-steps.js critical path (before bootApp)
-import { requireAuth, currentSalesRepId, isManager } from './auth/auth-gate.js';
-import { enforceRouteGuard, currentUserRole, normalizeRole, homeRouteForRole, ROLE_MANAGER } from './operators/manager/route-guard.js';
+import { requireAuth, currentSalesRepId, hasRole, ROLE_MANAGER } from './auth/auth-gate.js';
+import { enforceRouteGuard, currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from './operators/manager/route-guard.js';
 import { initGoogleSignIn, requestDriveScopeGrant } from './auth/google-oauth.js';
 import { renderDriveAccessGateScreen, DRIVE_ACCESS_REASON_SCOPE, DRIVE_ACCESS_REASON_PERMISSION, DRIVE_ACCESS_REASON_TRANSIENT }
   from './views/auth/drive-access-gate-screen.js';
@@ -65,7 +65,10 @@ async function renderView(route) {
   // F-24-05: role gate before any view dispatch — admin/accounting/sales prefixes
   // redirect roles that don't belong there (toast + navigate, real ACL is Drive-side).
   // #15: normalize — boot stamps the rep prefix as role until users.jsonl resolves.
-  const effectiveRole = isManager() ? ROLE_MANAGER : normalizeRole(currentUserRole());
+  // #28: the guard takes the whole SET. Boot window (users.jsonl not resolved yet) falls back to
+  // the normalized single role so a real rep is not bounced on every cold start.
+  const roles = currentUserRoles();
+  const effectiveRole = roles.length ? roles : [normalizeRole(currentUserRole())];
   if (enforceRouteGuard(route, effectiveRole)) return;
 
   const printMatch = PRINT_ROUTE_RE.exec(route);
@@ -214,9 +217,9 @@ export function bootApp(user, db) {
   // #15: non-manager without a rep fork boots straight to their role home (pending-access for
   // ReadOnly) instead of the old blanket '/dashboard' — the guard would bounce them anyway,
   // this just skips the denial toast on every cold boot.
-  const defaultRoute = !isManager() && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER'
+  const defaultRoute = !hasRole(ROLE_MANAGER) && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER'
     ? '/sales/me/pnl/new'
-    : (isManager() ? DEFAULT_ROUTE : homeRouteForRole(normalizeRole(currentUserRole())));
+    : homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);
 
   // WASM already initialized in repo-init-steps.js critical path

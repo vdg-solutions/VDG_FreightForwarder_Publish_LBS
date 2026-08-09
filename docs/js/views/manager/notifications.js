@@ -1,7 +1,7 @@
 // Manager Notifications Center — F-14-14
 
 import { NOTIFICATION_TYPES } from '../../operators/manager/notification-composer.js';
-import { isManager }  from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }   from '../../router.js';
 import { t } from '../../i18n/index.js';
 
@@ -117,7 +117,7 @@ function renderNotifList(container) {
 // ── main render ───────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   if (_onEntity)     window.removeEventListener('vdg:entity-changed', _onEntity);
   if (_onOpenDrawer) window.removeEventListener('vdg:open-notif-drawer', _onOpenDrawer);

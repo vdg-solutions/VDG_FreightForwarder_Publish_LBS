@@ -1,7 +1,7 @@
 // Manager Dashboard — F-14-01
 
 import { compose, LAYOUT_DEBOUNCE_MS, ACTIVITY_FEED_MAX, TOP_CUSTOMERS_MAX } from '../../operators/manager/dashboard-composer.js';
-import { isManager } from '../../auth/auth-gate.js';
+import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate } from '../../router.js';
 import { getActiveSalesReps } from '../../operators/sales-registry.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
@@ -195,7 +195,7 @@ async function _buildSalesBtns() {
 }
 
 export async function render(root) {
-  if (!isManager()) { navigate('/dashboard'); return; }
+  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   destroyCharts();
   if (_onEntityChanged) window.removeEventListener('vdg:entity-changed', _onEntityChanged);

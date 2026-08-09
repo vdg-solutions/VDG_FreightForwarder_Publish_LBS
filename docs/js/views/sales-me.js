@@ -1,7 +1,7 @@
 // F-12-09 — Sales personal workspace (daily driver)
 // Identity: Google OAuth verified — no self-pick modal
 
-import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
+import { currentSalesRepId, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
 import { dueSoonHtml } from './sales-me-due-soon.js';
 import { t, currentLocale } from '../i18n/index.js';
@@ -32,7 +32,7 @@ function mtdFilter(s) {
 }
 
 function roleBadgeHtml(salesId) {
-  const isM  = isManager();
+  const isM  = hasRole(ROLE_MANAGER);
   const cls  = isM
     ? 'bg-purple-100 text-purple-700 border-purple-200'
     : 'bg-blue-100 text-blue-700 border-blue-200';
