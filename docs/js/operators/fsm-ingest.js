@@ -10,6 +10,9 @@ import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
 // never ran" and from a genuine register_entity bridge failure below.
 const UNRESOLVED_STATE_TAG = '[fsm-ingest] unresolved-state';
 
+const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
+const KIND_SHIPMENT        = 'shipment';
+
 export async function registerFsmEntity(ref, state) {
   if (!ref || !state) return;
   const fn = typeof window !== 'undefined' ? window.register_entity : undefined;
@@ -44,5 +47,15 @@ export async function rehydrateFsmStates(repo) {
 export async function persistAdvancedState(repo, ref, newState) {
   if (!repo || !ref || !newState) return;
   const rec = await repo.get('shipment', ref).catch(() => null);
-  if (rec && rec.state !== newState) await repo.put('shipment', ref, { ...rec, state: newState });
+  if (rec && rec.state !== newState) {
+    await repo.put('shipment', ref, { ...rec, state: newState });
+    // #27: repo.put does not announce anything — every other writer dispatches this itself
+    // (bulk-orchestrator, period-close-orchestrator). This path did not, so closing a file left
+    // the list showing the old status until the user pressed F5 (QC 2026-08-09: "reload lại có").
+    // Same guard style as registerFsmEntity: probe the FUNCTION, not the object — node:test
+    // supplies a partial `window` stub with no event target on it.
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent(ENTITY_CHANGED_EVENT, { detail: { kind: KIND_SHIPMENT } }));
+    }
+  }
 }

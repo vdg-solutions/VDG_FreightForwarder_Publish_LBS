@@ -206,10 +206,15 @@ export async function loadRealData() {
   return allShipments;
 }
 
-let _onLocale; // module-level, mirrors pnl-report.js's teardown-then-attach handle
+const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
+const KIND_SHIPMENT        = 'shipment';
+
+let _onLocale;        // module-level, mirrors pnl-report.js's teardown-then-attach handle
+let _onEntityChanged; // #27 — same teardown-then-attach discipline, or renders stack up per visit
 
 export async function render(root) {
   if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
+  if (_onEntityChanged) window.removeEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
 
   const isLarge = location.hash.includes('large=1');
 
@@ -286,4 +291,13 @@ export async function render(root) {
     if (liveRoot) render(liveRoot);
   };
   window.addEventListener('vdg:locale-changed', _onLocale);
+
+  // #27: a status transition (closing a file) writes through the repo and announces
+  // vdg:entity-changed. Without this the list kept the old status until a manual reload.
+  _onEntityChanged = (e) => {
+    if (e?.detail?.kind && e.detail.kind !== KIND_SHIPMENT) return;
+    const liveRoot = document.getElementById('view-root');
+    if (liveRoot) render(liveRoot);
+  };
+  window.addEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
 }
