@@ -824,6 +824,7 @@
   "nav.admin.users":                  "User Management",
   "admin.users.title":                "User Management",
   "admin.users.add_button":           "+ Add User",
+  "admin.users.loading": "Loading users…",
   "admin.users.column.email":         "Email",
   "admin.users.column.display_name":  "Display Name",
   "admin.users.column.role":          "Role",

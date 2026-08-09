@@ -11,6 +11,8 @@ const ROLE_LABEL_KEYS = {
   Auditor:    'admin.users.role.auditor',
 };
 
+const SKELETON_ROWS = 4;
+
 function roleLabel(role) { return t(ROLE_LABEL_KEYS[role] || role); }
 
 // #24: hats ride next to the primary role so the grid answers "who keeps the rate cards?"
@@ -53,6 +55,19 @@ export function filterBarHtml(filter) {
 
 /// AC-02: renders one row per user. AC-05: Deactivate hidden once already inactive (no
 /// reactivate flow in this feature's scope).
+/// #26: shown while repo-init's deferred step is still wiring the user repo. Without it the grid
+/// paints its empty state ("—", 0 / 0) for the whole boot, which reads as "the users are gone"
+/// rather than "not loaded yet". Mirrors the audit/dashboard skeleton convention.
+export function renderUsersSkeleton(container) {
+  if (!container) return;
+  container.innerHTML = `
+    <div aria-busy="true" aria-live="polite" aria-label="${t('admin.users.loading')}">
+      <div class="h-10 bg-slate-200 animate-pulse rounded-t-lg"></div>
+      ${Array.from({ length: SKELETON_ROWS }, () => '<div class="h-9 mt-px bg-slate-100 animate-pulse"></div>').join('')}
+      <div class="h-9 mt-px bg-slate-100 animate-pulse rounded-b-lg"></div>
+    </div>`;
+}
+
 export function renderUsersTable(container, users) {
   if (!users.length) {
     container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 border border-slate-200 rounded-lg">—</div>`;

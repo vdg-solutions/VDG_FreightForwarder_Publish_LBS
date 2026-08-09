@@ -5,7 +5,7 @@ import { isManager } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { filterUsers, sortUsersByEmail } from '../../operators/manager/users-view-composer.js';
-import { filterBarHtml, renderUsersTable, bindRowActions } from './users-list.js';
+import { filterBarHtml, renderUsersTable, renderUsersSkeleton, bindRowActions } from './users-list.js';
 import { openAddUserModal }  from './user-add-modal.js';
 import { openEditUserModal } from './user-edit-modal.js';
 import { showConfirm }       from '../../helpers/show-confirm.js';
@@ -63,7 +63,9 @@ async function _reload(root) {
     // until the route was re-entered by hand (QC 2026-08-09: "0 / 0" on a workspace with 6 users).
     window.addEventListener(USER_REPO_READY_EVENT, () => { if (root.isConnected) _reload(root); }, { once: true });
     _allUsers = [];
-    _applyAndRender(root);
+    renderUsersSkeleton(root.querySelector('#usr-table-wrap'));
+    const countEl = root.querySelector('#usr-count');
+    if (countEl) countEl.textContent = ''; // "0 / 0" while loading reads as an empty workspace
     return;
   }
   _allUsers = sortUsersByEmail(await repo.listAll());

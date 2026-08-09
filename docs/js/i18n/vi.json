@@ -824,6 +824,7 @@
   "nav.admin.users":                  "Quản lý người dùng",
   "admin.users.title":                "Quản lý người dùng",
   "admin.users.add_button":           "+ Thêm người dùng",
+  "admin.users.loading": "Đang tải danh sách người dùng…",
   "admin.users.column.email":         "Email",
   "admin.users.column.display_name":  "Tên hiển thị",
   "admin.users.column.role":          "Vai trò",
