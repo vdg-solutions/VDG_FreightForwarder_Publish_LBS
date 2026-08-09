@@ -7,6 +7,29 @@ export const ROLE_ACCOUNTANT = 'Accountant';
 export const ROLE_AUDITOR    = 'Auditor';
 export const ROLE_VALUES     = [ROLE_MANAGER, ROLE_SALES_REP, ROLE_ACCOUNTANT, ROLE_AUDITOR];
 
+// #24: secondary hats sit alongside the primary role, never inside ROLE_VALUES — the role picker
+// must not offer Pricing as a role. A hat is a checkbox any user can carry on top of any role.
+export const ROLE_PRICING = 'Pricing';
+export const HAT_VALUES   = [ROLE_PRICING];
+
+/// Reads the ticked hats out of a modal. Scoped by the data-hat attribute rather than an id
+/// prefix, so the add and edit modals share one API and neither needs its own id vocabulary.
+export function hatsFromForm(overlay) {
+  return [...overlay.querySelectorAll('input[data-hat]')]
+    .filter((el) => el.checked)
+    .map((el) => el.dataset.hat);
+}
+
+/// Hat checkbox markup shared by the add and edit modals.
+export function hatCheckboxesHtml(current = [], labelFor = (h) => h) {
+  const held = new Set(current || []);
+  return HAT_VALUES.map((h) => `
+    <label class="flex items-center gap-2 text-xs text-slate-600">
+      <input type="checkbox" data-hat="${h}" ${held.has(h) ? 'checked' : ''} class="rounded border-slate-300" />
+      ${labelFor(h)}
+    </label>`).join('');
+}
+
 const STATUS_FILTER_ACTIVE   = 'active';
 const STATUS_FILTER_INACTIVE = 'inactive';
 const EMAIL_REGEX            = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

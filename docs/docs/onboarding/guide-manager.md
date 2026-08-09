@@ -18,6 +18,24 @@ Khi gán vai trò, quyền truy cập Drive được cấp tự động cho đú
 
 ![Gán vai trò cho nhân viên khi mời](/docs/onboarding/img/e33-manager-02-role-assign.png)
 
+### Quyền bổ sung — "Giá cước"
+
+Ngoài vai trò chính, mỗi nhân viên có thể được gán thêm **quyền bổ sung**. Hiện có một quyền:
+**Giá cước**.
+
+- Ai giữ quyền Giá cước mới sửa được **biểu cước hàng không (air-rates)**, **phụ phí địa phương
+  (local-charges)** và **biểu cước đường biển (ocean-tariff)**.
+- Gán được cho **bất kỳ ai**, không phụ thuộc vai trò chính: một bạn Sales vẫn có thể là người giữ
+  biểu cước. Bật ô **Giá cước** trong modal thêm/sửa người dùng là xong.
+- Trong danh sách người dùng, người có quyền này hiện một nhãn vàng **Giá cước** cạnh vai trò.
+- **Quản lý không mặc định có quyền này.** Quản lý phân quyền và xem được mọi thứ, nhưng muốn tự sửa
+  biểu cước thì phải tự gán quyền Giá cước cho mình. Đây là chủ ý: giá cước sai một dòng là sai mọi
+  báo giá, nên việc sửa nó thuộc về người được giao đích danh.
+- Tương tự, **Kế toán** giữ khách hàng, tỷ giá và sổ kế toán; Quản lý cũng không sửa trực tiếp ba
+  mục này trong app.
+
+Muốn thu quyền lại thì bỏ tick ô đó rồi lưu — app gỡ quyền ghi trên Drive ngay trong lần lưu ấy.
+
 ---
 
 ## 2. Biểu hoa hồng (Commission)

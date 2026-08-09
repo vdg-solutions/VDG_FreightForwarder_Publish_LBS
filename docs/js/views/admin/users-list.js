@@ -13,6 +13,14 @@ const ROLE_LABEL_KEYS = {
 
 function roleLabel(role) { return t(ROLE_LABEL_KEYS[role] || role); }
 
+// #24: hats ride next to the primary role so the grid answers "who keeps the rate cards?"
+const HAT_LABEL_KEYS = { Pricing: 'admin.users.hat.pricing' };
+function hatBadges(user) {
+  return (user.extra_roles || [])
+    .map((h) => `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">${t(HAT_LABEL_KEYS[h] || h)}</span>`)
+    .join('');
+}
+
 function fmtDate(iso) {
   if (!iso) return '—';
   return iso.slice(0, 10);
@@ -55,7 +63,7 @@ export function renderUsersTable(container, users) {
     <tr class="border-t border-slate-100 text-xs" data-user-email="${u.email}">
       <td class="px-3 py-2">${u.email}</td>
       <td class="px-3 py-2">${u.display_name || ''}</td>
-      <td class="px-3 py-2">${roleLabel(u.role)}</td>
+      <td class="px-3 py-2">${roleLabel(u.role)}${hatBadges(u)}</td>
       <td class="px-3 py-2">${u.user_prefix || '—'}</td>
       <td class="px-3 py-2">${activeBadge(u.active)}</td>
       <td class="px-3 py-2">${fmtDate(u.last_active)}</td>

@@ -5,7 +5,7 @@
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
 import { t } from '../../i18n/index.js';
-import { ROLE_VALUES, ROLE_SALES_REP, deriveUserPrefix } from '../../operators/manager/users-view-composer.js';
+import { ROLE_VALUES, ROLE_SALES_REP, ROLE_PRICING, deriveUserPrefix, hatsFromForm, hatCheckboxesHtml } from '../../operators/manager/users-view-composer.js';
 
 const ROLE_LABEL_KEYS = {
   Manager:    'admin.users.role.manager',
@@ -13,6 +13,8 @@ const ROLE_LABEL_KEYS = {
   Accountant: 'admin.users.role.accountant',
   Auditor:    'admin.users.role.auditor',
 };
+
+const HAT_LABEL_KEYS = { [ROLE_PRICING]: 'admin.users.hat.pricing' };
 
 function getUserRepo()    { return window.__vdg_user_repo; }
 function getRoleService() { return window.__vdg_role_assignment_service; }
@@ -47,6 +49,11 @@ export function openEditUserModal(user, { onSaved } = {}) {
         <label id="edit-prefix-wrap" class="block text-xs text-slate-600 ${user.role === ROLE_SALES_REP ? '' : 'hidden'}">${t('admin.users.column.user_prefix')}
           <input id="edit-prefix" value="${user.user_prefix || ''}"
                  class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
+        <div id="edit-hats" class="pt-1 border-t border-slate-100 space-y-1">
+          <div class="text-xs font-medium text-slate-700">${t('admin.users.hats.title')}</div>
+          <div class="text-[11px] text-slate-400">${t('admin.users.hats.hint')}</div>
+          ${hatCheckboxesHtml(user.extra_roles, (h) => t(HAT_LABEL_KEYS[h]))}
+        </div>
       </div>
       <div id="edit-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -67,6 +74,7 @@ async function _onSubmit(overlay, user, onSaved) {
   const newRole   = overlay.querySelector('#edit-role').value;
   const prefixRaw = overlay.querySelector('#edit-prefix').value.trim();
   const newPrefix = newRole === ROLE_SALES_REP ? (prefixRaw || deriveUserPrefix(user.email)) : null;
+  const newHats   = hatsFromForm(overlay);
 
   if (!newName) return showError(overlay, t('admin.users.error.name_required'));
 
@@ -74,7 +82,8 @@ async function _onSubmit(overlay, user, onSaved) {
   const userRepo     = getUserRepo();
   if (!roleService || !userRepo) return showError(overlay, 'Workspace not ready');
 
-  const roleChanged = newRole !== user.role || newPrefix !== (user.user_prefix || null);
+  const oldHats     = (user.extra_roles || []).join(',');
+  const roleChanged = newRole !== user.role || newPrefix !== (user.user_prefix || null) || newHats.join(',') !== oldHats;
   const nameChanged = newName !== (user.display_name || '');
 
   const submitBtn = overlay.querySelector('#edit-submit');
@@ -84,13 +93,13 @@ async function _onSubmit(overlay, user, onSaved) {
     if (roleChanged) {
       // changeRole returns { skipped } — ACL folders drive.file couldn't grant (they hold
       // non-app-created files). Non-fatal; surfaced below.
-      const changeResult = await roleService.changeRole(user, newRole, newPrefix);
+      const changeResult = await roleService.changeRole(user, newRole, newPrefix, newHats);
       assignSkipped = changeResult?.skipped || [];
     }
     if (nameChanged) {
       await userRepo.upsert({
         email: user.email, display_name: newName, role: newRole, user_prefix: newPrefix,
-        active: true, created_at: user.created_at,
+        extra_roles: newHats, active: true, created_at: user.created_at,
       });
     }
 

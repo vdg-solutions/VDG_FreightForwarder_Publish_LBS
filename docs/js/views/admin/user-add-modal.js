@@ -8,7 +8,7 @@
 
 import { t } from '../../i18n/index.js';
 import {
-  ROLE_VALUES, ROLE_SALES_REP, deriveUserPrefix, isValidEmail,
+  ROLE_VALUES, ROLE_SALES_REP, ROLE_PRICING, deriveUserPrefix, isValidEmail, hatsFromForm, hatCheckboxesHtml,
 } from '../../operators/manager/users-view-composer.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
 
@@ -18,6 +18,8 @@ const ROLE_LABEL_KEYS = {
   Accountant: 'admin.users.role.accountant',
   Auditor:    'admin.users.role.auditor',
 };
+
+const HAT_LABEL_KEYS = { [ROLE_PRICING]: 'admin.users.hat.pricing' };
 
 function getUserRepo()   { return window.__vdg_user_repo; }
 function getRoleService() { return window.__vdg_role_assignment_service; }
@@ -53,6 +55,11 @@ export function openAddUserModal({ onAdded } = {}) {
           </select></label>
         <label id="add-prefix-wrap" class="block text-xs text-slate-600 hidden">${t('admin.users.column.user_prefix')}
           <input id="add-prefix" class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
+        <div id="add-hats" class="pt-1 border-t border-slate-100 space-y-1">
+          <div class="text-xs font-medium text-slate-700">${t('admin.users.hats.title')}</div>
+          <div class="text-[11px] text-slate-400">${t('admin.users.hats.hint')}</div>
+          ${hatCheckboxesHtml([], (h) => t(HAT_LABEL_KEYS[h]))}
+        </div>
       </div>
       <div id="add-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -113,7 +120,7 @@ async function _onSubmit(overlay, onAdded) {
       }
       // Returns { user, skipped } — skipped = ACL folders drive.file couldn't grant because
       // they hold non-app-created files (appNotAuthorizedToChild). Non-fatal; surfaced below.
-      const assignResult = await roleService.assignRole(email, role, userPrefix);
+      const assignResult = await roleService.assignRole(email, role, userPrefix, hatsFromForm(overlay));
       assignSkipped = assignResult?.skipped || [];
     } catch (err) {
       // F-24-08 D-03: assignRole failed after the user record was upserted above — soft-delete

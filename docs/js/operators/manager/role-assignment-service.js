@@ -39,21 +39,23 @@ export class RoleAssignmentService {
 
   /// F-27-01: grant list resolved via the WASM permission_resolve_grants bridge
   /// (protection_table.rs), replacing the role-drive-acl.json fetch.
-  async resolveAcl(role, userPrefix = null) {
+  /// #24: the wire format is the role SET, primary first — "SalesRep,Pricing". A bare role string
+  /// still resolves as a one-element set, so existing callers are unaffected.
+  async resolveAcl(role, userPrefix = null, extraRoles = []) {
     const wasm = this._wasm || window.__vdg_wasm;
-    return wasm.permission_resolve_grants(role, userPrefix);
+    return wasm.permission_resolve_grants(roleSetToken(role, extraRoles), userPrefix);
   }
 
   /// AC-01/AC-02/AC-04: grant every ACL folder for `role`, rollback on partial failure,
   /// upsert the user record last (only once the Drive side is fully consistent).
-  async assignRole(email, role, userPrefix = null) {
-    const acl    = await this.resolveAcl(role, userPrefix);
+  async assignRole(email, role, userPrefix = null, extraRoles = []) {
+    const acl    = await this.resolveAcl(role, userPrefix, extraRoles);
     const rootId = await this._requireRoot();
 
     const { granted, skipped } = await this._grantAll(rootId, email, acl);
 
     const existing = await this._userRepo.get(email);
-    const result   = await this._userRepo.upsert(_buildUserRecord(existing, email, role, userPrefix));
+    const result   = await this._userRepo.upsert(_buildUserRecord(existing, email, role, userPrefix, extraRoles));
     this._auditLog?.append(AUDIT_KIND, email, AUDIT_ASSIGN, { role, user_prefix: userPrefix, granted: granted.length, skipped: skipped.length });
     this._userAuditLog?.write(
       USER_AUDIT_ASSIGN_ROLE,
@@ -71,14 +73,18 @@ export class RoleAssignmentService {
   /// value that may already be the new one (F-24-08 D-02: a bare oldRole+userPrefix pair let
   /// callers pass the NEW prefix for both sides, silently losing the old ACL's {user_prefix}
   /// substitution). Guards the last-manager lockout before any Drive call.
-  async changeRole(user, newRole, newUserPrefix = null) {
+  async changeRole(user, newRole, newUserPrefix = null, newExtraRoles = null) {
     const { email, role: oldRole, user_prefix: oldUserPrefix } = user;
     if (oldRole === ROLE_MANAGER && newRole !== ROLE_MANAGER) {
       await this._assertNotLastManager(email);
     }
 
-    const oldAcl = await this.resolveAcl(oldRole, oldUserPrefix);
-    const newAcl = await this.resolveAcl(newRole, newUserPrefix);
+    // null means "leave the hats alone"; an array (including []) is an explicit new set.
+    const oldExtraRoles = user.extra_roles || [];
+    const extraRoles    = newExtraRoles === null ? oldExtraRoles : newExtraRoles;
+
+    const oldAcl = await this.resolveAcl(oldRole, oldUserPrefix, oldExtraRoles);
+    const newAcl = await this.resolveAcl(newRole, newUserPrefix, extraRoles);
     const rootId = await this._requireRoot();
 
     const toRevoke = oldAcl.filter((o) => !_aclHas(newAcl, o));
@@ -88,7 +94,7 @@ export class RoleAssignmentService {
     const { skipped } = await this._grantAll(rootId, email, toGrant);
 
     const existing = await this._userRepo.get(email);
-    await this._userRepo.upsert(_buildUserRecord(existing, email, newRole, newUserPrefix));
+    await this._userRepo.upsert(_buildUserRecord(existing, email, newRole, newUserPrefix, extraRoles));
     this._auditLog?.append(AUDIT_KIND, email, AUDIT_CHANGE, { oldRole, newRole, user_prefix: newUserPrefix });
     this._userAuditLog?.write(
       USER_AUDIT_CHANGE_ROLE,
@@ -230,6 +236,11 @@ function _isNotAuthorizedToChild(err) {
   return err?.status === 403 && String(err?.message || '').includes(REASON_NOT_AUTH_CHILD);
 }
 
+/// #24 wire format for the wasm bridge: primary role first, secondary hats after, comma-separated.
+export function roleSetToken(role, extraRoles = []) {
+  return [role, ...(extraRoles || [])].filter(Boolean).join(',');
+}
+
 function _aclHas(acl, entry) {
   return acl.some((e) => e.path === entry.path && e.access === entry.access);
 }
@@ -265,12 +276,15 @@ async function resolvePathToFolderId(driveApi, rootId, path) {
 // no fork prefix" and must be written as-is, not silently backfilled from the stale existing
 // record (that backfill previously kept an old SalesRep prefix alive after demoting to a role
 // that shouldn't carry one).
-function _buildUserRecord(existing, email, role, userPrefix) {
+// #24: extra_roles carries secondary hats (Pricing). Always written as an array — an older record
+// without the field reads back as [], so nothing needs migrating.
+function _buildUserRecord(existing, email, role, userPrefix, extraRoles = []) {
   return {
     email,
     display_name: existing?.display_name || email,
     role,
     user_prefix: userPrefix,
+    extra_roles: [...extraRoles],
     created_at:  existing?.created_at || new Date().toISOString(),
     active:      true,
   };
