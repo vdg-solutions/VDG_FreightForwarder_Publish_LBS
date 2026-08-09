@@ -78,6 +78,12 @@ function _rolesCsv(roles) {
 /** Decision comes from Rust; this only shapes it for the caller.
  *  `roles` is the user's role SET (a bare string still works — one-element set). */
 export function routeGuard(route, roles) {
+  // The bounce target is always reachable. Denying it means enforceRouteGuard navigates to a route
+  // that is itself denied, and navigate() dispatches synchronously when the hash already matches —
+  // guard → navigate → dispatch → guard … until the tab dies with Out Of Memory (QC 2026-08-09,
+  // seen while the wasm policy bridge was briefly unavailable and every route was being denied).
+  if (route === PENDING_ROUTE || route.startsWith(`${PENDING_ROUTE}/`)) return 'allow';
+
   const { canRoute, redirectFor } = _access();
   const csv = _rolesCsv(roles);
   if (typeof canRoute !== 'function') {
@@ -96,6 +102,12 @@ export function routeGuard(route, roles) {
 export function enforceRouteGuard(route, role) {
   const decision = routeGuard(route, role);
   if (decision === 'allow') return false;
+  // Second belt on the same loop: if the policy would bounce us to where we already are, stop —
+  // navigating to the current route re-enters the router synchronously.
+  if (decision.redirect === route) {
+    console.warn('[route-guard] denied on its own redirect target:', route); // DEV
+    return true;
+  }
   window.dispatchEvent(new CustomEvent(TOAST_EVENT, {
     detail: { type: TOAST_TYPE_WARN, message: t(decision.reason), duration: TOAST_DURATION_MS },
   }));
@@ -138,7 +150,10 @@ export function resolveUserRoles(userRecord) {
 
 /** Reads the boot-populated snapshot (boot/repo-init-steps.js). */
 export function currentUserRoles() {
-  return window.__vdg_current_user?.roles || [];
+  const fromBoot = window.__vdg_current_user?.roles;
+  if (fromBoot?.length) return fromBoot;
+  // Sign-in resolved these from admin/users.jsonl before repo-init existed — same source, earlier.
+  return window.__vdg_session_roles || [];
 }
 
 // #15: boot stamps the rep PREFIX as role until users.jsonl resolves (repo-init-steps step 6:

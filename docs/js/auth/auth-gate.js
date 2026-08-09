@@ -68,6 +68,10 @@ export function hasRole(role) {
 function _setResolved(token, roles = null) {
   _resolvedRole  = token;
   _resolvedRoles = roles ?? _rolesForToken(token);
+  // Published for the route guard: sign-in resolves the role set long before repo-init builds
+  // window.__vdg_current_user, and gating on the later snapshot bounced a real manager to
+  // /pending-access on every cold boot (#28 regression, caught on the pilot).
+  if (typeof window !== 'undefined') window.__vdg_session_roles = [..._resolvedRoles];
   return token;
 }
 
