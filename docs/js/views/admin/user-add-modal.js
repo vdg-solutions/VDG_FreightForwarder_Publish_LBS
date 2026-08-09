@@ -8,7 +8,7 @@
 
 import { t } from '../../i18n/index.js';
 import {
-  deriveUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml,
+  deriveUserPrefix, allocateUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml,
 } from '../../operators/manager/users-view-composer.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
 
@@ -49,8 +49,10 @@ export function openAddUserModal({ onAdded } = {}) {
           <div class="text-[11px] text-slate-400">${t('admin.users.roles.hint')}</div>
           ${roleCheckboxesHtml([], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
-        <label id="add-prefix-wrap" class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
-          <input id="add-prefix" class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
+        <div class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
+          <div id="add-prefix-preview" class="mt-1 w-full border rounded px-3 py-1.5 text-xs bg-slate-50 text-slate-500 font-mono">—</div>
+          <div class="mt-1 text-[11px] text-slate-400">${t('admin.users.prefix.auto_hint')}</div>
+        </div>
       </div>
       <div id="add-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -61,12 +63,13 @@ export function openAddUserModal({ onAdded } = {}) {
 
   document.body.appendChild(overlay);
 
-  const emailInput  = overlay.querySelector('#add-email');
-  const prefixInput = overlay.querySelector('#add-prefix');
-  let prefixTouched = false;
-  prefixInput.addEventListener('input', () => { prefixTouched = true; });
+  // #30: the prefix is machinery (Drive fork name + grant file name), not a manager decision —
+  // the preview just shows what will be created. The definitive value is allocated at submit,
+  // against the roster as it stands then, so a collision cannot slip through a stale preview.
+  const emailInput    = overlay.querySelector('#add-email');
+  const prefixPreview = overlay.querySelector('#add-prefix-preview');
   emailInput.addEventListener('input', () => {
-    if (!prefixTouched) prefixInput.value = deriveUserPrefix(emailInput.value);
+    prefixPreview.textContent = deriveUserPrefix(emailInput.value) || '—';
   });
 
   overlay.querySelector('#add-cancel').addEventListener('click', () => overlay.remove());
@@ -78,19 +81,21 @@ async function _onSubmit(overlay, onAdded) {
   const name  = overlay.querySelector('#add-name').value.trim();
   const roles = rolesFromForm(overlay);
   const role  = roles[0] || '';
-  const prefixRaw = overlay.querySelector('#add-prefix').value.trim();
 
   if (!email) return showError(overlay, t('admin.users.error.email_required'));
   if (!isValidEmail(email)) return showError(overlay, t('admin.users.error.email_invalid'));
   if (!name) return showError(overlay, t('admin.users.error.name_required'));
 
   if (!roles.length) return showError(overlay, t('admin.users.error.role_required'));
-  // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
-  const userPrefix = prefixRaw || deriveUserPrefix(email);
   const roleService = getRoleService();
   const driveApi     = getDriveApi();
   const userRepo     = getUserRepo();
   if (!roleService || !driveApi || !userRepo) return showError(overlay, 'Workspace not ready');
+
+  // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
+  // #30: allocated here, against the current roster, so two users sharing an email local-part
+  // cannot end up sharing a fork.
+  const userPrefix = allocateUserPrefix(email, await userRepo.list(), null);
 
   const submitBtn = overlay.querySelector('#add-submit');
   submitBtn.disabled = true;

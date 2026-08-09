@@ -32,6 +32,8 @@ export function roleCheckboxesHtml(current = [], labelFor = (r) => r) {
     </label>`).join('');
 }
 
+/// Matches user_prefix.rs SUFFIX_MODULO — the 4-digit collision suffix space.
+const PREFIX_SEED_RANGE      = 10000;
 const STATUS_FILTER_ACTIVE   = 'active';
 const STATUS_FILTER_INACTIVE = 'inactive';
 const EMAIL_REGEX            = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -40,6 +42,19 @@ const EMAIL_REGEX            = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /// auth-gate.js::emailPrefix — kept local here so this module stays zero-dependency/pure).
 export function deriveUserPrefix(email) {
   return (email || '').split('@')[0].toLowerCase();
+}
+
+/// #30: the prefix is ALLOCATED, not typed. It names the user's Drive fork and their grant file,
+/// which is machinery, not something a manager should be asked to invent — and the field was
+/// mislabelled "Mã sales" on the form, colliding with the real 4-digit sales_code. Two employees
+/// can genuinely share a local-part (an@gmail.com / an@congty.vn), so a collision appends 4 random
+/// digits. Allocation itself lives in Rust (boundary/user_prefix.rs) — this only feeds it the
+/// prefixes already in use and a random starting suffix.
+export function allocateUserPrefix(email, users, wasm = null) {
+  const bridge = wasm || window.__vdg_wasm;
+  const taken  = (users || []).map((u) => u.user_prefix).filter(Boolean);
+  const seed   = Math.floor(Math.random() * PREFIX_SEED_RANGE);
+  return bridge.user_prefix_allocate(email, JSON.stringify(taken), seed);
 }
 
 /// AC-03: "validated as Google email" == well-formed email address; Google OAuth itself is the

@@ -86,6 +86,24 @@ export async function findSharedSubfolder(name) {
   return sorted[0].id;
 }
 
+// #30: shared FILES whose name starts with `base`. Exact-name lookup is not usable here — a
+// colliding prefix gets 4 random digits appended (user_prefix.rs::allocate_prefix), so the user
+// cannot know their own fork name at sign-in. They search on what they DO know, the local-part of
+// their email, and the grant file itself reports the real user_prefix back.
+//
+// The mimeType clause is what separates the grant file from the fork folder: both are shared to
+// this user and both carry the same name. Drive's `contains` is word-prefix-ish rather than a
+// strict startsWith, so the result is filtered again here. Read-only, same rules as
+// findSharedSubfolder: never dedupe, move or delete a folder this user does not own.
+export async function findSharedFilesByNamePrefix(base) {
+  if (!base) return [];
+  const q = `name contains '${base}' and ${SHARED_WITH_ME_CLAUSE} and mimeType!='${FOLDER_MIME}' and trashed=false`;
+  const res = await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`);
+  return (res.files || [])
+    .filter((f) => typeof f.name === 'string' && f.name.startsWith(base))
+    .sort((a, b) => a.name.length - b.name.length || a.id.localeCompare(b.id));
+}
+
 export async function listChildFolder(parentId, name) {
   return findFolder(parentId, name);
 }

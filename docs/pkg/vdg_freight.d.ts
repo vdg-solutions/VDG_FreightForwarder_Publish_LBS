@@ -176,6 +176,18 @@ export function get_transition_log(entity_id: string): any;
 
 export function get_validation_errors(): any;
 
+export function grant_file_build(email: string, workspace: string, user_prefix: string, roles: string): string;
+
+/**
+ * Post-boot verification seam. auth-gate reads the grant file BEFORE wasm loads and carries its
+ * own minimal mirror (`grant-file.js`); this export is what the mirror is tested against.
+ */
+export function grant_file_roles(json: string, email: string, workspace: string): string;
+
+export function grant_file_target_name(workspace: string, user_prefix: string): string;
+
+export function grant_file_target_path(workspace: string, user_prefix: string): string;
+
 /**
  * Booking Excel import — returns ImportReport<CreateShipmentCommand> as JsValue.
  * On file-level error (wrong template) returns JsError with PARSE code.
@@ -294,6 +306,12 @@ export function store_put_notification(notif: any): void;
 
 export function store_put_wma(key: string, body: any): void;
 
+/**
+ * `taken_json` is the JSON array of prefixes already in use; `seed` is a caller-supplied random
+ * 0..9999 so two managers adding at once don't both pick the same suffix.
+ */
+export function user_prefix_allocate(email: string, taken_json: string, seed: number): string;
+
 export function validate_airport_iata(s: string): boolean;
 
 export function validate_awb_no(s: string): boolean;
@@ -359,6 +377,10 @@ export interface InitOutput {
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
+    readonly grant_file_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly grant_file_roles: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly grant_file_target_name: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly grant_file_target_path: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
@@ -390,6 +412,7 @@ export interface InitOutput {
     readonly store_put_meta: (a: number, b: number, c: number, d: number) => void;
     readonly store_put_notification: (a: number, b: number) => void;
     readonly store_put_wma: (a: number, b: number, c: number, d: number) => void;
+    readonly user_prefix_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly validate_airport_iata: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
     readonly validate_carrier_iata: (a: number, b: number) => number;
@@ -455,8 +478,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10568: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10570: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10620: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10622: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

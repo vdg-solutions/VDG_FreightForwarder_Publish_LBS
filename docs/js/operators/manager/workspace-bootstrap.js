@@ -16,7 +16,10 @@
 const SHARED_DIR = '_shared';
 // Exported for test-side alignment assertions against role-drive-acl.json (F-24-15 AC-03/AC-04).
 export const SHARED_SUBFOLDERS = ['customers', 'fx-rates', 'ledger'];
-const ROOT_FOLDERS = ['users', 'admin'];
+// #30: `grants` holds one read-only grant file per user. It is created here but NEVER appears in
+// resolve_grants — a permission on the folder would inherit down to every child and hand each user
+// everyone else's role set, which is the exact leak the per-file share exists to prevent.
+const ROOT_FOLDERS = ['users', 'admin', 'grants'];
 
 // Idempotent — getOrCreateFolder dedups on repeat calls (F-15-19/F-20-02 pattern), so calling
 // this on every Manager boot is safe and cheap once the folders already exist.

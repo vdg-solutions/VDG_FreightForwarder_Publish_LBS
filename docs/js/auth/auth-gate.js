@@ -9,6 +9,7 @@
 import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
 import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord } from './workspace-acl.js';
+import { readGrant } from './grant-file.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
@@ -75,13 +76,16 @@ function _setResolved(token, roles = null) {
   return token;
 }
 
-/// Token -> roles when no users.jsonl record is available. Mirrors route-guard's normalizeRole:
-/// a fork prefix means a provisioned users/{prefix} exists -> SalesRep; the sentinels mean no
-/// fork -> no role at all (ReadOnly is the absence of roles, not a role).
+/// Token -> roles when no authority record is available at all.
+/// #30: a fork prefix used to answer SalesRep here, which is where the bug lived — owning
+/// `users/{prefix}` proves the user has STORAGE, not what they are allowed to do. Employees cannot
+/// read admin/users.jsonl (resolve_grants never grants on admin/), so every Accountant, Auditor and
+/// Pricing holder took this branch and resolved as SalesRep on their own machine. Authority now
+/// comes from their own grant file; with no grant there is no role, and the route guard parks them
+/// on /pending-access instead of handing out someone else's job.
 function _rolesForToken(token) {
   if (token === MANAGER_ID) return [ROLE_MANAGER];
-  if (!token || token === NOT_PROVISIONED_ID || token === UNKNOWN_ID) return [];
-  return [ROLE_SALES_REP];
+  return [];
 }
 
 export function emailPrefix(email) {
@@ -102,7 +106,7 @@ export async function detectRoleViaDrive(user, options = {}) {
   }
   if (options.force) clearRoleCache();
   const cached = readCachedRole(user.email);
-  if (cached) { _setResolved(cached); return cached; }
+  if (cached) { _setResolved(cached.role, cached.roles); return cached.role; }
 
   return Promise.race([
     _probeInner(user),
@@ -136,63 +140,80 @@ async function _probeInner(user) {
         const acl = await readWorkspaceAcl(adminFolder.id, user.email);
         if (!acl.seeded) {                       // nobody provisioned yet — creator's first run
           _setResolved(MANAGER_ID, [ROLE_MANAGER]);
-          writeCachedRole(user.email, MANAGER_ID);
+          writeCachedRole(user.email, MANAGER_ID, [ROLE_MANAGER]);
           return MANAGER_ID;
         }
         const role = roleTokenFromRecord(acl.record, MANAGER_ID, prefix);
         if (role) {
           // #28: authority comes from the record's role set, not from which token we minted.
-          _setResolved(role, rolesFromRecord(acl.record));
-          writeCachedRole(user.email, role);
+          const roles = rolesFromRecord(acl.record);
+          _setResolved(role, roles);
+          writeCachedRole(user.email, role, roles);
           return role;
         }
         // seeded, but this email is not an active user — fall through to the users/ probe
       }
-    } catch (_) { /* probe missed — fall through to users/ check */ }
-
-    // Probe users/<email-prefix>/
-    try {
-      const usersRoot = await listChildFolder(rootId, USERS_FOLDER_NAME);
-      if (usersRoot) {
-        const userFolder = await listChildFolder(usersRoot.id, prefix);
-        if (userFolder) {
-          const role = prefix.toUpperCase();
-          _setResolved(role);
-          writeCachedRole(user.email, role);
-          return role;
-        }
-      }
-    } catch (_) { /* probe missed — fall through to NOT_PROVISIONED */ }
+    } catch (_) { /* probe missed — fall through to the grant-file check */ }
   }
 
-  // Employee path (subfolder-first): users/{prefix} fork is shared directly to them (F-27-01),
-  // visible via sharedWithMe without the root. Decoupled — resolves even when rootId is null.
-  const subfolderId = await findSharedSubfolder(prefix);
-  if (subfolderId) {
-    const role = prefix.toUpperCase();
-    _setResolved(role);
-    writeCachedRole(user.email, role);
+  // Employee path (#30): the grant file is the only authority an employee can actually read —
+  // admin/users.jsonl lives under admin/, which resolve_grants never shares. It is found via
+  // sharedWithMe with no root dependency, so it resolves even when rootId is null, and it reports
+  // the real user_prefix (a collision appended random digits, so the fork name is not guessable).
+  const grant = await readGrant(wsName, prefix, user.email);
+  if (grant.roles.length > 0) {
+    const role = grant.userPrefix.toUpperCase();
+    _setResolved(role, grant.roles);
+    writeCachedRole(user.email, role, grant.roles);
     return role;
   }
 
+  // A fork with no grant still identifies WHERE this user's data lives, so the token resolves —
+  // but it is NOT a role. This branch used to answer SalesRep off the folder's mere existence,
+  // which is what gave every Accountant and Auditor a sales session. With an empty role set the
+  // guard parks them on /pending-access, which is the truthful state: storage, no authority.
+  const forkToken = await _resolveForkToken(rootId, prefix);
+  if (forkToken) {
+    _setResolved(forkToken, []);
+    writeCachedRole(user.email, forkToken, []);
+    return forkToken;
+  }
+
   _setResolved(NOT_PROVISIONED_ID);
-  writeCachedRole(user.email, NOT_PROVISIONED_ID);
+  writeCachedRole(user.email, NOT_PROVISIONED_ID, []);
   return NOT_PROVISIONED_ID;
 }
 
+/// The user's fork, by either route: under a root they can see, or shared directly to them
+/// (F-27-04 — an employee never owns the root, so sharedWithMe resolves it with no root at all).
+/// Identity only; the role set comes from the grant file.
+async function _resolveForkToken(rootId, prefix) {
+  if (rootId) {
+    try {
+      const usersRoot = await listChildFolder(rootId, USERS_FOLDER_NAME);
+      const fork      = usersRoot && await listChildFolder(usersRoot.id, prefix);
+      if (fork) return prefix.toUpperCase();
+    } catch (_) { /* probe missed — try the shared-to-me route */ }
+  }
+  return (await findSharedSubfolder(prefix)) ? prefix.toUpperCase() : null;
+}
+
+/// #30: the cache carries the ROLE SET, not just the fork token. It used to hold the token alone
+/// and rebuild roles via _rolesForToken, which now (correctly) answers "no roles" for a fork —
+/// a cached employee would have lost every role they had until the TTL expired.
 function readCachedRole(email) {
   try {
     const raw = localStorage.getItem(ROLE_CACHE_KEY);
     if (!raw) return null;
-    const { email: e, role, ts } = JSON.parse(raw);
+    const { email: e, role, roles, ts } = JSON.parse(raw);
     if (e !== email) return null;
     if (Date.now() - ts > ROLE_CACHE_TTL_MS) return null;
-    return role;
+    return { role, roles: Array.isArray(roles) ? roles : null };
   } catch { return null; }
 }
 
-function writeCachedRole(email, role) {
-  try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ email, role, ts: Date.now() })); }
+function writeCachedRole(email, role, roles = null) {
+  try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ email, role, roles, ts: Date.now() })); }
   catch { /* quota — ignore */ }
 }
 

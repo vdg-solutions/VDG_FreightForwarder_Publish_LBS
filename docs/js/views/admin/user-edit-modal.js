@@ -5,7 +5,7 @@
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
 import { t } from '../../i18n/index.js';
-import { deriveUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../operators/manager/users-view-composer.js';
+import { allocateUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../operators/manager/users-view-composer.js';
 
 const ROLE_LABEL_KEYS = {
   Manager:    'admin.users.role.manager',
@@ -42,9 +42,10 @@ export function openEditUserModal(user, { onSaved } = {}) {
           <div class="text-[11px] text-slate-400">${t('admin.users.roles.hint')}</div>
           ${roleCheckboxesHtml(user.roles || [user.role], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
-        <label id="edit-prefix-wrap" class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
-          <input id="edit-prefix" value="${user.user_prefix || ''}"
-                 class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
+        <div class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
+          <div id="edit-prefix-preview" class="mt-1 w-full border rounded px-3 py-1.5 text-xs bg-slate-50 text-slate-500 font-mono">${user.user_prefix || '—'}</div>
+          <div class="mt-1 text-[11px] text-slate-400">${t('admin.users.prefix.fixed_hint')}</div>
+        </div>
       </div>
       <div id="edit-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -63,9 +64,6 @@ async function _onSubmit(overlay, user, onSaved) {
   const newName   = overlay.querySelector('#edit-name').value.trim();
   const newRoles  = rolesFromForm(overlay);
   const newRole   = newRoles[0] || '';
-  const prefixRaw = overlay.querySelector('#edit-prefix').value.trim();
-  // #28: every user owns a fork, whatever their roles — never null.
-  const newPrefix = prefixRaw || deriveUserPrefix(user.email);
   const newHats   = newRoles.slice(1);
 
   if (!newName) return showError(overlay, t('admin.users.error.name_required'));
@@ -74,6 +72,12 @@ async function _onSubmit(overlay, user, onSaved) {
   const roleService = getRoleService();
   const userRepo     = getUserRepo();
   if (!roleService || !userRepo) return showError(overlay, 'Workspace not ready');
+
+  // #30: the prefix is fixed for the life of the account — it names the Drive fork holding this
+  // user's data, so changing it would orphan everything in it. A legacy record with none (the
+  // workspace creator was seeded without one) gets one allocated here.
+  // #28: every user owns a fork, whatever their roles — never null.
+  const newPrefix = user.user_prefix || allocateUserPrefix(user.email, await userRepo.list(), null);
 
   const oldRoles    = (user.roles || [user.role, ...(user.extra_roles || [])]).filter(Boolean).join(',');
   const roleChanged = newRoles.join(',') !== oldRoles || newPrefix !== (user.user_prefix || null);

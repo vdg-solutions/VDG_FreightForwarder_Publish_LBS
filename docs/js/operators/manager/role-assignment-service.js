@@ -4,6 +4,9 @@
 // its existing contract; the grant list now comes from the WASM permission_resolve_grants
 // bridge (protection_table.rs) instead of fetching role-drive-acl.json.
 
+// #30: the per-user grant file half lives in its own module (350-line cap).
+import { publishGrant, unpublishGrant, backfillGrants, grantFileOp } from './grant-publisher.js';
+
 const WILDCARD_PATH      = '*';
 const WILDCARD_SUFFIX    = '/*';
 const ACCESS_WRITE       = 'write';
@@ -28,13 +31,18 @@ const DRIVE_OP_REVOKE        = 'revoke';
 const DRIVE_OP_RESULT_OK     = 'ok';
 
 export class RoleAssignmentService {
-  constructor(driveApi, userRepo, findWorkspaceRootFn, auditLog = null, userAuditLog = null, wasm = null) {
+  /// `workspaceNameFn` is injected rather than imported: activeWorkspaceName lives behind
+  /// workspace-registry → workspace-root → drive-api → google-oauth, and this module is
+  /// deliberately free of that chain (DI over injected driveApi, same as ledger-reconciler).
+  constructor(driveApi, userRepo, findWorkspaceRootFn, auditLog = null, userAuditLog = null, wasm = null,
+              workspaceNameFn = null) {
     this._api         = driveApi;
     this._userRepo     = userRepo;
     this._findRoot      = findWorkspaceRootFn;
     this._auditLog      = auditLog;
     this._userAuditLog  = userAuditLog;
     this._wasm          = wasm;
+    this._workspaceName = workspaceNameFn;
   }
 
   /// F-27-01: grant list resolved via the WASM permission_resolve_grants bridge
@@ -53,6 +61,9 @@ export class RoleAssignmentService {
     const rootId = await this._requireRoot();
 
     const { granted, skipped } = await this._grantAll(rootId, email, acl);
+    // #30: publish the role set to the user themselves. Ordered AFTER the folder grants so a
+    // failed cascade never leaves a readable grant promising access that was not actually given.
+    await this._publishGrant(rootId, email, userPrefix, roleSetToken(role, extraRoles));
 
     const existing = await this._userRepo.get(email);
     const result   = await this._userRepo.upsert(_buildUserRecord(existing, email, role, userPrefix, extraRoles));
@@ -62,7 +73,7 @@ export class RoleAssignmentService {
       email,
       existing ? { role: existing.role, user_prefix: existing.user_prefix } : { role: null },
       { role, user_prefix: userPrefix },
-      _driveOpsFromAcl(acl),
+      [..._driveOpsFromAcl(acl), grantFileOp(userPrefix)],
     );
     return { user: result, skipped };
   }
@@ -93,6 +104,14 @@ export class RoleAssignmentService {
     for (const entry of toRevoke) await this._revokeEntry(rootId, email, entry);
     const { skipped } = await this._grantAll(rootId, email, toGrant);
 
+    // #30: a renamed fork leaves the OLD grant file still shared. readGrant takes the first
+    // candidate it can parse, so a stale file could keep handing out the previous role set —
+    // unshare it before the new one is published.
+    if (oldUserPrefix && oldUserPrefix !== newUserPrefix) {
+      await this._unpublishGrant(rootId, email, oldUserPrefix);
+    }
+    await this._publishGrant(rootId, email, newUserPrefix, roleSetToken(newRole, extraRoles));
+
     const existing = await this._userRepo.get(email);
     await this._userRepo.upsert(_buildUserRecord(existing, email, newRole, newUserPrefix, extraRoles));
     this._auditLog?.append(AUDIT_KIND, email, AUDIT_CHANGE, { oldRole, newRole, user_prefix: newUserPrefix });
@@ -101,7 +120,7 @@ export class RoleAssignmentService {
       email,
       { role: oldRole, user_prefix: oldUserPrefix },
       { role: newRole, user_prefix: newUserPrefix },
-      [..._driveOpsFromAcl(toRevoke, DRIVE_OP_REVOKE), ..._driveOpsFromAcl(toGrant)],
+      [..._driveOpsFromAcl(toRevoke, DRIVE_OP_REVOKE), ..._driveOpsFromAcl(toGrant), grantFileOp(newUserPrefix)],
     );
     return { skipped };
   }
@@ -113,6 +132,9 @@ export class RoleAssignmentService {
     const acl    = await this.resolveAcl(role, userPrefix);
     const rootId = await this._requireRoot();
     for (const entry of acl) await this._revokeEntry(rootId, email, entry);
+    // #30: revoked folders but a still-readable grant would leave the user signing in with a full
+    // role set and empty screens — worse to diagnose than a clean "no access".
+    if (userPrefix) await this._unpublishGrant(rootId, email, userPrefix);
 
     await this._userRepo.remove(email);
     this._auditLog?.append(AUDIT_KIND, email, AUDIT_REVOKE, { role, user_prefix: userPrefix });
@@ -121,8 +143,17 @@ export class RoleAssignmentService {
       email,
       { role, user_prefix: userPrefix },
       { active: false },
-      _driveOpsFromAcl(acl, DRIVE_OP_REVOKE),
+      [..._driveOpsFromAcl(acl, DRIVE_OP_REVOKE), grantFileOp(userPrefix, DRIVE_OP_REVOKE)],
     );
+  }
+
+  /// #30: publish grants for users provisioned before grant files existed. Manager-boot task.
+  async backfillGrants() {
+    return backfillGrants(this._api, this._wasm || window.__vdg_wasm, {
+      rootId:    await this._requireRoot(),
+      workspace: this._requireWorkspaceName(),
+      users:     await this._userRepo.list(),
+    });
   }
 
   // ── private ──────────────────────────────────────────────────────────────
@@ -133,13 +164,28 @@ export class RoleAssignmentService {
     return rootId;
   }
 
-  /// AC-04: grants `entries`, compensating-deletes everything granted THIS call before
-  /// re-throwing on a GENUINE failure. A drive.file `appNotAuthorizedToChild` 403 is NOT a
-  /// genuine failure — the target folder holds a file the app didn't create; rather than abort
-  /// the whole assignment (which blocked adding a Manager whenever the workspace held any
-  /// hand-created file), the wildcard-root grant fans out to each app-visible child folder and
-  /// any still-blocked target is recorded in `skipped` and surfaced to the admin.
-  /// Returns { granted, skipped }.
+  /// The workspace name is part of the grant file's NAME and content — an employee working for two
+  /// companies tells the two grants apart by it. Defaulting to '' would write a file that silently
+  /// matches nothing, so an unwired caller fails loudly instead.
+  _requireWorkspaceName() {
+    const name = this._workspaceName?.();
+    if (!name) throw new Error('RoleAssignmentService: workspaceNameFn not wired');
+    return name;
+  }
+
+  async _publishGrant(rootId, email, userPrefix, roleToken) {
+    if (!userPrefix) return null;
+    return publishGrant(this._api, this._wasm || window.__vdg_wasm, {
+      rootId, workspace: this._requireWorkspaceName(), email, userPrefix, roleToken,
+    });
+  }
+
+  async _unpublishGrant(rootId, email, userPrefix) {
+    return unpublishGrant(this._api, this._wasm || window.__vdg_wasm, {
+      rootId, workspace: this._requireWorkspaceName(), email, userPrefix,
+    });
+  }
+
   async _grantAll(rootId, email, entries) {
     const granted = [];
     const skipped = [];

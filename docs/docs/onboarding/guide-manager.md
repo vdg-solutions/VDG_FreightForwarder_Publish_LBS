@@ -38,6 +38,28 @@ Ngoài vai trò chính, mỗi nhân viên có thể được gán thêm **quyề
 
 Muốn thu quyền lại thì bỏ tick ô đó rồi lưu — app gỡ quyền ghi trên Drive ngay trong lần lưu ấy.
 
+### Thư mục riêng
+
+Mỗi người có một **thư mục riêng** trên Drive để chứa dữ liệu của họ. App tự đặt tên theo phần đầu
+email; nếu trùng với người khác thì thêm 4 số phía sau. Anh/chị không phải nhập, và **không sửa được**
+sau khi đã tạo — đổi tên là mất chỗ dữ liệu cũ.
+
+Đừng nhầm với **Mã sales** (4 chữ số) dùng để sinh số Job — đó là ô khác.
+
+### Nhân viên nhận vai trò bằng cách nào
+
+Khi lưu, ngoài việc cấp quyền trên các thư mục dữ liệu, app còn ghi cho mỗi người **một file quyền
+riêng** và chia sẻ **chỉ đọc** cho đúng email của họ. Nhân viên đăng nhập thì app đọc file đó để biết
+họ giữ những vai trò nào.
+
+Hai điều đáng biết:
+
+- Nhân viên **không đọc được danh sách nhân sự** của công ty, chỉ đọc được dòng của chính mình.
+- Nhân viên **không sửa được** file đó (chỉ đọc), nên không ai tự nâng mình lên Quản lý được.
+
+Người được thêm từ trước bản này chưa có file quyền. Anh/chị chỉ cần **đăng nhập một lần** bằng tài
+khoản Quản lý — app tự tạo bù cho những người còn thiếu.
+
 ---
 
 ## 2. Biểu hoa hồng (Commission)

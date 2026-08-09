@@ -16,7 +16,7 @@ export { moveToParent, globalOwnerQuery };
 // F-17-03: findWorkspaceRoot/listChildFolder/renameFolder/WORKSPACE_NAME moved to
 // workspace-root.js (350-line cap) — re-exported here so `driveApi.findWorkspaceRoot`
 // keeps resolving for every existing caller.
-export { findWorkspaceRoot, findSharedSubfolder, listChildFolder, renameFolder, WORKSPACE_NAME } from './workspace-root.js';
+export { findWorkspaceRoot, findSharedSubfolder, findSharedFilesByNamePrefix, listChildFolder, renameFolder, WORKSPACE_NAME } from './workspace-root.js';
 
 const DRIVE_API_BASE          = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE       = 'https://www.googleapis.com/upload/drive/v3';

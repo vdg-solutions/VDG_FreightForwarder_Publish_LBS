@@ -237,8 +237,11 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     window.__vdg_user_repo = userRepo;
 
     const { RoleAssignmentService } = await import('../operators/manager/role-assignment-service.js');
+    // #30: the last arg names the workspace, which goes into each user's grant file so a person
+    // working for two companies can tell their two grants apart. Injected, not imported — the
+    // service stays clear of the workspace-registry → drive-api → google-oauth chain.
     window.__vdg_role_assignment_service = new RoleAssignmentService(
-      driveApi, userRepo, findWorkspaceRoot, null, userAuditLog,
+      driveApi, userRepo, findWorkspaceRoot, null, userAuditLog, null, activeWorkspaceName,
     );
     // #25: this wiring lands in the DEFERRED step, long after the router may have rendered
     // #/admin/users on a deep link — that view read a null repo and sat at 0/0 forever. Announce it
@@ -256,6 +259,12 @@ async function _deferredInit(user, db, driveApi, repo, store) {
 
     // Manager-specific background tasks
     if (hasRole(ROLE_MANAGER)) {
+      // #30: users provisioned before grant files existed have none, and authority no longer comes
+      // from the fork — without this they all land on /pending-access. Only the manager can write
+      // grants/, so it runs here; failures are reported per user, never fatal to boot.
+      window.__vdg_role_assignment_service.backfillGrants()
+        .then((r) => { if (r.published.length) console.info('[VDG] grant backfill:', r); }) // DEV
+        .catch((err) => console.warn('[VDG] grant backfill failed:', err.message));         // DEV
       await _deferredManagerInit(user, driveApi, ledgerRepo, userRepo, repo);
     }
   } catch (err) {
