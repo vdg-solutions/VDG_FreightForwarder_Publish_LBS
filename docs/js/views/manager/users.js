@@ -218,21 +218,18 @@ function _applyAndMount(root) {
 // ── entry point ───────────────────────────────────────────────────────────────
 
 // #20: access on the workspace ROOT is access on admin/users.jsonl — the ACL itself — because
-// Drive inherits permissions downward, so the holder can promote themselves.
-// #22: Manager and Auditor legitimately hold it (their ACL path is "*", which resolves to the
-// root), so only permissions outside those two roles are reported — flagging the app's own grants
-// told managers to revoke the access their own screen had just handed out.
+// Drive inherits permissions downward, so the holder can promote themselves. The app's own grants
+// (resolve_grants in the Rust protection table) only ever reach users/{prefix} and _shared/*, so
+// anything sitting on the root came from a manual folder share. #23 reverted the #22 attempt to
+// exempt Manager/Auditor: that read a dead role-drive-acl.json row and hid exactly the account a
+// self-promoting Editor would be holding.
 async function _renderRootSharingWarning(root) {
   const driveApi = getDriveApi();
   const slot     = root.querySelector('#usr-root-sharing');
   if (!driveApi || !slot) return;
   try {
-    const rolesByEmail = {};
-    for (const u of _allUsers) {
-      if (u?.email && u.active !== false) rolesByEmail[u.email] = u.role;
-    }
     const rootId = await driveApi.findWorkspaceRoot(activeWorkspaceName());
-    const shared = await auditRootSharing(driveApi, rootId, rolesByEmail);
+    const shared = await auditRootSharing(driveApi, rootId);
     if (shared.length === 0 || !slot.isConnected) return;
     const rows = shared
       .map((s) => `<li>${s.email} — <span class="font-medium">${s.role}</span></li>`)
@@ -280,6 +277,8 @@ export async function render(root) {
       <div id="usr-grid"></div>
     </div>`;
 
+  _renderRootSharingWarning(root);
+
   root.querySelector('#btn-invite').addEventListener('click', () => openInviteModal(root, _modalDeps()));
 
   root.querySelector('#usr-search').addEventListener('input',  () => _applyAndMount(root));
@@ -287,5 +286,4 @@ export async function render(root) {
   root.querySelector('#usr-status').addEventListener('change', () => _applyAndMount(root));
 
   await _reload(root);
-  _renderRootSharingWarning(root); // after the reload — the audit needs _allUsers to know who is a Manager/Auditor
 }
