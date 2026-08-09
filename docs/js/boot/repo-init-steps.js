@@ -234,6 +234,10 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     window.__vdg_role_assignment_service = new RoleAssignmentService(
       driveApi, userRepo, findWorkspaceRoot, null, userAuditLog,
     );
+    // #25: this wiring lands in the DEFERRED step, long after the router may have rendered
+    // #/admin/users on a deep link — that view read a null repo and sat at 0/0 forever. Announce it
+    // so a screen that mounted too early can load itself once the services actually exist.
+    window.dispatchEvent(new CustomEvent('vdg:user-repo-ready'));
 
     // Resolve actual user role (async, updates window.__vdg_current_user)
     userRepo.get(user.email).then((record) => {

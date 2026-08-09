@@ -32,8 +32,7 @@ Ngoài vai trò chính, mỗi nhân viên có thể được gán thêm **quyề
 ![Ô Quyền bổ sung — Giá cước trong modal thêm người dùng](/docs/onboarding/img/e33-manager-03-pricing-hat.png)
 
 - **Quản lý không mặc định có quyền này.** Quản lý phân quyền và xem được mọi thứ, nhưng muốn tự sửa
-  biểu cước thì phải tự gán quyền Giá cước cho mình. Đây là chủ ý: giá cước sai một dòng là sai mọi
-  báo giá, nên việc sửa nó thuộc về người được giao đích danh.
+  biểu cước thì phải tự gán quyền Giá cước cho mình.
 - Tương tự, **Kế toán** giữ khách hàng, tỷ giá và sổ kế toán; Quản lý cũng không sửa trực tiếp ba
   mục này trong app.
 

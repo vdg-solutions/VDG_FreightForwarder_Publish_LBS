@@ -12,6 +12,8 @@ import { showConfirm }       from '../../helpers/show-confirm.js';
 
 const TOAST_MS = 4_000;
 
+const USER_REPO_READY_EVENT = 'vdg:user-repo-ready';
+
 function getUserRepo()    { return window.__vdg_user_repo; }
 function getRoleService() { return window.__vdg_role_assignment_service; }
 
@@ -55,7 +57,16 @@ function _applyAndRender(root) {
 
 async function _reload(root) {
   const repo = getUserRepo();
-  _allUsers  = repo ? sortUsersByEmail(await repo.listAll()) : [];
+  if (!repo) {
+    // #25: cold-boot deep link — repo-init wires window.__vdg_user_repo in its deferred step, which
+    // can finish after this view has already rendered. Without the retry the grid stayed empty
+    // until the route was re-entered by hand (QC 2026-08-09: "0 / 0" on a workspace with 6 users).
+    window.addEventListener(USER_REPO_READY_EVENT, () => { if (root.isConnected) _reload(root); }, { once: true });
+    _allUsers = [];
+    _applyAndRender(root);
+    return;
+  }
+  _allUsers = sortUsersByEmail(await repo.listAll());
   _applyAndRender(root);
 }
 
