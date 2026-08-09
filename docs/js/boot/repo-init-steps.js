@@ -5,15 +5,16 @@
 // licence check (reverifyPersistedLicense needs it) — this was a latent hang on the
 // NOT_PROVISIONED branch before F-17-03 reordered it.
 
-import { currentSalesRepId, clearRoleCache, isManager } from '../auth/auth-gate.js';
+import { currentSalesRepId, isManager } from '../auth/auth-gate.js';
 import { safeAwait } from '../util/safe-await.js';
 import { StoreIoPort } from '../data/store-io-adapters.js';
+import { setStoreScope } from '../cache/store-client.js';
 import { resolveUserRole } from '../operators/manager/route-guard.js';
 import { loadLocale } from '../i18n/index.js';
 import { APP_VERSION } from '../version.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { LicenseGate, prefsLicenseStore } from '../operators/license-gate.js';
-import { runFirstRunProvision, runLicenseGate } from './license-boot-gate.js';
+import { runLicenseGate } from './license-boot-gate.js';
 import { globalizeBridgeExports } from '../wasm-loader.js';
 import { rehydrateFsmStates } from '../operators/fsm-ingest.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
@@ -28,7 +29,6 @@ const REPO_HANG_SEAM_KEY = 'vdg.test.repoHangMs'; // AC-03 test seam
 const STEP_DRIVE_IMPORT  = 'driveApi-import';
 const STEP_OPEN_DB       = 'openVdgDb';
 const STEP_WASM_INIT     = 'wasm-init';
-const STEP_WORKSPACE_CHK = 'first-run-provision';
 const STEP_BUILD_REPO    = 'build-repo-stack';
 const STEP_LICENSE_GATE  = 'license-gate';
 const STEP_BOOT_APP      = 'bootApp';
@@ -79,19 +79,12 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   globalizeBridgeExports(wasmMod);
   window.dispatchEvent(new Event('vdg:wasm-ready'));
 
-  // 4. NOT_PROVISIONED → first-run manager provisioning, then reload into the ordinary licence
-  // gate below (F-17-03: a bundled licence has no per-role provisioning screen left to show).
-  if (currentSalesRepId() === 'NOT_PROVISIONED') {
-    fsm.dispatch(BootEvent.NEEDS_PROVISION); // wasm loaded but role needs first-run setup → PROVISIONING
-    stepRef.value = STEP_WORKSPACE_CHK;
-    await runFirstRunProvision(driveApi, activeWorkspaceName());
-    // Workspace + admin/ now exist — the NOT_PROVISIONED role cached before creation would
-    // otherwise survive up to ROLE_CACHE_TTL_MS and stall the reload button on this screen.
-    clearRoleCache();
-    location.reload(); // admin/ now exists -> this user resolves Manager on reload, then hits
-    return null;        // the normal licence gate below like any other boot (F-17-03)
-  }
-
+  // 4. NOT_PROVISIONED no longer auto-provisions (#17). Boot used to create a workspace root in
+  // the signed-in user's OWN Drive here, whose empty admin/users.jsonl then seeded that user as
+  // Manager — so every employee who had not been invited yet forked a private workspace with its
+  // own user and customer lists (QC 2026-08-09: "2 bên không đồng bộ, khác nhau"). Creating the
+  // company workspace is a deliberate manager action now; boot just continues degraded and the
+  // route guard lands this role on /pending-access, which owns that action.
   fsm.dispatch(BootEvent.WASM_READY); // real event: wasm module instantiated → BUILDING_REPO
 
   // AC-03 test seam
@@ -100,6 +93,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 5. Build repo — WASM only, storage on SQLite/OPFS (worker). The port keeps the idb_* method
   // names the Rust side imports; the substrate under them is SQL now (immune to the IDB wedge).
   stepRef.value = STEP_BUILD_REPO;
+  setStoreScope(user.email); // #18: idempotent — auth-gate already bound it, this is the backstop
   const ioPort = new StoreIoPort(driveApi, user.email);
   // Warm the SQLite worker off the critical path so the first repo read doesn't pay the cold
   // module-fetch + VFS-install latency inline. Non-blocking, bounded, failure is non-fatal here.

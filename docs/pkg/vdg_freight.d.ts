@@ -252,8 +252,10 @@ export function select(sql: string, params_json: string): string;
 
 /**
  * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
+ * `scope` partitions the pool per account — an empty scope is refused rather than silently
+ * falling back to a shared database.
  */
-export function sqlite_init(): Promise<void>;
+export function sqlite_init(scope: string): Promise<void>;
 
 export function store_count_entities(): any;
 
@@ -358,7 +360,7 @@ export interface InitOutput {
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly sqlite_init: () => number;
+    readonly sqlite_init: (a: number, b: number) => number;
     readonly store_count_entities: (a: number) => void;
     readonly store_delete: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly store_delete_meta: (a: number, b: number, c: number) => void;
@@ -436,8 +438,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10521: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10523: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10540: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10542: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

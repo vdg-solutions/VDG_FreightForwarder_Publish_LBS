@@ -45,6 +45,40 @@ const BUS_NAME    = 'vdg-sqlite-bus';
 const LEADER_LOCK = 'vdg-sqlite-leader';
 const RID_SEP     = '|'; // engine rid = `${tabId}|${localRid}` so concurrent tabs never collide
 
+// #18: the bus, the leader lock and the database are all per-account. They used to be origin-wide,
+// so two accounts open in one browser shared ONE engine over ONE database — account B read account
+// A's cached rows, and B's ops were relayed to a leader tab signed in as A.
+const SCOPE_MAX_LEN = 64;
+let _scope = null;
+
+export function storeScopeKey(email) {
+  return String(email || '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, SCOPE_MAX_LEN);
+}
+
+// Called as soon as an identity is established, before any store op. First call wins; a genuine
+// account switch happens only across a reload (signOut reloads), so a differing key mid-life is a
+// wiring bug and must fail loudly rather than serve another account's data.
+export function setStoreScope(email) {
+  const key = storeScopeKey(email);
+  if (!key) throw new SqliteUnavailableError('store scope requires a signed-in account');
+  if (_scope && _scope !== key) {
+    throw new SqliteUnavailableError(`store scope changed (${_scope} → ${key}) — reload required`);
+  }
+  _scope = key;
+}
+
+// #19: a leader tab that Chrome froze or discarded still HOLDS the Web Lock and never drains the
+// BroadcastChannel, so followers starve on pure timeouts with no error text — LOCKED_ERR_RE can't
+// classify silence, and boot degrades into the timeout storm QC hit. After a couple of unanswered
+// ops, steal the lock: either this tab heals the store, or its sahpool install fails with a real
+// NoModificationAllowedError that DOES classify.
+const LEADER_STEAL_AFTER_TIMEOUTS = 2;
+let _followerTimeouts = 0;
+let _stealAttempted   = false;
+
 let _bus      = null;              // BroadcastChannel to the other tabs; null until first op
 let _tabId    = null;
 let _isLeader = false;             // this tab holds the Web Lock and owns the engine worker
@@ -63,6 +97,7 @@ function _deliver(payload) {
   if (!p) return;
   _pending.delete(rid);
   clearTimeout(p.timer);
+  _followerTimeouts = 0; // the leader is answering
   if (ok) p.resolve(result);
   else {
     _announceLockedIf(err);
@@ -110,10 +145,20 @@ function _resendPending() {
   for (const [, p] of _pending) _dispatch(p.msg);
 }
 
+function _lockName() { return `${LEADER_LOCK}:${_scope}`; }
+
+function _becomeLeader() {
+  _isLeader = true;
+  _resendPending();                      // flush ops queued before the election settled
+  _bus.postMessage({ t: 'leader' });
+  return new Promise(() => { /* hold leadership until the tab dies */ });
+}
+
 function ensureTransport() {
   if (_bus) return;
+  if (!_scope) throw new SqliteUnavailableError('store scope not set — the local database is per-account');
   _tabId = 't' + Math.random().toString(36).slice(2, 10);
-  _bus = new BroadcastChannel(BUS_NAME);
+  _bus = new BroadcastChannel(`${BUS_NAME}:${_scope}`);
   _bus.onmessage = (ev) => {
     const m = ev.data || {};
     if (m.t === 'req' && _isLeader)            _forwardToEngine(m.tab, m.m);
@@ -123,25 +168,44 @@ function ensureTransport() {
   if (navigator.locks?.request) {
     // Held for the tab's whole life; on tab close the next waiter is granted and takes over
     // (the dead tab's sahpool handles are freed with it, so the new leader's install succeeds).
-    navigator.locks.request(LEADER_LOCK, () => {
+    navigator.locks.request(_lockName(), _becomeLeader).catch((err) => {
+      // AbortError = another tab's liveness failover stole it (#19). Stay a follower and drop the
+      // engine so its sahpool handles are freed for the new leader; anything else is a genuine
+      // Web Locks failure, where a per-tab engine is the only way to stay usable.
+      if (err?.name === 'AbortError') { _isLeader = false; _terminateEngine(); return; }
       _isLeader = true;
-      _resendPending();                    // flush ops queued before the election settled
-      _bus.postMessage({ t: 'leader' });
-      return new Promise(() => { /* hold leadership until the tab dies */ });
-    }).catch(() => { /* Web Locks failure — degrade to per-tab engine below */ _isLeader = true; });
+    });
   } else {
     _isLeader = true; // no Web Locks API — single-engine guarantee unavailable, per-tab engine
   }
+}
+
+function _terminateEngine() {
+  if (!_engine) return;
+  try { _engine.terminate(); } catch { /* already gone */ }
+  _engine = null;
+  _ready  = null;
+}
+
+function _onOpTimeout() {
+  if (_isLeader || _stealAttempted) return; // our own engine failing is covered by _engine.onerror
+  if (++_followerTimeouts < LEADER_STEAL_AFTER_TIMEOUTS) return;
+  _stealAttempted = true;
+  if (!navigator.locks?.request) return;
+  navigator.locks.request(_lockName(), { steal: true }, _becomeLeader)
+    .catch((err) => { _announceLockedIf(err?.message); });
 }
 
 function send(op, extra, timeoutMs) {
   ensureTransport();
   const rid = ++_seq;
   // rid first, then op/extra: extra may carry an entity `id` — it must never overwrite `rid`.
-  const msg = { rid, op, ...extra };
+  // scope last so no payload key can shadow the account partition the worker opens under.
+  const msg = { rid, op, ...extra, scope: _scope };
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       _pending.delete(rid);
+      _onOpTimeout();
       reject(new SqliteUnavailableError(op + ' timed out — sqlite worker unresponsive'));
     }, timeoutMs);
     _pending.set(rid, { resolve, reject, timer, msg });

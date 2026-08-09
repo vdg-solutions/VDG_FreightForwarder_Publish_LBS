@@ -15,10 +15,13 @@ import init, {
   store_count_entities,
 } from '../../pkg/vdg_freight.js';
 
+// #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
+// under it, so two accounts in one browser never share a database. No scope = no open.
 let _ready = null;
-function ready() {
+function ready(scope) {
   if (_ready) return _ready;
-  _ready = (async () => { await init(); await sqlite_init(); })().catch((e) => { _ready = null; throw e; });
+  if (!scope) return Promise.reject(new Error('sqlite: missing store scope — the database is per-account'));
+  _ready = (async () => { await init(); await sqlite_init(scope); })().catch((e) => { _ready = null; throw e; });
   return _ready;
 }
 
@@ -45,7 +48,7 @@ self.onmessage = async (ev) => {
   const m = ev.data || {};
   // rid = request-correlation id (m.id is the entity id in the payload; never use it to correlate).
   try {
-    await ready();
+    await ready(m.scope);
     const result = runOp(m);
     self.postMessage({ rid: m.rid, ok: true, result });
   } catch (e) {

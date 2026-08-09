@@ -8,6 +8,7 @@ import {
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
 import { t } from '../../i18n/index.js';
 import { openEditModal, openInviteModal } from './users-modals.js';
+import { auditRootSharing } from '../../operators/manager/root-sharing-audit.js';
 
 const KIND_USER         = 'user';
 const ROLE_ADMIN        = 'admin';
@@ -216,6 +217,31 @@ function _applyAndMount(root) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
+// #20: sharing the workspace ROOT hands every invitee write access to admin/users.jsonl, which is
+// the ACL itself — they can promote themselves. Nothing in the app grants that; it only comes from
+// a manual folder share, so surface it here where the manager fixes permissions.
+async function _renderRootSharingWarning(root) {
+  const driveApi = getDriveApi();
+  const slot     = root.querySelector('#usr-root-sharing');
+  if (!driveApi || !slot) return;
+  try {
+    const rootId = await driveApi.findWorkspaceRoot(activeWorkspaceName());
+    const shared = await auditRootSharing(driveApi, rootId);
+    if (shared.length === 0 || !slot.isConnected) return;
+    const rows = shared
+      .map((s) => `<li>${s.email} — <span class="font-medium">${s.role}</span></li>`)
+      .join('');
+    slot.innerHTML = `
+      <div class="border border-amber-300 bg-amber-50 rounded-lg p-3 text-xs text-amber-900">
+        <div class="font-semibold">⚠️ ${t('root_sharing.warn_title')}</div>
+        <div class="mt-1">${t('root_sharing.warn_body')}</div>
+        <ul class="mt-2 list-disc list-inside">${rows}</ul>
+      </div>`;
+  } catch (err) {
+    console.warn('[users] root sharing audit skipped:', err.message); // DEV — never block the grid
+  }
+}
+
 export async function render(root) {
   if (!isManager()) { navigate('/dashboard'); return; }
 
@@ -244,8 +270,11 @@ export async function render(root) {
         </select>
         <span id="usr-count" class="text-xs text-slate-400 self-center"></span>
       </div>
+      <div id="usr-root-sharing"></div>
       <div id="usr-grid"></div>
     </div>`;
+
+  _renderRootSharingWarning(root);
 
   root.querySelector('#btn-invite').addEventListener('click', () => openInviteModal(root, _modalDeps()));
 

@@ -1,17 +1,19 @@
 // F-13-P2 — Auth gate: Google sign-in + Drive folder probe for role (DYNAMIC, no hardcoded map)
 //
 // Role detection = Drive ACL enforced:
-//   - probe folder admin/         → 200 OK = admin role
+//   - admin/users.jsonl carries the role (#16) — an unseeded workspace means first run, so its
+//     creator is Manager; a seeded one grants only what the user's own record says
 //   - probe folder users/<email-prefix>/ → 200 OK = that sales rep
 //   - none → not provisioned (admin must invite)
 
 import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
+import { readWorkspaceAcl, roleTokenFromRecord } from './workspace-acl.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
-import { sqlCountEntities } from '../cache/store-client.js';
+import { sqlCountEntities, setStoreScope } from '../cache/store-client.js';
 
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
@@ -87,13 +89,25 @@ async function _probeInner(user) {
   // A null rootId no longer short-circuits — an employee never owns the root, so fall through.
   const rootId = await findWorkspaceRoot(wsName);
   if (rootId) {
-    // Probe admin/ first
+    // Probe admin/ first. #16: a listable admin/ only proves the root is VISIBLE — sharing the
+    // root makes it visible to every invitee, which used to hand each of them MANAGER. The role
+    // comes from admin/users.jsonl (the ACL contract); the folder probe is the first-run fallback.
     try {
       const adminFolder = await listChildFolder(rootId, ADMIN_FOLDER_NAME);
       if (adminFolder) {
-        _resolvedRole = MANAGER_ID;
-        writeCachedRole(user.email, MANAGER_ID);
-        return MANAGER_ID;
+        const acl = await readWorkspaceAcl(adminFolder.id, user.email);
+        if (!acl.seeded) {                       // nobody provisioned yet — creator's first run
+          _resolvedRole = MANAGER_ID;
+          writeCachedRole(user.email, MANAGER_ID);
+          return MANAGER_ID;
+        }
+        const role = roleTokenFromRecord(acl.record, MANAGER_ID, prefix);
+        if (role) {
+          _resolvedRole = role;
+          writeCachedRole(user.email, role);
+          return role;
+        }
+        // seeded, but this email is not an active user — fall through to the users/ probe
       }
     } catch (_) { /* probe missed — fall through to users/ check */ }
 
@@ -189,6 +203,7 @@ async function _hasCachedWorkspace() {
 export async function requireAuth(onSignedIn) {
   const user = getCurrentUser();
   if (user) {
+    setStoreScope(user.email); // #18: bind the local database to this account before any store op
     await _detectRoleOrThrow(user, 'auth-gate:requireAuth');
     await onSignedIn(user);
     return;
@@ -203,6 +218,7 @@ export async function requireAuth(onSignedIn) {
   if (wasPreviouslySignedIn()) {
     const revived = await rebuildSessionFromStoredToken();
     if (revived) {
+      setStoreScope(revived.email);
       await _detectRoleOrThrow(revived, 'auth-gate:requireAuth-revive');
       await onSignedIn(revived);
       return;
@@ -210,6 +226,7 @@ export async function requireAuth(onSignedIn) {
     // F-57-01 AC-04: cached identity + a synced local workspace → degrade to a local render instead
     // of a blind sign-out. AC-03: no cached identity or no cached workspace falls through to login.
     const cachedIdentity = _readCachedIdentityRaw();
+    if (cachedIdentity) setStoreScope(cachedIdentity.email); // scope BEFORE the entity count reads it
     if (cachedIdentity && await _hasCachedWorkspace()) {
       _resolvedRole = cachedIdentity.role; // best-effort — same source detectRoleViaDrive would cache
       const degradedUser = { email: cachedIdentity.email, name: '', picture: '', sub: '', id_token: null };
@@ -228,6 +245,7 @@ export async function requireAuth(onSignedIn) {
   if (!_loginMounted) {
     _loginMounted = true;
     await mountLoginScreen(async (u) => {
+      setStoreScope(u.email);
       await _detectRoleOrThrow(u, 'auth-gate:loginCb');
       onSignedIn(u);
     });
