@@ -15,6 +15,10 @@ const DRIVE_SCOPE          = 'https://www.googleapis.com/auth/drive.file';
 const USERINFO_URL         = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime when expires_in absent
 const USERINFO_FETCH_TIMEOUT_MS = 8000; // F-57-01 AC-01: matches SAFE_AWAIT_DEFAULT_MS/REPO_INIT_TIMEOUT_MS convention
+// #21 — GIS can fire NEITHER callback when an extension hands it a fake popup handle: the sign-in
+// screen then sits forever with no message. Long enough that a human typing a password + 2FA never
+// trips it; the hint is advisory only and never cancels the in-flight request.
+const SIGNIN_STALL_HINT_MS = 60_000;
 
 // F-35-01 AC-02 — mirrors access-token.js: GIS error_callback types meaning "popup blocked".
 const GIS_ERROR_POPUP_FAILED = 'popup_failed_to_open';
@@ -289,10 +293,15 @@ export function renderSignInButton(container) {
     </button>
   `;
   container.querySelector('#vdg-signin-btn').addEventListener('click', () => {
+    // #21 stall watchdog — armed just before the popup call, disarmed by whichever GIS callback
+    // answers. If neither ever does, the user gets an actionable hint instead of a dead screen.
+    let stallTimer = null;
+    const answered = () => { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } };
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope:     `openid email profile ${DRIVE_SCOPE}`,
       callback:  (resp) => {
+        answered();
         if (resp.error) {
           window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: resp.error }));
           return;
@@ -307,6 +316,7 @@ export function renderSignInButton(container) {
       },
       // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
       error_callback: (err) => {
+        answered();
         window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: _gisErrorMessage(err) }));
       },
     });
@@ -316,6 +326,10 @@ export function renderSignInButton(container) {
       window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: 'popup-blocked:window-open-unavailable' }));
       return;
     }
+    stallTimer = setTimeout(() => {
+      stallTimer = null;
+      window.dispatchEvent(new CustomEvent('vdg:signin-stalled'));
+    }, SIGNIN_STALL_HINT_MS);
     client.requestAccessToken({ prompt: 'consent' });
   });
 }

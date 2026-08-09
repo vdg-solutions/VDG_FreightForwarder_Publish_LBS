@@ -217,16 +217,22 @@ function _applyAndMount(root) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
-// #20: sharing the workspace ROOT hands every invitee write access to admin/users.jsonl, which is
-// the ACL itself — they can promote themselves. Nothing in the app grants that; it only comes from
-// a manual folder share, so surface it here where the manager fixes permissions.
+// #20: access on the workspace ROOT is access on admin/users.jsonl — the ACL itself — because
+// Drive inherits permissions downward, so the holder can promote themselves.
+// #22: Manager and Auditor legitimately hold it (their ACL path is "*", which resolves to the
+// root), so only permissions outside those two roles are reported — flagging the app's own grants
+// told managers to revoke the access their own screen had just handed out.
 async function _renderRootSharingWarning(root) {
   const driveApi = getDriveApi();
   const slot     = root.querySelector('#usr-root-sharing');
   if (!driveApi || !slot) return;
   try {
+    const rolesByEmail = {};
+    for (const u of _allUsers) {
+      if (u?.email && u.active !== false) rolesByEmail[u.email] = u.role;
+    }
     const rootId = await driveApi.findWorkspaceRoot(activeWorkspaceName());
-    const shared = await auditRootSharing(driveApi, rootId);
+    const shared = await auditRootSharing(driveApi, rootId, rolesByEmail);
     if (shared.length === 0 || !slot.isConnected) return;
     const rows = shared
       .map((s) => `<li>${s.email} — <span class="font-medium">${s.role}</span></li>`)
@@ -274,8 +280,6 @@ export async function render(root) {
       <div id="usr-grid"></div>
     </div>`;
 
-  _renderRootSharingWarning(root);
-
   root.querySelector('#btn-invite').addEventListener('click', () => openInviteModal(root, _modalDeps()));
 
   root.querySelector('#usr-search').addEventListener('input',  () => _applyAndMount(root));
@@ -283,4 +287,5 @@ export async function render(root) {
   root.querySelector('#usr-status').addEventListener('change', () => _applyAndMount(root));
 
   await _reload(root);
+  _renderRootSharingWarning(root); // after the reload — the audit needs _allUsers to know who is a Manager/Auditor
 }

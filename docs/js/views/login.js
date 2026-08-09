@@ -36,10 +36,13 @@ function loginHtml() {
         <!-- Error -->
         <div id="login-error" class="hidden text-xs text-red-600 text-center px-2"></div>
 
+        <!-- #21 stall hint (extension holding the popup) -->
+        <div id="login-hint" class="hidden text-xs text-amber-600 text-center px-2"></div>
+
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t('login.footer')}
-          <div class="mt-1 font-mono text-slate-400">v0.3.11</div>
+          <div class="mt-1 font-mono text-slate-400">v0.3.12</div>
         </div>
       </div>
     </div>`;
@@ -52,6 +55,7 @@ export function renderLoginPage(mountEl, onSuccess) {
 
   const btnTarget = mountEl.querySelector('#gis-btn-target');
   const errorEl   = mountEl.querySelector('#login-error');
+  const hintEl    = mountEl.querySelector('#login-hint');
 
   function showError(msg) {
     if (!errorEl) return;
@@ -59,9 +63,17 @@ export function renderLoginPage(mountEl, onSuccess) {
     errorEl.classList.remove('hidden');
   }
 
-  // OAuth2 callback errors + session expired
-  window.addEventListener('vdg:signin-error', (e) => showError(t('login.signin_failed', { detail: e.detail })), { once: true });
+  // OAuth2 callback errors + session expired. Not { once: true } — a second attempt must be able
+  // to replace a stale message, otherwise the screen looks frozen on the previous failure (#21).
+  window.addEventListener('vdg:signin-error', (e) => showError(t('login.signin_failed', { detail: e.detail })));
   window.addEventListener('vdg:session-expired', () => showError(sessionExpiredMessage()), { once: true });
+
+  // #21 — GIS answered with neither callback: name the usual culprit instead of hanging silently.
+  window.addEventListener('vdg:signin-stalled', () => {
+    if (!hintEl) return;
+    hintEl.textContent = t('login.signin_stalled');
+    hintEl.classList.remove('hidden');
+  });
 
   // initGoogleSignIn just loads GIS script — renderSignInButton handles the OAuth2 popup
   initGoogleSignIn(
