@@ -3,10 +3,9 @@
 // window.__vdg_repo; the proposal FSM (propose/merge/reject) and rate resolution stay in
 // the wasm island behind window.__vdg_wasm (F-28-04(a): no JS reimplementation of the
 // merge/denial logic). This class only sequences FSM calls against store reads/writes.
-// Constructor args kept for injection-site compatibility.
 
 export class PricedRefRepo {
-  constructor(_driveApi, _findWorkspaceRootFn, refName) {
+  constructor(refName) {
     this._refName = refName;
   }
 

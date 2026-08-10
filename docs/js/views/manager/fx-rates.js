@@ -6,14 +6,13 @@ import { navigate }                                from '../../router.js';
 import { t }                                       from '../../i18n/index.js';
 import { FxRateDriveRepo }                         from '../../implementations/fx-rate-drive-repo.js';
 import { validateRate, addRateEntry, FX_PAIR_DEFAULT } from '../../util/validate-rate.js';
-import { activeWorkspaceName }                     from '../../operators/workspace-registry.js';
 import { clearRateCache }                          from '../../util/fx-lookup.js';
 import { currentUserRole }                         from '../../operators/manager/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../util/master-load.js';
 import { isViewSuperseded }                        from '../../util/view-root.js';
+import { readSettings }                            from '../../operators/manager/workspace-settings.js';
 
 const SOURCE_OPTIONS  = ['Vietcombank', 'SBV', 'Manual'];
-const WORKSPACE_JSON  = 'workspace.json';
 const TOAST_MS        = 4_000;
 const LOAD_TAG        = 'fx-rates:list';
 const SOURCE_TAG      = 'fx-rates:source';
@@ -23,13 +22,8 @@ const VIEW_DATA_LOAD_BUDGET_MS = 6_000;
 
 let _repo = null;
 
-function getApi() { return window.__vdg_drive_api; }
-
 function getFxRepo() {
-  if (!_repo) {
-    const api = getApi();
-    _repo = new FxRateDriveRepo(api, () => api.findWorkspaceRoot(activeWorkspaceName()));
-  }
+  if (!_repo) _repo = new FxRateDriveRepo();
   return _repo;
 }
 
@@ -37,24 +31,12 @@ function toast(type, msg) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message: msg, duration: TOAST_MS } }));
 }
 
-/// Load fx_source from workspace.json; returns 'Manual' as default.
+/// The workspace's configured FX source, from the store. This used to read the loose
+/// `_shared/workspace.json` with its own driveFetch, which broke the moment settings moved to the
+/// `workspace_settings` kind (#31): the settings screen wrote the store, this screen kept reading
+/// a file nobody updates any more, so every rate defaulted to 'Manual'.
 async function loadDefaultSource() {
-  try {
-    const api    = getApi();
-    const root   = await api.findWorkspaceRoot(activeWorkspaceName());
-    if (!root) return 'Manual';
-    const shared = await api.findFolder(root, '_shared');
-    if (!shared) return 'Manual';
-    const q   = `name='${WORKSPACE_JSON}' and '${shared.id}' in parents and trashed=false`;
-    const res = await api.driveFetch(
-      'GET', `/files?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive`,
-    );
-    const f = res?.files?.[0];
-    if (!f) return 'Manual';
-    const data = await api.getFile(f.id);
-    if (!data?.content) return 'Manual';
-    return JSON.parse(data.content).fx_source || 'Manual';
-  } catch { return 'Manual'; }
+  return (await readSettings(window.__vdg_repo)).fx_source;
 }
 
 function sourceLabel(src) {

@@ -2267,6 +2267,66 @@ export function wasm_compute_sales_analytics(shipments_json, lines_json) {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
+
+/**
+ * @param {string} code
+ * @returns {boolean}
+ */
+export function workspace_currency_is_selectable(code) {
+    const ptr0 = passStringToWasm0(code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.workspace_currency_is_selectable(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
+ * Empty strings for "absent" -- JS passes `draft.currency || ''` and the config value or ''.
+ * @param {string} saved
+ * @param {string} configured_default
+ * @returns {string}
+ */
+export function workspace_header_currency(saved, configured_default) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(saved, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(configured_default, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.workspace_header_currency(retptr, ptr0, len0, ptr1, len1);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred3_0 = r0;
+        deferred3_1 = r1;
+        return getStringFromWasm0(r0, r1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export5(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * The codes the default-currency picker may offer, as JSON -- one source for the Rust rule and
+ * the select that renders it.
+ * @returns {string}
+ */
+export function workspace_selectable_currencies() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.workspace_selectable_currencies(retptr);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred1_0 = r0;
+        deferred1_1 = r1;
+        return getStringFromWasm0(r0, r1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export5(deferred1_0, deferred1_1, 1);
+    }
+}
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
@@ -2711,7 +2771,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10622(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10632(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2729,7 +2789,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10622(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10632(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2902,7 +2962,7 @@ function __wbg_get_imports() {
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
             // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1734, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10620);
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10630);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -2939,10 +2999,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_10620(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_10630(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_10620(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_10630(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -2953,8 +3013,8 @@ function __wasm_bindgen_func_elem_10620(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_10622(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_10622(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_10632(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_10632(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')

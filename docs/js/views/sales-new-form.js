@@ -12,14 +12,23 @@ import { sectionCHtml, wireCommissionSection, collectCommission }
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }
   from './sales-new-form/section-waterfall.js';
 import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
-import { countCurrencyMismatches } from './sales-new-form/pnl-line-fx.js';
+import { summarizeLineCurrencies, DEFAULT_HEADER_CURRENCY } from './sales-new-form/pnl-line-fx.js';
 import { computeVndInvariant } from './sales-new-form/pnl-save-validations.js';
 
 const AUTOSAVE_DELAY_MS = 1500;
 
+/// Thin call into the Rust rule. The bridge is up by the time a view renders (repo-init awaits
+/// wasm); DEFAULT_HEADER_CURRENCY is the same literal workspace_config.rs falls back to, so a
+/// missing bridge yields the identical answer rather than a JS-side decision.
+function resolveHeaderCurrency(saved, configuredDefault) {
+  const bridge = window.workspace_header_currency;
+  if (typeof bridge !== 'function') return saved || configuredDefault || DEFAULT_HEADER_CURRENCY;
+  return bridge(saved || '', configuredDefault || '');
+}
+
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
-          mode = 'create', fxRepo = null, jobNo = null } = opts;
+          mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || todayLocal();
@@ -28,6 +37,13 @@ export async function renderForm(root, opts = {}) {
   const isManager = (window.__vdg_current_user?.roles || []).includes('Manager');
   const d = draft ? { ...draft } : {};
   if (!d.sales_rep && salesRepId) d.sales_rep = salesRepId;
+
+  // Which currency the header opens in is a business rule, so Rust decides it
+  // (boundary/workspace_config.rs::header_currency): a saved P&L keeps its own, a new one takes
+  // accounting's default, an unofferable default degrades to the fallback. Resolved BEFORE section
+  // B renders, because the rows seed their currency cells off this same value — passing '' here
+  // sent them down their own VND fallback while the header select showed USD.
+  d.currency = resolveHeaderCurrency(d.currency, defaultCurrency);
 
   // F-32-01 AC-01/AC-07: Job No is resolved by the caller (render()'s bounded personalization
   // load, same PERSONALIZATION_LOAD_TIMEOUT_MS ceiling as customers/userConfig — F-19-29) and
@@ -59,9 +75,7 @@ export async function renderForm(root, opts = {}) {
         ${sectionBHtml(d)}
         ${sectionCHtml(d)}
         ${sectionDHtml(d, { isManager })}
-        <div id="ni-currency-warning"
-          class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-4 py-2">
-        </div>
+        <div id="ni-currency-summary" class="hidden text-[11px] text-slate-500 px-1"></div>
         <div id="ni-form-errors"
           class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2">
         </div>
@@ -222,25 +236,25 @@ function _renderActionBar(publishState) {
     </div>`;
 }
 
-// FR-05: non-blocking heads-up when entered lines' currency differs from the header
-function _renderCurrencyWarning(root, count) {
-  const el = root.querySelector('#ni-currency-warning');
+// Plain read-out of which currencies the entered lines use — no header comparison. The old FR-05
+// warning compared every line cell against the header, so it fired on a blank form and reported
+// cells while saying "dòng"; the count is what people actually wanted to see.
+function _renderCurrencySummary(root, summary) {
+  const el = root.querySelector('#ni-currency-summary');
   if (!el) return;
-  if (count > 0) {
-    el.textContent = t('sales_new.warning.currency_mismatch').replace('{count}', count);
-    el.classList.remove('hidden');
-  } else {
-    el.classList.add('hidden');
-  }
+  if (summary.length === 0) { el.classList.add('hidden'); return; }
+  const items = summary.map((s) =>
+    t('sales_new.currency_summary.item', { count: s.count, currency: s.currency }));
+  el.textContent = `${t('sales_new.currency_summary.label')} ${items.join(' · ')}`;
+  el.classList.remove('hidden');
 }
 
 function _recomputeWaterfall(root, userConfig) {
   const lines           = collectLines(root);
   const commissionLines = collectCommission(root);
   const overrides       = collectWaterfallOverrides(root);
-  const headerCurrency  = root.querySelector('[name=currency]')?.value || '';
 
-  _renderCurrencyWarning(root, countCurrencyMismatches(lines, commissionLines, headerCurrency));
+  _renderCurrencySummary(root, summarizeLineCurrencies(lines, commissionLines));
 
   const sr  = sumVndCollect(lines);
   const sp  = sumVndPay(lines);

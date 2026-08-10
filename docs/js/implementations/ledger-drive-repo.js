@@ -2,8 +2,8 @@
 // posted-index, reconciliation/repost logs, balances and seed-ensure live in
 // data_repo/ledger_store.rs behind window.__vdg_repo. What stays here: fetching the two
 // bundled seed assets (chart-of-accounts/posting-rules — static app files, not Drive) and
-// pushing the chart into the store once. Constructor args kept for injection-site
-// compatibility; public method set unchanged (sync_ledger.rs reaches these via IoPort).
+// pushing the chart into the store once. Public method set unchanged (sync_ledger.rs
+// reaches these via IoPort).
 
 import { LedgerRepo } from '../abstractions/ledger-repo.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
@@ -16,7 +16,7 @@ const RECONCILIATION_LOG_FILE  = 'reconciliation-log.jsonl';
 const REPOST_LOG_FILE          = 'repost-log.jsonl';
 
 export class LedgerDriveRepo extends LedgerRepo {
-  constructor(_driveApi, _findWorkspaceRootFn) {
+  constructor() {
     super();
     this._chartCache        = null; // acc_code -> Account (also pushed into the WASM store)
     this._postingRulesCache = null;

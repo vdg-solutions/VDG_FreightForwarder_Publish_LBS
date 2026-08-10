@@ -5,7 +5,6 @@ import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }              from '../../router.js';
 import { t }                     from '../../i18n/index.js';
 import { AwbDriveRepo }          from '../../implementations/awb-drive-repo.js';
-import { activeWorkspaceName }   from '../../operators/workspace-registry.js';
 
 // AC-10: jsPDF lazy CDN — not bundled, loaded on first Export PDF click
 const JSPDF_CDN   = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
@@ -16,13 +15,8 @@ const STATUS_OPTS = ['All', 'Drafted', 'SISubmitted', 'Released', 'DeliveryProof
 let _repo  = null;
 let _jsPdf = null;
 
-function getApi() { return window.__vdg_drive_api; }
-
 function getRepo() {
-  if (!_repo) {
-    const api = getApi();
-    _repo = new AwbDriveRepo(api, () => api.findWorkspaceRoot(activeWorkspaceName()));
-  }
+  if (!_repo) _repo = new AwbDriveRepo();
   return _repo;
 }
 

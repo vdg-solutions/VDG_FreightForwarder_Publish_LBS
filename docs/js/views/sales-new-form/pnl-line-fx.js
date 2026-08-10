@@ -11,6 +11,12 @@ const RO_CELL_CLS  = `${FX_CELL_CLS} bg-slate-50`;
 // module graph) that a plain table-cell markup helper must not carry along. Keep in sync by hand.
 export const LINE_CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 
+// Last-ditch header currency when neither the draft nor the workspace default supplies one.
+// MUST equal section-header.js's `d.currency || 'USD'` literal: sectionBHtml used to pass '' here
+// instead, so a blank form rendered a USD header against VND line cells and reported every cell
+// as a currency mismatch. Same hand-sync rule as LINE_CURRENCY_OPTIONS above.
+export const DEFAULT_HEADER_CURRENCY = 'USD';
+
 /** computeLineVnd — AC-02: vnd_amount = amount × fx_rate, VND passthrough */
 export function computeLineVnd(amount, currency, fxRate) {
   const amt = Number(amount) || 0;
@@ -66,18 +72,26 @@ export function vndCellHtml(side, line = {}) {
       class="w-28 ${RO_CELL_CLS} text-right font-medium ${colorCls}" /></td>`;
 }
 
-/** countCurrencyMismatches — FR-05: count of entered mục B/C currency values that differ from header */
-export function countCurrencyMismatches(lines = [], commissionLines = [], headerCurrency) {
-  if (!headerCurrency) return 0;
-  let count = 0;
+/** summarizeLineCurrencies — how many lines sit in each currency, mục B rows + mục C rows.
+ *  Counts ROWS, not cells: a mục B row counts once per distinct currency it actually uses, so an
+ *  all-USD row is 1 × USD and a buy-USD/sell-VND row is 1 × USD + 1 × VND. Only sides carrying an
+ *  amount count — a blank form has nothing to report. Replaces countCurrencyMismatches (FR-05),
+ *  which compared against the header and so fired on every untouched form. */
+export function summarizeLineCurrencies(lines = [], commissionLines = []) {
+  const counts = new Map();
+  const bump = (currency) => { if (currency) counts.set(currency, (counts.get(currency) || 0) + 1); };
   for (const l of lines) {
-    if (l.buy_currency && l.buy_currency !== headerCurrency) count++;
-    if (l.sell_currency && l.sell_currency !== headerCurrency) count++;
+    const used = new Set();
+    if (l.buy_amt)  used.add(l.buy_currency);
+    if (l.sell_amt) used.add(l.sell_currency);
+    for (const c of used) bump(c);
   }
   for (const l of commissionLines) {
-    if (l.currency && l.currency !== headerCurrency) count++;
+    if (l.amount_fx) bump(l.currency);
   }
-  return count;
+  return [...counts.entries()]
+    .map(([currency, count]) => ({ currency, count }))
+    .sort((a, b) => b.count - a.count || a.currency.localeCompare(b.currency));
 }
 
 /** applyFxDateDefaults — AC-06: blank fx_date cells default to the document date */

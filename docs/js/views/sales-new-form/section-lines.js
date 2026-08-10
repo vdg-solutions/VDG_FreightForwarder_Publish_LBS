@@ -3,8 +3,8 @@ import { t, currentLocale } from '../../i18n/index.js';
 import { kindI18nLabel }    from '../../util/kind-i18n.js';
 import { ensureWmaStyle, applyWmaToRow, applyWmaToAllRows, dismissWmaBadge }
   from './section-lines-wma.js';
-import { computeLineVnd, fxCellsHtml, vndCellHtml, wireLineFx, applyFxDateDefaults, prefillRowFx }
-  from './pnl-line-fx.js';
+import { computeLineVnd, fxCellsHtml, vndCellHtml, wireLineFx, applyFxDateDefaults, prefillRowFx,
+  DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
 
 // Mirrors Rust PNL_VERTICAL_KIND_MAP — prefix-to-kind for AC-10
 export const PNL_VERTICAL_KIND_MAP_JS = {
@@ -125,7 +125,9 @@ function onKindChange(rowEl, newKind) {
 
 export function sectionBHtml(draft = {}) {
   const lines          = draft.lines || [];
-  const headerCurrency = draft.currency || '';
+  // Never '' — an empty header sends fxCellsHtml down its own VND fallback, which is a different
+  // currency from the header select's USD fallback (see DEFAULT_HEADER_CURRENCY).
+  const headerCurrency = draft.currency || DEFAULT_HEADER_CURRENCY;
   const padded = lines.length >= INIT_ROWS
     ? lines
     : [...lines, ...Array(INIT_ROWS - lines.length).fill({})];

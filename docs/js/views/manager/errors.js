@@ -4,8 +4,7 @@ import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t }         from '../../i18n/index.js';
-
-const ERROR_LOG_PATH = '_shared/error-log';
+import { listErrorRecords, purgeErrorMonth } from '../../operators/manager/error-log-store.js';
 
 // raw technical tokens shown verbatim (mono diagnostic dump), same carve-out as row.kind below
 const KIND_OPTS = ['js_error', 'unhandled_rejection', 'sync_error'];
@@ -16,56 +15,6 @@ let _kindFilter = '';
 let _dateFilter = '';
 
 function getApi() { return window.__vdg_drive_api || null; }
-
-// ── Drive read ─────────────────────────────────────────────────────────────────
-
-async function loadErrorRecords(api) {
-  const { findWorkspaceRoot, findFolder, parseJsonlBundle } = await import('../../auth/drive-api.js');
-  const { activeWorkspaceName } = await import('../../operators/workspace-registry.js');
-  const wsRoot = await findWorkspaceRoot(activeWorkspaceName());
-  if (!wsRoot) return [];
-
-  let cur = wsRoot;
-  for (const part of ERROR_LOG_PATH.split('/')) {
-    const f = await findFolder(cur, part);
-    if (!f) return [];
-    cur = f.id;
-  }
-
-  const q   = `'${cur}' in parents and trashed=false and name contains '.jsonl'`;
-  const res = await api.driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`);
-  const files = res.files || [];
-  const records = [];
-  for (const file of files) {
-    const data = await api.getFile(file.id);
-    if (!data) continue;
-    records.push(...parseJsonlBundle(data.content));
-  }
-  return records.sort((a, b) => b.ts?.localeCompare(a.ts || '') || 0);
-}
-
-// soft-delete: rename file so it won't be fetched on next load
-async function clearMonthly(api, month) {
-  const { findWorkspaceRoot, findFolder } = await import('../../auth/drive-api.js');
-  const { activeWorkspaceName } = await import('../../operators/workspace-registry.js');
-  const wsRoot = await findWorkspaceRoot(activeWorkspaceName());
-  if (!wsRoot) return;
-
-  let cur = wsRoot;
-  for (const part of ERROR_LOG_PATH.split('/')) {
-    const f = await findFolder(cur, part);
-    if (!f) return;
-    cur = f.id;
-  }
-
-  const fileName = `${month}.jsonl`;
-  const q   = `name='${fileName}' and '${cur}' in parents and trashed=false`;
-  const res = await api.driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`);
-  const file = res.files?.[0];
-  if (!file) return;
-  // soft-delete: move to trash via Drive API
-  await api.driveFetch('DELETE', `/files/${file.id}`);
-}
 
 // ── grid ───────────────────────────────────────────────────────────────────────
 
@@ -149,7 +98,7 @@ export async function render(root) {
   async function reload() {
     root.querySelector('#err-status').textContent = t('loading');
     try {
-      _allRows = api ? await loadErrorRecords(api) : [];
+      _allRows = await listErrorRecords();
     } catch (err) {
       _allRows = [];
       root.querySelector('#err-status').textContent = t('errors.status.error_prefix', { msg: err.message });
@@ -185,7 +134,7 @@ export async function render(root) {
     const now   = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     try {
-      await clearMonthly(api, month);
+      await purgeErrorMonth(api, month);
       await reload();
     } catch (err) {
       window.dispatchEvent(new CustomEvent('vdg:toast', {

@@ -2,13 +2,8 @@
 // (month cache, listing, append, delete, CAS) lives in data_repo/fx_store.rs behind
 // window.__vdg_repo; domain math (resolve/overlap/write-gate) in the fx island behind
 // window.__vdg_wasm. This class only pumps between the two — no caches, no Drive calls.
-// Constructor args kept for injection-site compatibility (repo-init-steps.js).
 
 export class FxRateDriveRepo {
-  constructor(_driveApi, _findWorkspaceRootFn) {
-    // dependencies live behind the WASM repo now; args kept so injection sites don't churn
-  }
-
   _repo() {
     const repo = window.__vdg_repo;
     if (!repo?.fx_months_to_ingest) throw new Error('WASM repo not ready');

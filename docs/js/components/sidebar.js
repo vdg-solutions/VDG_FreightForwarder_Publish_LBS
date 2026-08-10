@@ -34,6 +34,9 @@ const V1_ITEMS = [
   { group: 'reports',   route: '/accounting/ledger',   labelKey: 'nav.reports.ledger',    icon: 'doc', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
   // F-23-05: financial reports (TB/P&L/BS) — same reports group; F-24-05 opens to Accountant
   { group: 'reports',   route: '/accounting/reports',  labelKey: 'nav.reports.financial', icon: 'doc', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  // #31: finance policy the ACCOUNTANT owns (default P&L currency). Not under /manager — that
+  // prefix is Manager-only in access_policy.rs, which would lock out the very role that sets it.
+  { group: 'reports',   route: '/accounting/settings', labelKey: 'nav.accounting.settings', icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
   { group: 'reports',   route: '/manager/commission-rules', labelKey: 'nav.reports.comm_rules', icon: 'check', managerOnly: true, allowRoles: [ROLE_MANAGER] },
   // F-24-04: manager-only user CRUD — same reports group (R-5 minimal change, precedent above)
   { group: 'reports',   route: '/admin/users',         labelKey: 'nav.admin.users',       icon: 'db',  managerOnly: true },
@@ -263,7 +266,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build b8c3165">v0.3.21</span>
+        <span class="font-mono whitespace-nowrap" title="build 8344022">v0.3.23</span>
       </div>
     `;
   }

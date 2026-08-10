@@ -7,11 +7,11 @@ import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
 import { renderForm, collectFormState, validateNiForm, shipmentToDraft } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
 import { createSubmitGuard } from './sales-new/submit-guard.js';
-import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
 import { safeMasterLoad } from '../util/master-load.js';
 import { ensureRepCode } from '../operators/rep-code-registry.js';
 import { assignJobNo } from '../operators/job-no-gen.js';
+import { readSettings, DEFAULT_CURRENCY_FIELD } from '../operators/manager/workspace-settings.js';
 
 // F-19-29: personalization reads (userConfig + commission override) are optional — bound them
 // under RENDER_MOUNT_TIMEOUT_MS (8s) so a slow Drive fallback still leaves headroom for the
@@ -27,11 +27,9 @@ function showToast(msg, type = 'info') {
 let _fxRepoSingleton = null;
 async function _fxRepo() {
   if (_fxRepoSingleton) return _fxRepoSingleton;
-  const api = window.__vdg_drive_api;
-  if (!api) return null;
   try {
     const { FxRateDriveRepo } = await import('../implementations/fx-rate-drive-repo.js');
-    _fxRepoSingleton = new FxRateDriveRepo(api, () => api.findWorkspaceRoot(activeWorkspaceName()));
+    _fxRepoSingleton = new FxRateDriveRepo();
     return _fxRepoSingleton;
   } catch { return null; /* fx pre-fill is optional — form still works without it */ }
 }
@@ -63,6 +61,7 @@ export async function render(root, opts = {}) {
   let userConfig = null;
   let draft      = null;
   let jobNo      = null;
+  let defaultCurrency = null;
 
   // F-19-29: customers list + personalization reads raced concurrently under one bound —
   // a slow/cold Drive fallback degrades to customers=[]/userConfig=null (both already
@@ -72,10 +71,13 @@ export async function render(root, opts = {}) {
   // await) so a stalled repo never doubles the wait — reuses rawUserConfig, no extra fetch.
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, rawUserConfig, assignment] = await Promise.all([
+      const [customerList, rawUserConfig, assignment, wsSettings] = await Promise.all([
         repo.list('customers').catch(() => []),
         salesRepId ? repo.get('user', `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
         salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
+        // Accounting's default header currency — a LOCAL store read (workspace_settings kind),
+        // not a Drive fetch: the delta tick is what keeps it current, not this render.
+        isEdit ? Promise.resolve(null) : readSettings(repo),
       ]);
       // Resolve manager-assigned sales_pct → inject into userConfig
       let resolvedUserConfig = rawUserConfig;
@@ -90,13 +92,14 @@ export async function render(root, opts = {}) {
           generatedJobNo = await assignJobNo(repo, repCode);
         } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
       }
-      return { customerList, userConfig: resolvedUserConfig, jobNo: generatedJobNo };
+      return { customerList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
       customers  = loadRes.value.customerList;
       userConfig = loadRes.value.userConfig;
       jobNo      = loadRes.value.jobNo;
+      defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
     }
     // !loadRes.ok (timeout or thrown): customers=[], userConfig=null, jobNo=null — all
     // already-tolerated defaults downstream (sales-new-form.js — no contract change;
@@ -156,7 +159,7 @@ export async function render(root, opts = {}) {
 
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
-  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo });
+  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo, defaultCurrency });
 
   // F-32-02: one guard per render() — re-entrancy-blocks a second submit while the
   // first is still pending (double-click / slow network) so only one shipment/job_no

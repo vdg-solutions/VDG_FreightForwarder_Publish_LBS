@@ -10,7 +10,7 @@ const USER_AUDIT_ADD_USER        = 'add_user';
 const USER_AUDIT_DEACTIVATE_USER = 'deactivate_user';
 
 export class UserDriveRepo extends UserRepoPort {
-  constructor(_driveApi, _findWorkspaceRootFn, userAuditLog = null) {
+  constructor(userAuditLog = null) {
     super();
     this._userAuditLog = userAuditLog;
   }

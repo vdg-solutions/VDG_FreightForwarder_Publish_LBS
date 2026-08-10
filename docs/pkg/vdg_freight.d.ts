@@ -338,6 +338,19 @@ export function wasm_build_reversal_entry(legs_json: string, chart_json: string,
 
 export function wasm_compute_sales_analytics(shipments_json: string, lines_json: string): any;
 
+export function workspace_currency_is_selectable(code: string): boolean;
+
+/**
+ * Empty strings for "absent" -- JS passes `draft.currency || ''` and the config value or ''.
+ */
+export function workspace_header_currency(saved: string, configured_default: string): string;
+
+/**
+ * The codes the default-currency picker may offer, as JSON -- one source for the Rust rule and
+ * the select that renders it.
+ */
+export function workspace_selectable_currencies(): string;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -468,6 +481,9 @@ export interface InitOutput {
     readonly wasmentityrepo_users_list_all: (a: number) => number;
     readonly wasmentityrepo_users_remove: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
+    readonly workspace_currency_is_selectable: (a: number, b: number) => number;
+    readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly workspace_selectable_currencies: (a: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -478,8 +494,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10620: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10622: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10630: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10632: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

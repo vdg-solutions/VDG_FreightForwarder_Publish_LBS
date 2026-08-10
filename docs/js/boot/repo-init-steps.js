@@ -202,12 +202,12 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     const { initDueSoonChecker } = await import('../sync/due-soon-checker.js');
     initDueSoonChecker();
 
-    // Ledger + user repos — wrap so every injected findWorkspaceRootFn resolves the
-    // registry-bound name (F-17-03: findWorkspaceRoot takes a required explicit name).
+    // Drive root resolution is still needed by the ACL/provisioning services below — those
+    // administer Drive itself. The DATA repos take nothing: they read the WASM store.
     const findWorkspaceRoot = () => driveApi.findWorkspaceRoot(activeWorkspaceName());
 
     const { LedgerDriveRepo } = await import('../implementations/ledger-drive-repo.js');
-    const ledgerRepo = new LedgerDriveRepo(driveApi, findWorkspaceRoot);
+    const ledgerRepo = new LedgerDriveRepo();
     window.__vdg_ledger_repo = ledgerRepo;
 
     // Priced-ref governance repos (F-28-12) — one PricedRefRepo per priced-tier master,
@@ -216,7 +216,7 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     const { PricedRefRepo } = await import('../implementations/priced-ref-repo.js');
     window.__vdg_priced_repos = {};
     for (const refName of PRICED_REFS) {
-      window.__vdg_priced_repos[refName] = new PricedRefRepo(driveApi, findWorkspaceRoot, refName);
+      window.__vdg_priced_repos[refName] = new PricedRefRepo(refName);
     }
 
     // Priced-ref boot migration (F-28-14(d)): materialize each priced master bundle into its
@@ -233,7 +233,7 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     window.__vdg_user_audit_log = userAuditLog;
 
     const { UserDriveRepo } = await import('../implementations/user-drive-repo.js');
-    const userRepo = new UserDriveRepo(driveApi, findWorkspaceRoot, userAuditLog);
+    const userRepo = new UserDriveRepo(userAuditLog);
     window.__vdg_user_repo = userRepo;
 
     const { RoleAssignmentService } = await import('../operators/manager/role-assignment-service.js');

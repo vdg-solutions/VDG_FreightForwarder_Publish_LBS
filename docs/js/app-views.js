@@ -68,6 +68,7 @@ export const VIEWS = {
   '/accounting/ledger':          () => import('./views/accounting/ledger-viewer.js'),
   // E-23 F-23-05
   '/accounting/reports':         () => import('./views/accounting/reports.js'),
+  '/accounting/settings':        () => import('./views/accounting/settings.js'),
   // E-24 F-24-04
   '/admin/users':                () => import('./views/admin/users-view.js'),
   // E-24 F-24-06

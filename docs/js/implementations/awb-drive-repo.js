@@ -1,12 +1,8 @@
 // AwbDriveRepo — facade over the WASM awb store (#11 port). Storage orchestration
 // (month files, append, delete-by-awb_no, CAS) lives in data_repo/awb_store.rs behind
-// window.__vdg_repo. Constructor args kept for injection-site compatibility.
+// window.__vdg_repo.
 
 export class AwbDriveRepo {
-  constructor(_driveApi, _findWorkspaceRootFn) {
-    // dependencies live behind the WASM repo now; args kept so injection sites don't churn
-  }
-
   _repo() {
     const repo = window.__vdg_repo;
     if (!repo?.awb_list_by_month) throw new Error('WASM repo not ready');

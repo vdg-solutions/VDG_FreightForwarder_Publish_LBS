@@ -11,7 +11,7 @@
 // seed:     bundled seed file fetched by the view's seed migration, or null when the view
 //           has no file-backed seed (e.g. inline defaults, or no seeding at all).
 // tier:     'priced' feeds a price/PNL calculation (governance-sensitive); else 'reference'.
-import { ROLE_MANAGER, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
+import { ROLE_MANAGER, ROLE_SALES_REP, ROLE_ACCOUNTANT } from '../operators/manager/route-guard.js';
 
 const SEED_BASE = 'seed/masters';
 
@@ -38,4 +38,12 @@ export const MASTER_REGISTRY = {
   // F-18-11: alias-only registry over the 6 Rust-FSM-backed ShipmentState canonical values.
   // Manager may edit aliases/labels on the 6 seeded rows only — never add/remove a row.
   'shipment-states':  { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/shipment-states.jsonl`,   tier: 'reference' },
+  // Single-row workspace policy (fx source, air-rates second eyes, default currency). It used to
+  // be a loose `_shared/workspace.json` read by a bespoke driveFetch, which meant every reader
+  // paid a Drive round-trip and nothing refreshed it — a loose file carries no kind, so the 30s
+  // delta engine never saw it. Registered here it lives in the DB like every other kind: readers
+  // hit the local store, and sync_delta picks up an accounting change within a tick.
+  // #31: Accountant writes it too — the default currency and the FX source are finance policy,
+  // which is accounting's call, not an administration one.
+  workspace_settings: { audience: 'team',    writers: [ROLE_MANAGER, ROLE_ACCOUNTANT], seed: null,                                   tier: 'reference' },
 };
