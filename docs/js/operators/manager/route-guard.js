@@ -174,3 +174,12 @@ export function normalizeRole(role) {
 export function currentUserRole() {
   return window.__vdg_current_user?.role || ROLE_READ_ONLY;
 }
+
+/// Stamped on anything that has to answer "who did this" — the workspace user prefix
+/// (`users/{prefix}`), the same token the ledger uses. A ROLE is not an identity: two sales
+/// reps share one, so a role-stamped record cannot name either of them.
+export const UNKNOWN_USER_ID = 'unknown';
+
+export function currentUserId() {
+  return window.__vdg_current_user?.user_prefix || UNKNOWN_USER_ID;
+}

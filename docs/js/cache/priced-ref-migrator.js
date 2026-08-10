@@ -13,9 +13,11 @@ import { beginMigration, endMigration } from '../boot/migration-overlay.js';
 
 const PRICED_TIER          = 'priced';
 const TEAM_AUDIENCE        = 'team';
-const DEFAULT_VALID_FROM   = '1970-01-01'; // open lower bound — row has no from/effective date
-const DEFAULT_VALID_TO     = '9999-12-31'; // open upper bound — row has no end date
 const UNKNOWN_CURRENCY     = { Other: 'UNKNOWN' }; // structural default; rows carry a currency in practice
+// Every field the PricedRecord envelope needs from the row. Named so a row that is missing
+// one names the field, instead of being silently defaulted into a shape the resolver
+// cannot use (see _toEnvelope).
+const REQUIRED_ROW_FIELDS  = ['pricing_key', 'valid_from', 'valid_to'];
 const KNOWN_CURRENCY_CODES = new Set(['VND', 'USD', 'CNY', 'EUR', 'JPY', 'KRW', 'SGD', 'THB', 'INR']);
 
 // AC-06: in-scope kinds = registry tier:'priced' ∩ audience:'team'. Single functor, no
@@ -55,18 +57,26 @@ async function _migrateKind(repo, pricedRepo, kind, _ms) {
   const rows = listRes.value || [];
 
   const recordsMap = {};
+  const skipped = [];
   let found = 0;
   for (const row of rows) {
     const id = row?.id;
     if (!id) continue; // no identity — skip (mirrors master-scope-migrator)
-    recordsMap[id] = _toEnvelope(id, row);
-    found++;
+    try {
+      recordsMap[id] = toPricedEnvelope(id, row);
+      found++;
+    } catch (err) {
+      // One malformed row must not cost the ref its other 89. Named, not swallowed: a silent
+      // skip is how a rate goes missing from the tariff with nothing on screen to say so.
+      skipped.push(id);
+      console.warn(`[priced-ref-migrator] ${kind}: ${err.message}`);
+    }
   }
 
   // Idempotency + empty-bundle guard both live in the repo — authority is the shared state.json.
   const seedRes = await safeAwait(pricedRepo.seedIfEmpty(recordsMap), _ms, null, `priced-ref-migrator:seed:${kind}`);
-  if (!seedRes.ok) return { kind, found, migrated: 0, reason: 'seed-failed' };
-  return { kind, found, ...seedRes.value };
+  if (!seedRes.ok) return { kind, found, skipped, migrated: 0, reason: 'seed-failed' };
+  return { kind, found, skipped, ...seedRes.value };
 }
 
 function _normalizeCurrency(code) {
@@ -76,13 +86,26 @@ function _normalizeCurrency(code) {
   return { Other: String(code) };
 }
 
-// Wrap one bundle row in the FROZEN PricedRecord envelope. body = whole row verbatim (no-loss).
-function _toEnvelope(id, row) {
+/**
+ * Wrap one bundle row in the FROZEN PricedRecord envelope. body = whole row verbatim (no-loss).
+ *
+ * `pricing_key` is READ from the row, never derived from the id. Deriving it made every record
+ * its own key, and that quietly disabled the whole effective-dating layer: no two records could
+ * ever share a key, so the overlap guard could not fire and `resolveOnDate` matched nothing —
+ * the ocean-tariff seed's two half-year WHLC windows resolved as two unrelated rates.
+ *
+ * The three fields are required, not defaulted. A default here is indistinguishable from a real
+ * open-ended window at read time, so a row that forgot its dates would price as if it were in
+ * force forever. Throwing names the row and the field instead.
+ */
+export function toPricedEnvelope(id, row) {
+  const missing = REQUIRED_ROW_FIELDS.filter((f) => !row?.[f]);
+  if (missing.length) throw new Error(`priced row '${id}' is missing ${missing.join(', ')}`);
   return {
     record_id:   id,
-    pricing_key: id,
-    valid_from:  row.valid_from ?? row.effective_from ?? DEFAULT_VALID_FROM,
-    valid_to:    row.valid_to   ?? row.valid_until    ?? DEFAULT_VALID_TO,
+    pricing_key: row.pricing_key,
+    valid_from:  row.valid_from,
+    valid_to:    row.valid_to,
     currency:    _normalizeCurrency(row.currency),
     body:        row,
   };

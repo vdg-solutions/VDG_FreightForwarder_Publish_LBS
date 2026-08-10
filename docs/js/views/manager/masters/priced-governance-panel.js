@@ -5,6 +5,7 @@
 // F-28-04 §B — no per-field cherry-pick). Never writes state.json itself.
 
 import { t } from '../../../i18n/index.js';
+import { currentUserId } from '../../../operators/manager/route-guard.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 
 const TOAST_MS      = 4_000;
@@ -33,7 +34,7 @@ function proposalCardHtml(proposal, currentRecord) {
   const rows = keys.map((k) => diffRowHtml(k, currentRecord?.[k], proposal.diff[k])).join('');
   return `
     <div class="border border-slate-200 rounded-lg p-3 mb-3" data-proposal-id="${escHtml(proposal.proposal_id)}">
-      <div class="text-[10px] text-slate-400 mb-2">${escHtml(proposal.record_id)} — ${escHtml(proposal.author)}</div>
+      <div class="text-[10px] text-slate-400 mb-2">${escHtml(proposal.record_id)} — ${escHtml(proposal.author_user)} (${escHtml(proposal.author)})</div>
       <table class="w-full mb-2">
         <thead><tr class="text-[9px] uppercase text-slate-400">
           <th class="text-left py-1 px-2"></th>
@@ -73,10 +74,42 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
     return canWriteDirect ? t('common.action.save') : t('priced.action.propose');
   }
 
+  /// Two windows for one pricing key would make "the rate on this date" ambiguous, and the
+  /// resolver has no tie-break — so the collision is refused at write time, where the person
+  /// who caused it is still looking at the form.
+  async function assertWritable(recordId, body) {
+    try {
+      await pricedRepo.assertNoOverlapAgainstRef(recordId, body);
+    } catch (err) {
+      // Rethrown, so the modal stays open on the form the user must fix — but toasted
+      // first, because the raw wasm error envelope is not a sentence anyone can act on.
+      console.error('[priced-governance-panel] write refused:', err.message); // DEV — user sees the toast
+      toast(t('priced.overlap.denied'), 'error');
+      throw err;
+    }
+  }
+
+  /// THE write seam. Hosts call this and nothing else — they do not branch on canWriteDirect
+  /// and then remember to guard the branch they took. That arrangement is what left the flag
+  /// wired to one master and would leave the overlap check wired to one branch: a rule every
+  /// caller must re-apply is a rule that holds until the next caller. `canWriteDirect` stays
+  /// exported for the button LABEL, which is a display question, not a routing one.
+  async function commit(recordId, entity) {
+    await assertWritable(recordId, entity);
+    if (canWriteDirect) {
+      if (!liveRepo) throw new Error('priced panel: direct write with no liveRepo');
+      await liveRepo.put(refName, recordId, entity);
+      return { routed: 'direct' };
+    }
+    await submitProposal(recordId, entity);
+    return { routed: 'proposal' };
+  }
+
   /// AC-01: writes ONLY `_pending/{id}.json` (via PricedRefRepo) — never repo.put, never
   /// state.json. Toasts the "pending, not saved" affordance exactly once per submit.
   async function submitProposal(recordId, body) {
-    const dto = await pricedRepo.propose(recordId, body, role);
+    await assertWritable(recordId, body);
+    const dto = await pricedRepo.propose(recordId, body, role, currentUserId());
     toast(t('priced.pending.not_saved'));
     return dto;
   }
@@ -93,7 +126,7 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
 
     containerEl.querySelectorAll('.btn-pgp-approve').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const result = await pricedRepo.merge(btn.dataset.id, role);
+        const result = await pricedRepo.merge(btn.dataset.id, role, currentUserId());
         await _upsertMergedRecord(result);
         await onChanged?.();
       });
@@ -109,7 +142,7 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
         });
         if (!result?.confirmed) return;
         try {
-          await pricedRepo.reject(btn.dataset.id, role, result.reason);
+          await pricedRepo.reject(btn.dataset.id, role, currentUserId(), result.reason);
           await onChanged?.();
         } catch (err) {
           console.error('[priced-governance-panel] reject failed:', err.message); // DEV — surfaced to user via toast below, not swallowed
@@ -132,7 +165,7 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
 
   async function _renderProposerBanner(containerEl) {
     const pending = await pricedRepo.listPending();
-    const mine = pending.filter((p) => p.author === role);
+    const mine = pending.filter((p) => p.author_user === currentUserId());
     containerEl.innerHTML = mine.length
       ? `<div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">${t('priced.pending.proposer_banner', { n: mine.length })}</div>`
       : '';
@@ -145,5 +178,5 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
     await _renderProposerBanner(containerEl);
   }
 
-  return { isMaintainer, canWriteDirect, primaryActionLabel, submitProposal, renderPendingPanel };
+  return { isMaintainer, canWriteDirect, primaryActionLabel, submitProposal, renderPendingPanel, assertWritable, commit };
 }

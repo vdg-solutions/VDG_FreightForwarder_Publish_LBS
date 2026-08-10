@@ -24,7 +24,7 @@ async function loadRates(repo) {
 }
 
 function rateLabel(r) {
-  return `${r.route_origin}→${r.route_dest} · ${r.carrier_iata} · ${r.valid_from}..${r.valid_until} (${r.currency})`;
+  return `${r.route_origin}→${r.route_dest} · ${r.carrier_iata} · ${r.valid_from}..${r.valid_to} (${r.currency})`;
 }
 
 function renderOptions(rates) {

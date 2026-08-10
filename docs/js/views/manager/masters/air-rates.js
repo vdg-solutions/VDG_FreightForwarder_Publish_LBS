@@ -7,8 +7,7 @@ import { boundedList, boundedSeedIfEmpty, safeMasterLoad, renderMasterLoadRetryS
 import { currentUserRole } from '../../../operators/manager/route-guard.js';
 import { MASTER_REGISTRY } from '../../../data/master-registry.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
-import { loadWorkspaceSettings, SECOND_EYES_FIELD } from '../../../operators/manager/workspace-settings.js';
-import { activeWorkspaceName } from '../../../operators/workspace-registry.js';
+import { readSettings, SECOND_EYES_FIELD } from '../../../operators/manager/workspace-settings.js';
 import { isViewSuperseded } from '../../../util/view-root.js';
 
 const KIND       = 'air-rates';
@@ -61,8 +60,8 @@ function buildModal(entity, primaryLabel) {
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">${t('air_rate.field.valid_until')} <span class="text-red-500">*</span></label>
-            <input id="ar-until" type="date" value="${escHtml(e.valid_until)}" required
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('air_rate.field.valid_to')} <span class="text-red-500">*</span></label>
+            <input id="ar-until" type="date" value="${escHtml(e.valid_to)}" required
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>
@@ -110,7 +109,7 @@ function openModal(root, entity, onSave, primaryLabel) {
     if (!Array.isArray(breaks) || !breaks.length) { setErr('#ar-err-breaks', t('air_rate.err.break_required')); return; }
 
     const id = entity?.id || entity?.rate_id || `AR-${origin}-${dest}-${carrier}`;
-    const updated = { ...(entity || {}), id, rate_id: id, route_origin: origin, route_dest: dest, carrier_iata: carrier, breaks, valid_from: validFrom, valid_until: validUntil, currency };
+    const updated = { ...(entity || {}), id, rate_id: id, route_origin: origin, route_dest: dest, carrier_iata: carrier, breaks, valid_from: validFrom, valid_to: validUntil, currency, pricing_key: id };
     await onSave(updated);
     dialog.close();
   });
@@ -125,7 +124,7 @@ function rowHtml(e, isM) {
       <td class="px-3 py-2 font-mono font-semibold">${escHtml(e.route_origin)}→${escHtml(e.route_dest)}</td>
       <td class="px-3 py-2 font-mono">${escHtml(e.carrier_iata)}</td>
       <td class="px-3 py-2 text-[10px] text-slate-500 max-w-xs truncate">${escHtml(breaksLabel(e.breaks))}</td>
-      <td class="px-3 py-2">${escHtml(e.valid_from)} – ${escHtml(e.valid_until)}</td>
+      <td class="px-3 py-2">${escHtml(e.valid_from)} – ${escHtml(e.valid_to)}</td>
       <td class="px-3 py-2 font-mono">${escHtml(e.currency)}</td>
       ${isM ? `<td class="px-3 py-2">${actions}</td>` : ''}
     </tr>`;
@@ -142,14 +141,10 @@ export async function render(root) {
 
   // F-28-12 AC-05/06/07: owner second-eyes flag forces even the sole maintainer through
   // propose->pending on the SAME shared governance component local-charges uses.
-  const api    = window.__vdg_drive_api;
-  const wsName = activeWorkspaceName();
-  // AC-01/02: bounded — a stalled workspace-settings Drive read must not stack onto the
-  // pending/list awaits below and outlive the mountView ceiling.
-  const settingsRes = api
-    ? await safeMasterLoad(() => loadWorkspaceSettings(api, wsName), 'air-rates:settings')
-    : { ok: true, value: { [SECOND_EYES_FIELD]: false } };
-  const settings   = window.__vdg_workspace_settings ?? (settingsRes.ok ? settingsRes.value : { [SECOND_EYES_FIELD]: false });
+  // readSettings, not loadWorkspaceSettings: since #31 the flag is a row of the
+  // `workspace_settings` kind, so there is no Drive read left to bound here — and both priced
+  // masters now learn the flag the same way, instead of one reading the DB and one the network.
+  const settings   = window.__vdg_workspace_settings ?? await readSettings(repo);
   const secondEyes = !!settings[SECOND_EYES_FIELD];
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
   const panel = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, secondEyes, liveRepo: repo }) : null;
@@ -225,8 +220,10 @@ export async function render(root) {
   // AC-05/06: canWriteDirect routes straight to repo.put; otherwise the edit becomes a
   // proposal — the row is never put to the live table (no state.json mutation).
   async function saveEntity(entity) {
-    if (!panel || panel.canWriteDirect) { await repo.put(KIND, entity.id, entity); }
-    else { await panel.submitProposal(entity.id, entity); }
+    // One call, not a branch plus a guard the branch has to remember: panel.commit routes to
+    // repo.put or to a proposal, and refuses an overlapping window on either road.
+    if (panel) await panel.commit(entity.id, entity);
+    else await repo.put(KIND, entity.id, entity);
     await reload();
   }
 

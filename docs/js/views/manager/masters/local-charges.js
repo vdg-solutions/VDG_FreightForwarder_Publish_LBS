@@ -5,6 +5,7 @@
 import { runSeedMigrations } from '../../../cache/seed-migrator.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../util/master-load.js';
 import { currentUserRole } from '../../../operators/manager/route-guard.js';
+import { readSettings, SECOND_EYES_FIELD } from '../../../operators/manager/workspace-settings.js';
 import { MASTER_REGISTRY } from '../../../data/master-registry.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { openModal, statusLabels } from './local-charges-modal.js';
@@ -26,15 +27,18 @@ const CARRIER_ID_PREFIX = 'OCR';
 // Versioned seeds — add a new migration id when a shipping line / rows are appended.
 // Exported for AC-03 direct materialization testing (F-28-08).
 //
-// local-charges v2 REPLACES v1 rather than sitting next to it, because the same rows were
-// CORRECTED, not appended: vat_pct carried 0.0526315789 (20/19 — the signature of dividing by
-// 0.95 instead of multiplying by 1.05, and not a legal VN rate), and 65 of 90 descriptions were
-// written without Vietnamese diacritics. A workspace seeded at v1 holds the wrong numbers until a
-// NEW id runs, so the id is the only thing that reaches it. Keeping v1 in the list too would just
-// make a fresh workspace write all 90 rows twice. User-edited rows (`_seed_locked`) survive both.
+// Each local-charges version REPLACES the last rather than sitting next to it, because the same
+// rows keep being CORRECTED, not appended — and a workspace already seeded holds the old values
+// until a NEW id runs, so the id is the only thing that reaches it. Listing the old ids too would
+// just make a fresh workspace write all 90 rows once per version. `_seed_locked` rows survive all.
+//   v2: vat_pct carried 0.0526315789 (20/19 — dividing by 0.95 instead of multiplying by 1.05,
+//       and not a legal VN rate); 65 of 90 descriptions had no Vietnamese diacritics.
+//   v3: effective_from -> valid_from, explicit valid_to, and a declared pricing_key. The envelope
+//       used to DERIVE pricing_key from the row id, which made every record its own key — no two
+//       could share one, so the overlap guard could never fire and resolveOnDate matched nothing.
 export const SEED_MIGRATIONS = [
   { id: '2026-07-09-units-of-measure-v1', kind: UNIT_KIND,    url: UNIT_SEED,    key: (e) => e.code },
-  { id: '2026-08-10-local-charges-v2',    kind: KIND,         url: SEED_URL,     key: (e) => e.id },
+  { id: '2026-08-10-local-charges-v3',    kind: KIND,         url: SEED_URL,     key: (e) => e.id },
   { id: '2026-07-13-ocean-carriers-v1',   kind: CARRIER_KIND, url: CARRIER_SEED, key: (e) => `${CARRIER_ID_PREFIX}-${e.scac}` },
 ];
 
@@ -98,7 +102,16 @@ export async function render(root) {
   const role       = currentUserRole();
   const isEditor   = canWrite(role);
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
-  const panel      = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, liveRepo: repo }) : null;
+  // The four-eyes flag is a property of the priced refs as a set, not of air-rates: with it
+  // wired only there, turning the workspace's second-eyes on left this tariff — the one a
+  // sales rep can actually edit — still writing straight through.
+  // readSettings, not loadWorkspaceSettings: since #31 the flag is a row of the
+  // `workspace_settings` kind, so this is a local read. A grid has no business opening a Drive
+  // connection to learn whether its save button says "Save" or "Propose" — and the legacy-JSON
+  // migration keeps its single owner in the settings screens.
+  const settings   = window.__vdg_workspace_settings ?? await readSettings(repo);
+  const secondEyes = !!settings[SECOND_EYES_FIELD];
+  const panel      = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, secondEyes, liveRepo: repo }) : null;
   const colSpan    = LOAD_COL_SPAN + (isEditor ? 1 : 0);
   // Container is what separates otherwise identical tariff rows (a 20' and a 40' Empty Reposition
   // differ ONLY here) — without the column the grid renders five distinct charges as five copies.
@@ -196,8 +209,10 @@ export async function render(root) {
   // AC-01/05: canWriteDirect routes straight to repo.put; otherwise the edit becomes a
   // proposal — the row is never put to the live table (no state.json mutation).
   async function saveEntity(entity) {
-    if (!panel || panel.canWriteDirect) { await repo.put(KIND, entity.id, entity); }
-    else { await panel.submitProposal(entity.id, entity); }
+    // One call, not a branch plus a guard the branch has to remember: panel.commit routes to
+    // repo.put or to a proposal, and refuses an overlapping window on either road.
+    if (panel) await panel.commit(entity.id, entity);
+    else await repo.put(KIND, entity.id, entity);
     await loadAndRender();
     apply();
   }

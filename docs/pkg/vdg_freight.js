@@ -1538,6 +1538,31 @@ export function permission_resolve_grants(role, user_prefix) {
 }
 
 /**
+ * Called by `PricedRefRepo` before BOTH writes that can land a record in a ref —
+ * the maintainer's direct save and an approved proposal. A guard on one of the two
+ * is a guard on neither: the same row reaches the same ref either way.
+ * @param {string} records_json
+ * @param {string} candidate_json
+ */
+export function priced_ref_check_overlap(records_json, candidate_json) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(records_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(candidate_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        wasm.priced_ref_check_overlap(retptr, ptr0, len0, ptr1, len1);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        if (r1) {
+            throw takeObject(r0);
+        }
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * AC-05: `PricedRefRepo.resolveOnDate` calls this with every `PricedRecord`
  * body for the ref; a gap date returns the nearest-earlier row because Rust
  * says so, never a JS-computed guess.
@@ -1597,9 +1622,10 @@ export function process_excel_file(bytes) {
  * @param {string} proposal_json
  * @param {string} ref_state_json
  * @param {string} actor_role
+ * @param {string} actor_user
  * @returns {any}
  */
-export function proposal_merge(proposal_json, ref_state_json, actor_role) {
+export function proposal_merge(proposal_json, ref_state_json, actor_role, actor_user) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(proposal_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
@@ -1608,7 +1634,9 @@ export function proposal_merge(proposal_json, ref_state_json, actor_role) {
         const len1 = WASM_VECTOR_LEN;
         const ptr2 = passStringToWasm0(actor_role, wasm.__wbindgen_export, wasm.__wbindgen_export2);
         const len2 = WASM_VECTOR_LEN;
-        wasm.proposal_merge(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        const ptr3 = passStringToWasm0(actor_user, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len3 = WASM_VECTOR_LEN;
+        wasm.proposal_merge(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -1652,19 +1680,22 @@ export function proposal_propose(input_json, author_role) {
  * R-3, AC-07: a maintainer may decline a Pending proposal without merging.
  * @param {string} proposal_json
  * @param {string} actor_role
+ * @param {string} actor_user
  * @param {string} reason
  * @returns {any}
  */
-export function proposal_reject(proposal_json, actor_role, reason) {
+export function proposal_reject(proposal_json, actor_role, actor_user, reason) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passStringToWasm0(proposal_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(actor_role, wasm.__wbindgen_export, wasm.__wbindgen_export2);
         const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(reason, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const ptr2 = passStringToWasm0(actor_user, wasm.__wbindgen_export, wasm.__wbindgen_export2);
         const len2 = WASM_VECTOR_LEN;
-        wasm.proposal_reject(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        const ptr3 = passStringToWasm0(reason, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len3 = WASM_VECTOR_LEN;
+        wasm.proposal_reject(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
@@ -2783,7 +2814,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10648(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10655(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2801,7 +2832,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10648(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10655(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2974,7 +3005,7 @@ function __wbg_get_imports() {
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
             // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1739, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10646);
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10653);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -3011,10 +3042,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_10646(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_10653(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_10646(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_10653(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -3025,8 +3056,8 @@ function __wasm_bindgen_func_elem_10646(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_10648(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_10648(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_10655(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_10655(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')

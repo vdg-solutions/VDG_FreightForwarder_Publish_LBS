@@ -10,6 +10,8 @@
 // within a delta tick. workspace.json is still READ once, to migrate a workspace provisioned
 // before this; it is never written again.
 
+import { safeAwait } from '../../util/safe-await.js';
+
 const WORKSPACE_JSON_PATH = 'workspace.json';
 const SHARED_FOLDER       = '_shared';
 const DEFAULT_FX_SOURCE   = 'Manual';
@@ -17,12 +19,21 @@ const DEFAULT_FX_SOURCE   = 'Manual';
 // workspace that has never saved settings still renders the header and the line cells alike.
 const DEFAULT_CURRENCY    = 'USD';
 
+// Local store read, not a network call — SAFE_AWAIT_DEFAULT_MS (8s) is a budget for Drive.
+// Derived, not picked: a caller on a render path pays this BEFORE its own 8s bounded load, and
+// both in series must still settle inside the view's ~10s ceiling. A local get is sub-ms in the
+// normal case, so a whole second is already generous — past it the store is wedged, not slow.
+const SETTINGS_READ_TIMEOUT_MS = 1000;
+
 export const SETTINGS_KIND = 'workspace_settings';
 /// One row per workspace — the kind is a singleton, so the id is fixed.
 export const SETTINGS_ID   = 'workspace';
 
-// AC-05/06/07: single new boolean field, default OFF — the only schema addition authorized.
-export const SECOND_EYES_FIELD = 'air_rates_second_eyes';
+// AC-05/06/07: single boolean, default OFF. Named for the priced refs as a SET, not for
+// air-rates: the flag was only ever read by air-rates.js, so a workspace that turned
+// second-eyes on still had local-charges — the tariff a sales rep can actually edit —
+// writing straight through. Renamed rather than aliased; no workspace has shipped with it on.
+export const SECOND_EYES_FIELD = 'priced_second_eyes';
 export const DEFAULT_CURRENCY_FIELD = 'default_currency';
 
 function defaults() {
@@ -34,14 +45,18 @@ function defaults() {
 }
 
 /// Settings as they stand in the local DB. Synchronous-cheap: no Drive call, so a caller on a
-/// render path (sales-new.js) can await it without budgeting for the network. `null` repo — or a
-/// row that isn't there yet — resolves to defaults, never to a half-populated object.
+/// render path (sales-new.js, the priced masters) can await it without budgeting for the
+/// network. `null` repo — or a row that isn't there yet — resolves to defaults, never to a
+/// half-populated object.
+///
+/// Bounded, because "cheap" is a claim about the usual case and a wedged store is the unusual
+/// one: an unbounded await here parks every caller at its loading placeholder forever. The
+/// timeout resolves to defaults — the same answer an absent row gives.
 export async function readSettings(repo) {
   if (!repo?.get) return defaults();
-  try {
-    const row = await repo.get(SETTINGS_KIND, SETTINGS_ID);
-    return row ? { ...defaults(), ...row } : defaults();
-  } catch { /* store unavailable — defaults keep the caller rendering */ return defaults(); }
+  const res = await safeAwait(repo.get(SETTINGS_KIND, SETTINGS_ID), SETTINGS_READ_TIMEOUT_MS, null, 'workspace-settings:read');
+  if (!res.ok) return defaults(); // store unavailable or wedged — defaults keep the caller rendering
+  return res.value ? { ...defaults(), ...res.value } : defaults();
 }
 
 async function getSharedFolder(driveApi, wsName) {
@@ -66,7 +81,7 @@ async function readLegacyJson(driveApi, wsName) {
 }
 
 /// AC-07: merges over defaults so an absent row/field always resolves
-/// `air_rates_second_eyes === false` (AC-05 default OFF).
+/// `priced_second_eyes === false` (AC-05 default OFF).
 ///
 /// #31: DB first. Only when the row is absent does this fall back to the legacy JSON, and it
 /// writes what it found into the DB so the fallback runs at most once per workspace. Migration is

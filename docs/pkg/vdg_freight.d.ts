@@ -235,6 +235,13 @@ export function permission_can_push_own_fork(role: string): boolean;
 export function permission_resolve_grants(role: string, user_prefix?: string | null): any;
 
 /**
+ * Called by `PricedRefRepo` before BOTH writes that can land a record in a ref —
+ * the maintainer's direct save and an approved proposal. A guard on one of the two
+ * is a guard on neither: the same row reaches the same ref either way.
+ */
+export function priced_ref_check_overlap(records_json: string, candidate_json: string): void;
+
+/**
  * AC-05: `PricedRefRepo.resolveOnDate` calls this with every `PricedRecord`
  * body for the ref; a gap date returns the nearest-earlier row because Rust
  * says so, never a JS-computed guess.
@@ -248,7 +255,7 @@ export function process_excel_file(bytes: Uint8Array): any;
  * non-maintainer or stale-base attempt throws — the caller never sees a
  * `MergeResultDto` for a denied merge.
  */
-export function proposal_merge(proposal_json: string, ref_state_json: string, actor_role: string): any;
+export function proposal_merge(proposal_json: string, ref_state_json: string, actor_role: string, actor_user: string): any;
 
 /**
  * AC-01, AC-06, AC-07: propose returns a Pending ProposalDto to JS. Requires
@@ -259,7 +266,7 @@ export function proposal_propose(input_json: string, author_role: string): any;
 /**
  * R-3, AC-07: a maintainer may decline a Pending proposal without merging.
  */
-export function proposal_reject(proposal_json: string, actor_role: string, reason: string): any;
+export function proposal_reject(proposal_json: string, actor_role: string, actor_user: string, reason: string): any;
 
 /**
  * Registers a shipment into the FSM state map — register-if-absent (AC-09
@@ -408,11 +415,12 @@ export interface InitOutput {
     readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_push_own_fork: (a: number, b: number, c: number) => void;
     readonly permission_resolve_grants: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly priced_ref_check_overlap: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly priced_ref_resolve_on_date: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly process_excel_file: (a: number, b: number, c: number) => void;
-    readonly proposal_merge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly proposal_merge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly proposal_propose: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -499,8 +507,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10646: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10648: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10653: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10655: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
