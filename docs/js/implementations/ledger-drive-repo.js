@@ -75,6 +75,13 @@ export class LedgerDriveRepo extends LedgerRepo {
     return await this._repo().lgr_replace_leg(year, acc_code, JSON.stringify(leg));
   }
 
+  /// Drops every leg of an ORPHANED entry (source record no longer exists) and returns the count.
+  /// Not a general delete — a live entry is corrected via replaceLeg or neutralised via a reversal.
+  async removeEntry(year, entry_id) {
+    await this._loadChart(); // store needs the chart's account codes to know which files to scan
+    return await this._repo().lgr_remove_entry(year, entry_id);
+  }
+
   /// F-29-24 AC-03: append one repost-run record to repost-log.jsonl.
   async appendRepostRecord(record) {
     return await this._repo().lgr_append_log(REPOST_LOG_FILE, JSON.stringify(record));

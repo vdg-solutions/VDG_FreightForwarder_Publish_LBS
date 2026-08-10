@@ -39,6 +39,10 @@ export class WasmEntityRepo {
     lgr_list_entry_legs(year: number, entry_id: string): Promise<any>;
     lgr_list_legs(year: number, acc_code: string, from: string, to: string): Promise<any>;
     lgr_record_posted(posted_index: string, entry_ids_json: string): Promise<any>;
+    /**
+     * Orphan purge only — see LedgerStore::remove_entry for why this is not a general delete.
+     */
+    lgr_remove_entry(year: number, entry_id: string): Promise<any>;
     lgr_replace_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_set_chart(chart_json: string): void;
     list(kind: string): Promise<any>;
@@ -460,6 +464,7 @@ export interface InitOutput {
     readonly wasmentityrepo_lgr_list_entry_legs: (a: number, b: number, c: number, d: number) => number;
     readonly wasmentityrepo_lgr_list_legs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly wasmentityrepo_lgr_record_posted: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_remove_entry: (a: number, b: number, c: number, d: number) => number;
     readonly wasmentityrepo_lgr_replace_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_set_chart: (a: number, b: number, c: number, d: number) => void;
     readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
@@ -494,8 +499,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10630: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10632: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10649: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10651: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

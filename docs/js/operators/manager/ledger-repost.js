@@ -6,6 +6,8 @@
 import { buildEntriesFromCommission, buildEntriesFromShipment } from '../ledger-poster.js';
 
 const AMOUNT_EPSILON = 0.005; // half-cent float-rounding tolerance, mirrors ledger-reconciler.js
+// Distinguishes a purge record from a repost run in the shared repost-log.jsonl.
+const PURGE_ACTION   = 'purge_orphans';
 
 // D2: these carry i18n KEYS (ledger.repost.reason.*), not literal English — the view
 // (ledger-repost-panel.js) translates at render time. A raw diagnostic string (e.g. a thrown
@@ -171,6 +173,40 @@ export async function applyRepost(ledgerRepo, plan) {
     flagged:        plan.flagged.length,
     orphans:        plan.orphans.length,
     changes:        plan.replacements.map(({ entry_id, leg_idx, acc_code, before, after }) => ({ entry_id, leg_idx, acc_code, before, after })),
+  };
+  await ledgerRepo.appendRepostRecord(record);
+  return record;
+}
+
+/// Clears the orphans a plan found: entries whose source shipment/commission no longer exists, so
+/// they document nothing and no reversal can be derived for them. Only `plan.orphans` is touched —
+/// `flagged` entries still HAVE a live source and are a repost problem, never a delete one.
+///
+/// Per-orphan failures are collected rather than thrown: one locked account file must not strand
+/// the rest, and the audit record has to say what actually happened.
+/// `year` must be the one the plan was built for — planRepost scans a single year, so its orphan
+/// list only means anything against that same year's account files.
+export async function purgeOrphans(ledgerRepo, plan, year = new Date().getFullYear()) {
+  const purged = [];
+  const failed = [];
+  for (const orphan of plan.orphans) {
+    try {
+      const removed = await ledgerRepo.removeEntry(year, orphan.entry_id);
+      purged.push({ entry_id: orphan.entry_id, source: orphan.source, legs_removed: Number(removed) || 0 });
+    } catch (err) {
+      failed.push({ entry_id: orphan.entry_id, error: err.message });
+    }
+  }
+
+  const record = {
+    run_at:      new Date().toISOString(),
+    action:      PURGE_ACTION,
+    year,
+    orphans_found: plan.orphans.length,
+    purged:      purged.length,
+    failed:      failed.length,
+    entries:     purged,
+    failures:    failed,
   };
   await ledgerRepo.appendRepostRecord(record);
   return record;

@@ -3,7 +3,7 @@
 // views/manager/masters/shipment-states.js's canWrite()-gated migration section.
 
 import { t } from '../../i18n/index.js';
-import { planRepost, applyRepost } from '../../operators/manager/ledger-repost.js';
+import { planRepost, applyRepost, purgeOrphans } from '../../operators/manager/ledger-repost.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 
 const REPOST_YEAR = new Date().getFullYear();
@@ -34,6 +34,9 @@ function shellHtml() {
           <button id="btn-repost-apply" disabled
             class="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40"
             aria-label="${t('ledger.repost.button')}">${t('ledger.repost.button')}</button>
+          <button id="btn-purge-orphans" disabled
+            class="px-3 py-1.5 text-xs rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:opacity-40"
+            aria-label="${t('ledger.repost.purge_button')}">${t('ledger.repost.purge_button')}</button>
         </div>
       </div>
       <div id="repost-preview-list" class="text-xs"></div>
@@ -74,10 +77,13 @@ function reasonRowsHtml(label, rows) {
 function renderPreview(root, plan) {
   const list = root.querySelector('#repost-preview-list');
   const applyBtn = root.querySelector('#btn-repost-apply');
-  if (!plan) { list.innerHTML = ''; applyBtn.disabled = true; return; }
+  const purgeBtn = root.querySelector('#btn-purge-orphans');
+  if (!plan) { list.innerHTML = ''; applyBtn.disabled = true; purgeBtn.disabled = true; return; }
 
   const total = plan.replacements.length + plan.unchanged_count + plan.flagged.length + plan.orphans.length;
   applyBtn.disabled = plan.replacements.length === 0;
+  // Orphans only. `flagged` entries still have a live source — those are a repost problem.
+  purgeBtn.disabled = plan.orphans.length === 0;
 
   if (!total) { list.innerHTML = `<div class="text-slate-400">${t('ledger.repost.none_found')}</div>`; return; }
 
@@ -150,6 +156,31 @@ export async function mountRepostPanel(root, { ledgerRepo, entityRepo }) {
       toast('error', t('ledger.repost.error'));
     } finally {
       previewBtn.disabled = false;
+    }
+  });
+
+  root.querySelector('#btn-purge-orphans').addEventListener('click', async () => {
+    if (!lastPlan || !lastPlan.orphans.length) return;
+    const ok = await showConfirm({
+      title: t('ledger.repost.purge_confirm_title'),
+      body:  t('ledger.repost.purge_confirm_body', { n: String(lastPlan.orphans.length) }),
+      confirmLabel: t('ledger.repost.purge_button'),
+      destructive: true,
+    });
+    if (!ok) return;
+
+    const purgeBtn = root.querySelector('#btn-purge-orphans');
+    purgeBtn.disabled = true;
+    try {
+      const record = await purgeOrphans(ledgerRepo, lastPlan, REPOST_YEAR);
+      toast(record.failed ? 'error' : 'success', t('ledger.repost.purge_result', {
+        purged: String(record.purged), failed: String(record.failed),
+      }));
+      await runPreview(); // orphan list must come back empty, or the purge did not do what it said
+    } catch (err) {
+      console.error('[ledger-repost-panel] purge failed:', err); // DEV
+      toast('error', t('ledger.repost.error'));
+      purgeBtn.disabled = false;
     }
   });
 
