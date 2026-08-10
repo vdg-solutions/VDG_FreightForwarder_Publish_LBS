@@ -1070,6 +1070,7 @@
   "common.select.placeholder": "-- select --",
   "local_charges.col.carrier": "Carrier",
   "local_charges.col.charge": "Charge",
+  "local_charges.col.container": "Container",
   "local_charges.col.unit": "Unit",
   "local_charges.col.amount_vat": "VND (excl / incl VAT)",
   "local_charges.title": "Local Charge Tariff",

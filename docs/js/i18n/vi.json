@@ -1070,6 +1070,7 @@
   "common.select.placeholder": "-- chọn --",
   "local_charges.col.carrier": "Hãng tàu",
   "local_charges.col.charge": "Phí",
+  "local_charges.col.container": "Loại cont",
   "local_charges.col.unit": "Đơn vị tính",
   "local_charges.col.amount_vat": "VND (chưa / có VAT)",
   "local_charges.title": "Biểu phí local",

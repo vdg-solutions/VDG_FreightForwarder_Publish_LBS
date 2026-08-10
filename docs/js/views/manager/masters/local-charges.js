@@ -11,7 +11,7 @@ import { openModal, statusLabels } from './local-charges-modal.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
 import { t, currentLocale } from '../../../i18n/index.js';
 
-const LOAD_COL_SPAN    = 5;
+const LOAD_COL_SPAN    = 6;
 
 const KIND         = 'local-charges';
 const UNIT_KIND    = 'units-of-measure';
@@ -38,6 +38,18 @@ function norm(s) {
   return String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 function fmtVnd(n) { return (n || n === 0) ? Number(n).toLocaleString('vi-VN') : '—'; }
+
+// ISO 6346 size-type: the FIRST character is the length code (2 = 20', 4 = 40', L = 45'). Derived
+// rather than table-mapped so a code the seed has not used yet still reads as a size instead of
+// falling through to raw. Anything non-ISO (the seed's own "20SPECIAL") shows verbatim — better an
+// unfamiliar code than a wrong size.
+const ISO_LENGTH_BY_CODE = { '2': "20'", '4': "40'", 'L': "45'" };
+
+function containerLabel(iso) {
+  if (!iso) return '—';
+  const len = ISO_LENGTH_BY_CODE[iso[0]];
+  return len && iso.length === 4 ? `${len} (${iso})` : iso;
+}
 
 // AC-01 rework: locale-pick mirrors reports.js accountName — label_en in EN, label_vi in VI.
 function uomLabel(u) {
@@ -66,6 +78,7 @@ function rowHtml(c, unitLabel, carrierLabel, isEditor) {
       <td class="py-2 px-3 text-xs text-slate-600">${escHtml(carrierLabel)}</td>
       <td class="py-2 px-3 text-xs font-medium text-slate-900">${escHtml(c.charge_name)}${kindBadge}
         <div class="text-[10px] text-slate-400 font-normal">${escHtml(c.charge_description || '')}</div></td>
+      <td class="py-2 px-3 text-xs text-slate-600 whitespace-nowrap">${escHtml(containerLabel(c.container_iso6346))}</td>
       <td class="py-2 px-3 text-xs text-slate-600">${escHtml(unitLabel)}</td>
       <td class="py-2 px-3 text-xs text-right whitespace-nowrap">${amt}</td>
       <td class="py-2 px-3 text-[10px] text-slate-400">${c.route_via_unlocode ? t('local_charges.route_via_cai_mep') : ''} ${c.free_days != null ? `FreeDay ${c.free_days}` : ''}</td>
@@ -80,7 +93,9 @@ export async function render(root) {
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
   const panel      = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, liveRepo: repo }) : null;
   const colSpan    = LOAD_COL_SPAN + (isEditor ? 1 : 0);
-  const headers    = [t('local_charges.col.carrier'), t('local_charges.col.charge'), t('local_charges.col.unit'), t('local_charges.col.amount_vat'), ''];
+  // Container is what separates otherwise identical tariff rows (a 20' and a 40' Empty Reposition
+  // differ ONLY here) — without the column the grid renders five distinct charges as five copies.
+  const headers    = [t('local_charges.col.carrier'), t('local_charges.col.charge'), t('local_charges.col.container'), t('local_charges.col.unit'), t('local_charges.col.amount_vat'), ''];
   if (isEditor) headers.push(t('common.col.actions'));
 
   root.innerHTML = `
