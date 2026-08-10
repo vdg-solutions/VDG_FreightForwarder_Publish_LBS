@@ -25,9 +25,16 @@ const CARRIER_ID_PREFIX = 'OCR';
 
 // Versioned seeds — add a new migration id when a shipping line / rows are appended.
 // Exported for AC-03 direct materialization testing (F-28-08).
+//
+// local-charges v2 REPLACES v1 rather than sitting next to it, because the same rows were
+// CORRECTED, not appended: vat_pct carried 0.0526315789 (20/19 — the signature of dividing by
+// 0.95 instead of multiplying by 1.05, and not a legal VN rate), and 65 of 90 descriptions were
+// written without Vietnamese diacritics. A workspace seeded at v1 holds the wrong numbers until a
+// NEW id runs, so the id is the only thing that reaches it. Keeping v1 in the list too would just
+// make a fresh workspace write all 90 rows twice. User-edited rows (`_seed_locked`) survive both.
 export const SEED_MIGRATIONS = [
   { id: '2026-07-09-units-of-measure-v1', kind: UNIT_KIND,    url: UNIT_SEED,    key: (e) => e.code },
-  { id: '2026-07-09-local-charges-v1',    kind: KIND,         url: SEED_URL,     key: (e) => e.id },
+  { id: '2026-08-10-local-charges-v2',    kind: KIND,         url: SEED_URL,     key: (e) => e.id },
   { id: '2026-07-13-ocean-carriers-v1',   kind: CARRIER_KIND, url: CARRIER_SEED, key: (e) => `${CARRIER_ID_PREFIX}-${e.scac}` },
 ];
 
