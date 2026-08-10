@@ -25,16 +25,20 @@ function fmtRunDate(runAt) { return runAt ? new Date(runAt).toLocaleDateString('
 function shellHtml() {
   return `
     <div class="border border-slate-200 rounded-lg p-4 bg-white">
+      <div class="mb-3">
+        <h3 class="text-sm font-semibold text-slate-800">${t('ledger.repost.section_title')}</h3>
+        <p class="text-[11px] text-slate-500 mt-0.5 max-w-2xl">${t('ledger.repost.section_help')}</p>
+      </div>
       <div class="flex items-center justify-between flex-wrap gap-3 mb-2">
         <div id="repost-status" class="text-xs text-slate-600"></div>
         <div class="flex gap-2">
-          <button id="btn-repost-preview"
+          <button id="btn-repost-preview" title="${t('ledger.repost.preview_hint')}"
             class="px-3 py-1.5 text-xs rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100"
             aria-label="${t('ledger.repost.preview_button')}">${t('ledger.repost.preview_button')}</button>
-          <button id="btn-repost-apply" disabled
+          <button id="btn-repost-apply" disabled title="${t('ledger.repost.button_hint')}"
             class="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40"
             aria-label="${t('ledger.repost.button')}">${t('ledger.repost.button')}</button>
-          <button id="btn-purge-orphans" disabled
+          <button id="btn-purge-orphans" disabled title="${t('ledger.repost.purge_hint')}"
             class="px-3 py-1.5 text-xs rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:opacity-40"
             aria-label="${t('ledger.repost.purge_button')}">${t('ledger.repost.purge_button')}</button>
         </div>
@@ -104,6 +108,21 @@ function renderStatus(root, lastRepost) {
         replaced: String(lastRepost.replaced), unchanged: String(lastRepost.left_unchanged), flagged: String(lastRepost.flagged),
       })}`
     : '';
+}
+
+/// The panel resolves its own repos, at mount time.
+///
+/// The view used to hand them in, reading window.__vdg_ledger_repo at the top of render() and
+/// mounting only after several awaits. On a cold boot that read ran before boot had wired it, so
+/// the panel held `undefined` and every button answered "Đăng lại thất bại" — a TypeError on
+/// chartOfAccounts wearing the costume of a legitimate failure. Resolving here means the read
+/// happens when the value is actually needed, and a missing repo means no panel rather than a
+/// panel that lies.
+export async function mountRepostPanelIfReady(root) {
+  const entityRepo = window.__vdg_repo;
+  const ledgerRepo = window.__vdg_ledger_repo;
+  if (!root || !entityRepo || !ledgerRepo) return;
+  await mountRepostPanel(root, { ledgerRepo, entityRepo });
 }
 
 export async function mountRepostPanel(root, { ledgerRepo, entityRepo }) {
