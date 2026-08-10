@@ -320,6 +320,9 @@ async function loadInitial(root, repo) {
 
 export async function render(root) {
   // F-24-09: route-guard (F-24-05) is the authoritative gate for /accounting/*, not this view.
+  // NOT captured for later use — boot may still be wiring __vdg_ledger_repo when render starts,
+  // and a captured undefined stays undefined for the whole mount (it silently broke the repost
+  // panel: "Cannot read properties of undefined (reading 'chartOfAccounts')").
   const repo = getLedgerRepo();
 
   _selectedAccount    = null;
@@ -342,9 +345,13 @@ export async function render(root) {
   // view must not reintroduce the check route-guard.js already superseded).
   if (currentUserRole() === ROLE_MANAGER) {
     const entityRepo = window.__vdg_repo;
-    if (entityRepo) {
+    // Re-read rather than reuse `repo`: loadInitial above has awaited, so boot may have finished
+    // in the meantime. Both repos are required — mounting with a missing one gives the manager a
+    // panel whose every button reports failure.
+    const ledgerRepo = getLedgerRepo();
+    if (entityRepo && ledgerRepo) {
       const panelRoot = root.querySelector('#repost-panel-root');
-      await safeMasterLoad(() => mountRepostPanel(panelRoot, { ledgerRepo: repo, entityRepo }), REPOST_TAG);
+      await safeMasterLoad(() => mountRepostPanel(panelRoot, { ledgerRepo, entityRepo }), REPOST_TAG);
     }
   }
 }
