@@ -275,10 +275,18 @@ export async function requireAuth(onSignedIn) {
     }
     // F-57-01 AC-04: cached identity + a synced local workspace → degrade to a local render instead
     // of a blind sign-out. AC-03: no cached identity or no cached workspace falls through to login.
+    // Degrade only into a session that actually HOLDS something. The role set comes from the cache
+    // when it has one, else from the token (the manager sentinel still answers Manager; a fork
+    // token answers nothing, which is the point). An empty set is not a session: it renders as
+    // "no role granted yet", an ACL claim, when the truth is only that the token is dead — that is
+    // what put the workspace owner on /pending-access. Sign-in re-probes and heals it.
     const cachedIdentity = readCachedIdentityRaw();
     if (cachedIdentity) setStoreScope(cachedIdentity.email); // scope BEFORE the entity count reads it
-    if (cachedIdentity && await _hasCachedWorkspace()) {
-      _setResolved(cachedIdentity.role); // best-effort — same source detectRoleViaDrive would cache
+    const cachedRoles = cachedIdentity
+      ? (cachedIdentity.roles.length ? cachedIdentity.roles : _rolesForToken(cachedIdentity.role))
+      : [];
+    if (cachedRoles.length && await _hasCachedWorkspace()) {
+      _setResolved(cachedIdentity.role, cachedRoles);
       const degradedUser = { email: cachedIdentity.email, name: '', picture: '', sub: '', id_token: null };
       await onSignedIn(degradedUser);
       window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect')); // token verified dead — true red

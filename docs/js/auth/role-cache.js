@@ -36,11 +36,14 @@ export function clearCachedRole() {
 // render, not a live permission grant (the Drive ACL still gates every write), so a role cached
 // hours ago is still the best available signal once the network itself is the thing that is down.
 // Deliberately bypasses readCachedRole's TTL gate.
+// Carries `roles` as well: a degraded render still needs the AUTHORITY, and rebuilding it from the
+// token answers "no roles" for a fork token, which the route guard renders as "you have not been
+// granted a role" — a false statement about the ACL when the real state is a dead token.
 export function readCachedIdentityRaw() {
   try {
     const raw = localStorage.getItem(ROLE_CACHE_KEY);
     if (!raw) return null;
-    const { email, role } = JSON.parse(raw);
-    return email && role ? { email, role } : null;
+    const { email, role, roles } = JSON.parse(raw);
+    return email && role ? { email, role, roles: Array.isArray(roles) ? roles : [] } : null;
   } catch { return null; }
 }
