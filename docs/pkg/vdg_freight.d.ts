@@ -93,10 +93,6 @@ export function air_calc_result(actual: number, l: number, w: number, h: number,
  */
 export function apply_fsm_event(entity_id: string, event: string): any;
 
-export function billing_ledger_drain_writes(): any;
-
-export function billing_ledger_ingest(ledger_json: string): void;
-
 export function check_air_rate_transition(from: string, event: string): boolean;
 
 export function check_air_shipment_transition(from: string, event: string, ctx_json: string): boolean;
@@ -124,12 +120,6 @@ export function commission_compute(shipment_json: string, rule_id: string, deduc
 export function commission_resolve_rule(sales_id: string, shipment_json: string): any;
 
 /**
- * Override the default registry with rules loaded from Drive (JSON array of CommissionRule).
- * Call on boot after loading `commission_rules` entity from repo.
- */
-export function commission_rules_ingest(rules_json: string): void;
-
-/**
  * Single-source profit waterfall for the UI: margin → TNDN(20%) → net → sales/LBS split.
  * `sales_pct_0_100` is the manager-set share (0–100). Returns whole-VND figures.
  * `clamp_negatives`: true for payout (loss → zero), false for the sales-form
@@ -142,12 +132,6 @@ export function compute_chargeable_kg(actual: number, l: number, w: number, h: n
 export function compute_due_soon(billing_json: string, today_str: string, warn_days: number): any;
 
 export function compute_freight(actual: number, l: number, w: number, h: number, breaks_json: string): number | undefined;
-
-/**
- * Single document create (manual form). Returns DocumentDto echo with Draft state.
- * Operator wiring deferred to F-03-01 (Document FSM entity).
- */
-export function create_document_wasm(cmd_json: string): any;
 
 export function drain_events(): any;
 
@@ -189,8 +173,6 @@ export function grant_file_build(email: string, workspace: string, user_prefix: 
 export function grant_file_roles(json: string, email: string, workspace: string): string;
 
 export function grant_file_target_name(workspace: string, user_prefix: string): string;
-
-export function grant_file_target_path(workspace: string, user_prefix: string): string;
 
 /**
  * Booking Excel import — returns ImportReport<CreateShipmentCommand> as JsValue.
@@ -323,19 +305,9 @@ export function store_put_wma(key: string, body: any): void;
  */
 export function user_prefix_allocate(email: string, taken_json: string, seed: number): string;
 
-export function validate_airport_iata(s: string): boolean;
-
 export function validate_awb_no(s: string): boolean;
 
-export function validate_carrier_iata(s: string): boolean;
-
-export function validate_carrier_icao(s: string): boolean;
-
-export function validate_flight_no_wasm(s: string): boolean;
-
 export function validate_iata_dgr_class(class_str: string): boolean;
-
-export function validate_uld_code(s: string): boolean;
 
 export function vdg_version(): string;
 
@@ -348,8 +320,6 @@ export function wasm_build_entries_from_shipment(shipment_json: string, chart_js
 export function wasm_build_reversal_entry(legs_json: string, chart_json: string, actor_id: string): any;
 
 export function wasm_compute_sales_analytics(shipments_json: string, lines_json: string): any;
-
-export function workspace_currency_is_selectable(code: string): boolean;
 
 /**
  * Empty strings for "absent" -- JS passes `draft.currency || ''` and the config value or ''.
@@ -375,8 +345,6 @@ export interface InitOutput {
     readonly access_roles_from_record: (a: number, b: number, c: number) => void;
     readonly air_calc_result: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly apply_fsm_event: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly billing_ledger_drain_writes: (a: number) => void;
-    readonly billing_ledger_ingest: (a: number, b: number, c: number) => void;
     readonly check_air_rate_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_air_shipment_transition: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly check_allocation_within_mgw: (a: number, b: number, c: number) => number;
@@ -384,12 +352,10 @@ export interface InitOutput {
     readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
     readonly commission_compute: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly commission_resolve_rule: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly commission_rules_ingest: (a: number, b: number, c: number) => void;
     readonly commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly compute_chargeable_kg: (a: number, b: number, c: number, d: number) => number;
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly compute_freight: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly create_document_wasm: (a: number, b: number, c: number) => void;
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
@@ -404,7 +370,6 @@ export interface InitOutput {
     readonly grant_file_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly grant_file_roles: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly grant_file_target_name: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly grant_file_target_path: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
@@ -438,13 +403,8 @@ export interface InitOutput {
     readonly store_put_notification: (a: number, b: number) => void;
     readonly store_put_wma: (a: number, b: number, c: number, d: number) => void;
     readonly user_prefix_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-    readonly validate_airport_iata: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
-    readonly validate_carrier_iata: (a: number, b: number) => number;
-    readonly validate_carrier_icao: (a: number, b: number) => number;
-    readonly validate_flight_no_wasm: (a: number, b: number) => number;
     readonly validate_iata_dgr_class: (a: number, b: number) => number;
-    readonly validate_uld_code: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;
     readonly verify_license: (a: number, b: number, c: bigint) => number;
     readonly wasm_build_entries_from_commission: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
@@ -494,7 +454,6 @@ export interface InitOutput {
     readonly wasmentityrepo_users_list_all: (a: number) => number;
     readonly wasmentityrepo_users_remove: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
-    readonly workspace_currency_is_selectable: (a: number, b: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
@@ -507,8 +466,8 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10653: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10655: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10377: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10379: (a: number, b: number, c: number, d: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

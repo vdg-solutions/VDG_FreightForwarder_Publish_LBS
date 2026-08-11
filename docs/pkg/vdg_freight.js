@@ -711,44 +711,6 @@ export function apply_fsm_event(entity_id, event) {
 }
 
 /**
- * @returns {any}
- */
-export function billing_ledger_drain_writes() {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.billing_ledger_drain_writes(retptr);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * @param {string} ledger_json
- */
-export function billing_ledger_ingest(ledger_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(ledger_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.billing_ledger_ingest(retptr, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        if (r1) {
-            throw takeObject(r0);
-        }
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
  * @param {string} from
  * @param {string} event
  * @returns {boolean}
@@ -878,27 +840,6 @@ export function commission_resolve_rule(sales_id, shipment_json) {
 }
 
 /**
- * Override the default registry with rules loaded from Drive (JSON array of CommissionRule).
- * Call on boot after loading `commission_rules` entity from repo.
- * @param {string} rules_json
- */
-export function commission_rules_ingest(rules_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(rules_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.commission_rules_ingest(retptr, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        if (r1) {
-            throw takeObject(r0);
-        }
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
  * Single-source profit waterfall for the UI: margin → TNDN(20%) → net → sales/LBS split.
  * `sales_pct_0_100` is the manager-set share (0–100). Returns whole-VND figures.
  * `clamp_negatives`: true for payout (loss → zero), false for the sales-form
@@ -980,30 +921,6 @@ export function compute_freight(actual, l, w, h, breaks_json) {
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r2 = getDataViewMemory0().getFloat64(retptr + 8 * 1, true);
         return r0 === 0 ? undefined : r2;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * Single document create (manual form). Returns DocumentDto echo with Draft state.
- * Operator wiring deferred to F-03-01 (Document FSM entity).
- * @param {string} cmd_json
- * @returns {any}
- */
-export function create_document_wasm(cmd_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(cmd_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.create_document_wasm(retptr, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
@@ -1275,32 +1192,6 @@ export function grant_file_target_name(workspace, user_prefix) {
         const ptr1 = passStringToWasm0(user_prefix, wasm.__wbindgen_export, wasm.__wbindgen_export2);
         const len1 = WASM_VECTOR_LEN;
         wasm.grant_file_target_name(retptr, ptr0, len0, ptr1, len1);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        deferred3_0 = r0;
-        deferred3_1 = r1;
-        return getStringFromWasm0(r0, r1);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred3_0, deferred3_1, 1);
-    }
-}
-
-/**
- * @param {string} workspace
- * @param {string} user_prefix
- * @returns {string}
- */
-export function grant_file_target_path(workspace, user_prefix) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(workspace, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(user_prefix, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.grant_file_target_path(retptr, ptr0, len0, ptr1, len1);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         deferred3_0 = r0;
@@ -2097,54 +1988,10 @@ export function user_prefix_allocate(email, taken_json, seed) {
  * @param {string} s
  * @returns {boolean}
  */
-export function validate_airport_iata(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.validate_airport_iata(ptr0, len0);
-    return ret !== 0;
-}
-
-/**
- * @param {string} s
- * @returns {boolean}
- */
 export function validate_awb_no(s) {
     const ptr0 = passStringToWasm0(s, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.validate_awb_no(ptr0, len0);
-    return ret !== 0;
-}
-
-/**
- * @param {string} s
- * @returns {boolean}
- */
-export function validate_carrier_iata(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.validate_carrier_iata(ptr0, len0);
-    return ret !== 0;
-}
-
-/**
- * @param {string} s
- * @returns {boolean}
- */
-export function validate_carrier_icao(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.validate_carrier_icao(ptr0, len0);
-    return ret !== 0;
-}
-
-/**
- * @param {string} s
- * @returns {boolean}
- */
-export function validate_flight_no_wasm(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.validate_flight_no_wasm(ptr0, len0);
     return ret !== 0;
 }
 
@@ -2156,17 +2003,6 @@ export function validate_iata_dgr_class(class_str) {
     const ptr0 = passStringToWasm0(class_str, wasm.__wbindgen_export, wasm.__wbindgen_export2);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.validate_iata_dgr_class(ptr0, len0);
-    return ret !== 0;
-}
-
-/**
- * @param {string} s
- * @returns {boolean}
- */
-export function validate_uld_code(s) {
-    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.validate_uld_code(ptr0, len0);
     return ret !== 0;
 }
 
@@ -2309,17 +2145,6 @@ export function wasm_compute_sales_analytics(shipments_json, lines_json) {
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
-}
-
-/**
- * @param {string} code
- * @returns {boolean}
- */
-export function workspace_currency_is_selectable(code) {
-    const ptr0 = passStringToWasm0(code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.workspace_currency_is_selectable(ptr0, len0);
-    return ret !== 0;
 }
 
 /**
@@ -2814,7 +2639,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10655(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10379(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -2832,7 +2657,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10655(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_10379(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -3004,8 +2829,8 @@ function __wbg_get_imports() {
             return addHeapObject(ret);
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1739, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10653);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1720, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10377);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0) {
@@ -3042,10 +2867,10 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_10653(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_10377(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_10653(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_10377(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -3056,8 +2881,8 @@ function __wasm_bindgen_func_elem_10653(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_10655(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_10655(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_10379(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_10379(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')

@@ -6,7 +6,7 @@
 //   - probe folder users/<email-prefix>/ → 200 OK = that sales rep
 //   - none → not provisioned (admin must invite)
 
-import { getCurrentUser, signOut, ROLE_CACHE_KEY, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
+import { getCurrentUser, signOut, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
 import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord } from './workspace-acl.js';
 import { readGrant } from './grant-file.js';
@@ -15,17 +15,33 @@ import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
 import { sqlCountEntities, setStoreScope } from '../cache/store-client.js';
+import { readCachedRole, writeCachedRole, clearCachedRole, readCachedIdentityRaw } from './role-cache.js';
 
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
 const NOT_PROVISIONED_ID    = 'NOT_PROVISIONED';
 const ADMIN_FOLDER_NAME     = 'admin';
 const USERS_FOLDER_NAME     = 'users';
-const ROLE_CACHE_TTL_MS          = 5 * 60 * 1000; // 5 min — refresh on each session
 const DRIVE_PROBE_TIMEOUT_MS     = 5000;           // F-15-19 AC-4: surface banner if probe hangs
 const AUTH_DETECT_ROLE_TIMEOUT_MS = SAFE_AWAIT_DEFAULT_MS; // F-19-01: outer safeAwait guard
 const LOGIN_ROOT_ID           = 'login-root';
 const LOGIN_OVERLAY_STYLE     = 'position:fixed;inset:0;z-index:50;background:#f8fafc;';
+
+// A failed request is not an answer about authority. 403 and 404 legitimately fall through — an
+// employee cannot read admin/, and an absent file means nobody is provisioned yet — but a dead
+// token or an unreachable Drive means "cannot tell", and app.js already renders that as the retry
+// screen. Swallowing them is how an expired access token turned the workspace OWNER into a
+// pending-access account: the 401 fell through to "fork exists, no grant" = zero roles, which the
+// route guard then parked on /pending-access.
+const AUTH_FAILED_STATUS = 401;
+const SERVER_ERROR_FLOOR = 500;
+const RATE_LIMITED_STATUS = 429;
+
+function _isUndecidable(err) {
+  if (err?.name !== 'DriveApiError') return true;   // transport/TypeError — no verdict either
+  const s = err.status;
+  return s === AUTH_FAILED_STATUS || s === RATE_LIMITED_STATUS || s >= SERVER_ERROR_FLOOR;
+}
 
 export class RoleProbeTimeoutError extends Error {
   constructor() {
@@ -153,7 +169,10 @@ async function _probeInner(user) {
         }
         // seeded, but this email is not an active user — fall through to the users/ probe
       }
-    } catch (_) { /* probe missed — fall through to the grant-file check */ }
+    } catch (err) {
+      if (_isUndecidable(err)) throw err;   // no verdict — never "no roles"
+      /* 403/404: this account cannot read admin/, which is the employee case — fall through */
+    }
   }
 
   // Employee path (#30): the grant file is the only authority an employee can actually read —
@@ -193,32 +212,16 @@ async function _resolveForkToken(rootId, prefix) {
       const usersRoot = await listChildFolder(rootId, USERS_FOLDER_NAME);
       const fork      = usersRoot && await listChildFolder(usersRoot.id, prefix);
       if (fork) return prefix.toUpperCase();
-    } catch (_) { /* probe missed — try the shared-to-me route */ }
+    } catch (err) {
+      if (_isUndecidable(err)) throw err;
+      /* probe missed — try the shared-to-me route */
+    }
   }
   return (await findSharedSubfolder(prefix)) ? prefix.toUpperCase() : null;
 }
 
-/// #30: the cache carries the ROLE SET, not just the fork token. It used to hold the token alone
-/// and rebuild roles via _rolesForToken, which now (correctly) answers "no roles" for a fork —
-/// a cached employee would have lost every role they had until the TTL expired.
-function readCachedRole(email) {
-  try {
-    const raw = localStorage.getItem(ROLE_CACHE_KEY);
-    if (!raw) return null;
-    const { email: e, role, roles, ts } = JSON.parse(raw);
-    if (e !== email) return null;
-    if (Date.now() - ts > ROLE_CACHE_TTL_MS) return null;
-    return { role, roles: Array.isArray(roles) ? roles : null };
-  } catch { return null; }
-}
-
-function writeCachedRole(email, role, roles = null) {
-  try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({ email, role, roles, ts: Date.now() })); }
-  catch { /* quota — ignore */ }
-}
-
 export function clearRoleCache() {
-  localStorage.removeItem(ROLE_CACHE_KEY);
+  clearCachedRole();
   _setResolved(null);
 }
 
@@ -230,19 +233,6 @@ let _loginMounted = false;
 async function _detectRoleOrThrow(user, tag) {
   const roleResult = await safeAwait(detectRoleViaDrive(user), AUTH_DETECT_ROLE_TIMEOUT_MS, null, tag);
   if (!roleResult.ok) throw roleResult.error;
-}
-
-// F-57-01 AC-04: TTL-unbounded raw read of the role cache — a degraded cold-boot restore is a
-// best-effort local render, not a live permission grant (Drive ACL still gates every write), so
-// a role cached minutes/hours ago is still the best available signal once the network itself is
-// the thing that's down. Deliberately bypasses readCachedRole's ROLE_CACHE_TTL_MS gate below.
-function _readCachedIdentityRaw() {
-  try {
-    const raw = localStorage.getItem(ROLE_CACHE_KEY);
-    if (!raw) return null;
-    const { email, role } = JSON.parse(raw);
-    return email && role ? { email, role } : null;
-  } catch { return null; }
 }
 
 // F-57-01 AC-04: does the local SQLite workspace already hold at least one synced entity row
@@ -285,7 +275,7 @@ export async function requireAuth(onSignedIn) {
     }
     // F-57-01 AC-04: cached identity + a synced local workspace → degrade to a local render instead
     // of a blind sign-out. AC-03: no cached identity or no cached workspace falls through to login.
-    const cachedIdentity = _readCachedIdentityRaw();
+    const cachedIdentity = readCachedIdentityRaw();
     if (cachedIdentity) setStoreScope(cachedIdentity.email); // scope BEFORE the entity count reads it
     if (cachedIdentity && await _hasCachedWorkspace()) {
       _setResolved(cachedIdentity.role); // best-effort — same source detectRoleViaDrive would cache

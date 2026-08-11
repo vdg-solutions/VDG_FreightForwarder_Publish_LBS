@@ -47,7 +47,11 @@ export function render(root) {
   }, ROLE_POLL_MS);
 
   root.querySelector('#pending-retry').addEventListener('click', () => {
-    if (!exitIfGranted()) location.reload();
+    // Retry means re-probe. Without this the reload just reads the cached verdict back — the same
+    // "no roles" this screen is showing — and the button does nothing for up to ROLE_CACHE_TTL_MS.
+    if (exitIfGranted()) return;
+    clearRoleCache();
+    location.reload();
   });
   root.querySelector('#pending-signout').addEventListener('click', () => {
     window.__vdg_auth?.signOut?.();

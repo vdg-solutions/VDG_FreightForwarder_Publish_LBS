@@ -1,5 +1,7 @@
 // Period-lock UI helpers — banner display only.
-// Drive write enforcement is in drive-entity-repo.js via is_period_closed() WASM gate.
+// NOTE (F-20-10): write enforcement does not exist. This file used to claim it lived in
+// drive-entity-repo.js via the is_period_closed() wasm gate; that file is gone and neither the
+// wasm gate nor checkPeriodLock below has a caller, so locking a period blocks nothing today.
 
 export const PREF_LOCKED_PERIODS_KEY = 'locked_periods';
 

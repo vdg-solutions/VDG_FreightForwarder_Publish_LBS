@@ -27,10 +27,6 @@ export function grantFileName(workspace, userPrefix) {
   return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${userPrefix}`;
 }
 
-export function grantFilePath(workspace, userPrefix) {
-  return `${GRANTS_DIR}/${grantFileName(workspace, userPrefix)}`;
-}
-
 /// Search key: tag + workspace + the local-part of the user's own email. Their real prefix may
 /// carry 4 random digits from a collision, so the fork name is not knowable at sign-in.
 export function grantSearchKey(workspace, emailBase) {
@@ -52,7 +48,10 @@ export function userPrefixFromGrantName(name, workspace) {
 export function parseGrant(json, email, workspace) {
   let grant;
   try { grant = JSON.parse(json); } catch { return []; } // not our file — absence, not a failure
-  if (!grant || typeof grant.email !== 'string' || !Array.isArray(grant.roles)) return [];
+  // user_prefix is required, as it is on the Rust side: GrantFile has no default for it, so a file
+  // missing it is not a grant. Accepting one here handed out roles from a half-written file.
+  if (!grant || typeof grant.email !== 'string' || typeof grant.user_prefix !== 'string'
+      || !grant.user_prefix || !Array.isArray(grant.roles)) return [];
   if (grant.email.toLowerCase() !== String(email || '').toLowerCase()) return [];
   if (String(grant.workspace || '').toLowerCase() !== String(workspace || '').toLowerCase()) return [];
   if (grant.roles.length === 0) return [];
