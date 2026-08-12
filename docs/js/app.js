@@ -15,9 +15,7 @@ import { initRouter, navigate } from './router.js';
 import { requireAuth, currentSalesRepId, hasRole, ROLE_MANAGER } from './auth/auth-gate.js';
 import { enforceRouteGuard, currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from './operators/manager/route-guard.js';
 import { initGoogleSignIn, requestDriveScopeGrant } from './auth/google-oauth.js';
-import { renderDriveAccessGateScreen, DRIVE_ACCESS_REASON_SCOPE, DRIVE_ACCESS_REASON_PERMISSION, DRIVE_ACCESS_REASON_TRANSIENT }
-  from './views/auth/drive-access-gate-screen.js';
-import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT, DRIVE_ERROR_KIND_FILE_PERMISSION } from './auth/drive-error-classifier.js';
+import { renderDriveGate } from './boot/drive-gate.js';
 import { loadLocale, t } from './i18n/index.js';
 import { tryParamRoute }       from './app-router-ext.js';
 import { loadView }            from './util/view-loader.js';
@@ -213,12 +211,12 @@ export function bootApp(user, db) {
   initWmaListener();
   initConflictModal(); // F-14-18-3 modal was defined but never mounted — vdg:conflict-detected had zero listeners
   initMergeToast();    // #14 — vdg:merge-autoresolved toast + undo
-  const _repId = currentSalesRepId() || ''; // AC-02: non-manager provisioned sales → /sales/me/pnl/new
+  const _repId = currentSalesRepId() || ''; // AC-02: non-manager provisioned sales → /shipments/new
   // #15: non-manager without a rep fork boots straight to their role home (pending-access for
   // ReadOnly) instead of the old blanket '/dashboard' — the guard would bounce them anyway,
   // this just skips the denial toast on every cold boot.
   const defaultRoute = !hasRole(ROLE_MANAGER) && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER'
-    ? '/sales/me/pnl/new'
+    ? '/shipments/new'
     : homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);
 
@@ -285,30 +283,15 @@ async function main() {
       });
       return;
     }
-    // AC-03/AC-08/AC-09: Drive scope never granted at consent — no doomed Drive request was
-    // fired (auth-gate's guard threw before one could be). Re-consent button reuses the same
-    // popup; decline-again re-renders with a visible hint instead of looping silently.
-    if (err?.name === 'DriveApiError' && err.driveErrorKind === DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT) {
-      const mount  = _resolveBootFallbackMount();
-      const render = (declinedAgain) => renderDriveAccessGateScreen(mount, {
-        reason: DRIVE_ACCESS_REASON_SCOPE, declinedAgain,
-        onRequestScope: () => requestDriveScopeGrant(
-          () => location.reload(),   // AC-08: scope acquired — resume boot
-          () => render(true),        // AC-09: declined again — visible feedback, not a no-op
-        ),
-      });
-      render(false);
-      return;
-    }
-    // AC-06: file/folder-permission 403 (scope IS granted) — distinct screen, flag never
-    // cleared, no re-consent offered (that would not fix a permission problem).
-    if (err?.name === 'DriveApiError' && err.driveErrorKind === DRIVE_ERROR_KIND_FILE_PERMISSION) {
-      renderDriveAccessGateScreen(_resolveBootFallbackMount(), { reason: DRIVE_ACCESS_REASON_PERMISSION });
-      return;
-    }
-    // F-24-19: any other DriveApiError (transport/5xx/quota) — Drive unreachable, not "workspace absent". Retry screen, reload re-runs boot.
-    if (err?.name === 'DriveApiError') {
-      renderDriveAccessGateScreen(_resolveBootFallbackMount(), { reason: DRIVE_ACCESS_REASON_TRANSIENT });
+    // Every Drive failure routes through one gate: scope re-consent (AC-03/08/09), file/folder
+    // permission (AC-06), a dead session (401 — reconnect, NOT reload), or Drive genuinely
+    // unreachable (F-24-19). The status is logged because the screen deliberately doesn't show
+    // one, and a support question about it otherwise has nothing to go on.
+    if (renderDriveGate(_resolveBootFallbackMount(), err, {
+      onRequestScope: requestDriveScopeGrant,
+      onReconnected:  () => location.reload(),   // credential is good now — re-run boot
+    })) {
+      console.error('[VDG] boot stopped on Drive', err.status, err.driveErrorKind || '', err.message); // DEV
       return;
     }
     throw err;

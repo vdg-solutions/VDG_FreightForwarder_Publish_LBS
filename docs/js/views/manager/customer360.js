@@ -5,6 +5,7 @@ import { navigate }                      from '../../router.js';
 import { compose, HEALTH_THRESHOLD_GOOD, HEALTH_THRESHOLD_WATCH, compose360 } from '../../operators/manager/customer360-composer.js';
 import { shipmentLane } from '../../util/shipment-lane.js';
 import { t } from '../../i18n/index.js';
+import { listShipments } from '../../data/shipment-repo.js';
 
 const CUSTOMER360_RE   = /^\/manager\/customers\/([^/]+)$/;
 const KIND_CUSTOMER    = 'customers';
@@ -278,7 +279,7 @@ export async function render(root, param) {
   if (repo) {
     [customers, _shipments, _billing, _exceptions, quotations] = await Promise.all([
       repo.list(KIND_CUSTOMER, null),
-      repo.list(KIND_SHIPMENT, null),
+      listShipments(repo, null),
       repo.list(KIND_BILLING, null),
       repo.list(KIND_EXCEPTION, null),
       repo.list(KIND_QUOTATION, null),
@@ -334,7 +335,7 @@ export async function render(root, param) {
     if (![KIND_CUSTOMER, KIND_SHIPMENT, KIND_BILLING, KIND_EXCEPTION].includes(kind)) return;
     if (repo) {
       [customers, _shipments, _billing, _exceptions] = await Promise.all([
-        repo.list(KIND_CUSTOMER, null), repo.list(KIND_SHIPMENT, null),
+        repo.list(KIND_CUSTOMER, null), listShipments(repo, null),
         repo.list(KIND_BILLING, null),  repo.list(KIND_EXCEPTION, null),
       ]);
     }

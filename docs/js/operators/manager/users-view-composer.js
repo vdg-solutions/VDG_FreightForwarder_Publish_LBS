@@ -1,11 +1,17 @@
 // users-view-composer.js — pure logic for the admin Users CRUD view (F-24-04).
 // No I/O: role list, email/prefix derivation, table filter, sort. Mirrors ledger-composer.js.
 
-export const ROLE_MANAGER    = 'Manager';
-export const ROLE_SALES_REP  = 'SalesRep';
-export const ROLE_ACCOUNTANT = 'Accountant';
-export const ROLE_AUDITOR    = 'Auditor';
-export const ROLE_VALUES     = [ROLE_MANAGER, ROLE_SALES_REP, ROLE_ACCOUNTANT, ROLE_AUDITOR];
+import { emailPrefix } from '../../util/email-prefix.js';
+
+export const ROLE_MANAGER          = 'Manager';
+export const ROLE_SALES_MANAGER    = 'SalesManager';
+export const ROLE_SALES_REP        = 'SalesRep';
+export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
+export const ROLE_ACCOUNTANT       = 'Accountant';
+export const ROLE_AUDITOR          = 'Auditor';
+// Mirrors boundary/role.rs::Role::PRIMARY, in the same order.
+export const ROLE_VALUES = [ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP,
+                            ROLE_CUSTOMER_SERVICE, ROLE_ACCOUNTANT, ROLE_AUDITOR];
 
 export const ROLE_PRICING = 'Pricing';
 
@@ -13,6 +19,18 @@ export const ROLE_PRICING = 'Pricing';
 // a sales rep who also keeps the rate cards). ROLE_VALUES stays the filter-bar vocabulary;
 // ASSIGNABLE_ROLES is what the add/edit form offers as checkboxes.
 export const ASSIGNABLE_ROLES = [...ROLE_VALUES, ROLE_PRICING];
+
+// The add and edit modals used to keep one copy of this map each, and both had to be remembered
+// when a role was added — a role missing here renders its raw enum name in the checkbox list.
+export const ROLE_LABEL_KEYS = {
+  [ROLE_MANAGER]:          'admin.users.role.manager',
+  [ROLE_SALES_MANAGER]:    'admin.users.role.sales_manager',
+  [ROLE_SALES_REP]:        'admin.users.role.sales_rep',
+  [ROLE_CUSTOMER_SERVICE]: 'admin.users.role.customer_service',
+  [ROLE_ACCOUNTANT]:       'admin.users.role.accountant',
+  [ROLE_AUDITOR]:          'admin.users.role.auditor',
+  [ROLE_PRICING]:          'admin.users.hat.pricing',   // a hat, so its label reads as one
+};
 
 /// Ticked roles, returned in ASSIGNABLE_ROLES order so the wire format is stable.
 export function rolesFromForm(overlay) {
@@ -38,10 +56,11 @@ const STATUS_FILTER_ACTIVE   = 'active';
 const STATUS_FILTER_INACTIVE = 'inactive';
 const EMAIL_REGEX            = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/// AC-03: Add User modal auto-fills user_prefix from the email local-part (mirrors
-/// auth-gate.js::emailPrefix — kept local here so this module stays zero-dependency/pure).
+/// AC-03: Add User modal auto-fills user_prefix from the email local-part. The rule that decides
+/// which fork a user's data lives in now has ONE implementation (util/email-prefix.js) — the local
+/// copy existed only to stay dependency-free, and the leaf is dependency-free.
 export function deriveUserPrefix(email) {
-  return (email || '').split('@')[0].toLowerCase();
+  return emailPrefix(email);
 }
 
 /// #30: the prefix is ALLOCATED, not typed. It names the user's Drive fork and their grant file,

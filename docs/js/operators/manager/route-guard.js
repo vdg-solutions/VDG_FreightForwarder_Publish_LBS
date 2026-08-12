@@ -6,10 +6,14 @@
 import { navigate } from '../../router.js';
 import { t } from '../../i18n/index.js';
 
-export const ROLE_MANAGER    = 'Manager';
-export const ROLE_ACCOUNTANT = 'Accountant';
-export const ROLE_SALES_REP  = 'SalesRep';
-export const ROLE_READ_ONLY  = 'ReadOnly'; // AC-06: default for a user absent from admin/users.jsonl
+export const ROLE_MANAGER          = 'Manager';
+export const ROLE_SALES_MANAGER    = 'SalesManager';
+export const ROLE_ACCOUNTANT       = 'Accountant';
+export const ROLE_SALES_REP        = 'SalesRep';
+export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
+export const ROLE_AUDITOR          = 'Auditor';
+export const ROLE_PRICING          = 'Pricing';
+export const ROLE_READ_ONLY        = 'ReadOnly'; // AC-06: default for a user absent from admin/users.jsonl
 
 const TOAST_EVENT       = 'vdg:toast';
 const TOAST_TYPE_WARN   = 'warn';
@@ -161,7 +165,14 @@ export function currentUserRoles() {
 // not 'SalesRep'. Guarding on the raw value would bounce that rep to the pending screen at
 // every cold boot. A prefix means a provisioned users/{prefix} fork exists -> SalesRep.
 // The rep-id sentinels (auth-gate.js) are NOT prefixes — they mean no fork -> ReadOnly.
-const KNOWN_ROLES = [ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_READ_ONLY];
+// E-37: this list must hold EVERY assignable role. A role missing from it is not merely unguarded —
+// it falls through to the `return ROLE_SALES_REP` below, so a CustomerService user was silently
+// normalized into a sales rep and given a rep's nav. Pinned to boundary/role.rs::ALL by
+// tests/unit/role-catalog-parity.test.mjs.
+const KNOWN_ROLES = [
+  ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP,
+  ROLE_CUSTOMER_SERVICE, ROLE_AUDITOR, ROLE_PRICING, ROLE_READ_ONLY,
+];
 const REP_ID_SENTINELS = ['NOT_PROVISIONED', 'OTHER'];
 
 export function normalizeRole(role) {

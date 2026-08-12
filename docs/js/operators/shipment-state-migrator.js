@@ -14,6 +14,7 @@
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { SHIPMENT_STATES } from '../util/dashboard-distribution.js';
 import { resolveShipmentState } from '../util/shipment-state-resolver.js';
+import { listEnvelopes, putEnvelope } from '../data/shipment-repo.js';
 
 const AUDIT_KIND  = 'audit_log';
 const AUDIT_EVENT = 'shipment-state-migration';
@@ -25,7 +26,7 @@ const AUDIT_EVENT = 'shipment-state-migration';
  * @returns {Promise<{found:number, migrated:number, skippedUnresolved:number}>}
  */
 export async function migrateLegacyShipmentState(repo, aliasRows, _ms = SAFE_AWAIT_DEFAULT_MS) {
-  const listRes   = await safeAwait(repo.list('shipment', null), _ms, null, 'shipment-state-migrator:list');
+  const listRes   = await safeAwait(listEnvelopes(repo, null), _ms, null, 'shipment-state-migrator:list');
   const shipments = listRes.ok ? listRes.value : [];
 
   // Already-canonical records are never touched — content-based idempotency, no meta flag.
@@ -40,7 +41,7 @@ export async function migrateLegacyShipmentState(repo, aliasRows, _ms = SAFE_AWA
 
     const { status, ...rest } = s; // status field retired (Q4)
     const putRes = await safeAwait(
-      repo.put('shipment', s.shipment_ref, { ...rest, state: canonical }),
+      putEnvelope(repo, s.shipment_ref, { ...rest, state: canonical }),
       _ms, null, 'shipment-state-migrator:put',
     );
     if (putRes.ok) migrated++;

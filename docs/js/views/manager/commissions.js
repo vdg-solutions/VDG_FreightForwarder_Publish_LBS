@@ -14,6 +14,7 @@ import { compose as composeRules } from '../../operators/manager/commission-comp
 import { bulkPut }            from '../../cache/bulk-orchestrator.js';
 import { PREF_LOCKED_PERIODS_KEY } from '../../cache/period-lock-ui.js';
 import { safeMasterLoad }     from '../../util/master-load.js';
+import { listShipments } from '../../data/shipment-repo.js';
 
 const PAYOUT_KIND          = 'commission_payout';
 const KIND_COMMISSION_RULES = 'commission_rules';
@@ -112,7 +113,7 @@ async function loadData() {
   _loadInFlight = true;
   const res = await safeMasterLoad(async () => {
     const [shipments, pnlLines, payouts] = await Promise.all([
-      repo.list(KIND_SHIPMENT, null),
+      listShipments(repo, null),
       repo.list(KIND_PNL_LINE, null),
       repo.list(PAYOUT_KIND, null),
     ]);

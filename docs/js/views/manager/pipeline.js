@@ -9,8 +9,9 @@ import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
 import { shipmentLane } from '../../util/shipment-lane.js';
 import { t } from '../../i18n/index.js';
 import { todayLocal } from '../../util/today-local.js';
+import { SHIPMENT_MAIN_PATH } from '../../util/shipment-phases.js';
 
-const SEA_KANBAN_STATES = ['Created','BookingConfirmed','InTransit','Arrived','Delivered','Closed'];
+const SEA_KANBAN_STATES = SHIPMENT_MAIN_PATH;
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
 const ALL_KANBAN_STATES = [...SEA_KANBAN_STATES,'Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
 

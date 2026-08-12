@@ -3,6 +3,7 @@ import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';
 import { t } from '../i18n/index.js';
 import { todayLocal } from '../util/today-local.js';
+import { getShipment } from '../data/shipment-repo.js';
 
 const COMPANY_NAME    = 'VDG FREIGHT SERVICES CO., LTD';
 const COMPANY_ADDRESS = '123 Nguyen Hue, District 1, Ho Chi Minh City, Vietnam';
@@ -13,7 +14,7 @@ const COMPANY_TEL     = '+84 28 3822 0000';
 async function loadShipment(ref) {
   const repo = window.__vdg_repo;
   if (!repo) return null;
-  return repo.get('shipment', ref);
+  return getShipment(repo, ref);
 }
 
 async function loadLines(ref) {
@@ -169,7 +170,7 @@ function notFoundHtml(ref) {
   return `
     <div class="p-8 text-center">
       <div class="text-sm font-semibold text-slate-700">${t('budget_print.empty.title', { ref })}</div>
-      <div class="text-xs text-slate-500 mt-1">${t('budget_print.empty.hint')} <a href="#/sales/me/pnl/new" class="underline">${t('budget_print.empty.link')}</a></div>
+      <div class="text-xs text-slate-500 mt-1">${t('budget_print.empty.hint')} <a href="#/shipments/new" class="underline">${t('budget_print.empty.link')}</a></div>
     </div>`;
 }
 

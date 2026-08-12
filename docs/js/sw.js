@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-va503a9d';
+const STATIC_CACHE     = 'vdg-static-vbbfa072';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-va503a9d';
+const DRIVE_META_CACHE = 'vdg-drive-meta-vbbfa072';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -53,12 +53,15 @@ const BOOT_GRAPH = [
   'js/auth/google-oauth.js',
   'js/auth/grant-file.js',
   'js/auth/role-cache.js',
+  'js/auth/token-anchor.js',
   'js/auth/token-refresh.js',
+  'js/auth/undecidable.js',
   'js/auth/window-open-guard.js',
   'js/auth/workspace-acl.js',
   'js/auth/workspace-root.js',
   'js/boot/boot-fsm-view.js',
   'js/boot/boot-fsm.js',
+  'js/boot/drive-gate.js',
   'js/boot/license-boot-gate.js',
   'js/boot/migration-overlay.js',
   'js/boot/repo-bootstrap.js',
@@ -89,7 +92,10 @@ const BOOT_GRAPH = [
   'js/components/upload-zone.js',
   'js/components/vdg-confirm-dialog.js',
   'js/components/wizard-stepper.js',
+  'js/data/bundle-file-heal.js',
   'js/data/master-registry.js',
+  'js/data/shipment-repo.js',
+  'js/data/shipment-revenue-repo.js',
   'js/data/store-io-adapters.js',
   'js/data/wasm-io-adapters.js',
   'js/helpers/show-confirm.js',
@@ -104,13 +110,17 @@ const BOOT_GRAPH = [
   'js/operators/shipment-void-delete.js',
   'js/operators/workspace-registry.js',
   'js/router.js',
+  'js/sync/audit-log.js',
   'js/sync/job-tracker.js',
+  'js/sync/shipment-audit.js',
   'js/sync/wma-engine.js',
   'js/sync/wma-store.js',
   'js/util/dashboard-distribution.js',
+  'js/util/email-prefix.js',
   'js/util/mount-view.js',
   'js/util/safe-await.js',
   'js/util/sales-rep-i18n.js',
+  'js/util/shipment-phases.js',
   'js/util/shipment-state-aliases.js',
   'js/util/shipment-state-resolver.js',
   'js/util/status-i18n.js',
@@ -140,7 +150,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps a503a9d → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps bbfa072 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

@@ -23,6 +23,11 @@ const SHARED_DIR = '_shared';
 export const SHARED_SUBFOLDERS = [
   'customers', 'fx-rates', 'ledger',        // Accountant's refs
   'air-rates', 'local-charges', 'ocean-tariff', // the Pricing hat's rate refs (#24)
+  // E-37: the job file left the sales rep's fork — CS and Sales both write it, so no single fork
+  // can hold it — and publish materializes the financial snapshot into `billing`, which is the
+  // only shipment area Accounting is granted. Both are CONFIDENTIAL refs: a role outside their
+  // reader set gets no permission at all, so these folders must exist before anyone is assigned.
+  'shipments', 'billing',
 ];
 // #30: `grants` holds one read-only grant file per user. It is created here but NEVER appears in
 // resolve_grants — a permission on the folder would inherit down to every child and hand each user

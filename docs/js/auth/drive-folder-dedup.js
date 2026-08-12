@@ -30,8 +30,10 @@ export async function resolveRealParentId(driveFetch, parentId) {
 }
 
 export async function globalOwnerQuery(driveFetch, name) {
+  // createdTime rides along for workspace-root's seeded-root tiebreak (oldest wins) — the
+  // dedupe logic below never reads it.
   const q = `name='${name}' and 'me' in owners and mimeType='${FOLDER_MIME}' and trashed=false`;
-  return (await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name,parents)&spaces=drive`)).files || [];
+  return (await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name,parents,createdTime)&spaces=drive`)).files || [];
 }
 
 export async function moveToParent(driveFetch, fileId, newParentId, removeParents = []) {

@@ -5,9 +5,12 @@
 import { t } from '../i18n/index.js';
 import { resolveShipmentState } from './shipment-state-resolver.js';
 
-// Mirrors ShipmentState::as_str() (src/abstractions/states/shipment_state.rs) exactly.
-// Drift-guard test (dashboard-distribution-undercount.test.mjs) fails loudly if these diverge.
-export const SHIPMENT_STATES = ['Created', 'BookingConfirmed', 'InTransit', 'Arrived', 'Delivered', 'Closed', 'Cancelled'];
+// F-37-04: was a fourth hand-written copy of the lifecycle. Re-exported so its consumers are
+// untouched, but the list itself now lives in util/shipment-phases.js, pinned to Rust.
+// Imported AND exported: `export { X } from` re-exports without binding the name locally, and
+// buildDistribution below reads it.
+import { SHIPMENT_STATES } from './shipment-phases.js';
+export { SHIPMENT_STATES };
 export const UNKNOWN_STATE = 'Unknown';
 
 const LABEL_KEY = {

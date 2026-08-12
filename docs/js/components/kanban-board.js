@@ -4,19 +4,15 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { getActiveSalesReps } from '../operators/sales-registry.js';
 import { t } from '../i18n/index.js';
 import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';
+import { SHIPMENT_MAIN_PATH, NEXT_ON_PATH } from '../util/shipment-phases.js';
 
-const KANBAN_STATES           = ['Created','BookingConfirmed','InTransit','Arrived','Delivered','Closed'];
+const KANBAN_STATES           = SHIPMENT_MAIN_PATH;
 const KANBAN_COLUMN_WIDTH_PX  = 280;
 const TOUCH_MODE_BREAKPOINT   = 768; // F-14-16: touch at mobile widths
 const FALLBACK_BORDER_COLOR   = 'border-slate-300';
-const VALID_NEXT = {
-  Created:           ['BookingConfirmed'],
-  BookingConfirmed:  ['InTransit'],
-  InTransit:         ['Arrived'],
-  Arrived:           ['Delivered'],
-  Delivered:         ['Closed'],
-  Closed:            [],
-};
+// F-37-04: this was a hand-written copy of the transition table, so a state added to the FSM
+// would silently have no drag target here. Derived from the order now.
+const VALID_NEXT = NEXT_ON_PATH;
 
 function fmtNum(n) {
   if (!n && n !== 0) return '—';

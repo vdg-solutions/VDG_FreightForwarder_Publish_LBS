@@ -3,6 +3,8 @@
 // Split out of note-print.js so that file stays presentation-only (and under the 350-line cap).
 // Everything here is a pure read through window.__vdg_repo — no Drive call, no mutation.
 
+import { getShipment } from '../data/shipment-repo.js';
+
 export const NOTE_TYPE_DEBIT  = 'debit';
 export const NOTE_TYPE_CREDIT = 'credit';
 
@@ -75,7 +77,7 @@ export async function loadNoteData(
   };
   if (!repo || !shipmentRef) return empty;
 
-  const shipment = await repo.get(KIND_SHIPMENT, shipmentRef).catch(() => null);
+  const shipment = await getShipment(repo, shipmentRef).catch(() => null);
   if (!shipment) return empty;
 
   // Materialized pnl_line rows are the source of truth (both entry paths write them since

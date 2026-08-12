@@ -6,7 +6,10 @@ import { freshViewRoot } from './util/view-root.js';
 const CUSTOMER360_RE = /^\/manager\/customers\/([^/]+)$/;
 const MASTERS_RE     = /^\/manager\/masters\/([^/]+)$/;
 const SALES_EDIT_RE  = /^\/sales\/edit\/([^/]+)$/;        // AC-06 reload path
-const SALES_PNL_NEW_RE = /^\/sales\/([^/]+)\/pnl\/new$/;  // create PNL; salesId 'me' = self
+// F-37-03: the create route is no longer keyed by a sales rep. A shipment is not owned by one
+// person any more — the envelope is shared and the rep is a FIELD on it — so the rep rides in the
+// query like every other prefill, and CS can open the same URL without it reading as theirs.
+const SHIPMENT_NEW_RE = /^\/shipments\/new$/;
 
 /**
  * Attempts to match parameterised routes. Returns true if handled, false otherwise.
@@ -44,9 +47,8 @@ export async function tryParamRoute(route) {
     return true;
   }
 
-  // Create PNL: /sales/:salesId/pnl/new  (salesId 'me' → current user)
-  const pnlNewMatch = SALES_PNL_NEW_RE.exec(basePath);
-  if (pnlNewMatch) {
+  // Create a shipment: /shipments/new[?sales=<rep>]  ('me' or absent → the signed-in user)
+  if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
     const mod = await loadView(() => import('./views/sales-new.js'), root, basePath);
     if (!mod) return true;
@@ -58,7 +60,7 @@ export async function tryParamRoute(route) {
       ? { quote_id: quoteId, customer: qs.get('customer') || '', pol: qs.get('pol') || '',
           pod: qs.get('pod') || '', container: qs.get('container') || '' }
       : undefined;
-    await mountView(() => mod.render(root, { salesId: pnlNewMatch[1], mode: 'create', quotePrefill }), root, basePath);
+    await mountView(() => mod.render(root, { salesId: qs.get('sales') || 'me', mode: 'create', quotePrefill }), root, basePath);
     return true;
   }
 

@@ -65,13 +65,70 @@ export function findWorkspaceRoot(name) {
 // post-provision reload resolves the freshly-created root.
 export function resetWorkspaceRootCache() { _rootCache.clear(); }
 
+// The root the app is BOUND to is identity, not a search result. Once a root has resolved, its
+// id is pinned here and later sessions verify the pin with one files.get instead of re-running
+// the owner-wide search — because the search is a name lookup, and a name is forgeable by
+// accident: a QA-created duplicate "LBS" folder won the blind lowest-id pick (drive.file scope
+// cannot classify parents) and the whole app silently bound an empty shadow workspace, reading
+// as "chưa ai cấp quyền" for the OWNER. The pin only lets go when Drive itself says the folder
+// is gone (404/trashed) — a transient error propagates rather than unbinding.
+const ROOT_PIN_PREFIX = 'vdg.workspace.root_id.';
+
+function _readRootPin(name)      { try { return localStorage.getItem(ROOT_PIN_PREFIX + name); } catch { return null; /* storage-less context (tests) — resolve by search */ } }
+function _writeRootPin(name, id) { try { localStorage.setItem(ROOT_PIN_PREFIX + name, id); } catch { /* storage-less context — nothing to pin */ } }
+function _clearRootPin(name)     { try { localStorage.removeItem(ROOT_PIN_PREFIX + name); } catch { /* already absent */ } }
+
+async function _verifyPinnedRoot(id) {
+  const res = await driveFetch('GET', `/files/${id}?fields=id,trashed`);
+  return res && res.trashed !== true ? id : null;
+}
+
 async function _resolveWorkspaceRoot(name) {
-  const found  = await globalOwnerQuery(driveFetch, name);
-  const winner = await dedupeGlobalOwnerFolders(driveFetch, found, DRIVE_ROOT_PARENT_ID);
-  if (winner) return winner.id;
+  const pinned = _readRootPin(name);
+  if (pinned) {
+    try {
+      const ok = await _verifyPinnedRoot(pinned);
+      if (ok) return ok;
+      _clearRootPin(name); // Drive answered: the pinned folder is gone — fall to search
+    } catch (err) {
+      // 404 is an answer (folder gone); anything else carries no verdict and must propagate —
+      // unbinding on a transient is how a workspace flips identity mid-flight.
+      if (err?.status === 404) _clearRootPin(name);
+      else throw err;
+    }
+  }
+
+  const found = await globalOwnerQuery(driveFetch, name);
+  const winner = found.length > 1
+    ? await _pickSeededRoot(found) ?? await dedupeGlobalOwnerFolders(driveFetch, found, DRIVE_ROOT_PARENT_ID)
+    : await dedupeGlobalOwnerFolders(driveFetch, found, DRIVE_ROOT_PARENT_ID);
+  if (winner) { _writeRootPin(name, winner.id); return winner.id; }
 
   // AC-01/AC-03: not owned by the signed-in user — check whether it was shared instead.
-  return await findSharedSubfolder(name);
+  const shared = await findSharedSubfolder(name);
+  if (shared) _writeRootPin(name, shared);
+  return shared;
+}
+
+// Several same-name candidates and no pin: the real workspace is the one that has been
+// PROVISIONED — its admin/ holds users.jsonl. A shell that merely shares the name (empty
+// skeleton, backup, accident) must never win on id order. Ties break to the oldest folder;
+// nothing is deleted here — cleanup stays with dedupeGlobalOwnerFolders, which only deletes
+// what it can actually classify.
+async function _pickSeededRoot(found) {
+  const seeded = [];
+  for (const f of found) {
+    try {
+      const admin = await findFolder(f.id, 'admin');
+      if (!admin) continue;
+      const q = `name='users.jsonl' and '${admin.id}' in parents and trashed=false`;
+      const res = await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id)&spaces=drive`);
+      if ((res.files || []).length > 0) seeded.push(f);
+    } catch { /* unreadable candidate — treated as unseeded, the classified path still runs */ }
+  }
+  if (seeded.length === 0) return null;
+  return seeded.slice().sort((a, b) =>
+    String(a.createdTime || '').localeCompare(String(b.createdTime || '')) || a.id.localeCompare(b.id))[0];
 }
 
 // F-27-04: resolve a folder shared directly TO the signed-in user by exact name, with no

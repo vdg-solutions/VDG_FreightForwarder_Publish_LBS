@@ -109,6 +109,11 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   window.__vdg_repo      = repo;
   window.__vdg_drive_api = driveApi;
   window.__vdg_store     = ioPort._store; // on-demand views (prefs, drafts, wma, notifications) read SQLite here
+  // E-37: the shipment revenue half is addressed by PATH, not by kind — the kind route
+  // always resolves to the signed-in user's fork, so a manager reading a rep's job needs
+  // ws_read_file on users/{rep}/shipment_revenue. data/shipment-revenue-repo.js reaches
+  // the port through here.
+  window.__vdg_io        = ioPort;
 
   // F-19-88 AC-04/05: rehydrate the WASM FSM map from the repo (reload + pre-existing
   // rollback orphans) — non-fatal bound so a large shipment list never hangs boot.
@@ -175,9 +180,12 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     const { startOutboxDrainScheduler } = await import('../sync/outbox-drain-scheduler.js');
     startOutboxDrainScheduler({ getRepo: () => repo });
 
-    // Audit log
+    // Audit log. F-37-02: the instance used to be constructed and dropped on the floor — nothing
+    // held it, `runRepoInitBounded` returned auditLog: null, and every `_auditLog?.append(...)`
+    // in role-assignment-service optional-chained into nothing. The trail was empty by
+    // construction, which is indistinguishable from a workspace where nobody ever changed a role.
     const { AuditLog } = await import('../sync/audit-log.js');
-    new AuditLog(
+    window.__vdg_audit_log = new AuditLog(
       () => window.__vdg_auth?.getCurrentUser?.(),
       () => currentSalesRepId(),
     );
@@ -195,6 +203,13 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     // Error log
     const { initErrorLog } = await import('../sync/error-log.js');
     initErrorLog(driveApi, () => window.__vdg_auth?.getCurrentUser?.(), () => APP_VERSION);
+
+    // Retention. The write side is capped per session but never expires, so without a prune the
+    // log is append-only for the life of the workspace. Fire-and-forget: a boot must not wait on
+    // housekeeping, and a workspace with nothing to prune is a normal result.
+    import('../operators/manager/error-log-store.js')
+      .then((m) => m.pruneErrorLog(driveApi))
+      .catch((err) => console.warn('[VDG] error-log prune skipped:', err.message)); // DEV
 
     // Payment due-soon checker (F-48-01) — tier 3/4 main-thread badge/notify, one shared
     // compute_due_soon call, 100% local (no Drive/token). Tiers 1/2 registration lives in
@@ -241,7 +256,8 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     // working for two companies can tell their two grants apart. Injected, not imported — the
     // service stays clear of the workspace-registry → drive-api → google-oauth chain.
     window.__vdg_role_assignment_service = new RoleAssignmentService(
-      driveApi, userRepo, findWorkspaceRoot, null, userAuditLog, null, activeWorkspaceName,
+      driveApi, userRepo, findWorkspaceRoot, window.__vdg_audit_log || null,
+      userAuditLog, null, activeWorkspaceName,
     );
     // #25: this wiring lands in the DEFERRED step, long after the router may have rendered
     // #/admin/users on a deep link — that view read a null repo and sat at 0/0 forever. Announce it

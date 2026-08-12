@@ -2,6 +2,7 @@ import { t } from '../i18n/index.js';
 import { buildDistribution } from '../util/dashboard-distribution.js';
 import { resolveShipmentState } from '../util/shipment-state-resolver.js';
 import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
+import { listShipments } from '../data/shipment-repo.js';
 
 const CLOSED_LIKE_STATES  = ['Closed', 'Delivered']; // F-18-11: KPI "active" excludes these
 
@@ -155,7 +156,7 @@ export async function render(root) {
   let allShipments = [];
   let aliasRows = [];
   if (repo) {
-    allShipments = await repo.list('shipment', null);
+    allShipments = await listShipments(repo, null);
     // DEFECT-1: seed-on-first-read — a fresh session (any role) must resolve legacy aliases
     // without a manager first opening the states-master view.
     aliasRows = await ensureShipmentStateAliases(repo);

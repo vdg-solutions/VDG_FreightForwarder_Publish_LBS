@@ -125,7 +125,7 @@ async function handleActions(e, root, repo) {
     } else {
       const q = quote;
       const qs = new URLSearchParams({ quote_id: id, customer: q.customer || '', pol: q.pol || '', pod: q.pod || '', container: q.container_type || '' });
-      navigate(`/sales/me/pnl/new?${qs.toString()}`);
+      navigate(`/shipments/new?${qs.toString()}`);
     }
   }
 

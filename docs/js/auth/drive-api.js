@@ -3,7 +3,7 @@
 import { clearDriveScopeGrant } from './google-oauth.js';
 import { globalOwnerQuery, dedupeGlobalOwnerFolders, moveToParent } from './drive-folder-dedup.js';
 import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
-import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive } from './access-token.js';
+import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive, recoverFromUnauthorized } from './access-token.js';
 
 // F-19-72: token lifecycle moved to access-token.js (350-line cap) — re-exported here so
 // existing importers (token-refresh.js) keep resolving.
@@ -30,14 +30,32 @@ const RATE_LIMIT_MAX_ATTEMPTS = 3;
 // unbounded stall.
 const RETRYABLE_STATUSES = new Set([429, 503]);
 
-// single-flight guard — prevents multiple reloads on concurrent 401s
-let _reauthInflight = false;
+const HTTP_UNAUTHORIZED   = 401;
+const SESSION_EXPIRED_MSG = 'Drive session expired — reconnect required';
 
-// Real 401 + failed re-mint -> flip the app into reconnect state (topbar chip + auth-gate
+// Real 401 + failed recovery -> flip the app into reconnect state (topbar chip + auth-gate
 // listen). Was left dangling when the old token-refresh module was retired — every failed
 // re-mint threw ReferenceError instead of surfacing the reconnect chip.
 function _dispatchNeedsReconnect() {
   window.dispatchEvent(new CustomEvent('vdg:auth-needs-reconnect'));
+}
+
+// Reactive 401 recovery through the TokenAnchor rule (owner model: "lúc 401 mới cần" — never
+// proactive). Shared by BOTH fetch wrappers: every content read/write goes through driveFetchRaw,
+// and it had no 401 branch at all — verified live on the deploy, where four metadata calls
+// returned 200 and the first alt=media download 401'd. usedToken anchors the verdict: a 401
+// earned by a token that is no longer current retries with the fresh one instead of declaring
+// the session dead (the "expired seconds after reconnect" false red). The retry runs AFTER
+// recovery settles, so a 403 coming back from it stays a 403.
+async function _reauthThenRetry(attempt, usedToken, retry) {
+  if (attempt !== 0) throw new DriveApiError(HTTP_UNAUTHORIZED, SESSION_EXPIRED_MSG); // one recovery per request
+  try {
+    await recoverFromUnauthorized(usedToken);
+  } catch {
+    _dispatchNeedsReconnect();   // AC-04: reconnect state, no reload
+    throw new DriveApiError(HTTP_UNAUTHORIZED, SESSION_EXPIRED_MSG);
+  }
+  return retry();
 }
 
 export { FOLDER_MIME };
@@ -89,20 +107,8 @@ export async function driveFetch(method, path, body = undefined, attempt = 0) {
     return driveFetch(method, path, body, attempt + 1);
   }
 
-  if (res.status === 401) {
-    if (attempt === 0 && !_reauthInflight) {
-      _reauthInflight = true;
-      try {
-        await refreshAccessTokenSilently();               // ONE silent refresh
-        return await driveFetch(method, path, body, attempt + 1);   // retry SAME request once
-      } catch (reauthErr) {
-        _dispatchNeedsReconnect();                        // AC-04: reconnect state, no reload
-        throw new DriveApiError(401, 'Drive session expired — reconnect required');
-      } finally {
-        _reauthInflight = false;
-      }
-    }
-    throw new DriveApiError(401, 'Drive session expired — reconnect required');   // concurrent / already-retried
+  if (res.status === HTTP_UNAUTHORIZED) {
+    return _reauthThenRetry(attempt, token, () => driveFetch(method, path, body, attempt + 1));
   }
 
   if (!res.ok) {
@@ -137,6 +143,13 @@ export async function driveFetchRaw(method, path, body = undefined, extraHeaders
   if (RETRYABLE_STATUSES.has(res.status) && attempt < RATE_LIMIT_MAX_ATTEMPTS) {
     await _sleep(RATE_LIMIT_BASE_MS * Math.pow(2, attempt));
     return driveFetchRaw(method, path, body, extraHeaders, attempt + 1);
+  }
+
+  // Content path — same one-shot re-mint as driveFetch. getFile/uploadFile used to hand the raw
+  // 401 to the caller, so an expired token killed the read outright while a metadata call on the
+  // same token healed itself.
+  if (res.status === HTTP_UNAUTHORIZED) {
+    return _reauthThenRetry(attempt, token, () => driveFetchRaw(method, path, body, extraHeaders, attempt + 1));
   }
 
   return res; // caller checks status — a persistent 503 falls through here and getFile's

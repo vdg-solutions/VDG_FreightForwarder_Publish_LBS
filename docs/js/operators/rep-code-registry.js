@@ -35,10 +35,19 @@ export async function assignRepCode(repo) {
 // Mirrors the existing seed-if-unseeded idiom (ensureShipmentStateAliases) — called lazily at
 // first shipment creation so pre-existing reps (non-numeric sales_code, e.g. "quang") upgrade
 // without a manual migration script.
+//
+// The persist merges onto the FRESH record, never onto the object the caller handed in —
+// callers fabricate `{ id, sales_code: null }` skeletons when their own read missed (observed
+// live: the owner's user row at _rev 11 reduced to nothing but a sales_code, which cost them
+// their Manager role at the next uncached probe). And a row that doesn't exist is not created
+// here: a skeleton with no email is a caller's placeholder (the '__MANAGER__' sentinel), not a
+// user — it gets its code for Job No purposes and nothing is written.
 export async function ensureRepCode(user, repo) {
   if (isValidRepCode(user.sales_code)) return user.sales_code;
-  const code = await assignRepCode(repo);
-  await repo.put(KIND_USER, user.id, { ...user, sales_code: code });
+  const code  = await assignRepCode(repo);
+  const fresh = await repo.get(KIND_USER, user.id).catch(() => null);
+  if (fresh) await repo.put(KIND_USER, user.id, { ...fresh, sales_code: code });
+  else if (user.email) await repo.put(KIND_USER, user.id, { ...user, sales_code: code });
   return code;
 }
 

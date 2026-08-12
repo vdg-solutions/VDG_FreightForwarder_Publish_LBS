@@ -1,5 +1,7 @@
 // Quote orchestrator — Draft creation, state transitions, validation
 
+import { listEnvelopes } from '../data/shipment-repo.js';
+
 const OVERRIDE_THRESHOLD_PCT = 0.15; // 15% lower → manager approval required
 const KIND_QUOTATIONS        = 'quotations';
 const KIND_SHIPMENT          = 'shipment';
@@ -119,6 +121,6 @@ export async function markAccepted(repo, quote) {
 // ── convert guard ─────────────────────────────────────────────────────────────
 
 export async function checkAlreadyConverted(repo, quoteId) {
-  const shipments = await repo.list(KIND_SHIPMENT, (s) => s.quote_id === quoteId).catch(() => []);
+  const shipments = await listEnvelopes(repo, (s) => s.quote_id === quoteId).catch(() => []);
   return shipments[0] || null;
 }

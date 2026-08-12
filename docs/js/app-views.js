@@ -8,7 +8,8 @@ export const VIEWS = {
   '/finance':         () => import('./views/finance-dashboard.js'),
   '/finance/credit':  () => import('./views/credit-dashboard.js'),
   '/finance/demdet':  () => import('./views/demdet.js'),
-  // '/sales/:salesId/pnl/new' — create PNL, handled by tryParamRoute (app-router-ext.js)
+  // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
+  // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
   '/sales/me':        () => import('./views/sales-me.js'),
 '/sales/analytics':  () => import('./views/sales-analytics.js'),
   '/sales/quote/new':  () => import('./views/sales-quote-new.js'),

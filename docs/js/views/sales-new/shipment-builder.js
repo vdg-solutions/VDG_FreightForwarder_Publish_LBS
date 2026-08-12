@@ -3,6 +3,7 @@
 
 import { resolveShipmentState } from '../../util/shipment-state-resolver.js';
 import { todayLocal } from '../../util/today-local.js';
+import { pnlLineId } from '../../util/pnl-line-id.js';
 
 const SOURCE_ORIGIN  = 'form-entry';
 const PARSER_ID      = 'form-v1';
@@ -74,8 +75,13 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     job_currency:          state.currency              || 'USD',
     roe_buying:            parseFloat(state.roe_buying) || null,
     roe_debit:             parseFloat(state.roe_debit)  || null,
+    // E-37: line_id is the join key between the two records a shipment is stored as (the buy side
+    // travels with the envelope into _shared/shipments, the sell side stays in the rep's fork).
+    // Same scheme as the materialized `pnl_line` rows, so one shipment has one line vocabulary.
+    // shipment_split REFUSES a line without it rather than producing a half that cannot rejoin.
     pnl_lines:             state.lines
-      ? state.lines.map((ln) => ({
+      ? state.lines.map((ln, i) => ({
+          line_id:             ln.line_id || pnlLineId(ref, i + 1),
           subtype:             ln.kind || 'MiscOperatingExpense',
           description:         ln.desc,
           buying_qty:          ln.buy_qty,
@@ -94,7 +100,9 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
           selling_vnd_collect: ln.vnd_collect,
           pol_pod_side:        ln.pol_pod_side,
         }))
-      : (state.pnl_lines || []),
+      // The import path (pnl-commit-orchestrator) hands lines through already shaped; they still
+      // need the join key, and stamping it here keeps ONE place that decides a line's identity.
+      : (state.pnl_lines || []).map((ln, i) => ({ line_id: ln.line_id || pnlLineId(ref, i + 1), ...ln })),
     sales_share_pct_override: state.sales_share_pct_override ?? null,
     // AC-08: commission rows stored in shipment payload (F-15-59)
     commission_lines: (state.commission_lines || []).map((l) => ({

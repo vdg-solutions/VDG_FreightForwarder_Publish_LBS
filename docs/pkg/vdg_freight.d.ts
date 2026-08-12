@@ -269,6 +269,56 @@ export function run(sql: string, params_json: string): void;
 export function select(sql: string, params_json: string): string;
 
 /**
+ * The record Accounting is handed at publish, derived from the JOINED shipment.
+ *
+ * `published_json` is the snapshots already published for this shipment (from the same fork), used
+ * only to work out the next revision — an amendment supersedes rather than overwrites, so a second
+ * publish cannot erase the figures an invoice was already raised from.
+ *
+ * Errors when the shipment carries no sell side: that is what a shipment looks like when it was
+ * read by somebody with no access to the revenue fork, and publishing it would invoice zero.
+ */
+export function shipment_billing_snapshot(shipment_json: string, published_json: string, published_at: string, published_by: string): string;
+
+/**
+ * `{ "envelope": [{field,from,to}], "revenue": [...] }` — what changed, already sorted into the
+ * two halves that have different readers, so the caller only chooses a store and never a side.
+ *
+ * An empty `before_json` is a create and yields history from null. Passing two ENVELOPE records
+ * (the state-change path) is correct and returns an empty revenue list.
+ */
+export function shipment_change_set(before_json: string, after_json: string): string;
+
+/**
+ * True when a revenue half carries anything at all. JS must not answer this itself: what counts as
+ * revenue is the same contract as the split, and a CS-created job's EMPTY half is the difference
+ * between writing nothing and writing a revenue record into the wrong person's fork.
+ */
+export function shipment_has_revenue(revenue_json: string): boolean;
+
+/**
+ * Rejoin for a reader holding both halves. An empty `revenue_json` is the CS case — the folder
+ * was never granted — and yields the envelope unchanged rather than an error. The caller must
+ * already have decided that the absence is an ANSWER and not a failed read.
+ */
+export function shipment_join(envelope_json: string, revenue_json: string): string;
+
+/**
+ * `{ current, off_path, phases: [{ state, position, requirements }] }`.
+ *
+ * The state comes from the FSM state map when the entity is registered, and from the record's own
+ * `state` otherwise — a job whose boot registration has not run yet still has a real state, and
+ * showing it at Created would be a lie the user cannot correct.
+ */
+export function shipment_phases(entity_id: string, shipment_json: string): string;
+
+/**
+ * `{ "envelope": {...}, "revenue": {...} }` — the two records to write.
+ * Errors when a P&L line has no `line_id`; see `boundary::shipment_split::split`.
+ */
+export function shipment_split(shipment_json: string): string;
+
+/**
  * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
  * `scope` partitions the pool per account — an empty scope is refused rather than silently
  * falling back to a shared database.
@@ -389,6 +439,12 @@ export interface InitOutput {
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_billing_snapshot: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly shipment_change_set: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_has_revenue: (a: number, b: number, c: number) => void;
+    readonly shipment_join: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_split: (a: number, b: number, c: number) => void;
     readonly sqlite_init: (a: number, b: number) => number;
     readonly store_count_entities: (a: number) => void;
     readonly store_delete: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -466,8 +522,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10377: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10379: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10629: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10631: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4449: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

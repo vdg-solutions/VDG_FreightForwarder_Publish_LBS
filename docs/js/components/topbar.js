@@ -9,6 +9,7 @@ import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAri
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
 import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 import { renderUserMenu, renderSwBanner } from './topbar-menus.js';
+import { putEnvelope } from '../data/shipment-repo.js';
 
 const SW_DISMISS_KEY            = 'vdg.sw.update.dismissed';
 const SUPPORTED_LOCALES         = ['vi', 'en'];
@@ -197,7 +198,7 @@ class VdgTopbar extends LitElement {
       let count = 0;
       for (const item of data) {
         if (!item?.id) throw new Error('Import item missing "id" field.');
-        await repo.put('shipment', item.id, item); // entity-repo contract: put(kind, id, body)
+        await putEnvelope(repo, item.id, item); // envelope only — an undo of a list edit never touches money
         count++;
         if (count % 500 === 0) {
           window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.import.progress', { count, total: data.length }) } }));

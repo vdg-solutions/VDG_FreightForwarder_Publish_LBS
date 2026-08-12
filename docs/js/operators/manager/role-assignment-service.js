@@ -6,6 +6,12 @@
 
 // #30: the per-user grant file half lives in its own module (350-line cap).
 import { publishGrant, unpublishGrant, backfillGrants, grantFileOp } from './grant-publisher.js';
+// F-37-05: `users/*/billing_published` is a CROSS PRODUCT — see fork-grants.js for why it has to
+// be maintained from both ends and why CS needs none of it.
+import { roleSetToken, resolvePathToFolderId, _aclHas, _driveOpsFromAcl,
+  _isNotAuthorizedToChild, _buildUserRecord } from './role-assignment-helpers.js';
+import { splitInteriorWildcard, grantAcrossForks, revokeAcrossForks, grantNewForkToReaders }
+  from './fork-grants.js';
 
 const WILDCARD_PATH      = '*';
 const WILDCARD_SUFFIX    = '/*';
@@ -61,6 +67,10 @@ export class RoleAssignmentService {
     const rootId = await this._requireRoot();
 
     const { granted, skipped } = await this._grantAll(rootId, email, acl);
+    // F-37-05: the other end of the cross product. Without this an Accountant hired before this
+    // user silently never sees anything they publish — nothing errors, the invoices just never
+    // arrive. Ordered after the fork's own grant, which is what creates the fork.
+    await this._backGrantNewFork(rootId, userPrefix);
     // #30: publish the role set to the user themselves. Ordered AFTER the folder grants so a
     // failed cascade never leaves a readable grant promising access that was not actually given.
     await this._publishGrant(rootId, email, userPrefix, roleSetToken(role, extraRoles));
@@ -204,6 +214,11 @@ export class RoleAssignmentService {
   /// root it fans out to app-visible child folders; a specific subfolder is recorded in
   /// `skipped`. Any other error propagates (caller rolls back). Mutates `granted`/`skipped`.
   async _grantEntryResilient(rootId, email, entry, granted, skipped) {
+    // An interior wildcard names one subfolder of EVERY fork, so it has no single folder id.
+    if (splitInteriorWildcard(entry.path)) {
+      granted.push(...await grantAcrossForks(this._api, resolvePathToFolderId, rootId, email, entry));
+      return;
+    }
     try {
       const result = await this._grantEntry(rootId, email, entry);
       if (result) granted.push(result);
@@ -252,10 +267,28 @@ export class RoleAssignmentService {
   }
 
   async _revokeEntry(rootId, email, entry) {
+    if (splitInteriorWildcard(entry.path)) {
+      await revokeAcrossForks(this._api, resolvePathToFolderId, rootId, email, entry);
+      return;
+    }
     const folderId = await resolvePathToFolderId(this._api, rootId, entry.path);
     const perms    = await this._api.listPermissions(folderId);
     const match    = perms.find((p) => p.emailAddress === email);
     if (match) await this._api.deletePermission(folderId, match.id);
+  }
+
+  /// Grants this fork's cross-product subfolders to everyone whose role already reads them. Who
+  /// that is comes from resolveAcl per user — Rust states it once, JS never keeps a second list.
+  async _backGrantNewFork(rootId, userPrefix) {
+    // Same capability probe as _grantChildFolders: a repo without `list` is a caller that never
+    // had a user directory, not a failure to report.
+    if (!userPrefix || typeof this._userRepo?.list !== 'function') return;
+    const users = await this._userRepo.list().catch(() => []);
+    await grantNewForkToReaders(
+      this._api, resolvePathToFolderId,
+      (u) => this.resolveAcl(u.role, u.user_prefix, u.extra_roles || []),
+      users, rootId, userPrefix,
+    );
   }
 
   async _rollback(granted) {
@@ -272,67 +305,4 @@ export class RoleAssignmentService {
   }
 }
 
-// ── module-level helpers ─────────────────────────────────────────────────────
-
-/// drive.file scope limit: granting a permission on a folder 403s with `appNotAuthorizedToChild`
-/// when that folder holds a file the app itself did not create. Distinct from a genuine Drive
-/// failure (network / auth / permission on an app-owned file), which must still abort + roll back.
-/// The reason string is embedded in DriveApiError.message (`Drive API 403: {..."reason":...}`).
-function _isNotAuthorizedToChild(err) {
-  return err?.status === 403 && String(err?.message || '').includes(REASON_NOT_AUTH_CHILD);
-}
-
-/// #24 wire format for the wasm bridge: primary role first, secondary hats after, comma-separated.
-export function roleSetToken(role, extraRoles = []) {
-  return [role, ...(extraRoles || [])].filter(Boolean).join(',');
-}
-
-function _aclHas(acl, entry) {
-  return acl.some((e) => e.path === entry.path && e.access === entry.access);
-}
-
-/// F-24-06: shapes ACL entries into user-audit-log.jsonl drive_ops records. Grant vs revoke
-/// share the same entry list — kind='revoke' overrides the access-derived grant_write/grant_read.
-function _driveOpsFromAcl(entries, kind = null) {
-  return entries.map((e) => ({
-    folder: e.path,
-    op:     kind === DRIVE_OP_REVOKE ? DRIVE_OP_REVOKE : (e.access === ACCESS_WRITE ? DRIVE_OP_GRANT_WRITE : DRIVE_OP_GRANT_READ),
-    result: DRIVE_OP_RESULT_OK,
-  }));
-}
-
-/// Wildcards resolve to the containing folder itself — Drive permission grants are inherited
-/// by everything nested under a shared folder, so '*' -> workspace root and 'users/*' -> the
-/// 'users' folder, never a per-child fan-out.
-async function resolvePathToFolderId(driveApi, rootId, path) {
-  if (path === WILDCARD_PATH) return rootId;
-  const trimmed = path.endsWith(WILDCARD_SUFFIX) ? path.slice(0, -WILDCARD_SUFFIX.length) : path;
-
-  let current = rootId;
-  for (const segment of trimmed.split('/').filter(Boolean)) {
-    const folder = await driveApi.listChildFolder(current, segment);
-    if (!folder) throw new Error(`ACL path not found: ${path} (missing "${segment}")`);
-    current = folder.id;
-  }
-  return current;
-}
-
-// F-24-08 D-02: both call sites (assignRole/changeRole) always pass an explicit resolved
-// userPrefix (string or null) — never omit it — so an explicit null here means "this role has
-// no fork prefix" and must be written as-is, not silently backfilled from the stale existing
-// record (that backfill previously kept an old SalesRep prefix alive after demoting to a role
-// that shouldn't carry one).
-// #24: extra_roles carries secondary hats (Pricing). Always written as an array — an older record
-// without the field reads back as [], so nothing needs migrating.
-function _buildUserRecord(existing, email, role, userPrefix, extraRoles = []) {
-  return {
-    email,
-    display_name: existing?.display_name || email,
-    role,                                  // legacy readers — roles[0]
-    roles: [role, ...extraRoles].filter(Boolean),
-    user_prefix: userPrefix,
-    extra_roles: [...extraRoles],
-    created_at:  existing?.created_at || new Date().toISOString(),
-    active:      true,
-  };
-}
+export { roleSetToken, resolvePathToFolderId };

@@ -4,6 +4,7 @@ import { hasRole, ROLE_MANAGER } from '../../auth/auth-gate.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../i18n/index.js';
 import { todayLocal } from '../../util/today-local.js';
+import { changeLines, changesCell, renderChainStatus } from './audit-changes.js';
 
 const AUDIT_LOG_L2_MAX       = 500;
 const AUDIT_LOG_SCROLL_BATCH = 50;
@@ -14,7 +15,8 @@ const AUDIT_LOG_KIND         = 'audit_log';
 function csvHeaders() {
   return [
     t('audit.col.when'), t('audit.col.who'), t('audit.csv.entity_kind'), t('audit.csv.entity_id'),
-    t('audit.col.from'), t('audit.col.to'), t('audit.col.event'), t('audit.col.emitted'),
+    t('audit.col.from'), t('audit.col.to'), t('audit.col.event'), t('audit.col.changes'),
+    t('audit.col.emitted'),
   ];
 }
 
@@ -95,6 +97,9 @@ function _colDefs() {
     { headerName: t('audit.col.from'),    field: 'from_state',  width: 120 },
     { headerName: t('audit.col.to'),      field: 'to_state',    width: 120 },
     { headerName: t('audit.col.event'),   field: 'event',       width: 140 },
+    // F-37-02: a hash can only say that something moved. Sell figures are NOT here — they are in
+    // the rep's own fork, in the trail whose readers already hold the record it describes.
+    { headerName: t('audit.col.changes'), flex: 1, cellRenderer: changesCell },
     { headerName: t('audit.col.emitted'), field: 'emitted_at',  width: 100 },
   ];
 }
@@ -193,6 +198,9 @@ function handleExportCsv() {
       `"${r.from_state  || ''}"`,
       `"${r.to_state    || ''}"`,
       `"${r.event       || r.op || ''}"`,
+      // Semicolons, not newlines: one entry stays one CSV row. Quotes are doubled because a
+      // changed value can contain one and would otherwise end the field early.
+      `"${changeLines(r).join('; ').replace(/"/g, '""')}"`,
       `"${r.emitted_at  || ''}"`,
     ].join(',')),
   ];
@@ -234,6 +242,10 @@ export async function render(root) {
         <input id="f-date-to"   type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_to')}">
       </div>
 
+      <!-- F-37-02: whether the trail can still be trusted. Everyone who writes a shipment can
+           write this folder, so an intact chain is a claim worth making explicitly. -->
+      <div id="chain-status" class="text-xs text-slate-400"></div>
+
       <!-- Grid skeleton -->
       <div id="grid-wrap">
         <div class="h-12 bg-slate-200 animate-pulse rounded-t-lg"></div>
@@ -259,6 +271,8 @@ export async function render(root) {
     try { _allRows = await loadRows(repo); }
     catch (err) { console.error('[audit] load failed:', err); } // DEV
   }
+
+  renderChainStatus(root.querySelector('#chain-status'), _allRows);
 
   const gridWrap = root.querySelector('#grid-wrap');
   gridWrap.innerHTML = '';

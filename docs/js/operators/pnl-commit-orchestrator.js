@@ -1,6 +1,7 @@
 import { findMatch } from './master-deduper.js';
 import { todayLocal } from '../util/today-local.js';
 import { pnlLineId } from '../util/pnl-line-id.js';
+import { putShipment } from '../data/shipment-repo.js';
 
 const KIND_SHIPMENT         = 'shipment';
 const KIND_LINE             = 'pnl_line';
@@ -79,7 +80,7 @@ export async function commitPnlReport(report, repo) {
   // Persist shipments
   for (const s of shipments) {
     const id = s.shipment_ref || s.ShipmentRef || generateId('SHP');
-    await repo.put(KIND_SHIPMENT, id, { ...s, id, _imported_at: Date.now() });
+    await putShipment(repo, { ...s, id, shipment_ref: s.shipment_ref || id, _imported_at: Date.now() });
     done++;
     _emitProgress(done, total, KIND_SHIPMENT);
   }

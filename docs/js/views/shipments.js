@@ -9,6 +9,8 @@ import { agGridLocaleText } from '../i18n/ag-grid-locale.js';
 import { hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { chooseShipmentAffordance, runShipmentAffordance } from '../operators/shipment-void-delete.js';
+import { listShipments } from '../data/shipment-repo.js';
+import { navigate } from '../router.js';
 
 const PANEL_WIDTH_PX    = 480;
 const SLIDE_DURATION_MS = 250;
@@ -27,7 +29,15 @@ function statusRenderer(params) {
 }
 
 function pnlRenderer(params) {
-  const v = params.value || 0;
+  // F-37-06: undefined is NOT zero. A reader who could not see the sell side must not be shown
+  // a margin at all - `|| 0` reported cost-with-no-revenue, i.e. every job at a loss.
+  if (params.value === undefined || params.value === null) {
+    const dash = document.createElement('span');
+    dash.className = 'text-slate-400 font-mono text-xs';
+    dash.textContent = '—';
+    return dash;
+  }
+  const v = params.value;
   const positive = v >= 0;
   const div = document.createElement('div');
   div.className = 'flex items-center gap-2';
@@ -105,7 +115,15 @@ async function handleRowAffordance(row, api) {
 }
 
 // Grid column headers via t() — pure, no DOM/agGrid dep so it's unit-reachable (AC-01).
-export function buildColumnDefs() {
+/**
+ * F-37-06: the columns follow the DATA this reader could actually read, never their role.
+ *
+ * There is no `if (role === 'CS')` here on purpose - that would put the wall back in the UI,
+ * where it enforces nothing (the bytes already reached the client). CS gets no Lãi/lỗ column
+ * because CS's rows carry no sell side, which is the same reason a rep sees their own and not
+ * anyone else's: the folder was never granted.
+ */
+export function buildColumnDefs(rows = null) {
   const cols = [
     { headerName: t(COLUMN_LABEL_KEY.ref), field: 'ref', pinned: 'left', width: 140, cellClass: 'font-mono text-xs' },
     { headerName: t(COLUMN_LABEL_KEY.customer), field: 'customer', width: 170 },
@@ -117,8 +135,14 @@ export function buildColumnDefs() {
     { headerName: t(COLUMN_LABEL_KEY.eta), field: 'eta', width: 110, cellClass: 'font-mono text-xs text-slate-600' },
     { headerName: t(COLUMN_LABEL_KEY.teu), field: 'teu', width: 70, type: 'numericColumn', cellClass: 'font-mono text-xs text-right' },
     { headerName: t(COLUMN_LABEL_KEY.state), field: 'state', width: 150, cellRenderer: statusRenderer },
-    { headerName: t(COLUMN_LABEL_KEY.pnl), field: 'pnl', width: 180, cellRenderer: pnlRenderer },
   ];
+  // The evidence is the DATA, not a role and not a flag: a sell figure either came back or it
+  // did not, whichever door it came through (the revenue record, or pnl_line entities). And
+  // `rows === null` means the caller has no list yet - keep the column rather than decide on
+  // no evidence at all.
+  if (rows === null || rows.some((r) => r?.pnl != null)) {
+    cols.push({ headerName: t(COLUMN_LABEL_KEY.pnl), field: 'pnl', width: 180, cellRenderer: pnlRenderer });
+  }
   // AC-05: only a manager gets the row action column at all.
   if (hasRole(ROLE_MANAGER)) {
     cols.push({
@@ -148,7 +172,10 @@ export function toolbar(total, isLarge) {
         <button id="toggle-large" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50" title="${t('shipments.toolbar.stress_test_title')}">
           ${isLarge ? t('shipments.toolbar.normal_view') : t('shipments.toolbar.large_demo')}
         </button>
-        <button id="export-csv" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('shipments.toolbar.export_csv')}</button>
+        <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('shipments.toolbar.export_csv')}</button>
+        <!-- F-37-03: creating a job starts here, where the jobs are. It used to live only under
+             Sales, which said the job was a rep's before anyone had named one. -->
+        <button id="new-shipment" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('shipments.new')}</button>
       </div>
     </div>
   `;
@@ -175,7 +202,7 @@ export async function loadRealData() {
   const repo = window.__vdg_repo;
   if (!repo) return [];
   const [allShipments, allLines, aliasRows] = await Promise.all([
-    _bounded(repo.list('shipment', null), []),
+    _bounded(listShipments(repo, null), []),
     _bounded(repo.list('pnl_line'), []),
     _bounded(ensureShipmentStateAliases(repo), []),
   ]);
@@ -198,10 +225,19 @@ export async function loadRealData() {
     // pnl_lines for manual P&Ls saved before they materialized entities, so existing shipments
     // show revenue without a re-save.
     const lines = (linesByRef[s.ref] && linesByRef[s.ref].length) ? linesByRef[s.ref] : (s.pnl_lines || []);
-    const margin = lines.reduce((acc, l) =>
-      acc + (Number(l.sell_amt || l.selling_vnd_collect || 0))
-          - (Number(l.buy_amt  || l.buying_vnd_pay      || 0)), 0);
-    s.pnl = margin;
+    // F-37-06: with no sell side this sum is cost-only, and reporting it as the margin tells the
+    // reader every job lost money. Leave it UNDEFINED - the renderer shows a dash and the column
+    // is not generated at all when nobody's revenue came back.
+    // Decidable only when a sell figure actually came back: the read receipt says nothing was
+    // hidden from us, AND some line carries one. A job the rep has costed but not yet priced
+    // gets a dash too - reporting -800 there says it lost money, when it simply has no price.
+    const sellSeen = lines.some(
+      (l) => l.sell_amt != null || l.selling_vnd_collect != null || l.selling_amount != null);
+    s.pnl = sellSeen
+      ? lines.reduce((acc, l) =>
+          acc + (Number(l.sell_amt || l.selling_vnd_collect || 0))
+              - (Number(l.buy_amt  || l.buying_vnd_pay      || 0)), 0)
+      : undefined;
   }
   return allShipments;
 }
@@ -244,7 +280,7 @@ export async function render(root) {
   let api = null;
   if (window.agGrid) {
     api = window.agGrid.createGrid(gridDiv, {
-      columnDefs: buildColumnDefs(),
+      columnDefs: buildColumnDefs(rowData),
       rowData,
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowSelection: 'single',
@@ -266,6 +302,10 @@ export async function render(root) {
 
     document.getElementById('export-csv')?.addEventListener('click', () => {
       api?.exportDataAsCsv({ fileName: 'vdg_shipments.csv' });
+    });
+
+    document.getElementById('new-shipment')?.addEventListener('click', () => {
+      navigate('/shipments/new');
     });
 
     document.getElementById('toggle-large')?.addEventListener('click', () => {

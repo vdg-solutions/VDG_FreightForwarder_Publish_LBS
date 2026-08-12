@@ -16,6 +16,8 @@
 // skipped outright as a cheap short-circuit (no redundant put).
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
+import { putShipment } from '../data/shipment-repo.js';
+import { pnlLineId } from '../util/pnl-line-id.js';
 import { parseJsonlBundle } from '../auth/drive-api.js';
 
 const MIGRATED_META_PREFIX = 'master-scope-migrated.'; // + kind
@@ -34,12 +36,82 @@ export const MASTER_SCOPE_MIGRATION_KINDS = [
   // F-57-01: 'carrier' was never a registered kind — every Excel import stranded its carrier
   // masters in users/{prefix}/carrier/ while the real master stayed empty.
   { read: 'carrier', write: 'carriers' },
+  // E-37: shipments written before the split are stranded in the fork the resolver no
+  // longer points at, so the owner would simply stop seeing their own pilot jobs. They go
+  // back through putShipment, which splits them - a plain repo.put would land the whole
+  // record, revenue included, in the folder CS reads.
+  //
+  { read: 'shipment', write: 'shipment', via: _replayShipment },
 ];
 
-// Normalizes either entry form to { readKind, writeKind }.
+// A sweep must not take the tab hostage. Replaying a whole backlog in one boot is what turned
+// 50 stranded shipments into a session that stopped answering: every write re-enters the sync
+// engine, and the cost of that is not the migrator's to spend all at once. The rest goes on the
+// next boot — the flag is only set by a sweep that found nothing left to do.
+export const MAX_RECORDS_PER_SWEEP = 10;
+
+/**
+ * The same id, once.
+ *
+ * The old folder holds DUPLICATE bundles (concurrent first-writers — the family bundle-file-heal
+ * merges), so reading it yields the same job several times with divergent bodies. Replaying each
+ * copy writes the job repeatedly and the later copies land as conflicts AGAINST THE MIGRATION'S
+ * OWN earlier write. Same rule as the heal: higher _rev wins, newer stamp breaks the tie.
+ */
+function _dedupeById(records) {
+  const best = new Map();
+  for (const rec of records) {
+    const id = rec?.id;
+    if (!id) continue;
+    const prev = best.get(id);
+    if (!prev || _wins(rec, prev)) best.set(id, rec);
+  }
+  return [...best.values()];
+}
+
+function _wins(a, b) {
+  const ra = Number(a?._rev ?? 0);
+  const rb = Number(b?._rev ?? 0);
+  if (ra !== rb) return ra > rb;
+  return String(a?._rev_at ?? '') > String(b?._rev_at ?? '');
+}
+
+// Lines written before E-37 carry no line_id, and shipment_split refuses a line without one
+// (an unjoinable line reads as a line that earned nothing). Stamp with the SAME scheme the
+// form uses, so a migrated job and a new one have one line vocabulary.
+async function _replayShipment(repo, _kind, id, record) {
+  const ref   = record.shipment_ref || id;
+  const lines = (record.pnl_lines || []).map((ln, i) => ({ line_id: ln.line_id || pnlLineId(ref, i + 1), ...ln }));
+  await putShipment(repo, { ...record, shipment_ref: ref, pnl_lines: lines });
+}
+
+// Normalizes either entry form to { readKind, writeKind, via }.
 function _resolveKindSpec(spec) {
-  if (typeof spec === 'string') return { readKind: spec, writeKind: spec };
-  return { readKind: spec.read, writeKind: spec.write };
+  const plainPut = (repo, kind, id, record) => repo.put(kind, id, record);
+  if (typeof spec === 'string') return { readKind: spec, writeKind: spec, via: plainPut };
+  return { readKind: spec.read, writeKind: spec.write, via: spec.via || plainPut };
+}
+
+/**
+ * Is there nothing left to do for this record?
+ *
+ * Two ways to be settled, and the second one is the one that bites.
+ *
+ * ARRIVED — not "is it in my cache": the cache was seeded from the OLD home, so a copy sitting
+ * there proves nothing about the destination, and treating it as proof is what let _clearOldCopy
+ * delete a row's only Drive copy. A copy that went through the new write path carries a _rev, so
+ * an unstamped copy is always replayed and a stamped, content-equal one is done.
+ *
+ * DELETED — a tombstone at the destination is an ANSWER, not an absence. Deletes always tombstone
+ * (apply_delete writes a row even for an id it cannot find), so a tombstone says somebody decided
+ * this record is gone. The old folder is a copy from BEFORE that decision; replaying it asks the
+ * app to resurrect a deleted job, which it rightly refuses — and the sweep then retries it on
+ * every boot, forever. Found live: 24 of the 45 rows in the owner's shared bundle are tombstones
+ * for jobs the stranded folder still holds.
+ */
+function _settledAtDestination(existing, record) {
+  if (existing?._deleted) return true;
+  return Boolean(existing?._rev) && _contentEquals(existing, record);
 }
 
 /**
@@ -68,7 +140,7 @@ export async function migrateMasterScope(
 async function _migrateKind(repo, driveApi, store, findWorkspaceRoot, prefix, spec, _ms) {
   // readKind names the OLD per-user folder; writeKind names the registered kind the records
   // belong under. They differ only for a rename entry — for a scope flip both are the same.
-  const { readKind, writeKind } = _resolveKindSpec(spec);
+  const { readKind, writeKind, via } = _resolveKindSpec(spec);
   const kind    = writeKind;              // reported/audited under the destination kind
   const flagKey = MIGRATED_META_PREFIX + readKind; // keyed by source folder — a rename and a
                                                    // flip of the same name never share a flag
@@ -82,40 +154,46 @@ async function _migrateKind(repo, driveApi, store, findWorkspaceRoot, prefix, sp
   const { records, files } = readRes.ok ? readRes.value : { records: [], files: [] };
   if (!readRes.ok) return { kind, found: 0, merged: 0, conflicted: 0 }; // couldn't read — retry next boot
 
-  let merged        = 0;
-  let conflicted     = 0;
-  let allConfirmed  = true;
+  let merged       = 0;
+  let conflicted   = 0;
+  let written      = 0;
+  let allConfirmed = true;
 
-  for (const record of records) {
-    const id = record?.id;
-    if (!id) continue;
+  const pending = _dedupeById(records);
+  for (const record of pending) {
+    const id = record.id;
 
     const getRes = await safeAwait(repo.get(kind, id), _ms, null, `master-scope-migrator:get:${kind}`);
     if (!getRes.ok) { allConfirmed = false; continue; } // can't verify existing — retry next boot
 
     const existing = getRes.value;
-    if (existing && _contentEquals(existing, record)) continue; // identical — already merged, nothing to do
+    if (_settledAtDestination(existing, record)) continue;
+
+    // Stopping is not failing: what is left is still in the old folder, and the flag stays unset
+    // so the next boot picks it up. Marking here would strand the remainder AND delete it.
+    if (written >= MAX_RECORDS_PER_SWEEP) { allConfirmed = false; break; }
 
     // Divergent or genuinely new — let the Rust rebase gate (apply_put) decide. A legacy
     // record has no _rev, so against an existing id this naturally lands as Base::New →
     // Conflict, dispatched as vdg:conflict-detected — never a silent overwrite.
     if (existing) conflicted++;
-    const putRes = await safeAwait(repo.put(kind, id, record), _ms, null, `master-scope-migrator:put:${kind}`);
+    const putRes = await safeAwait(via(repo, kind, id, record), _ms, null, `master-scope-migrator:put:${kind}`);
     if (!putRes.ok) { allConfirmed = false; continue; }
+    written++;
     if (!existing) merged++;
   }
 
-  await _recordCensus(repo, kind, records.length, merged, _ms);
+  await _recordCensus(repo, kind, pending.length, merged, _ms);
 
   if (allConfirmed) {
     const markRes = await safeAwait(
-      store.cache_put_meta(flagKey, { migrated: true, kind, source_kind: readKind, found: records.length, merged, at: new Date().toISOString() }),
+      store.cache_put_meta(flagKey, { migrated: true, kind, source_kind: readKind, found: pending.length, merged, at: new Date().toISOString() }),
       _ms, null, `master-scope-migrator:mark:${kind}`,
     );
     if (markRes.ok) await _clearOldCopy(driveApi, files, _ms); // never drop the old copy before shared is confirmed
   }
 
-  return { kind, found: records.length, merged, conflicted };
+  return { kind, found: pending.length, merged, conflicted };
 }
 
 // ── old per-user path (read directly — the resolver no longer points here) ────────────

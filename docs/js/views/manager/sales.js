@@ -11,6 +11,7 @@ import {
 import { compose as composeRules } from '../../operators/manager/commission-composer.js';
 import { t }                        from '../../i18n/index.js';
 import { agGridLocaleText }         from '../../i18n/ag-grid-locale.js';
+import { listShipments } from '../../data/shipment-repo.js';
 
 const DEFAULT_PERIOD_MODE    = 'month';
 const KIND_COMMISSION_RULES  = 'commission_rules';
@@ -228,7 +229,7 @@ export async function render(root) {
   const repo = getRepo();
   if (repo) {
     [_shipments, _pnlLines] = await Promise.all([
-      repo.list(KIND_SHIPMENT, null),
+      listShipments(repo, null),
       repo.list(KIND_PNL_LINE, null),
     ]);
     const composed = await composeRules(repo);
@@ -314,7 +315,7 @@ export async function render(root) {
     const kind = e.detail?.kind;
     if (kind !== KIND_SHIPMENT && kind !== KIND_COMMISSION_RULES) return;
     if (repo) {
-      [_shipments, _pnlLines] = await Promise.all([repo.list(KIND_SHIPMENT, null), repo.list(KIND_PNL_LINE, null)]);
+      [_shipments, _pnlLines] = await Promise.all([listShipments(repo, null), repo.list(KIND_PNL_LINE, null)]);
       const composed = await composeRules(repo);
       _rules = composed.rules;
     }

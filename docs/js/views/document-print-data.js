@@ -11,6 +11,7 @@
 // i18n coverage still applies.
 
 import { loadNoteData, NOTE_TYPE_DEBIT } from './note-print-data.js';
+import { getShipment } from '../data/shipment-repo.js';
 
 const KIND_SHIPMENT = 'shipment';
 
@@ -120,7 +121,7 @@ export async function loadDocumentData(
 ) {
   if (!repo || !docId) return { shipment: null, fields: [] };
 
-  const shipment = await repo.get(KIND_SHIPMENT, docId).catch(() => null);
+  const shipment = await getShipment(repo, docId).catch(() => null);
   if (!shipment) return { shipment: null, fields: [] };
 
   if (docType === DOC_TYPE_DEBIT) {

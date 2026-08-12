@@ -19,7 +19,7 @@ function paletteActions() {
     { label: t('cmd_palette.action.approve_all'),         shortcut: null,  kind: 'action', action: () => navigate('/manager/approvals') },
     { label: t('close_period.title'),                     shortcut: null,  kind: 'action', action: () => navigate('/manager/finance/close-period') },
     { label: t('cmd_palette.action.sales_view'),          shortcut: null,  kind: 'action', action: () => navigate('/dashboard') },
-    { label: t('nav.sales.create_pnl'),                   shortcut: null,  kind: 'action', action: () => navigate('/sales/me/pnl/new') },
+    { label: t('nav.sales.create_shipment'),                   shortcut: null,  kind: 'action', action: () => navigate('/shipments/new') },
   ];
 }
 

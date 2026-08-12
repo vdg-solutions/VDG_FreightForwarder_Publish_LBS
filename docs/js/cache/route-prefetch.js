@@ -1,6 +1,7 @@
 // Route prefetch — L2 preload for dashboard
 
 import { toLocalDateStr } from '../util/today-local.js';
+import { listEnvelopes } from '../data/shipment-repo.js';
 
 const PREFETCH_DAYS_BACK = 30;
 
@@ -11,7 +12,7 @@ export async function prefetchDashboard(repo) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - PREFETCH_DAYS_BACK);
     const cutoffIso = toLocalDateStr(cutoff);
-    await repo.list('shipment', (r) => (r.etd || '') >= cutoffIso);
+    await listEnvelopes(repo, (r) => (r.etd || '') >= cutoffIso);
   } catch (err) {
     console.warn('[route-prefetch] dashboard prefetch failed:', err.message); // DEV
   }

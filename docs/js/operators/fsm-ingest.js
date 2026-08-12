@@ -4,6 +4,7 @@
 
 import { resolveShipmentState } from '../util/shipment-state-resolver.js';
 import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
+import { listEnvelopes, getEnvelope, putEnvelope } from '../data/shipment-repo.js';
 
 // F-41-01 AC-04: diagnostic tag for a raw state/status value that resolves against neither
 // the canonical ShipmentState set nor the alias registry — distinguishable from "rehydrate
@@ -30,7 +31,7 @@ export async function registerFsmEntity(ref, state) {
 export async function rehydrateFsmStates(repo) {
   if (!repo) return;
   const aliasRows = await ensureShipmentStateAliases(repo); // seed-on-first-read, never throws
-  for (const s of await repo.list('shipment', null)) {
+  for (const s of await listEnvelopes(repo, null)) {
     const ref = s.shipment_ref || s.ref;
     const raw = s.state || s.status; // AC-03: status fallback before the guard
     if (!ref || !raw) continue;
@@ -46,9 +47,9 @@ export async function rehydrateFsmStates(repo) {
 // PM Q1: repo stays authoritative — mirror an FSM advance back into the shipment record.
 export async function persistAdvancedState(repo, ref, newState) {
   if (!repo || !ref || !newState) return;
-  const rec = await repo.get('shipment', ref).catch(() => null);
+  const rec = await getEnvelope(repo, ref).catch(() => null);
   if (rec && rec.state !== newState) {
-    await repo.put('shipment', ref, { ...rec, state: newState });
+    await putEnvelope(repo, ref, { ...rec, state: newState });
     // #27: repo.put does not announce anything — every other writer dispatches this itself
     // (bulk-orchestrator, period-close-orchestrator). This path did not, so closing a file left
     // the list showing the old status until the user pressed F5 (QC 2026-08-09: "reload lại có").

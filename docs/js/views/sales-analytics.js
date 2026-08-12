@@ -4,6 +4,7 @@ import {
   COMMISSION_PCT,
 } from '../operators/sales-analytics-compute.js';
 import { t } from '../i18n/index.js';
+import { listShipments } from '../data/shipment-repo.js';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -193,7 +194,7 @@ export async function render(root) {
 
   const repo = window.__vdg_repo;
   const [shipments, lines] = await Promise.all([
-    repo.list(KIND_SHIPMENT, null),
+    listShipments(repo, null),
     repo.list(KIND_LINE, null),
   ]);
 

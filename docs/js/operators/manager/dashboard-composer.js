@@ -4,6 +4,7 @@ import {
   computeKpis, computeLeaderboard, computeTopCustomers,
   computeMonthlyBars, computeLaneHeatmap,
 } from '../sales-analytics-compute.js';
+import { listShipments } from '../../data/shipment-repo.js';
 
 const VOLUME_LABEL_BY_MODE = {
   Sea: 'manager.kpi.teu',
@@ -83,7 +84,7 @@ function daysOverdue(billing) {
  */
 export async function compose(repo, period, salesFilter, mode = 'All') {
   const [shipments, pnlLines, billing, approvals] = await Promise.all([
-    repo.list('shipment', null),
+    listShipments(repo, null),
     repo.list('pnl_line', null),
     repo.list('billing', null),
     repo.list('approval_request', null),

@@ -5,10 +5,12 @@ const I18N_ROUTES = [
   { pattern: /^(#\/?)?$/,               group: 'nav.group.workspace', viewKey: 'nav.workspace.dashboard' },
   { pattern: /^#\/dashboard$/,           group: 'nav.group.workspace', viewKey: 'nav.workspace.dashboard' },
   { pattern: /^#\/shipments$/,           group: 'nav.group.workspace', viewKey: 'nav.workspace.shipments' },
-  { pattern: /^#\/sales\/new$/,          group: 'nav.group.sales',     viewKey: 'nav.sales.create_pnl' },
-  { pattern: /^#\/sales\/me$/,           group: 'nav.group.sales',     viewKey: 'nav.sales.my_pnl' },
-  { pattern: /^#\/sales\/([^/]+)\/pnl\/new$/, group: 'nav.group.sales', viewKey: 'nav.sales.create_pnl' },
-  { pattern: /^#\/sales\/edit\/(.+)$/,   group: 'nav.group.sales',     viewKey: 'nav.sales.edit_pnl', paramKey: 'ref' },
+  { pattern: /^#\/sales\/new$/,          group: 'nav.group.sales',     viewKey: 'nav.sales.create_shipment' },
+  { pattern: /^#\/sales\/me$/,           group: 'nav.group.sales',     viewKey: 'nav.sales.my_shipments' },
+  // F-37-03: creating a shipment belongs to the workspace, not to a rep's corner of it — CS opens
+  // this screen too, and the old /sales/:salesId/pnl/new said the job was already somebody's.
+  { pattern: /^#\/shipments\/new$/,      group: 'nav.group.workspace', viewKey: 'nav.sales.create_shipment' },
+  { pattern: /^#\/sales\/edit\/(.+)$/,   group: 'nav.group.sales',     viewKey: 'nav.sales.edit_shipment', paramKey: 'ref' },
   { pattern: /^#\/masters\/customers$/,  group: 'nav.group.masters',   viewKey: 'nav.masters.customers' },
   { pattern: /^#\/masters\/ocean-carriers$/, group: 'nav.group.masters', viewKey: 'nav.masters.ocean_carriers' },
   { pattern: /^#\/manager\/reports\/pnl$/, group: 'nav.group.reports', viewKey: 'nav.reports.pnl_report' },
@@ -64,7 +66,10 @@ const FALLBACK_VIEW  = 'nav.workspace.dashboard';
  * @returns {{ group: string, view: string }}
  */
 export function resolveBreadcrumb(hash, _locale, t) {
-  const h = hash == null ? '' : String(hash);
+  // Every pattern is anchored with $, so a query string used to drop the route to the fallback —
+  // `#/shipments/new?sales=nv01` showed "Dashboard". Pre-existing, and F-37-03 made it the common
+  // case by moving the rep out of the path and into the query. Strip it once, for all routes.
+  const h = (hash == null ? '' : String(hash)).split('?')[0];
   for (const route of ROUTES) {
     const m = h.match(route.pattern);
     if (m) {

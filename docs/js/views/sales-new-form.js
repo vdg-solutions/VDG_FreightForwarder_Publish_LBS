@@ -28,13 +28,24 @@ function resolveHeaderCurrency(saved, configuredDefault) {
 
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
-          mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null } = opts;
+          mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null,
+          revenueVisible = true } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || todayLocal();
   // #28: display toggle (which waterfall rows to show), reading the SET the auth gate resolved —
   // not a single-field string compare, and not an authority gate (route-guard owns those).
   const isManager = (window.__vdg_current_user?.roles || []).includes('Manager');
+  // F-37-06: `revenueVisible` comes from the CALLER, which is the thing that did the read - the
+  // receipt is non-enumerable on purpose (it must never be persisted), so it does not survive
+  // the spread into a draft. Passing it explicitly is also the honest shape: this module is
+  // told what was readable, it does not infer it.
+  // The commission and waterfall sections exist when the SELL SIDE could be read, and not
+  // otherwise. Deliberately not `if (role === 'CS')` — that would put the wall back in the UI where
+  // it enforces nothing, since the bytes have already reached the client. CS gets no revenue
+  // section for the same reason CS gets no revenue: the folder was never granted, so the record
+  // came back without one. A new job (no stored record yet) counts as visible — the rep typing it
+  // is about to supply the figures.
   const d = draft ? { ...draft } : {};
   if (!d.sales_rep && salesRepId) d.sales_rep = salesRepId;
 
@@ -73,8 +84,8 @@ export async function renderForm(root, opts = {}) {
       <form id="ni-form" class="space-y-4">
         ${sectionAHtml(d, customers)}
         ${sectionBHtml(d)}
-        ${sectionCHtml(d)}
-        ${sectionDHtml(d, { isManager })}
+        ${revenueVisible ? sectionCHtml(d) : ''}
+        ${revenueVisible ? sectionDHtml(d, { isManager }) : ''}
         <div id="ni-currency-summary" class="hidden text-[11px] text-slate-500 px-1"></div>
         <div id="ni-form-errors"
           class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2">
@@ -87,10 +98,11 @@ export async function renderForm(root, opts = {}) {
 
   wireHeaderSection(root, onChanged);
   wireLinesSection(root, onChanged, salesRepId, fxRepo, docDate);
-  wireCommissionSection(root, onChanged, fxRepo, docDate);
-  wireWaterfallSection(root, onChanged);
-
-  _recomputeWaterfall(root, userConfig);
+  if (revenueVisible) {
+    wireCommissionSection(root, onChanged, fxRepo, docDate);
+    wireWaterfallSection(root, onChanged);
+    _recomputeWaterfall(root, userConfig);
+  }
 
   // autosave draft only in create mode — edit data must not pollute localStorage draft
   if (!isEdit) {

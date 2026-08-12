@@ -10,6 +10,7 @@ import { resolveShipmentState } from '../util/shipment-state-resolver.js';
 import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
 import { statusBadgeLabel } from '../util/status-i18n.js';
+import { listShipments } from '../data/shipment-repo.js';
 
 const LOAD_TIMEOUT_MS = 12000;
 const CLOSED_LIKE_STATES = ['Closed', 'Delivered'];
@@ -153,7 +154,7 @@ async function loadMyData(salesId) {
   if (!repo) return EMPTY_DATA;
 
   const [allShipments, allLines, allCashFlows, allCommEntries, aliasRows] = await Promise.all([
-    repo.list('shipment', (s) => (s.sales_rep || '').toLowerCase() === salesId.toLowerCase()),
+    listShipments(repo, (s) => (s.sales_rep || '').toLowerCase() === salesId.toLowerCase()),
     repo.list('pnl_line').catch(() => []),
     repo.list('cash_flow_entry').catch(() => []),
     repo.list('commission_entry').catch(() => []),
@@ -268,7 +269,7 @@ async function populateView(root, salesId, user) {
   // F-18-11: `all` shipments already carry a resolved canonical `state` (set in loadMyData).
   const activeShipments = all.filter((s) => !CLOSED_LIKE_STATES.includes(s.state));
 
-  const emptyActive = `${t('sales_me.empty_active')} <a href="#/sales/me/pnl/new" class="text-blue-500 hover:underline">${t('sales_me.quick_add')}</a>`;
+  const emptyActive = `${t('sales_me.empty_active')} <a href="#/shipments/new" class="text-blue-500 hover:underline">${t('sales_me.quick_add')}</a>`;
 
   if (bodyEl) {
     bodyEl.innerHTML = `
@@ -276,7 +277,7 @@ async function populateView(root, salesId, user) {
         <div class="text-xs text-slate-500">
           ${t('sales_me.signed_in_as')} <span class="font-semibold text-slate-800">${user.email}</span>
         </div>
-        <a href="#/sales/me/pnl/new?sales=${encodeURIComponent(salesId)}"
+        <a href="#/shipments/new?sales=${encodeURIComponent(salesId)}"
           class="px-4 py-2 bg-blue-600 text-white text-xs rounded-lg font-semibold hover:bg-blue-700 transition">
           ${t('sales_me.quick_add')}
         </a>
@@ -294,7 +295,7 @@ async function populateView(root, salesId, user) {
 
       <div class="bg-white rounded-xl border border-slate-200 p-5 mb-4">
         <div class="text-sm font-semibold text-slate-900 mb-3">
-          ${t('sales_me.pending_pnl')}
+          ${t('sales_me.pending_revenue')}
           ${pending.length === 0 
             ? `<span class="ml-2 text-xs font-normal text-emerald-600">${t('sales_me.pending_zero')}</span>`
             : `<span class="ml-2 text-xs font-normal text-amber-600">${t('sales_me.pending_suffix').replace('{n}', pending.length)}</span>`

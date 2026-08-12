@@ -8,6 +8,7 @@ import { registerFsmEntity } from '../../operators/fsm-ingest.js';
 import { ensureRepCode } from '../../operators/rep-code-registry.js';
 import { assignJobNo } from '../../operators/job-no-gen.js';
 import { pnlLineId, deletePnlLinesFor } from '../../util/pnl-line-id.js';
+import { putShipment, deleteShipment, getEnvelope, listEnvelopes } from '../../data/shipment-repo.js';
 import { todayLocal } from '../../util/today-local.js';
 
 const KIND_USER = 'user';
@@ -109,7 +110,7 @@ async function _repCodeFor(repo, salesRepId) {
 // the user abandons/reopens it after already submitting once, and resubmits — without this
 // check the second save would mint a duplicate legal doc number (F-32-01 QA rework).
 async function _jobNoTaken(repo, jobNo, excludeRef) {
-  const matches = await repo.list('shipment', (s) => s.job_no === jobNo && s.shipment_ref !== excludeRef);
+  const matches = await listEnvelopes(repo, (s) => s.job_no === jobNo && s.shipment_ref !== excludeRef);
   return matches.length > 0;
 }
 
@@ -155,7 +156,9 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   const jobNo = await _resolveJobNo(state, repo, salesRepId);
   const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
   shipment._ledger_version = INITIAL_LEDGER_VERSION;
-  await repo.put('shipment', ref, shipment);
+  // E-37: two records, split in Rust. The envelope goes to _shared/shipments where CS and the rep
+  // both work; the sell side goes to the rep's fork, which CS holds no permission on.
+  await putShipment(repo, shipment);
   await registerFsmEntity(ref, shipment.state); // F-19-88 AC-01: make it a first-class FSM entity
 
   const warnings = [];
@@ -185,9 +188,13 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
     // Materialize pnl_line entities so the Shipments list + analytics see this manual P&L.
     await _writePnlLines(repo, ref, shipment, INITIAL_LEDGER_VERSION);
 
+    // F-37-05: publish is what CREATES the record Accounting reads. A publish_state flag on the
+    // envelope cannot make "kế toán chỉ thấy sau khi publish" true - Accounting is not in the
+    // reader set of _shared/shipments at all, so it sees nothing there whatever the flag says.
+    if (publish) await _handOverToAccounting(repo, shipment);
     // Draft or Publish Pending: persist only. Accounting logic is now handled asynchronously by WASM.
   } catch (err) {
-    await repo.delete('shipment', ref);
+    await deleteShipment(repo, ref);
     for (const { key } of writtenCe) await repo.delete('commission_entry', key);
     await _deletePnlLines(repo, ref);
     throw err;
@@ -209,7 +216,7 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
 
   const publish = opts.publish !== false;
 
-  const prior = await repo.get('shipment', ref).catch(() => null);
+  const prior = await getEnvelope(repo, ref).catch(() => null);
   const stateAliasRows = await _loadStateAliasRows(repo);
   // F-18-11 AC-02: a re-save that carries no explicit state change must never regress the
   // prior resolved canonical state back to the create-time default — read prior.state BEFORE
@@ -219,7 +226,7 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
   const jobNo = await _resolveJobNo(state, repo, salesRepId, prior?.job_no, ref);
   const shipment = buildShipment(stateInput, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
   shipment._ledger_version = (prior?._ledger_version || 0) + 1;
-  await repo.put('shipment', ref, shipment);
+  await putShipment(repo, shipment);
   await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state
 
   // Commission overwrite: delete existing CE records then write new set (PM-locked strategy).
@@ -242,6 +249,10 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
     written.push(record);
   }
 
+  // F-37-05: an amendment publishes a NEW REVISION. Never an overwrite - Accounting may already
+  // have raised an invoice from the previous one, and changing the figures under it is exactly
+  // the thing a published record must not be able to do.
+  if (publish) await _handOverToAccounting(repo, shipment);
   // Overwrite pnl_line entities (delete old set, write new) — mirrors commission handling.
   await _deletePnlLines(repo, ref);
   await _writePnlLines(repo, ref, shipment, shipment._ledger_version);
@@ -249,4 +260,16 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
   // Accounting logic is now handled asynchronously by WASM.
 
   return { publishState: shipment.publish_state };
+}
+
+/**
+ * Write the billing snapshot, and let a failure ROLL THE PUBLISH BACK.
+ *
+ * Reporting success while Accounting was handed nothing is the failure this whole card exists to
+ * remove: the rep sees "đã publish", Accounting sees no job, and nobody finds out until somebody
+ * asks where the invoice is.
+ */
+async function _handOverToAccounting(repo, shipment) {
+  const { publishBilling } = await import('../../data/billing-publish-repo.js');
+  await publishBilling(repo, shipment, {});
 }

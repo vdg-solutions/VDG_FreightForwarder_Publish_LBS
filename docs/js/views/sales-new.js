@@ -12,6 +12,41 @@ import { safeMasterLoad } from '../util/master-load.js';
 import { ensureRepCode } from '../operators/rep-code-registry.js';
 import { assignJobNo } from '../operators/job-no-gen.js';
 import { readSettings, DEFAULT_CURRENCY_FIELD } from '../operators/manager/workspace-settings.js';
+import { getShipment, REVENUE_SEEN } from '../data/shipment-repo.js';
+import { loadTimeline, renderTimeline, bindTimeline } from '../components/phase-timeline.js';
+
+const TIMELINE_MOUNT_ID = 'phase-timeline';
+
+/**
+ * Draw the phases above the form, and let a click move the FORM'S FOCUS.
+ *
+ * Focus is not state. Clicking a phase the job has already passed opens it for correction — which
+ * is the back-and-forth between CS and Sales the owner asked for — and never moves the shipment
+ * backwards. `state` only changes through apply_fsm_event, which is guarded and audited.
+ *
+ * A shipment the FSM does not recognise gets no timeline rather than an empty one: "this job has
+ * no phases" is a different claim from "we could not work out where it is".
+ */
+function mountPhaseTimeline(root, record) {
+  const timeline = loadTimeline(record);
+  if (!timeline) return;
+
+  const host = document.createElement('div');
+  host.id = TIMELINE_MOUNT_ID;
+  host.className = 'mx-6 mt-4';
+
+  const formMount = root.querySelector('#form-mount');
+  if (formMount) root.insertBefore(host, formMount);
+  else root.prepend(host);
+
+  // Re-render replaces the buttons, so the handler has to re-bind itself — otherwise the second
+  // click on a phase does nothing and reads as a dead control.
+  const paint = (focus) => {
+    host.innerHTML = renderTimeline(timeline, { focus });
+    bindTimeline(host, paint);
+  };
+  paint(timeline.current);
+}
 
 // F-19-29: personalization reads (userConfig + commission override) are optional — bound them
 // under RENDER_MOUNT_TIMEOUT_MS (8s) so a slow Drive fallback still leaves headroom for the
@@ -62,6 +97,11 @@ export async function render(root, opts = {}) {
   let draft      = null;
   let jobNo      = null;
   let defaultCurrency = null;
+  // F-37-06: whether the SELL SIDE came back. A new job is visible - the rep about to type the
+  // figures is the one who owns them. On an edit it is whatever the read actually returned, so
+  // CS opening a job gets no revenue section: not because of their role, but because the folder
+  // was never granted and the record arrived without one.
+  let revenueVisible = true;
 
   // F-19-29: customers list + personalization reads raced concurrently under one bound —
   // a slow/cold Drive fallback degrades to customers=[]/userConfig=null (both already
@@ -110,7 +150,8 @@ export async function render(root, opts = {}) {
     // AC-01: hydrate from persisted records
     try {
       if (repo) {
-        const shipment = await repo.get('shipment', editRef);
+        const shipment = await getShipment(repo, editRef);
+        if (shipment) revenueVisible = shipment[REVENUE_SEEN] !== false;
         const ce = await repo.get('commission_entry', `${editRef}-CR1`).catch(() => null);
         draft = shipmentToDraft(shipment, ce);
       }
@@ -157,9 +198,19 @@ export async function render(root, opts = {}) {
     }
   }
 
+  // F-37-04: the phases, above the form. In edit mode it reads the shipment; on a new job there is
+  // nothing stored yet, so it reads the draft at Created — which is the point: it tells whoever
+  // opened the job what the FIRST phase needs before they have typed anything.
+  mountPhaseTimeline(root, {
+    ...(draft || {}),
+    shipment_ref: editRef || jobNo || draft?.shipment_ref || '',
+    state: draft?.state || 'Created',
+  });
+
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
-  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo, defaultCurrency });
+  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
+                                defaultCurrency, revenueVisible });
 
   // F-32-02: one guard per render() — re-entrancy-blocks a second submit while the
   // first is still pending (double-click / slow network) so only one shipment/job_no

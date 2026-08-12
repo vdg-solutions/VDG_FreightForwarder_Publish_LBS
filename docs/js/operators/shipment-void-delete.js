@@ -3,6 +3,7 @@
 // consume it. Reuses the existing repo tombstone delete path — no parallel write path.
 
 import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
+import { getEnvelope, putEnvelope, deleteShipment as deleteBothHalves } from '../data/shipment-repo.js';
 
 export const CANCELLED_STATE   = 'Cancelled';
 const DRAFT_PUBLISH_STATE      = 'draft';
@@ -25,15 +26,15 @@ export function chooseShipmentAffordance(shipment) {
 // AC-01 — soft-cancel: patch canonical record's state, NO tombstone.
 export async function voidShipment(repo, shipment) {
   const ref = shipment.shipment_ref || shipment.ref;
-  const current = await repo.get('shipment', ref);
-  await repo.put('shipment', ref, { ...(current || shipment), state: CANCELLED_STATE });
+  const current = await getEnvelope(repo, ref);
+  await putEnvelope(repo, ref, { ...(current || shipment), state: CANCELLED_STATE });
   return ref;
 }
 
 // AC-02 — hard-delete: existing repo tombstone path (repo.delete()), no re-implementation.
 export async function deleteShipment(repo, shipment) {
   const ref = shipment.shipment_ref || shipment.ref;
-  await repo.delete('shipment', ref);
+  await deleteBothHalves(repo, ref);  // envelope AND the rep-fork revenue record
   return ref;
 }
 

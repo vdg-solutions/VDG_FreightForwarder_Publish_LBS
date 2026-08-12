@@ -9,16 +9,9 @@
 import { t } from '../../i18n/index.js';
 import {
   deriveUserPrefix, allocateUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml,
+  ROLE_LABEL_KEYS,
 } from '../../operators/manager/users-view-composer.js';
 import { activeWorkspaceName } from '../../operators/workspace-registry.js';
-
-const ROLE_LABEL_KEYS = {
-  Manager:    'admin.users.role.manager',
-  SalesRep:   'admin.users.role.sales_rep',
-  Accountant: 'admin.users.role.accountant',
-  Auditor:    'admin.users.role.auditor',
-  Pricing:    'admin.users.hat.pricing',
-};
 
 
 function getUserRepo()   { return window.__vdg_user_repo; }

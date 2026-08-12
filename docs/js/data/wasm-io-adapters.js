@@ -1,15 +1,27 @@
 import { getFile, uploadFile, getOrCreateFolder, findWorkspaceRoot } from '../auth/drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { MASTER_REGISTRY } from './master-registry.js';
+import { healDuplicateBundle } from './bundle-file-heal.js';
 
+// F-37-02: the revenue audit trail is deliberately NOT here. A log inherits the ACL of the thing
+// it describes, and revenue history describes a record CS was never granted — listing it as a
+// shared log would move `selling_amount: 1000 -> 1200` into the folder CS reads, undoing the split
+// without touching the split. It falls through to the per-user fork below, which IS the wall.
+// A residue guard in tests/unit/f-37-02-shipment-audit.test.mjs fails the build if it appears here.
 const LOG_KINDS = ['error_log', 'audit_log'];
 const MASTERS_PATH = 'shared/masters';
 const USERS_PATH   = 'users';
-const KIND_PATH_OVERRIDES = { 
+// E-37: `shipment` left the per-user fallback. CS and the sales rep both write the job file,
+// so no single fork can hold it — the envelope is a protected ref (`_shared/shipments`) whose
+// reader set is what keeps Accounting out of a draft. Its revenue half stays per-user under
+// `shipment_revenue`, which needs no entry here precisely BECAUSE the fork fallback IS the
+// ACL that hides it from CS.
+const KIND_PATH_OVERRIDES = {
   user: 'admin/users',
   user_audit_log: 'admin',
   error_log: '_shared/error-log',
-  audit_log: '_shared/logs/audit-log'
+  audit_log: '_shared/logs/audit-log',
+  shipment: '_shared/shipments'
 };
 
 // Registry lookup replaces the old MASTER_KINDS membership check. A kind absent from the
@@ -46,9 +58,20 @@ export class WasmIoPort {
       const q = `'${folderId}' in parents and trashed=false`;
       inflight = this.driveApi
         .driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&pageSize=1000`)
-        .then((res) => {
+        .then(async (res) => {
+          // Same-name duplicates (two concurrent first-writers both POSTing the fileName)
+          // used to collapse here as "last in list order wins" — nondeterministic across
+          // sessions, so reads and writes raced between divergent copies. Every duplicate
+          // now heals to the deterministic lowest-id winner with contents merged first.
+          const byName = new Map();
+          for (const f of res?.files ?? []) {
+            if (!byName.has(f.name)) byName.set(f.name, []);
+            byName.get(f.name).push(f.id);
+          }
           const map = new Map();
-          for (const f of res?.files ?? []) map.set(f.name, f.id);
+          for (const [name, ids] of byName) {
+            map.set(name, ids.length === 1 ? ids[0] : await healDuplicateBundle(this.driveApi, name, ids));
+          }
           this.fileIndex.set(folderId, map);
           this._listingInflight.delete(folderId);
           return map;
@@ -75,7 +98,10 @@ export class WasmIoPort {
     if (!rootId) throw new Error('Workspace root not found');
 
     let folderId;
-    if (_isTeamMaster(kind) || LOG_KINDS.includes(kind)) {
+    // An explicit override wins outright: it is the only way to say "this kind does NOT live
+    // in the signed-in user's fork", and the shipment envelope depends on that being
+    // unconditional rather than a side effect of also being a master or a log.
+    if (KIND_PATH_OVERRIDES[kind] || _isTeamMaster(kind) || LOG_KINDS.includes(kind)) {
       const kindPath = KIND_PATH_OVERRIDES[kind] ?? `${MASTERS_PATH}/${kind}`;
       folderId = await this._ensureNestedFolder(rootId, kindPath);
     } else {
@@ -164,11 +190,28 @@ export class WasmIoPort {
       `/files?q=${encodeURIComponent(q)}&fields=files(id,name,version,modifiedTime)&spaces=drive&pageSize=1000`,
     );
     const files = res?.files ?? [];
+    // Same heal as _folderIndex — this listing used to build its own last-wins name→id map,
+    // which both BYPASSED the heal and re-poisoned fileIndex behind it. Worse, the delta
+    // engine walked every duplicate copy by id, so the cache ingested each divergent copy in
+    // Drive's list order and the visible row set changed from boot to boot.
+    const byName = new Map();
+    for (const f of files) {
+      if (!byName.has(f.name)) byName.set(f.name, []);
+      byName.get(f.name).push(f);
+    }
     const map = new Map();
-    for (const f of files) map.set(f.name, f.id);
+    const healed = [];
+    for (const [name, group] of byName) {
+      if (group.length === 1) { map.set(name, group[0].id); healed.push(group[0]); continue; }
+      const winnerId = await healDuplicateBundle(this.driveApi, name, group.map((g) => g.id));
+      map.set(name, winnerId);
+      // The winner's listed version predates the merge PATCH — handing back the stale version
+      // makes the delta engine re-pull it, which is exactly right after a content union.
+      healed.push(group.find((g) => g.id === winnerId));
+    }
     this.fileIndex.set(folderId, map);
     this._listingInflight.delete(folderId);
-    return { folderId, files };
+    return { folderId, files: healed };
   }
 
   async drive_read_file(fileId) {

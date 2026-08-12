@@ -1,6 +1,7 @@
 // Operator — Period close/reopen logic + pre-close checks. Writes flow through the repo.
 
 import { bulkPatch } from '../../cache/bulk-orchestrator.js';
+import { listShipments } from '../../data/shipment-repo.js';
 
 const PERIOD_CLOSE_KIND     = 'period_close';
 const PERIOD_REOPEN_KIND    = 'period_reopen';
@@ -57,7 +58,7 @@ function _shipmentsInPeriod(shipments, period) {
  */
 export async function runPreCloseChecks(repo, period) {
   const [shipments, pnlLines, exceptions] = await Promise.all([
-    repo.list('shipment',  null),
+    listShipments(repo, null),
     repo.list('pnl_line',  null),
     repo.list('exception', null),
   ]);
@@ -135,7 +136,7 @@ export async function closePeriod(repo, period, user, checklistSnapshot) {
   await repo.put(PERIOD_CLOSE_KIND, id, rec);
 
   if (repo) {
-    const shipments = await repo.list('shipment', null);
+    const shipments = await listShipments(repo, null);
     const ids       = _shipmentsInPeriod(shipments, period).map((s) => s.id);
     await bulkPatch(repo, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: true }));
     window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: 'shipment' } }));
@@ -168,7 +169,7 @@ export async function reopenPeriod(repo, period, reason, user) {
   await repo.put(PERIOD_REOPEN_KIND, id, rec);
 
   if (repo) {
-    const shipments = await repo.list('shipment', null);
+    const shipments = await listShipments(repo, null);
     const ids       = _shipmentsInPeriod(shipments, period).map((s) => s.id);
     await bulkPatch(repo, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: false }));
     window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: 'shipment' } }));

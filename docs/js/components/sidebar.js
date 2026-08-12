@@ -2,7 +2,9 @@ import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+e
 import { navigate } from '../router.js';
 import { hasRole } from '../auth/auth-gate.js';
 import { t } from '../i18n/index.js';
-import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../operators/manager/route-guard.js';
+import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole,
+  ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE }
+  from '../operators/manager/route-guard.js';
 import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed,
          toggleCollapsed, isGroupCollapsed, activeGroupKey,
          DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
@@ -19,10 +21,13 @@ const V1_ITEMS = [
   // #15: matches the /dashboard route-guard entry (nav-gates KEEP-CONSISTENT-WITH-route-guard)
   { group: 'workspace', route: '/dashboard',           labelKey: 'nav.workspace.dashboard',    icon: 'grid',   allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
   { group: 'workspace', route: '/shipments',           labelKey: 'nav.workspace.shipments',    icon: 'ship'   },
+  // F-37-03: CS opens a job before a rep is named, so creating one is workspace work and sits with
+  // the shipment list rather than in the Sales group. Its allowRoles is the /shipments reader set.
+  { group: 'workspace', route: '/shipments/new',       labelKey: 'nav.sales.create_shipment',  icon: 'tag',
+    allowRoles: [ROLE_CUSTOMER_SERVICE, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_MANAGER] },
 
   // F-24-09: allowRoles matches route-guard's /sales prefix map (SalesRep | Manager).
-  { group: 'sales',     route: '/sales/me/pnl/new',           labelKey: 'nav.sales.create_pnl',       icon: 'tag',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_pnl',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_shipments',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
   // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
   // explanation. A visible menu item that always fails. Now matches the /manager route-guard
@@ -266,7 +271,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build a503a9d">v0.3.33</span>
+        <span class="font-mono whitespace-nowrap" title="build bbfa072">v0.3.34</span>
       </div>
     `;
   }

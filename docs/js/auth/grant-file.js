@@ -21,7 +21,8 @@ const NAME_SEPARATOR        = '.';
 
 // Mirrors boundary/role.rs::Role::ALL. An unknown name refuses the WHOLE file rather than being
 // dropped — a silently dropped hat reads to the user as an unexplained access denial.
-const ROLE_NAMES = ['Manager', 'SalesRep', 'Accountant', 'Auditor', 'Pricing'];
+const ROLE_NAMES = ['Manager', 'SalesManager', 'SalesRep', 'CustomerService',
+                    'Accountant', 'Auditor', 'Pricing'];
 
 export function grantFileName(workspace, userPrefix) {
   return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${userPrefix}`;

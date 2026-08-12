@@ -5,6 +5,8 @@
 // Uniqueness: cross-rep by construction (REP_CODE is globally unique, see rep-code-registry.js);
 // within-rep by max-of-own-records+1 (cannot repeat a value this device already wrote).
 
+import { listEnvelopes } from '../data/shipment-repo.js';
+
 const REP_CODE_LEN  = 4;
 const LOCAL_SEQ_LEN  = 6;
 
@@ -29,7 +31,7 @@ export async function nextLocalSeq(repo, repCode) {
   _sessionSeq.set(repCode, provisional); // claim before the await — guards same-tick concurrency
   let repoMax = 0;
   try {
-    const all = await repo.list('shipment', (s) => {
+    const all = await listEnvelopes(repo, (s) => {
       const jobNo = s.job_no || '';
       return jobNo.startsWith(repCode) && jobNo.length === REP_CODE_LEN + LOCAL_SEQ_LEN;
     });

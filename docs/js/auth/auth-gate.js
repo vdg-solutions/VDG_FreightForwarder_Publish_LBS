@@ -16,6 +16,11 @@ import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
 import { sqlCountEntities, setStoreScope } from '../cache/store-client.js';
 import { readCachedRole, writeCachedRole, clearCachedRole, readCachedIdentityRaw } from './role-cache.js';
+import { emailPrefix } from '../util/email-prefix.js';
+// F-37-06: the answer-vs-cannot-tell rule moved to its own leaf so the data layer can ask the
+// same question without dragging this module's sign-in chain in. Re-exported for existing callers.
+import { isUndecidable as _isUndecidable } from './undecidable.js';
+export { isUndecidable } from './undecidable.js';
 
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
@@ -33,15 +38,6 @@ const LOGIN_OVERLAY_STYLE     = 'position:fixed;inset:0;z-index:50;background:#f
 // screen. Swallowing them is how an expired access token turned the workspace OWNER into a
 // pending-access account: the 401 fell through to "fork exists, no grant" = zero roles, which the
 // route guard then parked on /pending-access.
-const AUTH_FAILED_STATUS = 401;
-const SERVER_ERROR_FLOOR = 500;
-const RATE_LIMITED_STATUS = 429;
-
-function _isUndecidable(err) {
-  if (err?.name !== 'DriveApiError') return true;   // transport/TypeError — no verdict either
-  const s = err.status;
-  return s === AUTH_FAILED_STATUS || s === RATE_LIMITED_STATUS || s >= SERVER_ERROR_FLOOR;
-}
 
 export class RoleProbeTimeoutError extends Error {
   constructor() {
@@ -58,10 +54,12 @@ let _resolvedRole = null;
 // asks hasRole() for the specific role it needs.
 let _resolvedRoles = [];
 
-export const ROLE_MANAGER    = 'Manager';
-export const ROLE_SALES_REP  = 'SalesRep';
-export const ROLE_ACCOUNTANT = 'Accountant';
-export const ROLE_AUDITOR    = 'Auditor';
+export const ROLE_MANAGER          = 'Manager';
+export const ROLE_SALES_MANAGER    = 'SalesManager';
+export const ROLE_SALES_REP        = 'SalesRep';
+export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
+export const ROLE_ACCOUNTANT       = 'Accountant';
+export const ROLE_AUDITOR          = 'Auditor';
 
 // ── public helpers ────────────────────────────────────────────────────────────
 
@@ -104,9 +102,9 @@ function _rolesForToken(token) {
   return [];
 }
 
-export function emailPrefix(email) {
-  return (email || '').split('@')[0].toLowerCase();
-}
+// Re-exported: ~10 modules already import it from here, and the rule that names a user's fork is
+// worth having exactly one of (util/email-prefix.js) rather than a copy per caller.
+export { emailPrefix };
 
 // ── role detection (Drive folder probe) ──────────────────────────────────────
 

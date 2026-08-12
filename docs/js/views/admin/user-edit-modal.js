@@ -5,15 +5,9 @@
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
 import { t } from '../../i18n/index.js';
-import { allocateUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../operators/manager/users-view-composer.js';
-
-const ROLE_LABEL_KEYS = {
-  Manager:    'admin.users.role.manager',
-  SalesRep:   'admin.users.role.sales_rep',
-  Accountant: 'admin.users.role.accountant',
-  Auditor:    'admin.users.role.auditor',
-  Pricing:    'admin.users.hat.pricing',
-};
+import {
+  allocateUserPrefix, rolesFromForm, roleCheckboxesHtml, ROLE_LABEL_KEYS,
+} from '../../operators/manager/users-view-composer.js';
 
 
 function getUserRepo()    { return window.__vdg_user_repo; }
