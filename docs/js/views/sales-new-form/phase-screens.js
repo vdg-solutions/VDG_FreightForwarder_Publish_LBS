@@ -16,7 +16,6 @@
 
 import { t } from '../../i18n/index.js';
 import { PHASE_FOCUS_EVENT } from '../../components/phase-timeline.js';
-import { DOCS_EXT_FIELDS } from './section-docs-ext.js';
 
 export const SCREEN_BOOKING = 1;
 export const SCREEN_DOCS    = 2;
@@ -42,32 +41,33 @@ export const SCREEN_OF_STATE = {
   Cancelled:        SCREEN_BOOKING,
 };
 
-// Which screen a section-A cell belongs to, by input name. A name not listed here defaults to the
-// booking screen — a field someone forgets to place shows up on screen 1 where it is seen,
-// instead of vanishing. DOCS_EXT_FIELDS not repeated below therefore also land on booking.
+// Which screens a section-A cell appears on, by input name. A field may sit on SEVERAL screens —
+// the customer's Excel repeats the header columns across its sheets, and the bill sheet (3) is an
+// ENTRY sheet, not a summary: everything printed on the B/L is typed or corrected right there.
+// One record underneath, so a value edited on any screen is the same value everywhere.
+// A name not listed here defaults to the booking screen — a field someone forgets to place shows
+// up on screen 1 where it is seen, instead of vanishing.
 const FIELD_SCREEN = {
-  mbl: SCREEN_DOCS, shipper: SCREEN_DOCS, consignee: SCREEN_DOCS,
-  notify_party: SCREEN_DOCS, for_delivery: SCREEN_DOCS, seal_no: SCREEN_DOCS,
-  freight_terms: SCREEN_DOCS, doc_type: SCREEN_DOCS,
-  pieces: SCREEN_DOCS, weight_actual_kg: SCREEN_DOCS, volume_cbm: SCREEN_DOCS,
-  dim_l_cm: SCREEN_DOCS, dim_w_cm: SCREEN_DOCS, dim_h_cm: SCREEN_DOCS,
-  uld_type: SCREEN_DOCS, chargeable_kg: SCREEN_DOCS,
-  atd: SCREEN_BILL,
-  roe_buying: SCREEN_PNL, roe_selling: SCREEN_PNL, currency: SCREEN_PNL,
+  // header/routing — booking, and again on the bill (B/L carries all of them)
+  job_no: [SCREEN_BOOKING, SCREEN_BILL], customer: [SCREEN_BOOKING, SCREEN_BILL],
+  vessel: [SCREEN_BOOKING, SCREEN_BILL], booking_no: [SCREEN_BOOKING, SCREEN_BILL],
+  commodity: [SCREEN_BOOKING, SCREEN_BILL],
+  pol: [SCREEN_BOOKING, SCREEN_BILL], pod: [SCREEN_BOOKING, SCREEN_BILL],
+  etd: [SCREEN_BOOKING, SCREEN_BILL], eta: [SCREEN_BOOKING, SCREEN_BILL],
+  place_of_receipt: [SCREEN_BOOKING, SCREEN_BILL], place_of_delivery: [SCREEN_BOOKING, SCREEN_BILL],
+  // documentation — draft-bill entry, editable again on the final bill
+  mbl: [SCREEN_DOCS, SCREEN_BILL], shipper: [SCREEN_DOCS, SCREEN_BILL],
+  consignee: [SCREEN_DOCS, SCREEN_BILL], notify_party: [SCREEN_DOCS, SCREEN_BILL],
+  for_delivery: [SCREEN_DOCS, SCREEN_BILL], seal_no: [SCREEN_DOCS, SCREEN_BILL],
+  freight_terms: [SCREEN_DOCS, SCREEN_BILL], doc_type: [SCREEN_DOCS, SCREEN_BILL],
+  // cargo figures — docs screen only
+  pieces: [SCREEN_DOCS], weight_actual_kg: [SCREEN_DOCS], volume_cbm: [SCREEN_DOCS],
+  dim_l_cm: [SCREEN_DOCS], dim_w_cm: [SCREEN_DOCS], dim_h_cm: [SCREEN_DOCS],
+  uld_type: [SCREEN_DOCS], chargeable_kg: [SCREEN_DOCS],
+  atd: [SCREEN_BILL],
+  roe_buying: [SCREEN_PNL], roe_selling: [SCREEN_PNL], currency: [SCREEN_PNL],
 };
-
-const RECAP_FIELDS = [
-  'job_no', 'customer', 'vessel', 'pol', 'pod', 'etd', 'eta',
-  'shipper', 'consignee', 'seal_no', 'freight_terms', 'doc_type',
-];
-const RECAP_LABEL_KEYS = {
-  job_no: 'sales_new.field.job_no', customer: 'sales_new.field.customer',
-  vessel: 'sales_new.field.vessel', pol: 'sales_new.field.pol', pod: 'sales_new.field.pod',
-  etd: 'sales_new.field.etd', eta: 'sales_new.field.eta',
-  shipper: 'sales_new.field.shipper', consignee: 'sales_new.field.consignee',
-  seal_no: 'sales_new.field.seal_no', freight_terms: 'sales_new.field.freight_terms',
-  doc_type: 'sales_new.field.bill_type',
-};
+const DEFAULT_SCREENS = [SCREEN_BOOKING];
 
 const TAB_BASE     = 'px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 transition-colors';
 const TAB_ACTIVE   = 'bg-blue-600 text-white border-blue-600';
@@ -77,8 +77,8 @@ export function screenOfState(state) {
   return SCREEN_OF_STATE[state] ?? SCREEN_BOOKING;
 }
 
-export function screenOfField(name) {
-  return FIELD_SCREEN[name] ?? SCREEN_BOOKING;
+export function screensOfField(name) {
+  return FIELD_SCREEN[name] ?? DEFAULT_SCREENS;
 }
 
 function tabsHtml(active) {
@@ -88,20 +88,6 @@ function tabsHtml(active) {
       ${s.id}. ${t(`sales_new.screen.${s.key}`)}
     </button>`).join('');
   return `<div id="phase-screen-tabs" class="flex flex-wrap gap-2">${btns}</div>`;
-}
-
-/** The bill screen's read-only recap: what the bill will say, pulled live from the form. */
-function recapHtml(root) {
-  const rows = RECAP_FIELDS.map((name) => {
-    const el = root.querySelector(`[name=${name}]`);
-    return `<div><dt class="text-slate-400">${t(RECAP_LABEL_KEYS[name])}</dt>
-      <dd class="font-medium text-slate-800 font-mono">${esc(el?.value || '—')}</dd></div>`;
-  }).join('');
-  return `
-    <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
-      ${t('sales_new.screen.bill_recap')}
-    </div>
-    <dl class="grid grid-cols-3 gap-x-4 gap-y-2 text-xs">${rows}</dl>`;
 }
 
 // screens' own channel — never touches the `hidden` class the mode toggle owns
@@ -116,15 +102,10 @@ export function applyScreen(root, screen) {
   for (const cell of grid.children) {
     const input = cell.querySelector('[name]');
     if (!input) continue;
-    screenShow(cell, screenOfField(input.getAttribute('name')) === screen);
+    screenShow(cell, screensOfField(input.getAttribute('name')).includes(screen));
   }
   for (const [sel, home] of [['#sec-b-body', SCREEN_PNL], ['#sec-c-body', SCREEN_PNL], ['#sec-d-body', SCREEN_PNL]]) {
     screenShow(root.querySelector(sel), screen === home);
-  }
-  const recap = root.querySelector('#phase-screen-recap');
-  if (recap) {
-    screenShow(recap, screen === SCREEN_BILL);
-    if (screen === SCREEN_BILL) recap.innerHTML = recapHtml(root);
   }
   for (const btn of root.querySelectorAll('[data-screen-tab]')) {
     const active = Number(btn.dataset.screenTab) === screen;
@@ -133,15 +114,13 @@ export function applyScreen(root, screen) {
 }
 
 /**
- * Mounts the tab bar + recap panel and applies the opening screen for `state`.
+ * Mounts the tab bar and applies the opening screen for `state`.
  * Listens for phase-timeline focus events for as long as the form is in the document.
  */
 export function initPhaseScreens(root, { state = 'Created' } = {}) {
   const secA = root.querySelector('#sec-a-body');
   if (!secA) return;
   secA.insertAdjacentHTML('beforebegin', tabsHtml(screenOfState(state)));
-  secA.insertAdjacentHTML('afterend',
-    `<div id="phase-screen-recap" class="rounded-xl border border-slate-200 bg-white p-4" style="display:none"></div>`);
 
   const go = (screen) => applyScreen(root, screen);
   root.querySelector('#phase-screen-tabs')?.addEventListener('click', (e) => {
@@ -165,10 +144,5 @@ export function jumpToFirstError(root) {
   if (!bad) return;
   if (!bad.closest('#sec-a-body')) { applyScreen(root, SCREEN_PNL); return; }
   const name = bad.getAttribute('name') || bad.querySelector('[name]')?.getAttribute('name');
-  if (name) applyScreen(root, screenOfField(name));
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  if (name) applyScreen(root, screensOfField(name)[0]);
 }

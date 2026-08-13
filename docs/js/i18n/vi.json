@@ -1916,7 +1916,6 @@
   "sales_new.screen.docs":                "TT chứng từ",
   "sales_new.screen.bill":                "Chi tiết Bill",
   "sales_new.screen.pnl":                 "PNL",
-  "sales_new.screen.bill_recap":          "Tóm tắt Bill",
   "sales_new.field.booking_no":           "Số Booking",
   "sales_new.field.commodity":            "Tên hàng",
   "sales_new.field.container_qty":        "Số lượng cont",
@@ -1940,5 +1939,6 @@
   "sales_new.bill_type.seaway":           "Sea Waybill",
   "sales_new.bill_type.telex":            "Telex Release",
   "sales_new.bill_type.surrender":        "Surrender",
-  "sales_new.bill_type.original":         "Original"
+  "sales_new.bill_type.original":         "Original",
+  "topbar.sync.label.reconnect":          "Kết nối lại"
 }

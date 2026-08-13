@@ -1916,7 +1916,6 @@
   "sales_new.screen.docs":                "Documents",
   "sales_new.screen.bill":                "Bill Details",
   "sales_new.screen.pnl":                 "PNL",
-  "sales_new.screen.bill_recap":          "Bill summary",
   "sales_new.field.booking_no":           "Booking No",
   "sales_new.field.commodity":            "Commodity",
   "sales_new.field.container_qty":        "Container Qty",
@@ -1940,5 +1939,6 @@
   "sales_new.bill_type.seaway":           "Sea Waybill",
   "sales_new.bill_type.telex":            "Telex Release",
   "sales_new.bill_type.surrender":        "Surrender",
-  "sales_new.bill_type.original":         "Original"
+  "sales_new.bill_type.original":         "Original",
+  "topbar.sync.label.reconnect":          "Reconnect"
 }

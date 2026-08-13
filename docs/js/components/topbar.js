@@ -231,7 +231,12 @@ class VdgTopbar extends LitElement {
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t);
-    const labelText = (state === 'red' && !this._online) ? t('topbar.sync.state.offline') : t('topbar.sync.label');
+    // B-38-03-01: in reconnect state the label IS the affordance — "Đồng bộ" next to a red
+    // triangle reads as ordinary sync noise, and the owner signed out/in by hand instead of
+    // clicking. The tooltip already said it; the label has to.
+    const labelText = (state === 'red' && this._authReconnect) ? t('topbar.sync.label.reconnect')
+      : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
+      : t('topbar.sync.label');
 
     return html`
       ${renderSwBanner(this)}
