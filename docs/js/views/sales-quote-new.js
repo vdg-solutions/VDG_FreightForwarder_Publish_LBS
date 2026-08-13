@@ -208,7 +208,7 @@ export async function render(root) {
   _lines = [{ description: '', amount: '', currency: 'VND' }];
   const salesId = currentSalesRepId();
   if (!salesId) {
-    root.innerHTML = `<div class="p-6 text-red-600 text-sm">${t('sales_me.not_authenticated')}</div>`;
+    root.innerHTML = `<div data-auth-stale class="p-6 text-red-600 text-sm">${t('sales_me.not_authenticated')}</div>`;
     return;
   }
 
