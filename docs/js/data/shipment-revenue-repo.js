@@ -14,6 +14,10 @@
 
 import { emailPrefix } from '../util/email-prefix.js';
 
+// Role-token shape ('__MANAGER__' and kin, sales-rep-i18n.js SENTINEL_SHAPE) — kept as a shape
+// test, not an import: this is the data layer and sales-rep-i18n pulls the whole i18n runtime.
+const ROLE_SENTINEL_SHAPE = /^__.+__$/;
+
 export const KIND_SHIPMENT_REVENUE = 'shipment_revenue';
 const USERS_DIR    = 'users';
 const JSONL_SUFFIX = '.jsonl';
@@ -25,10 +29,17 @@ const g = () => globalThis.window || globalThis;
 function ioPort() { return g().__vdg_io || null; }
 
 /** The fork a shipment's revenue belongs to. Null when the job has no rep assigned yet — CS opens
- *  the job before the sales rep is named, and that is a normal state, not an error. */
+ *  the job before the sales rep is named, and that is a normal state, not an error.
+ *
+ *  The '__MANAGER__' sentinel is a ROLE token, not a fork name (E-40 live find: a manager-created
+ *  job carried it into sales_rep_id, and the write guard read it as somebody else's fork —
+ *  `users/__manager__/` — refusing the manager's own save). Null here means "the record names no
+ *  concrete rep fork": the writer's own session decides, which for the manager typing the figures
+ *  is exactly their fork, and a reader with no such record still gets the correct empty answer. */
 export function revenuePrefixFor(shipment) {
   const rep = shipment?.sales_rep_id || shipment?.sales_rep || '';
-  return rep ? emailPrefix(String(rep)) : null;
+  if (!rep || ROLE_SENTINEL_SHAPE.test(String(rep))) return null;
+  return emailPrefix(String(rep));
 }
 
 /**
