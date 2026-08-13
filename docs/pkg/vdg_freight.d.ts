@@ -17,6 +17,7 @@ export class WasmEntityRepo {
     awb_list_by_month(ym: string): Promise<any>;
     delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
+    fetch_older(kind: string, before: string): Promise<any>;
     /**
      * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
      */
@@ -209,6 +210,8 @@ export function license_arm(license_str: string, current_unix_ts: bigint): any;
  * checked against the compiled-in `WORKSPACE_ROOT`.
  */
 export function license_status(license_str: string, current_unix_ts: bigint): any;
+
+export function per_record_kinds(): any;
 
 export function permission_can_merge(role: string, ref_name: string): boolean;
 
@@ -434,6 +437,7 @@ export interface InitOutput {
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
     readonly license_status: (a: number, b: number, c: bigint) => number;
+    readonly per_record_kinds: () => number;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -481,6 +485,7 @@ export interface InitOutput {
     readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
+    readonly wasmentityrepo_fetch_older: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_fx_apply_writes: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_fx_delete_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_fx_invalidate_month: (a: number, b: number, c: number) => void;
@@ -531,9 +536,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10641: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10643: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4461: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10712: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10714: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4532: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

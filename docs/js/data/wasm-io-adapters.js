@@ -249,10 +249,17 @@ export class WasmIoPort {
   async ws_list_dir(dirPath) {
     const folderId = await this._resolveDir(dirPath);
     const q = `'${folderId}' in parents and trashed=false`;
+    // version/mimeType ride along for the per-record delta engine (F-38-03): version is the
+    // witness the version-compare needs, mimeType lets Rust tell partition folders from files.
     const res = await this.driveApi.driveFetch(
-      'GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&pageSize=1000`,
+      'GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name,version,mimeType)&spaces=drive&pageSize=1000`,
     );
-    return { files: (res?.files ?? []).map((f) => ({ id: f.id, name: f.name })) };
+    return {
+      folderId,
+      files: (res?.files ?? []).map((f) => ({
+        id: f.id, name: f.name, version: f.version ?? '', mimeType: f.mimeType ?? '',
+      })),
+    };
   }
 
   async ws_read_file(dirPath, fileName) {

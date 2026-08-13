@@ -204,12 +204,10 @@ async function _deferredInit(user, db, driveApi, repo, store) {
     const { initErrorLog } = await import('../sync/error-log.js');
     initErrorLog(driveApi, () => window.__vdg_auth?.getCurrentUser?.(), () => APP_VERSION);
 
-    // Retention. The write side is capped per session but never expires, so without a prune the
-    // log is append-only for the life of the workspace. Fire-and-forget: a boot must not wait on
-    // housekeeping, and a workspace with nothing to prune is a normal result.
-    import('../operators/manager/error-log-store.js')
-      .then((m) => m.pruneErrorLog(driveApi))
-      .catch((err) => console.warn('[VDG] error-log prune skipped:', err.message)); // DEV
+    // Storage upkeep (error-log retention, per-record bundle explode) — all fire-and-forget.
+    import('./maintenance.js')
+      .then((m) => m.runBootMaintenance(driveApi, ioPort))
+      .catch((err) => console.warn('[VDG] boot maintenance skipped:', err.message)); // DEV
 
     // Payment due-soon checker (F-48-01) — tier 3/4 main-thread badge/notify, one shared
     // compute_due_soon call, 100% local (no Drive/token). Tiers 1/2 registration lives in
