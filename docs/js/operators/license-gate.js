@@ -77,22 +77,32 @@ export class LicenseGate {
     return wasm.verify_license(licenseStr, BigInt(nowUnix));
   }
 
+  // F-20-11: the lifecycle verdict — {state: active|grace|blocked|invalid, can_write,
+  // days_past_exp, grace_days_left, payload, error_kind}. verify() above is pass/fail with
+  // ExpiryPolicy::Reject; THIS is what the boot gate renders, so an expired-but-sound license
+  // degrades to read-only grace instead of being refused outright.
+  //
+  // license_arm, not license_status: the same call stamps the verdict into the wasm write
+  // guard (data_repo/write_guard.rs), so the repo's own put/delete enforce read-only — the
+  // JS copy of the verdict is display only.
+  async status(licenseStr, nowUnix = _nowUnix()) {
+    const wasm = await this.ensureWasm();
+    return wasm.license_arm(licenseStr, BigInt(nowUnix));
+  }
+
   // AC-06 round-trip
   async save(licenseStr) { await this._store.save(licenseStr); }
   async load()            { return this._store.load(); }
   async clear()            { await this._store.clear(); }
 
-  // AC-11: load persisted -> re-verify -> { ok, error_kind, payload }; NEVER trusts stored
-  // blindly (a copied license.jwt must still fail WorkspaceMismatch on this deployment).
-  async reverifyPersistedLicense(nowUnix = _nowUnix()) {
+  // AC-11: load persisted -> re-classify -> lifecycle status (or null when nothing is stored);
+  // NEVER trusts stored blindly (a copied license.jwt must still fail WorkspaceMismatch on this
+  // deployment). F-20-11: this is status(), not verify() — a cached license one day past exp
+  // must boot into grace, not be thrown away and re-fetched into a hard refusal.
+  async statusOfPersistedLicense(nowUnix = _nowUnix()) {
     const stored = await this.load();
-    if (!stored) return { ok: false, error_kind: null, payload: null };
-    const result = await this.verify(stored, nowUnix);
-    return {
-      ok:         Boolean(result.valid),
-      error_kind: result.error_kind ?? null,
-      payload:    result.payload ?? null,
-    };
+    if (!stored) return null;
+    return this.status(stored, nowUnix);
   }
 }
 

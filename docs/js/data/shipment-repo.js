@@ -11,6 +11,7 @@
 import { readRevenue, readRevenueFor, revenuePrefixFor, writeRevenue, deleteRevenue }
   from './shipment-revenue-repo.js';
 import { recordShipmentChange } from '../sync/shipment-audit.js';
+import { assertWritable } from './write-gate.js';
 
 export const KIND_SHIPMENT = 'shipment';
 
@@ -30,6 +31,7 @@ function wasm() {
  *  rejoined would read as a shipment that earned nothing, so it must not be written at all. */
 export async function putShipment(repo, shipment) {
   const ref = shipment.shipment_ref;
+  await assertWritable(repo, shipment.etd, KIND_SHIPMENT);
   const before = await priorVersion(() => getShipment(repo, ref));
   const { envelope, revenue } = JSON.parse(wasm().shipment_split(JSON.stringify(shipment)));
   await repo.put(KIND_SHIPMENT, ref, envelope);
@@ -48,6 +50,10 @@ export async function putShipment(repo, shipment) {
  * write the sell figures straight into the folder CS reads. And it deliberately does not touch the
  * revenue record — a state change must never be able to blank a rep's numbers, which is exactly
  * what `putShipment` on an envelope-shaped record would do.
+ *
+ * Deliberately NOT period-gated (F-20-10): this path is the FSM, the state migrator and void —
+ * machinery, not somebody typing. Void of a locked-period shipment is governed by the ledger
+ * reversal flow, and blocking migrators on old periods would wedge boot.
  */
 export async function putEnvelope(repo, ref, shipmentLike) {
   const before = await priorVersion(() => repo.get(KIND_SHIPMENT, ref));
@@ -70,6 +76,9 @@ export async function listEnvelopes(repo, predicate = null) {
 }
 
 export async function deleteShipment(repo, ref) {
+  // The gate needs the doomed record's own ETD — the caller only hands a ref.
+  const doomed = await repo.get(KIND_SHIPMENT, ref).catch(() => null);
+  await assertWritable(repo, doomed?.etd, KIND_SHIPMENT);
   const before = await priorVersion(() => getShipment(repo, ref));
   await repo.delete(KIND_SHIPMENT, ref);
   await deleteRevenue(repo, ref).catch(() => { /* the envelope is gone; an orphan half is cleaned by repost */ });

@@ -9,6 +9,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VDG FreightForwarder</title>
 
+  <!-- PWA: manifest resolves against <base>, so the subpath deploy (GitHub Pages) keeps working -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#1e40af" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Google Fonts: dynamic CSS per font-variant negotiation — SRI not applicable (hash changes per UA/subset) -->

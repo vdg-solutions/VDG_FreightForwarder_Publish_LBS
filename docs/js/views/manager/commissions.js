@@ -12,7 +12,7 @@ import {
 } from '../../operators/manager/commission-calculator.js';
 import { compose as composeRules } from '../../operators/manager/commission-composer.js';
 import { bulkPut }            from '../../cache/bulk-orchestrator.js';
-import { PREF_LOCKED_PERIODS_KEY } from '../../cache/period-lock-ui.js';
+import { PREF_LOCKED_PERIODS_KEY } from '../../data/write-gate.js';
 import { safeMasterLoad }     from '../../util/master-load.js';
 import { listShipments } from '../../data/shipment-repo.js';
 

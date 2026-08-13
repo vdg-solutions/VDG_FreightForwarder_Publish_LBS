@@ -191,10 +191,18 @@ export function import_document_excel_wasm(bytes: Uint8Array): any;
 export function import_pnl_excel_wasm(bytes: Uint8Array): any;
 
 /**
- * Returns true when `entity_etd_ms` falls within a closed period.
- * `closed_periods_json` = `[{"period":"YYYY-MM","closed_at":"..."}]`
+ * Returns true when `entity_etd_ms` falls within a locked period.
+ * `locked_periods_json` = meta-pref `preferences.locked_periods` verbatim —
+ * `[{"period_key":"YYYY-MM"|"YYYY-Qn",...}]`. Law lives in operators/period_lock.rs.
  */
-export function is_period_closed(entity_kind: string, entity_etd_ms: bigint, closed_periods_json: string): boolean;
+export function is_period_closed(entity_kind: string, entity_etd_ms: bigint, locked_periods_json: string): boolean;
+
+/**
+ * F-20-11: classify AND arm the wasm write gate in one move. The boot gate calls THIS —
+ * the verdict that reaches the repo's put/delete never round-trips through a JS value a
+ * devtools user could edit. Every call re-arms; the latest classification wins.
+ */
+export function license_arm(license_str: string, current_unix_ts: bigint): any;
 
 /**
  * Lifecycle status of a license at `current_unix_ts` (active/grace/blocked/invalid),
@@ -424,6 +432,7 @@ export interface InitOutput {
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
+    readonly license_arm: (a: number, b: number, c: bigint) => number;
     readonly license_status: (a: number, b: number, c: bigint) => number;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -522,9 +531,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10629: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10631: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4449: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10641: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10643: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4461: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
