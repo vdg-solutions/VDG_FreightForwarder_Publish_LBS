@@ -43,7 +43,31 @@ export function shipmentToDraft(shipment, ce) {
     job_no:       s.job_no                || '',
     has_hbl:      Boolean(s.do_no),
     job_file_no:  s.job_file_no           || '',
-    product:      s.commodity_description || '',
+    // E-39: product is its own persisted field now; commodity_description only feeds the free-text
+    // commodity input. Legacy records (no product) fall back to the old commodity read so the
+    // select is not silently blanked on old jobs whose commodity happened to hold an option value.
+    product:      s.product               || s.commodity_description || '',
+    commodity:    s.commodity_description || '',
+    // E-39: carry the LIFECYCLE STATE through the edit round-trip — phase timeline + phase screens
+    // open at the phase the job is actually in, not at Created.
+    state:        s.state                 || '',
+    booking_no:         s.booking_no         || '',
+    container_qty:      s.container_qty      ?? '',
+    reefer_temp:        s.reefer_temp        || '',
+    reefer_vent:        s.reefer_vent        || '',
+    closing_si:         s.closing_si         || '',
+    closing_cy:         s.closing_cy         || '',
+    empty_pickup_depot: s.empty_pickup_depot || '',
+    full_return_depot:  s.full_return_depot  || '',
+    place_of_receipt:   s.place_of_receipt   || '',
+    place_of_delivery:  s.place_of_delivery  || '',
+    notify_party:       s.notify_party       || '',
+    for_delivery:       s.for_delivery       || '',
+    seal_no:            s.seal_no            || '',
+    freight_terms:      s.freight_terms      || '',
+    doc_type:           s.doc_type           || '',
+    volume_cbm:         s.volume_cbm         ?? '',
+    atd:                s.atd                || '',
     sales_rep:    s.sales_rep_id          || '',
     customer:     s.customer              || '',
     shipper:      s.shipper               || '',

@@ -4,7 +4,7 @@ import { t } from '../i18n/index.js';
 import { navigate } from '../router.js';
 import { currentSalesRepId } from '../auth/auth-gate.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
-import { renderForm, collectFormState, validateNiForm, shipmentToDraft } from './sales-new-form.js';
+import { renderForm, collectFormState, validateNiForm, shipmentToDraft, jumpToFirstError } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
 import { createSubmitGuard } from './sales-new/submit-guard.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
@@ -229,6 +229,7 @@ export async function render(root, opts = {}) {
       const errors  = validateNiForm(state);
       if (errors.length) {
         highlightErrors(root, errors);
+        jumpToFirstError(root); // E-39: the flagged field may sit on another screen
         const errEl = root.querySelector('#ni-form-errors');
         if (errEl) {
           errEl.innerHTML = errors.map((err) => `<div>&#x2022; ${err}</div>`).join('');

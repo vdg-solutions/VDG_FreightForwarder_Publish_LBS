@@ -16,7 +16,7 @@ const MODE_OPTIONS     = ['SEA', 'AIR'];
 const PRODUCT_LABEL_KEYS = { 'FCL EXPORT': 'sales_new.product_option.fcl_export', 'IMPORT FCL': 'sales_new.product_option.import_fcl', AIR: 'sales_new.product_option.air', LCL: 'sales_new.product_option.lcl' };
 const MODE_LABEL_KEYS    = { SEA: 'sales_new.mode_selector.sea', AIR: 'sales_new.mode_selector.air' };
 
-function fld(label, inner) {
+export function fld(label, inner) {
   return `
     <div>
       <label class="block text-[10px] text-slate-500 mb-0.5">${label}</label>
@@ -33,13 +33,13 @@ function cfld(label, inner, attr) {
     </div>`;
 }
 
-function txt(name, val, ph) {
+export function txt(name, val, ph) {
   const phAttr = ph ? ` placeholder="${ph}"` : '';
   return `<input type="text" name="${name}" value="${val || ''}"${phAttr}
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs" />`;
 }
 
-function num(name, val) {
+export function num(name, val) {
   return `<input type="number" name="${name}" value="${val || ''}" step="any"
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs" />`;
 }
@@ -49,7 +49,7 @@ function roNum(name, val) {
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50" />`;
 }
 
-function dateInp(name, val) {
+export function dateInp(name, val) {
   return `<input type="date" name="${name}" value="${val || ''}"
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs" />`;
 }
@@ -60,7 +60,7 @@ function optHtml(options, selected, labelKeys) {
   ).join('');
 }
 
-function selFld(name, options, selected, labelKeys) {
+export function selFld(name, options, selected, labelKeys) {
   return `<select name="${name}"
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs">
     <option value="">—</option>${optHtml(options, selected, labelKeys)}
@@ -124,11 +124,11 @@ export function sectionAHtml(draft = {}, customers = []) {
             </span>
           </div>
         </div>
-        ${cfld(t('sales_new.field.weight_actual'), num('weight_actual_kg', d.weight_actual_kg), `data-air-only${airHide}`)}
+        ${fld(t('sales_new.field.weight_actual'), num('weight_actual_kg', d.weight_actual_kg))}
         ${cfld(t('sales_new.field.dim_l'),         num('dim_l_cm', d.dim_l_cm),                `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.dim_w'),         num('dim_w_cm', d.dim_w_cm),                `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.dim_h'),         num('dim_h_cm', d.dim_h_cm),                `data-air-only${airHide}`)}
-        ${cfld(t('sales_new.field.pieces'),        num('pieces', d.pieces),                     `data-air-only${airHide}`)}
+        ${fld(t('sales_new.field.pieces'),        num('pieces', d.pieces))}
         ${cfld(t('sales_new.field.uld_type'),      txt('uld_type', d.uld_type),                 `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.flight_no'),     txt('flight_no', d.flight_no),               `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.origin_iata'),   txt('origin_iata', d.origin_iata, 'SGN'),    `data-air-only${airHide}`)}

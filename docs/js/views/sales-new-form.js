@@ -11,6 +11,9 @@ import { sectionCHtml, wireCommissionSection, collectCommission }
   from './sales-new-form/section-commission.js';
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }
   from './sales-new-form/section-waterfall.js';
+import { docsExtHtml, DOCS_EXT_FIELDS } from './sales-new-form/section-docs-ext.js';
+import { initPhaseScreens } from './sales-new-form/phase-screens.js';
+export { jumpToFirstError } from './sales-new-form/phase-screens.js';
 import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
 import { summarizeLineCurrencies, DEFAULT_HEADER_CURRENCY } from './sales-new-form/pnl-line-fx.js';
 import { computeVndInvariant } from './sales-new-form/pnl-save-validations.js';
@@ -94,6 +97,11 @@ export async function renderForm(root, opts = {}) {
       </form>
     </div>`;
 
+  // E-39: the extra booking/docs cells join section A's grid, then the 4 phase screens partition
+  // the whole form. The opening screen follows the phase the job is in (F-39-03).
+  root.querySelector('#sec-a-body .grid')?.insertAdjacentHTML('beforeend', docsExtHtml(d));
+  initPhaseScreens(root, { state: d.state || 'Created' });
+
   const onChanged = () => _recomputeWaterfall(root, userConfig);
 
   wireHeaderSection(root, onChanged);
@@ -162,6 +170,8 @@ export function collectFormState(root) {
     lines:            collectLines(root),
     commission_lines: collectCommission(root),
     sales_share_pct_override: collectWaterfallOverrides(root).sales_share_pct_override,
+    // E-39: booking/docs ext fields — one list (section-docs-ext.js), so collector cannot drift
+    ...Object.fromEntries(DOCS_EXT_FIELDS.map((n) => [n, g(n)])),
   };
 }
 
