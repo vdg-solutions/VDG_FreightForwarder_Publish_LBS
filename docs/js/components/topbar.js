@@ -2,6 +2,7 @@
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { currentSalesRepId, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
+import { readCachedProfile } from '../auth/profile-cache.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
@@ -217,12 +218,18 @@ class VdgTopbar extends LitElement {
   render() {
     const badge = badgeLabel(this._exceptionCount + this._approvalCount);
     const notifBadge = badgeLabel(this._notifCount + this._dueSoonCount); // F-48-01: additive, independent sources
-    // Degraded (expired-token) boot: getCurrentUser() is null but the cached working identity
-    // rode in via repo-init (__vdg_current_user). Show THAT account, so the avatar/menu never
-    // display a placeholder identity while the red reconnect chip is up.
-    const cached = window.__vdg_current_user;
+    // Degraded (expired-token) boot: getCurrentUser() is null but the person did not change.
+    // The persisted display profile (vdg.auth.profile, written at hydrate) keeps the REAL name
+    // and avatar photo up; the repo-init mirror covers the email when even that is missing.
+    // Owner 2026-08-13: the photo silently flipping to an initials chip every hourly expiry
+    // read as "mất cái icon".
+    const cached  = window.__vdg_current_user;
+    const profile = readCachedProfile();
     const user = window.__vdg_auth?.getCurrentUser?.()
-      || (cached?.email ? { email: cached.email, name: '', picture: '', sub: '', id_token: null } : null);
+      || ((profile?.email || cached?.email)
+        ? { email: profile?.email || cached.email, name: profile?.name || '',
+            picture: profile?.picture || '', sub: '', id_token: null }
+        : null);
     const salesId = currentSalesRepId();
     const now = Date.now();
     const state = computeChipState({

@@ -2,6 +2,7 @@
 // F-15-20 merged into F-15-19 R3: single OAuth2 popup grants identity + drive.file scope
 
 import { ensureWindowOpen } from './window-open-guard.js';
+import { PROFILE_KEY, writeCachedProfile } from './profile-cache.js';
 
 const CLIENT_ID            = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com';
 const TOKEN_KEY            = 'vdg.auth.id_token';
@@ -37,6 +38,7 @@ export const AUTH_STORAGE_KEYS = Object.freeze([
   ACCESS_TOKEN_EXP_KEY,
   DRIVE_SCOPE_KEY,
   ROLE_CACHE_KEY,
+  PROFILE_KEY, // display profile — expiry must not blank the avatar; see profile-cache.js
 ]);
 
 export { ROLE_CACHE_KEY };
@@ -83,6 +85,9 @@ export function getCurrentUser() {
   if (!stored) return null;
   _currentUser = buildUser(stored);
   if (!_currentUser) localStorage.removeItem(TOKEN_KEY); // expired/corrupt
+  // Backfill the display-profile cache for sessions signed in before PROFILE_KEY existed —
+  // otherwise their avatar still blanks at the NEXT hourly expiry.
+  if (_currentUser && !localStorage.getItem(PROFILE_KEY)) writeCachedProfile(_currentUser);
   return _currentUser;
 }
 
@@ -209,6 +214,7 @@ export async function hydrateSessionFromToken(resp) {
   localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken({
     email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
   }));
+  writeCachedProfile(info);
   _currentUser = null; // force rebuild from the freshly-minted token
   return getCurrentUser();
 }
