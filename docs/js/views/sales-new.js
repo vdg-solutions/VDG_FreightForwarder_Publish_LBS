@@ -247,17 +247,24 @@ export async function render(root, opts = {}) {
       }
       try {
         if (isEdit) {
-          await updateForm(state, repo, salesRepId, editRef, undefined, { publish });
+          const { advancedTo } = await updateForm(state, repo, salesRepId, editRef, undefined, { publish });
           _dispatchCommitted(formMount, salesRepId);
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
           showToast(t(key).replace('{ref}', editRef), 'success');
-          // Do not navigate if we are already on the edit page, to avoid a white screen flash
+          // E-40: the save completed the phase's data and the job moved — say so, and re-render so
+          // the timeline + phase screens open at where the job now IS. (Without an advance we stay
+          // put, to avoid the white flash.)
+          if (advancedTo) {
+            showToast(t('sales_new.auto_advanced', { state: t('shipment.status.' + advancedTo) }), 'success');
+            navigate('/sales/edit/' + editRef);
+          }
         } else {
-          const { ref } = await submitForm(state, repo, salesRepId, undefined, { publish });
+          const { ref, advancedTo } = await submitForm(state, repo, salesRepId, undefined, { publish });
           _dispatchCommitted(formMount, salesRepId);
           await clearDraft();
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
           showToast(t(key).replace('{ref}', ref), 'success');
+          if (advancedTo) showToast(t('sales_new.auto_advanced', { state: t('shipment.status.' + advancedTo) }), 'success');
           navigate('/sales/edit/' + ref);
         }
       } catch (err) {

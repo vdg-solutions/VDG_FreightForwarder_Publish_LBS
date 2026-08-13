@@ -5,6 +5,7 @@ import { t } from '../../i18n/index.js';
 import { buildShipment } from './shipment-builder.js';
 import { ensureShipmentStateAliases } from '../../util/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../operators/fsm-ingest.js';
+import { autoAdvanceShipment } from '../../operators/fsm-auto-advance.js';
 import { ensureRepCode } from '../../operators/rep-code-registry.js';
 import { assignJobNo } from '../../operators/job-no-gen.js';
 import { pnlLineId, deletePnlLinesFor } from '../../util/pnl-line-id.js';
@@ -200,7 +201,10 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
     throw err;
   }
 
-  return { ref, warnings, publishState: shipment.publish_state };
+  // E-40: data-driven advance — booking entered on the very first save moves the job itself
+  const advancedTo = await autoAdvanceShipment(repo, shipment);
+
+  return { ref, warnings, publishState: shipment.publish_state, advancedTo };
 }
 
 // AC-04..AC-06: update in-place — overwrite shipment record + commission_entry set for ref.
@@ -259,7 +263,11 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
 
   // Accounting logic is now handled asynchronously by WASM.
 
-  return { publishState: shipment.publish_state };
+  // E-40: a re-save that completed the missing data (e.g. ATD typed on the bill screen) moves
+  // the job right here — no drag, no button.
+  const advancedTo = await autoAdvanceShipment(repo, shipment);
+
+  return { publishState: shipment.publish_state, advancedTo };
 }
 
 /**

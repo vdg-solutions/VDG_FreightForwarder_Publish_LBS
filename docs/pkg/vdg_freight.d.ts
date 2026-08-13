@@ -280,6 +280,14 @@ export function run(sql: string, params_json: string): void;
 export function select(sql: string, params_json: string): string;
 
 /**
+ * E-40 — the owner's rule: "dữ liệu đủ thì đẩy qua". From the entity's stored state, keep
+ * advancing while the NEXT hop has a non-empty requirement list and EVERY row is affirmatively
+ * Met by the record (Unknown never advances — auto needs positive evidence; the manual button
+ * keeps its permissive policy as the escape hatch). Returns the state the job ends at.
+ */
+export function shipment_auto_advance(entity_id: string, shipment_json: string): any;
+
+/**
  * The record Accounting is handed at publish, derived from the JOINED shipment.
  *
  * `published_json` is the snapshots already published for this shipment (from the same fork), used
@@ -452,6 +460,7 @@ export interface InitOutput {
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_billing_snapshot: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly shipment_change_set: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_has_revenue: (a: number, b: number, c: number) => void;
@@ -536,9 +545,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10712: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10714: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4532: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10739: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10741: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4559: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

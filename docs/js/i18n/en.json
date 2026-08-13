@@ -1940,5 +1940,6 @@
   "sales_new.bill_type.telex":            "Telex Release",
   "sales_new.bill_type.surrender":        "Surrender",
   "sales_new.bill_type.original":         "Original",
-  "topbar.sync.label.reconnect":          "Reconnect"
+  "topbar.sync.label.reconnect":          "Reconnect",
+  "sales_new.auto_advanced":              "Requirements met — job moved to {state}"
 }

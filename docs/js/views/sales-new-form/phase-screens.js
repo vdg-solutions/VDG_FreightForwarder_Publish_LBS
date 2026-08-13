@@ -15,7 +15,7 @@
 // style.display. A cell shows only when both channels allow it.
 
 import { t } from '../../i18n/index.js';
-import { PHASE_FOCUS_EVENT } from '../../components/phase-timeline.js';
+import { PHASE_FOCUS_EVENT, REQ_FOCUS_EVENT } from '../../components/phase-timeline.js';
 
 export const SCREEN_BOOKING = 1;
 export const SCREEN_DOCS    = 2;
@@ -68,6 +68,17 @@ const FIELD_SCREEN = {
   roe_buying: [SCREEN_PNL], roe_selling: [SCREEN_PNL], currency: [SCREEN_PNL],
 };
 const DEFAULT_SCREENS = [SCREEN_BOOKING];
+
+// F-40-03: requirement code → the screen where its data is typed. Clicking a checklist row on the
+// timeline opens that page. Codes come from shipment_fsm/checks.rs — the same vocabulary the
+// timeline renders, so a new check without a door here simply does not navigate.
+export const REQ_SCREEN = {
+  carrier_booking: SCREEN_BOOKING, quotation: SCREEN_PNL,
+  dg_compliance: SCREEN_BOOKING, containers: SCREEN_BOOKING,
+  voyage_departed: SCREEN_BILL,
+  customs: SCREEN_BILL, haulage: SCREEN_BILL, delivery_order: SCREEN_BILL, cargo_release: SCREEN_BILL,
+  billing_paid: SCREEN_PNL, demdet_settled: SCREEN_PNL, claim_closed: SCREEN_PNL,
+};
 
 const TAB_BASE     = 'px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 transition-colors';
 const TAB_ACTIVE   = 'bg-blue-600 text-white border-blue-600';
@@ -134,6 +145,14 @@ export function initPhaseScreens(root, { state = 'Created' } = {}) {
     if (phase) go(screenOfState(phase));
   };
   window.addEventListener(PHASE_FOCUS_EVENT, onFocus);
+
+  // F-40-03: a checklist row names its requirement; opening its screen is the row's click action.
+  const onReq = (e) => {
+    if (!root.isConnected) { window.removeEventListener(REQ_FOCUS_EVENT, onReq); return; }
+    const screen = REQ_SCREEN[e.detail?.code];
+    if (screen) go(screen);
+  };
+  window.addEventListener(REQ_FOCUS_EVENT, onReq);
 
   go(screenOfState(state));
 }

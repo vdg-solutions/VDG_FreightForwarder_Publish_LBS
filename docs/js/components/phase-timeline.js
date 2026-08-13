@@ -16,6 +16,9 @@ import { t } from '../i18n/index.js';
 import { ROLE_LABEL_KEYS } from '../operators/manager/users-view-composer.js';
 
 export const PHASE_FOCUS_EVENT = 'vdg:phase-focus';
+// E-40 (F-40-03): a requirement row is a DOOR, not a caption — clicking it announces the
+// requirement's code and the phase screens open the page where that data is typed.
+export const REQ_FOCUS_EVENT = 'vdg:req-focus';
 
 // Positions as Rust spells them, and the ARIA values they map to. Hoisted out of the template
 // because a quoted word inside a ${} reads to the i18n gate as a label somebody forgot to
@@ -163,9 +166,13 @@ function detailPanel(phase) {
 function reqRow(req) {
   const cls  = STATUS_CLASS[req.status] ?? '';
   const icon = STATUS_ICON[req.status] ?? STATUS_ICON.unknown;
-  return `<li class="flex items-start gap-1.5 text-[11px] ${cls}" title="${esc(req.detail || '')}">
-      <span class="shrink-0 w-3 text-center">${esc(icon)}</span>
-      <span>${esc(requirementLine(req))}</span>
+  return `<li>
+      <button type="button" data-req="${esc(req.code)}" title="${esc(req.detail || '')}"
+        class="flex items-start gap-1.5 text-[11px] text-left w-full rounded px-1 py-0.5
+               hover:bg-slate-100 hover:underline ${cls}">
+        <span class="shrink-0 w-3 text-center">${esc(icon)}</span>
+        <span>${esc(requirementLine(req))}</span>
+      </button>
     </li>`;
 }
 
@@ -182,6 +189,11 @@ export function bindTimeline(root, onFocus) {
       const phase = el.getAttribute('data-phase');
       onFocus?.(phase);
       g().dispatchEvent?.(new CustomEvent(PHASE_FOCUS_EVENT, { detail: { phase } }));
+    });
+  }
+  for (const el of root.querySelectorAll('[data-req]')) {
+    el.addEventListener('click', () => {
+      g().dispatchEvent?.(new CustomEvent(REQ_FOCUS_EVENT, { detail: { code: el.getAttribute('data-req') } }));
     });
   }
 }

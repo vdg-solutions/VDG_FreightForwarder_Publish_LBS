@@ -1940,5 +1940,6 @@
   "sales_new.bill_type.telex":            "Telex Release",
   "sales_new.bill_type.surrender":        "Surrender",
   "sales_new.bill_type.original":         "Original",
-  "topbar.sync.label.reconnect":          "Kết nối lại"
+  "topbar.sync.label.reconnect":          "Kết nối lại",
+  "sales_new.auto_advanced":              "Đủ điều kiện — lô chuyển sang {state}"
 }
