@@ -115,14 +115,26 @@ export async function renderForm(root, opts = {}) {
   // autosave draft only in create mode — edit data must not pollute localStorage draft
   if (!isEdit) {
     let autosaveTimer = null;
-    root.querySelector('#ni-form')?.addEventListener('input', () => {
+    // B-40-01-02: a pristine form must never mint a draft — opening the screen and switching
+    // tabs used to store an all-blank draft, so the next visit greeted the rep with
+    // "Bản nháp đã khôi phục" over nothing.
+    let dirty = false;
+    const form = root.querySelector('#ni-form');
+    form?.addEventListener('input', () => {
+      dirty = true;
       clearTimeout(autosaveTimer);
-      autosaveTimer = setTimeout(() => saveDraft(collectFormState(root)), AUTOSAVE_DELAY_MS);
+      autosaveTimer = setTimeout(() => {
+        if (form.isConnected) saveDraft(collectFormState(root));
+      }, AUTOSAVE_DELAY_MS);
     });
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') saveDraft(collectFormState(root));
-    });
+    // submit clears the draft upstream — a still-pending timer must not resurrect it
+    form?.addEventListener('submit', () => clearTimeout(autosaveTimer));
+    const onHidden = () => {
+      // this render's form is gone → retire the listener instead of saving a stale copy
+      if (!form || !form.isConnected) { document.removeEventListener('visibilitychange', onHidden); return; }
+      if (dirty && document.visibilityState === 'hidden') saveDraft(collectFormState(root));
+    };
+    document.addEventListener('visibilitychange', onHidden);
   }
 }
 
