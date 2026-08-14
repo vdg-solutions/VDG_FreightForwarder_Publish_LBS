@@ -2,6 +2,7 @@
 
 import { clearDriveScopeGrant } from './google-oauth.js';
 import { globalOwnerQuery, dedupeGlobalOwnerFolders, moveToParent } from './drive-folder-dedup.js';
+import { rememberFolder, recallFolder } from './drive-folder-memo.js';
 import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
 import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive, recoverFromUnauthorized } from './access-token.js';
 
@@ -158,18 +159,25 @@ export async function driveFetchRaw(method, path, body = undefined, extraHeaders
 
 // ── folder helpers ────────────────────────────────────────────────────────────
 
+// F-42-03: folder ids learned from Drive's own create/query responses, remembered until the
+// files.list index catches up — see drive-folder-memo.js for why a query miss cannot be trusted.
 export async function findFolder(parentId, name) {
   const q   = `name='${name}' and '${parentId}' in parents and mimeType='${FOLDER_MIME}' and trashed=false`;
   const res = await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`);
-  return res.files?.[0] ?? null;
+  const hit = res.files?.[0] ?? null;
+  if (hit) { rememberFolder(parentId, name, hit.id); return hit; }
+  const remembered = recallFolder(parentId, name);
+  return remembered ? { id: remembered, name } : null;
 }
 
 export async function createFolder(parentId, name) {
-  return driveFetch('POST', '/files', {
+  const folder = await driveFetch('POST', '/files', {
     name,
     mimeType: FOLDER_MIME,
     parents:  [parentId],
   });
+  rememberFolder(parentId, name, folder?.id);
+  return folder;
 }
 
 // F-15-19 AC-1 + F-20-02 — Drive REST has no conditional-create so duplicate names
@@ -192,6 +200,10 @@ export async function getOrCreateFolder(parentId, name, { scoped = true } = {}) 
   const q = `name='${name}' and '${parentId}' in parents and mimeType='${FOLDER_MIME}' and trashed=false`;
   const found = (await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`)).files || [];
   if (found.length === 0) {
+    // F-42-03: an empty result is not proof of absence while the index lags. Creating anyway
+    // would make the DUPLICATE this function exists to prevent.
+    const remembered = recallFolder(parentId, name);
+    if (remembered) return { id: remembered, name };
     const created = await createFolder(parentId, name);
     const after = (await driveFetch('GET', `/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`)).files || [];
     return _dedupeSameNameFolders(after, created);
