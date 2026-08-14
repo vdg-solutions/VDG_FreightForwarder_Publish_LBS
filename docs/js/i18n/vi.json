@@ -144,7 +144,7 @@
   "phase.advance_conditions":"Điều kiện để chuyển sang «{state}»",
   "phase.req.unverified":"chưa xác nhận được",
   "phase.req.carrier_booking":"Xác nhận booking hãng tàu",
-  "phase.req.quotation":"Báo giá được duyệt",
+  "phase.req.quotation":"Đã chốt giá bán (nhập Tiền Bán ở PNL)",
   "phase.req.dg_compliance":"Hồ sơ hàng nguy hiểm",
   "phase.req.containers":"Container đã lên tàu",
   "phase.req.voyage_departed":"Tàu đã chạy",

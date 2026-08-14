@@ -144,7 +144,7 @@
   "phase.advance_conditions":"Conditions to advance to “{state}”",
   "phase.req.unverified":"not verified yet",
   "phase.req.carrier_booking":"Carrier booking confirmed",
-  "phase.req.quotation":"Quotation accepted",
+  "phase.req.quotation":"Selling price agreed (enter Selling in PNL)",
   "phase.req.dg_compliance":"Dangerous-goods file",
   "phase.req.containers":"Containers loaded on vessel",
   "phase.req.voyage_departed":"Vessel departed",
