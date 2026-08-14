@@ -1,20 +1,47 @@
 // section-header.js — Section A: identity, parties, routing, commercial
 
 import { t } from '../../i18n/index.js';
-import { classifyDocument } from '../sales-new/doc-auto-detect.js';
-import { computeChargeableKg } from '../../operators/air-rate-calculator.js';
-import { slugify } from '../../operators/pnl-commit-orchestrator.js';
-import { loadWasm } from '../../wasm-loader.js';
-import { getEmbedding } from '../../cache/semantic-search.js';
 import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
 import { getCurrentUser } from '../../auth/google-oauth.js';
+import { deriveDirection } from '../sales-new/shipment-builder.js';
+// the header fallback literal lives in ONE place; three copies is what the cross-side guards police
+import { DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
 
 const CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 // contract values (VALID_PRODUCTS in pnl_combined_row_mapper/shipment.rs) — value= stays raw, only the label translates
 const PRODUCT_OPTIONS  = ['FCL EXPORT', 'IMPORT FCL', 'AIR', 'LCL'];
 const MODE_OPTIONS     = ['SEA', 'AIR'];
+// F-41-07: direction is a FIELD of the shipment, not a fact about the product. FCL EXPORT and
+// IMPORT FCL happen to name it, AIR and LCL do not — and the customs check reads `direction`, so
+// an air job left it Unknown forever and could never leave Arrived. Collect it here: pre-filled
+// and read-only where the product already decides, an open required choice where it does not.
+const DIRECTION_OPTIONS    = ['export', 'import'];
+const DIRECTION_LABEL_KEYS = { export: 'sales_new.direction_option.export', import: 'sales_new.direction_option.import' };
+// field-key names, hoisted so the i18n linter reads them as identifiers rather than as bare
+// English prose inside the markup template (same carve-out shape as NAME_ATA in section-docs-ext)
+const NAME_DIRECTION         = 'direction';
+const NAME_DIRECTION_DISPLAY = 'direction_display';
 const PRODUCT_LABEL_KEYS = { 'FCL EXPORT': 'sales_new.product_option.fcl_export', 'IMPORT FCL': 'sales_new.product_option.import_fcl', AIR: 'sales_new.product_option.air', LCL: 'sales_new.product_option.lcl' };
 const MODE_LABEL_KEYS    = { SEA: 'sales_new.mode_selector.sea', AIR: 'sales_new.mode_selector.air' };
+
+/** The direction the product itself settles, or '' when the user must say. */
+export function directionFromProduct(product) {
+  return deriveDirection({ product }) || '';
+}
+
+function directionSel(draft) {
+  const fromProduct = directionFromProduct(draft.product);
+  const selected    = fromProduct || draft.direction || '';
+  const locked      = fromProduct ? ' disabled' : '';
+  // A disabled select submits nothing, so mirror the settled value in a hidden twin — the record
+  // must carry `direction` whether the user picked it or the product did.
+  const mirror = fromProduct ? `<input type="hidden" name="${NAME_DIRECTION}" value="${fromProduct}" />` : '';
+  return `<select name="${fromProduct ? NAME_DIRECTION_DISPLAY : NAME_DIRECTION}"${locked}
+    class="w-full border border-slate-200 rounded px-2 py-1 text-xs${locked ? ' bg-slate-50' : ''}">
+    <option value="">—</option>${DIRECTION_OPTIONS.map((o) =>
+      `<option value="${o}"${o === selected ? ' selected' : ''}>${t(DIRECTION_LABEL_KEYS[o])}</option>`).join('')}
+  </select>${mirror}`;
+}
 
 export function fld(label, inner) {
   return `
@@ -81,7 +108,36 @@ function custSel(customers, selected, isAutofilled) {
     </div>`;
 }
 
-export function sectionAHtml(draft = {}, customers = []) {
+// F-41-01: the rep field is a SELECT over provisioned reps (value = fork prefix), not free text —
+// what it holds names the revenue fork, the publish fork and the Job No namespace, none of which
+// a typed label can address. A prior value that is not in the active list (rep left, legacy
+// record) stays offered so an edit never silently loses it; a sentinel ('__MANAGER__') is a role
+// token, not a rep, and is NOT re-offered — resaving such a record forces a real pick.
+function repOptionLabel(r) {
+  return r.sales_code ? `${r.name} (${r.sales_code})` : r.name;
+}
+
+function repSel(reps, selected, currentUser) {
+  const known  = (reps || []).some((r) => r.prefix === selected);
+  const legacy = selected && !known && !/^__.*__$/.test(selected)
+    ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : '';
+  const opts = (reps || []).map((r) =>
+    `<option value="${r.prefix}"${r.prefix === selected ? ' selected' : ''}>${repOptionLabel(r)}</option>`).join('');
+  return `<select name="sales_rep" class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs">
+    <option value="">${t('sales_new.select_placeholder')}</option>${legacy}${opts}
+  </select>`;
+}
+
+// F-41-02: the job-side quote door. Options load when the picker opens (quote-attach.js);
+// at render it only shows what is already attached, so an edit reads truthfully offline.
+function quotePickSel(quoteId) {
+  const current = quoteId ? `<option value="${quoteId}" selected>${quoteId}</option>` : '';
+  return `<select name="quote_pick" class="w-full border border-slate-200 rounded px-2 py-1 text-xs">
+    <option value="">${t('sales_new.quote_pick_placeholder')}</option>${current}
+  </select>`;
+}
+
+export function sectionAHtml(draft = {}, customers = [], reps = []) {
   const d    = draft;
   const mode = (d.mode || 'SEA').toUpperCase();
   const seaHide = mode === 'AIR' ? ' class="hidden"' : '';
@@ -99,7 +155,9 @@ export function sectionAHtml(draft = {}, customers = []) {
         ${fld(t('sales_new.field.job_no'), `<div class="flex items-center gap-2"><input type="text" name="job_no" value="${d.job_no || ''}" readonly class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" /><label class="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap"><input type="checkbox" name="has_hbl" ${d.has_hbl ? 'checked' : ''} class="h-3.5 w-3.5" />${t('sales_new.field.has_hbl')}</label></div>`)}
         ${cfld(t('sales_new.field.hbl_do'), `<input type="text" name="hbl_do_display" value="${d.has_hbl ? (d.job_no || '') : ''}" readonly class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" />`, `data-hbl-do-row${d.has_hbl ? '' : ' class="hidden"'}`)}
         ${fld(t('sales_new.field.product'),  selFld('product', PRODUCT_OPTIONS, d.product, PRODUCT_LABEL_KEYS))}
+        ${fld(t('sales_new.field.direction'), directionSel(d))}
         ${fld(t('sales_new.field.customer'), custSel(customers, d.customer, d._autofilled))}
+        ${fld(t('sales_new.field.quote_pick'), quotePickSel(d.quote_id))}
         ${fld(t('sales_new.field.shipper'),   txt('shipper',  d.shipper))}
         ${fld(t('sales_new.field.consignee'), txt('consignee', d.consignee))}
         ${fld(t('sales_new.field.contact'),   txt('contact_person', d.contact_person))}
@@ -113,12 +171,11 @@ export function sectionAHtml(draft = {}, customers = []) {
         ${fld(t('sales_new.field.roe_buy'),  num('roe_buying', d.roe_buying))}
         ${fld(t('sales_new.field.roe_sell'), num('roe_selling', d.roe_selling))}
         ${fld(t('sales_new.field.currency'),
-          selFld('currency', CURRENCY_OPTIONS, d.currency || 'USD'))}
+          selFld('currency', CURRENCY_OPTIONS, d.currency || DEFAULT_HEADER_CURRENCY))}
         <div>
           <label class="block text-[10px] text-slate-500 mb-0.5">${t('sales_new.field.sales_rep')}</label>
           <div class="flex gap-1">
-            <input type="text" name="sales_rep" value="${resolveSalesRepLabel(d.sales_rep, getCurrentUser(), t)}"
-              class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs" />
+            ${repSel(reps, d.sales_rep, getCurrentUser())}
             <span id="doc-type-badge"
               class="hidden text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 self-center">
             </span>
@@ -136,215 +193,4 @@ export function sectionAHtml(draft = {}, customers = []) {
         ${cfld(t('sales_new.field.chargeable_kg'), roNum('chargeable_kg', d.chargeable_kg),     `data-air-only${airHide}`)}
       </div>
     </div>`;
-}
-
-// apply mode: toggle sea-only / air-only field visibility
-function _applyMode(root, mode) {
-  const isAir = mode === 'AIR';
-  root.querySelectorAll('[data-sea-only]').forEach((el) => {
-    el.classList.toggle('hidden', isAir);
-  });
-  root.querySelectorAll('[data-air-only]').forEach((el) => {
-    el.classList.toggle('hidden', !isAir);
-  });
-}
-
-// recompute + display chargeable weight from air inputs
-function _updateChargeable(root) {
-  const n = (name) => parseFloat(root.querySelector(`[name=${name}]`)?.value) || 0;
-  const kg = computeChargeableKg(
-    n('weight_actual_kg'), n('dim_l_cm'), n('dim_w_cm'), n('dim_h_cm')
-  );
-  const el = root.querySelector('[name=chargeable_kg]');
-  if (el) el.value = kg;
-}
-
-// Wires MBL → doc-type badge; mode toggle; chargeable weight; calls onChanged on any Section A input
-export function wireHeaderSection(root, onChanged) {
-  const mblEl  = root.querySelector('[name=mbl]');
-  const modeEl = root.querySelector('[name=mode]');
-  const badge  = root.querySelector('#doc-type-badge');
-
-  const updateBadge = () => {
-    const res = classifyDocument(mblEl?.value || '');
-    if (res.confidence !== 'Low' && res.docType) {
-      if (badge) { badge.textContent = res.docType; badge.classList.remove('hidden'); }
-    } else if (badge) {
-      badge.classList.add('hidden');
-    }
-  };
-
-  mblEl?.addEventListener('input', () => { updateBadge(); onChanged?.(); });
-  mblEl?.addEventListener('paste', () => setTimeout(() => { updateBadge(); onChanged?.(); }, 0));
-
-  modeEl?.addEventListener('change', () => {
-    _applyMode(root, modeEl.value);
-    onChanged?.();
-  });
-  const hblChk = root.querySelector('[name=has_hbl]'); // F-32-01 DEFECT-02: HBL/D-O display toggle
-  hblChk?.addEventListener('change', () => {
-    const on = hblChk.checked, disp = root.querySelector('[name=hbl_do_display]');
-    root.querySelectorAll('[data-hbl-do-row]').forEach((el) => el.classList.toggle('hidden', !on));
-    if (disp) disp.value = on ? (root.querySelector('[name=job_no]')?.value || '') : '';
-  });
-
-  const airFields = ['weight_actual_kg', 'dim_l_cm', 'dim_w_cm', 'dim_h_cm'];
-  airFields.forEach((name) => {
-    root.querySelector(`[name=${name}]`)?.addEventListener('input', () => {
-      _updateChargeable(root);
-      onChanged?.();
-    });
-  });
-
-  root.querySelector('#sec-a-body')?.querySelectorAll('input,select').forEach((el) => {
-    if (el !== mblEl && el !== modeEl && !airFields.includes(el.name) && el.id !== 'customer-search-input') {
-      el.addEventListener('input', onChanged);
-      el.addEventListener('change', onChanged);
-    }
-  });
-
-  // Wire Customer Hybrid Search
-  const custInput = root.querySelector('#customer-search-input');
-  const custHidden = root.querySelector('[name=customer]');
-  const custDropdown = root.querySelector('#customer-search-dropdown');
-  let cIndex = null;
-  const initCIndex = async () => {
-      if (cIndex) return;
-      const wasm = await loadWasm();
-      if (!wasm) return;
-      cIndex = new wasm.CustomerIndex();
-      // Assume customers array is available globally or passed down (it's passed in sectionAHtml but not here, we need to grab it)
-      // We will populate it from window.__vdg_repo if needed
-      try {
-          const repo = window.__vdg_repo;
-          if (repo) {
-              const list = await repo.list('customers');
-              for (const c of list) {
-                  if (c.name) {
-                      cIndex.add_customer(JSON.stringify({ id: c.name, name: c.name, embedding: c.embedding || null }));
-                  }
-              }
-          }
-      } catch (e) { console.warn('Failed to load customers into index', e); } // DEV
-  };
-
-  let searchTimeout = null;
-
-  const renderDropdown = (results, query) => {
-      custDropdown.innerHTML = '';
-      if (results.length > 0) {
-          results.forEach(r => {
-              const div = document.createElement('div');
-              div.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b border-slate-100';
-              const scoreHtml = r.score !== undefined ? `<span class="text-[9px] text-slate-400">${t('common.score_label')} ${(r.score).toFixed(2)}</span>` : '';
-              div.innerHTML = `<span class="font-medium">${r.name}</span>${scoreHtml}`;
-              div.addEventListener('click', () => {
-                  custInput.value = r.name;
-                  custHidden.value = r.name;
-                  custDropdown.classList.add('hidden');
-                  onChanged?.();
-              });
-              custDropdown.appendChild(div);
-          });
-      } else {
-          custDropdown.innerHTML = `<div class="px-3 py-2 text-slate-400 italic">Không tìm thấy khách hàng.</div>`;
-      }
-      
-      if (query) {
-          const createBtn = document.createElement('div');
-          createBtn.className = 'px-3 py-2 bg-slate-50 hover:bg-slate-100 cursor-pointer text-blue-600 font-medium text-center sticky bottom-0 border-t border-slate-200';
-          createBtn.textContent = '+ Tạo nhanh: "' + query + '"';
-          createBtn.addEventListener('click', async () => {
-              const repo = window.__vdg_repo;
-              if (repo) {
-                  const id = `CUST-${slugify(query)}`;
-                  const newCust = { id, name: query, status: 'Draft' };
-                  try {
-                      await repo.put('customers', id, newCust);
-                      custInput.value = query;
-                      custHidden.value = query;
-                      custDropdown.classList.add('hidden');
-                      if (cIndex) cIndex.add_customer(JSON.stringify({ id: query, name: query, embedding: null }));
-                      onChanged?.();
-                      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message: 'Đã tạo nhanh khách hàng', type: 'success' } }));
-                  } catch(err) {
-                      console.error(err); // DEV
-                  }
-              }
-          });
-          custDropdown.appendChild(createBtn);
-      }
-      
-      custDropdown.classList.remove('hidden');
-  };
-
-  const doSearch = (query, isAutofillCheck = false) => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(async () => {
-          if (!query) {
-              const repo = window.__vdg_repo;
-              let results = [];
-              if (repo) {
-                  const list1 = await repo.list('customers') || [];
-                  const list2 = await repo.list('customer') || [];
-                  const list = list1.length > list2.length ? list1 : list2;
-                  results = list.slice(0, 5).map(c => ({ name: c.name }));
-              }
-              renderDropdown(results, query);
-              return;
-          }
-          await initCIndex();
-          const qEmb = await getEmbedding(query);
-          let resultsJson = '[]';
-          if (cIndex) {
-              resultsJson = cIndex.search(query, JSON.stringify(qEmb), 5);
-          }
-          const results = JSON.parse(resultsJson);
-          
-          if (isAutofillCheck) {
-              // If it's an exact match or very close score, auto-accept and don't warn
-              const exactMatch = results.find(r => r.name.toLowerCase() === query.toLowerCase());
-              if (exactMatch || (results.length > 0 && results[0].score > 0.95)) {
-                  const bestName = exactMatch ? exactMatch.name : results[0].name;
-                  custInput.value = bestName;
-                  custHidden.value = bestName;
-                  custInput.classList.remove('border-amber-400', 'bg-amber-50');
-                  custDropdown.classList.add('hidden');
-                  onChanged?.();
-                  return;
-              } else {
-                  // Not exact match, show amber warning and open dropdown
-                  custInput.classList.add('border-amber-400', 'bg-amber-50');
-              }
-          } else {
-              custInput.classList.remove('border-amber-400', 'bg-amber-50');
-          }
-          
-          renderDropdown(results, query);
-      }, 100);
-  };
-
-  custInput?.addEventListener('input', (e) => {
-      const query = e.target.value.trim();
-      custHidden.value = query; // keep it in sync for raw typing
-      onChanged?.();
-      doSearch(query);
-  });
-  
-  custInput?.addEventListener('focus', (e) => {
-      const query = e.target.value.trim();
-      doSearch(query);
-  });
-  
-  // Trigger autofill check
-  if (custInput?.hasAttribute('data-autofilled') && custInput.value.trim()) {
-      doSearch(custInput.value.trim(), true);
-  }
-  
-  // Hide dropdown when clicking outside
-  document.addEventListener('click', (e) => {
-      if (!custInput?.contains(e.target) && !custDropdown?.contains(e.target)) {
-          custDropdown?.classList.add('hidden');
-      }
-  });
 }

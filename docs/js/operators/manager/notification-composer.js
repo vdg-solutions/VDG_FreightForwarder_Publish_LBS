@@ -1,6 +1,9 @@
 // Operator — Notification compute. Pure, no I/O.
 
+import { resolveSalesRepLabel } from '../../util/sales-rep-i18n.js';
+
 const PERIOD_CLOSE_WARN_DAYS = 7;
+const UNKNOWN_REP            = '?';
 const CUTOFF_WARN_HOURS      = 24;
 
 const NOTIFICATION_TYPES = [
@@ -38,8 +41,10 @@ export function computeFromEvent(eventDetail, entities) {
   }
 
   if (kind === 'commission_settlement' && entity?.status === 'Pending') {
+    // F-19-71: sales_rep can hold a role token (__MANAGER__), and a notification title is DOM —
+    // route it through the same resolver every other rep-render seam uses (F-19-66).
     return _make('commission_settle_request',
-      `Commission settle request from ${entity.sales_rep || '?'}`,
+      `Commission settle request from ${resolveSalesRepLabel(entity.sales_rep) || UNKNOWN_REP}`,
       { entityKind: kind, entityId: id });
   }
 

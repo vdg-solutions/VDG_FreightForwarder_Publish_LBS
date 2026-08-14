@@ -19,6 +19,9 @@ const AUDIT_FINAL_STATES       = ['Delivered', 'Closed']; // void hidden — aud
 export function chooseShipmentAffordance(shipment) {
   if (shipment?.publish_state === DRAFT_PUBLISH_STATE) return 'delete';
   if (shipment?.state === UNKNOWN_STATE) return 'delete';          // stored rollback-residue orphan
+  // Voiding is what PUT the shipment in Cancelled; offering it again asks the manager to cancel
+  // an already-cancelled job, and the second void is a no-op write of the state it already holds.
+  if (shipment?.state === CANCELLED_STATE) return 'none';
   if (AUDIT_FINAL_STATES.includes(shipment?.state)) return 'none';
   return 'void';
 }

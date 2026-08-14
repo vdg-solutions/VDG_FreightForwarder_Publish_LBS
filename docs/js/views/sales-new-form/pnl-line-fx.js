@@ -12,10 +12,10 @@ const RO_CELL_CLS  = `${FX_CELL_CLS} bg-slate-50`;
 export const LINE_CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 
 // Last-ditch header currency when neither the draft nor the workspace default supplies one.
-// MUST equal section-header.js's `d.currency || 'USD'` literal: sectionBHtml used to pass '' here
-// instead, so a blank form rendered a USD header against VND line cells and reported every cell
-// as a currency mismatch. Same hand-sync rule as LINE_CURRENCY_OPTIONS above.
-export const DEFAULT_HEADER_CURRENCY = 'USD';
+// MUST equal workspace-settings.js's DEFAULT_CURRENCY and section-header.js's own fallback:
+// sectionBHtml used to pass '' here instead, so a blank form rendered one currency in the header
+// against another in the line cells and called every cell a mismatch. Hand-sync rule as above.
+export const DEFAULT_HEADER_CURRENCY = 'VND';
 
 /** computeLineVnd — AC-02: vnd_amount = amount × fx_rate, VND passthrough */
 export function computeLineVnd(amount, currency, fxRate) {

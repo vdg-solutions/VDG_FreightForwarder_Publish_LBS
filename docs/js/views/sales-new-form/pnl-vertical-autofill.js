@@ -68,6 +68,13 @@ export function shipmentToDraft(shipment, ce) {
     doc_type:           s.doc_type           || '',
     volume_cbm:         s.volume_cbm         ?? '',
     atd:                s.atd                || '',
+    // F-41-03: phase evidence — an edit that dropped these would untick the timeline
+    ata:                s.ata                || '',
+    customs_cleared_at: s.customs_cleared_at || '',
+    haulage_signed_at:  s.haulage_signed_at  || '',
+    do_released_at:     s.do_released_at     || '',
+    cargo_released_at:  s.cargo_released_at  || '',
+    billing_paid_at:    s.billing_paid_at    || '',
     sales_rep:    s.sales_rep_id          || '',
     customer:     s.customer              || '',
     shipper:      s.shipper               || '',

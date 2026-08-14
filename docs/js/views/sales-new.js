@@ -2,7 +2,9 @@
 
 import { t } from '../i18n/index.js';
 import { navigate } from '../router.js';
-import { currentSalesRepId } from '../auth/auth-gate.js';
+import { currentSalesRepId, currentRoles } from '../auth/auth-gate.js';
+import { selfRepCandidate, customerRepFor } from '../operators/sales-rep-derivation.js';
+import { getActiveSalesReps } from '../operators/sales-registry.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
 import { renderForm, collectFormState, validateNiForm, shipmentToDraft, jumpToFirstError } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
@@ -16,6 +18,12 @@ import { getShipment, REVENUE_SEEN } from '../data/shipment-repo.js';
 import { loadTimeline, renderTimeline, bindTimeline } from '../components/phase-timeline.js';
 
 const TIMELINE_MOUNT_ID = 'phase-timeline';
+// A NEW job has no shipment_ref yet, but the timeline still needs a non-empty entity id to render
+// the Created checklist (F-37-04). It used to borrow the Job No for this — a 10-digit legal doc
+// number sitting in a ref-typed slot. The sentinel says what it is; it never persists (submitForm
+// mints the real EX|IM ref) and the FSM registry simply has no entry for it, which falls back to
+// the record's own state exactly like any not-yet-registered job.
+const DRAFT_TIMELINE_REF = 'draft:new';
 
 /**
  * Draw the phases above the form, and let a click move the FORM'S FOCUS.
@@ -88,8 +96,14 @@ function _dispatchCommitted(formMount, repId) {
 export async function render(root, opts = {}) {
   const { editRef = null, mode = 'create', salesId = 'me', quotePrefill = null } = opts;
   const isEdit = mode === 'edit' && !!editRef;
-  // salesId 'me' (self-service) resolves to the signed-in rep; an explicit id = on-behalf.
-  const salesRepId = (salesId && salesId !== 'me') ? salesId : (currentSalesRepId() || '');
+  // F-41-01: the job's rep is DERIVED — explicit ?sales= (on-behalf / the quote-convert door)
+  // wins, else the signed-in session but ONLY when it actually holds a sales role. The old
+  // unconditional `currentSalesRepId()` default is the bug this feature exists to remove: a job
+  // CS opened was attributed to the CS account, so its revenue fork, publish fork and Job No
+  // namespace all pointed at the wrong person. '' here means the form must be given a rep —
+  // the customer master autofills one, or the select asks.
+  const routeRep   = (salesId && salesId !== 'me') ? salesId : null;
+  const salesRepId = routeRep || selfRepCandidate(currentRoles(), currentSalesRepId() || '');
   const repo = window.__vdg_repo;
 
   let customers  = [];
@@ -97,6 +111,7 @@ export async function render(root, opts = {}) {
   let draft      = null;
   let jobNo      = null;
   let defaultCurrency = null;
+  let reps       = [];
   // F-37-06: whether the SELL SIDE came back. A new job is visible - the rep about to type the
   // figures is the one who owns them. On an edit it is whatever the read actually returned, so
   // CS opening a job gets no revenue section: not because of their role, but because the folder
@@ -111,13 +126,15 @@ export async function render(root, opts = {}) {
   // await) so a stalled repo never doubles the wait — reuses rawUserConfig, no extra fetch.
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, rawUserConfig, assignment, wsSettings] = await Promise.all([
+      const [customerList, rawUserConfig, assignment, wsSettings, repList] = await Promise.all([
         repo.list('customers').catch(() => []),
         salesRepId ? repo.get('user', `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
         salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
         // Accounting's default header currency — a LOCAL store read (workspace_settings kind),
         // not a Drive fetch: the delta tick is what keeps it current, not this render.
         isEdit ? Promise.resolve(null) : readSettings(repo),
+        // F-41-01: the rep select's options — a master-kind read, same 5-min registry cache.
+        getActiveSalesReps(repo).catch(() => []),
       ]);
       // Resolve manager-assigned sales_pct → inject into userConfig
       let resolvedUserConfig = rawUserConfig;
@@ -132,7 +149,7 @@ export async function render(root, opts = {}) {
           generatedJobNo = await assignJobNo(repo, repCode);
         } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
       }
-      return { customerList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings };
+      return { customerList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
@@ -140,6 +157,7 @@ export async function render(root, opts = {}) {
       userConfig = loadRes.value.userConfig;
       jobNo      = loadRes.value.jobNo;
       defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
+      reps       = loadRes.value.repList;
     }
     // !loadRes.ok (timeout or thrown): customers=[], userConfig=null, jobNo=null — all
     // already-tolerated defaults downstream (sales-new-form.js — no contract change;
@@ -203,14 +221,42 @@ export async function render(root, opts = {}) {
   // opened the job what the FIRST phase needs before they have typed anything.
   mountPhaseTimeline(root, {
     ...(draft || {}),
-    shipment_ref: editRef || jobNo || draft?.shipment_ref || '',
+    shipment_ref: editRef || draft?.shipment_ref || DRAFT_TIMELINE_REF,
     state: draft?.state || 'Created',
   });
+
+  // F-41-01: a prefilled customer (quote convert, restored draft) brings its master-assigned rep
+  // along when nothing picked one yet — the same chain the select's autofill walks.
+  if (draft && !draft.sales_rep) {
+    const fromCust = customerRepFor(draft.customer, customers);
+    if (fromCust) draft.sales_rep = fromCust;
+  }
 
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
   await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
-                                defaultCurrency, revenueVisible });
+                                defaultCurrency, revenueVisible, reps, editRef });
+
+  // F-41-01: the Job No preview follows the CHOSEN rep — a CS session has no namespace of its
+  // own to preview from, so the number appears when the rep does. Preview only: submit resolves
+  // the final number under the same rep, and edit mode never regenerates (guarded below).
+  const repSelect = formMount.querySelector('select[name=sales_rep]');
+  if (!isEdit && repo && repSelect) {
+    repSelect.addEventListener('change', async () => {
+      const prefix = repSelect.value;
+      if (!prefix) return;
+      try {
+        const user = (await repo.get('user', `user:${prefix}`).catch(() => null))
+          || { id: `user:${prefix}`, sales_code: null };
+        const code  = await ensureRepCode(user, repo);
+        const fresh = await assignJobNo(repo, code);
+        const jobEl = formMount.querySelector('[name=job_no]');
+        if (jobEl) jobEl.value = fresh;
+        const disp = formMount.querySelector('[name=hbl_do_display]');
+        if (disp && formMount.querySelector('[name=has_hbl]')?.checked) disp.value = fresh;
+      } catch { /* preview only — submit mints its own under the chosen rep */ }
+    });
+  }
 
   // F-32-02: one guard per render() — re-entrancy-blocks a second submit while the
   // first is still pending (double-click / slow network) so only one shipment/job_no
@@ -226,7 +272,7 @@ export async function render(root, opts = {}) {
     await guardedSubmit([saveBtn, publishBtn], async () => {
       const publish = intent === 'publish';
       const state   = collectFormState(formMount);
-      const errors  = validateNiForm(state);
+      const errors  = validateNiForm(state, { publish });
       if (errors.length) {
         highlightErrors(root, errors);
         jumpToFirstError(root); // E-39: the flagged field may sit on another screen
@@ -245,10 +291,13 @@ export async function render(root, opts = {}) {
         if (!proceed) return;
         state._fx_overrides = overrides;
       }
+      // F-41-01: the record's owner is what the FORM resolved (select → derivation chain), never
+      // the session fallback alone — validateNiForm has already refused an empty pick.
+      const repFinal = state.sales_rep || salesRepId;
       try {
         if (isEdit) {
-          const { advancedTo } = await updateForm(state, repo, salesRepId, editRef, undefined, { publish });
-          _dispatchCommitted(formMount, salesRepId);
+          const { advancedTo } = await updateForm(state, repo, repFinal, editRef, undefined, { publish });
+          _dispatchCommitted(formMount, repFinal);
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
           showToast(t(key).replace('{ref}', editRef), 'success');
           // E-40: the save completed the phase's data and the job moved — say so, and re-render so
@@ -259,8 +308,8 @@ export async function render(root, opts = {}) {
             navigate('/sales/edit/' + editRef);
           }
         } else {
-          const { ref, advancedTo } = await submitForm(state, repo, salesRepId, undefined, { publish });
-          _dispatchCommitted(formMount, salesRepId);
+          const { ref, advancedTo } = await submitForm(state, repo, repFinal, undefined, { publish });
+          _dispatchCommitted(formMount, repFinal);
           await clearDraft();
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
           showToast(t(key).replace('{ref}', ref), 'success');

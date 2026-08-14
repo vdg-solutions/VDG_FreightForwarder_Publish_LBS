@@ -17,7 +17,9 @@ const SHARED_FOLDER       = '_shared';
 const DEFAULT_FX_SOURCE   = 'Manual';
 // Accounting's default for a NEW P&L header. Must equal section-header.js's own fallback so a
 // workspace that has never saved settings still renders the header and the line cells alike.
-const DEFAULT_CURRENCY    = 'USD';
+// Owner 2026-08-14: VND. It is the LEDGER's own currency (every stored figure is vnd_pay /
+// vnd_collect), so a VND job needs no FX at all — lockFxIfVnd pins those lines at rate 1.
+const DEFAULT_CURRENCY    = 'VND';
 
 // Local store read, not a network call — SAFE_AWAIT_DEFAULT_MS (8s) is a budget for Drive.
 // Derived, not picked: a caller on a render path pays this BEFORE its own 8s bounded load, and

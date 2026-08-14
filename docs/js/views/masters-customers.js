@@ -4,12 +4,13 @@ import { hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { openMergeModal, mergeRecords, repointRefs } from '../operators/manager/merge-orchestrator.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { boundedList, renderMasterLoadRetryStatus } from '../util/master-load.js';
+import { getActiveSalesReps } from '../operators/sales-registry.js';
 import { t } from '../i18n/index.js';
 
 const KIND       = 'customers';
 const KIND_PREFIX = 'CUST'; // AC-M2
 
-const COLS = ['name', 'short_code', 'contact_person', 'tel', 'actions'];
+const COLS = ['name', 'short_code', 'contact_person', 'tel', 'sales_rep', 'actions'];
 
 const LOAD_ERROR_MSG   = "Couldn't load customers. Please retry.";
 const LOAD_RETRY_LABEL = 'Retry';
@@ -26,7 +27,18 @@ function genId() {
 
 // ── modal ─────────────────────────────────────────────────────────────────────
 
-function buildModal(entity) {
+// F-41-01: which rep serves this customer lives on the customer master, so a CS-created job
+// inherits its rep from the customer instead of from whoever typed it (industry rule). A stored
+// prefix no longer in the active list is still offered so an edit never silently drops it.
+function repOptions(reps, selected) {
+  const known  = (reps || []).some((r) => r.prefix === selected);
+  const legacy = selected && !known ? `<option value="${escHtml(selected)}" selected>${escHtml(selected)}</option>` : '';
+  return `<option value="">${t('masters_customers.field.sales_rep_none')}</option>${legacy}` +
+    (reps || []).map((r) =>
+      `<option value="${escHtml(r.prefix)}"${r.prefix === selected ? ' selected' : ''}>${escHtml(r.name)}${r.sales_code ? ` (${escHtml(r.sales_code)})` : ''}</option>`).join('');
+}
+
+function buildModal(entity, reps) {
   const isEdit = !!entity;
   const e = entity || {};
   return `
@@ -67,6 +79,13 @@ function buildModal(entity) {
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         </div>
         <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.sales_rep')}</label>
+          <select id="m-sales_rep"
+                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+            ${repOptions(reps, e.sales_rep_id)}
+          </select>
+        </div>
+        <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">${t('masters_customers.field.commercial_terms')}</label>
           <select id="m-commercial_terms"
                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -87,9 +106,9 @@ function buildModal(entity) {
     </dialog>`;
 }
 
-function openModal(root, entity, onSave) {
+function openModal(root, entity, onSave, reps = []) {
   root.querySelector('#master-modal')?.remove();
-  root.insertAdjacentHTML('beforeend', buildModal(entity));
+  root.insertAdjacentHTML('beforeend', buildModal(entity, reps));
   const dialog = root.querySelector('#master-modal');
   dialog.showModal();
 
@@ -113,6 +132,7 @@ function openModal(root, entity, onSave) {
       tel:            dialog.querySelector('#m-tel').value.trim() || null,
       email:          dialog.querySelector('#m-email').value.trim() || null,
       address:        dialog.querySelector('#m-address').value.trim() || null,
+      sales_rep_id:   dialog.querySelector('#m-sales_rep').value || null,
       commercial_terms:                  dialog.querySelector('#m-commercial_terms').value || null,
     };
 
@@ -135,6 +155,7 @@ function rowHtml(e, isM) {
       <td class="px-3 py-2 font-mono">${escHtml(e.short_code)}</td>
       <td class="px-3 py-2">${escHtml(e.contact_person)}</td>
       <td class="px-3 py-2">${escHtml(e.tel)}</td>
+      <td class="px-3 py-2 font-mono">${escHtml(e.sales_rep_id)}</td>
       ${isM ? `<td class="px-3 py-2">${actions}</td>` : ''}
     </tr>`;
 }
@@ -145,6 +166,10 @@ export async function render(root) {
   const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   let items  = [];
+  // F-41-01: options for the "sales phụ trách" select. Loaded when a modal OPENS, never on
+  // render's critical path — a stalled user-kind read must not push this view past its
+  // bounded-load ceiling (the F-29-14 guarantee).
+  const loadReps = async () => (repo ? await getActiveSalesReps(repo).catch(() => []) : []);
 
   const checkCol = isM ? '<th class="px-2 py-2 w-8"></th>' : '';
   const actCol   = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
@@ -167,6 +192,7 @@ export async function render(root) {
               <th class="px-3 py-2 text-left">${t('masters_customers.col.short_code')}</th>
               <th class="px-3 py-2 text-left">${t('masters_customers.col.contact')}</th>
               <th class="px-3 py-2 text-left">${t('masters_customers.col.tel')}</th>
+              <th class="px-3 py-2 text-left">${t('masters_customers.col.sales_rep')}</th>
               ${actCol}
             </tr>
           </thead>
@@ -217,18 +243,18 @@ export async function render(root) {
 
   await reload();
 
-  root.querySelector('#btn-add')?.addEventListener('click', () => {
+  root.querySelector('#btn-add')?.addEventListener('click', async () => {
     openModal(root, null, async (entity) => {
       await repo.put(KIND, entity.id, entity);
       await reload();
-    });
+    }, await loadReps());
   });
 
   root.querySelector('#m-tbody')?.addEventListener('click', async (e) => {
     const editBtn = e.target.closest('.btn-edit');
     if (editBtn) {
       const entity = items.find((i) => i.id === editBtn.dataset.id);
-      if (entity) openModal(root, entity, async (updated) => { await repo.put(KIND, updated.id, updated); await reload(); });
+      if (entity) openModal(root, entity, async (updated) => { await repo.put(KIND, updated.id, updated); await reload(); }, await loadReps());
     }
     const delBtn = e.target.closest('.btn-delete');
     if (delBtn) {

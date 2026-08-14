@@ -45,15 +45,18 @@ function headerBlock(s) {
 
   const today = todayLocal();
   const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
-  const salesRep = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t) || '—';
+  // F-41-05: the record's field is sales_rep_id — the names read before never existed on it,
+  // so the sheet printed '—' for the very person whose commission it feeds.
+  const salesRep = resolveSalesRepLabel(s.sales_rep_id || s.sales_rep || '', currentUser, t) || '—';
   const currencyLabel = t('currency');
   return `
     <div class="grid grid-cols-2 gap-x-8 mb-6">
       <table>
         <tbody>
+          ${row(t('sales_new.field.job_no'), fmt(s.job_no))}
           ${row(t('budget_print.field.job_file_no'),    fmt(s.job_file_no))}
-          ${row('MBL',           fmt(s.mbl_no))}
-          ${row('HBL',           fmt(s.hbl_no))}
+          ${row('MBL',           fmt(s.mbl))}
+          ${row('HBL',           fmt(s.hbl))}
           ${row(t('sales_rep'),  fmt(salesRep))}
           ${row(t('budget_print.field.preparing_date'), fmt(s.prep_date || today))}
           ${row(t('sales_new.field.shipper'),   fmt(s.shipper))}
@@ -68,7 +71,7 @@ function headerBlock(s) {
           ${row('ETD',           fmt(s.etd))}
           ${row('ETA',           fmt(s.eta))}
           ${row('ROE BUYING',    fmt(s.roe_buying))}
-          ${row('ROE DEBIT',     fmt(s.roe_selling))}
+          ${row('ROE DEBIT',     fmt(s.roe_debit))}
         </tbody>
       </table>
     </div>

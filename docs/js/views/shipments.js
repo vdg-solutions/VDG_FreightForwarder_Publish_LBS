@@ -4,13 +4,12 @@ import { UNKNOWN_STATE } from '../util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../util/shipment-state-aliases.js';
 import { safeAwait } from '../util/safe-await.js';
 import { shipmentLane } from '../util/shipment-lane.js';
-import { t, fmtNumber } from '../i18n/index.js';
+import { t } from '../i18n/index.js';
 import { agGridLocaleText } from '../i18n/ag-grid-locale.js';
 import { hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
-import { showConfirm } from '../helpers/show-confirm.js';
-import { chooseShipmentAffordance, runShipmentAffordance } from '../operators/shipment-void-delete.js';
 import { listShipments } from '../data/shipment-repo.js';
 import { navigate } from '../router.js';
+import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
 
 const PANEL_WIDTH_PX    = 480;
 const SLIDE_DURATION_MS = 250;
@@ -20,40 +19,6 @@ const Z_PANEL           = 40;
 const GOOGLE_DRIVE_URL = '/data/10k_shipments.json';
 const FSM_LEGEND_CODE  = 'FSM-01'; // status-machine badge prefix, not translatable prose — same
                                     // class as the linter's FINANCE_ABBREVS carve-out (MTD/YTD)
-
-function statusRenderer(params) {
-  const el = document.createElement('status-badge');
-  el.setAttribute('state', params.value);
-  el.setAttribute('fsm', 'shipment');
-  return el;
-}
-
-function pnlRenderer(params) {
-  // F-37-06: undefined is NOT zero. A reader who could not see the sell side must not be shown
-  // a margin at all - `|| 0` reported cost-with-no-revenue, i.e. every job at a loss.
-  if (params.value === undefined || params.value === null) {
-    const dash = document.createElement('span');
-    dash.className = 'text-slate-400 font-mono text-xs';
-    dash.textContent = '—';
-    return dash;
-  }
-  const v = params.value;
-  const positive = v >= 0;
-  const div = document.createElement('div');
-  div.className = 'flex items-center gap-2';
-  const bar = document.createElement('div');
-  bar.className = 'w-12 h-1.5 rounded-full overflow-hidden bg-slate-100';
-  const fill = document.createElement('div');
-  fill.style.width = `${Math.min(100, Math.abs(v) / 100)}%`;
-  fill.className = positive ? 'h-full bg-emerald-500' : 'h-full bg-red-500';
-  bar.appendChild(fill);
-  const label = document.createElement('span');
-  label.className = `font-mono text-xs ${positive ? 'text-emerald-700' : 'text-red-700'} font-semibold`;
-  label.textContent = `${positive ? '+' : ''}${fmtNumber(v)}`;
-  div.appendChild(bar);
-  div.appendChild(label);
-  return div;
-}
 
 // field -> i18n key. Generic columns reuse existing top-level keys (customer, state); the rest
 // are shipments-grid-specific, namespaced like sales_me.grid.* (AC-03).
@@ -70,49 +35,6 @@ const COLUMN_LABEL_KEY = {
 };
 
 const ACTIONS_COL_WIDTH = 90;
-
-// F-19-77 AC-01/02/05 — manager-only Void/Delete row action. Decision keys ONLY on the stored
-// row (publish_state/state) — orphans surface as state==='Unknown' in the grid (F-18-11
-// resolver), so the selector routes them to 'delete' without a per-row WASM NOT_FOUND probe.
-function actionsRenderer(params) {
-  const affordance = chooseShipmentAffordance(params.data);
-  if (affordance === 'none') return document.createElement('span');
-  const btn = document.createElement('button');
-  btn.className = affordance === 'delete'
-    ? 'text-xs px-2 py-1 rounded-md font-medium text-red-700 hover:bg-red-50'
-    : 'text-xs px-2 py-1 rounded-md font-medium text-amber-700 hover:bg-amber-50';
-  btn.textContent = affordance === 'delete' ? t('common.action.delete') : t('shipments.action.void');
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation(); // AC-01/02: row action must not also open the detail panel
-    handleRowAffordance(params.data, params.api);
-  });
-  return btn;
-}
-
-// AC-06 — same confirm thunk shape consumed by detail-panel.js's void/delete control.
-function confirmAffordance(affordance) {
-  return showConfirm({
-    destructive: true,
-    title: t(affordance === 'delete' ? 'shipments.delete_confirm.title' : 'shipments.void_confirm.title'),
-    body: affordance === 'void' ? t('shipments.void_confirm.body') : undefined,
-    confirmLabel: t(affordance === 'delete' ? 'common.action.delete' : 'shipments.action.void'),
-    cancelLabel: t('common.action.cancel'),
-  });
-}
-
-async function handleRowAffordance(row, api) {
-  const result = await runShipmentAffordance({
-    repo: window.__vdg_repo,
-    shipment: row,
-    isManager: hasRole(ROLE_MANAGER),
-    confirm: confirmAffordance,
-  });
-  if (!result.mutated) return;
-  // AC-04: re-list — a voided row re-renders Cancelled (still present), a deleted row is
-  // filtered out by the tombstone list filter.
-  const rows = await loadRealData();
-  api?.setGridOption('rowData', rows);
-}
 
 // Grid column headers via t() — pure, no DOM/agGrid dep so it's unit-reachable (AC-01).
 /**
@@ -143,11 +65,17 @@ export function buildColumnDefs(rows = null) {
   if (rows === null || rows.some((r) => r?.pnl != null)) {
     cols.push({ headerName: t(COLUMN_LABEL_KEY.pnl), field: 'pnl', width: 180, cellRenderer: pnlRenderer });
   }
+  // F-41-05: the P&L statement is the process's endpoint — every reader gets the door; what the
+  // sheet shows follows what their read returned (a CS row prints cost-only, same wall as here).
+  cols.push({
+    headerName: '', field: 'budget', width: 70, sortable: false, filter: false,
+    cellRenderer: budgetLinkRenderer,
+  });
   // AC-05: only a manager gets the row action column at all.
   if (hasRole(ROLE_MANAGER)) {
     cols.push({
       headerName: '', field: 'actions', width: ACTIONS_COL_WIDTH, sortable: false, filter: false,
-      cellRenderer: actionsRenderer,
+      cellRenderer: createActionsRenderer(loadRealData),
     });
   }
   return cols;

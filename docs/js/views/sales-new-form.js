@@ -4,7 +4,8 @@ import { t } from '../i18n/index.js';
 import { saveDraft } from './sales-new/draft-manager.js';
 import { todayLocal } from '../util/today-local.js';
 export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
-import { sectionAHtml, wireHeaderSection } from './sales-new-form/section-header.js';
+import { sectionAHtml } from './sales-new-form/section-header.js';
+import { wireHeaderSection } from './sales-new-form/section-header-wiring.js';
 import { sectionBHtml, wireLinesSection, collectLines, sumVndPay, sumVndCollect }
   from './sales-new-form/section-lines.js';
 import { sectionCHtml, wireCommissionSection, collectCommission }
@@ -12,6 +13,7 @@ import { sectionCHtml, wireCommissionSection, collectCommission }
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }
   from './sales-new-form/section-waterfall.js';
 import { docsExtHtml, DOCS_EXT_FIELDS } from './sales-new-form/section-docs-ext.js';
+import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
 import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
@@ -32,7 +34,7 @@ function resolveHeaderCurrency(saved, configuredDefault) {
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
           mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null,
-          revenueVisible = true } = opts;
+          revenueVisible = true, reps = [], editRef = null } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || todayLocal();
@@ -85,7 +87,7 @@ export async function renderForm(root, opts = {}) {
         </div>
       </div>
       <form id="ni-form" class="space-y-4">
-        ${sectionAHtml(d, customers)}
+        ${sectionAHtml(d, customers, reps)}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ''}
         ${revenueVisible ? sectionDHtml(d, { isManager }) : ''}
@@ -106,6 +108,9 @@ export async function renderForm(root, opts = {}) {
 
   wireHeaderSection(root, onChanged);
   wireLinesSection(root, onChanged, salesRepId, fxRepo, docDate);
+  // F-41-02: the job-side quote door — options, one-job-per-quote guard, auto-rating.
+  wireQuoteAttach(root, { repo: typeof window !== 'undefined' ? window.__vdg_repo : null,
+                          fxRepo, docDate, ownRef: editRef, onChanged });
   if (revenueVisible) {
     wireCommissionSection(root, onChanged, fxRepo, docDate);
     wireWaterfallSection(root, onChanged);
@@ -188,16 +193,33 @@ export function collectFormState(root) {
 }
 
 // → string[] (empty = valid); negative margin is NOT a blocker (AC-03)
-export function validateNiForm(state) {
+//
+// F-41-01: two gates are PUBLISH gates, not save gates. CS opens the job at the booking window,
+// before any B/L number or charge line exists — blocking that save blocked the whole CS-first
+// flow the process is built on. Publish is the handover to Accounting, which is where a job
+// without a bill number or a single line stops being a working file and starts being a mistake.
+// Default publish:true keeps every existing caller/test on the strict path.
+export function validateNiForm(state, { publish = true } = {}) {
   const errs = [];
-  if (!state.mbl && !state.hbl && !state.job_file_no) {
+  if (publish && !state.mbl && !state.hbl && !state.job_file_no) {
     errs.push(t('sales_new.validation.no_bill'));
   }
   if (!state.customer) {
     errs.push(t('sales_new.validation.no_customer'));
   }
+  // The job's owner must exist from birth: the revenue fork, the publish fork and the Job No
+  // namespace are all addressed by it — an unattributed save writes into nobody's folders.
+  if (!state.sales_rep) {
+    errs.push(t('sales_new.validation.no_sales_rep'));
+  }
+  // F-41-07: the customs checklist row is keyed on direction, so a job saved without one can
+  // never leave Arrived on its own evidence. Only blocks on publish — a booking-window draft may
+  // legitimately not know yet — and only bites when the product did not already settle it.
+  if (publish && !state.direction) {
+    errs.push(t('sales_new.validation.no_direction'));
+  }
   const hasLine = (state.lines || []).some((l) => l.vnd_pay > 0 || l.vnd_collect > 0);
-  if (!hasLine) {
+  if (publish && !hasLine) {
     errs.push(t('sales_new.validation.no_lines'));
   }
   // F-29-01 AC-05: amount without currency, or non-VND without fx_rate — hard block per side

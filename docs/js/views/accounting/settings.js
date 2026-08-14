@@ -17,10 +17,15 @@ import { loadWorkspaceSettings, saveWorkspaceSettings, DEFAULT_CURRENCY_FIELD }
   from '../../operators/manager/workspace-settings.js';
 import { LINE_CURRENCY_OPTIONS, DEFAULT_HEADER_CURRENCY } from '../sales-new-form/pnl-line-fx.js';
 import { safeMasterLoad } from '../../util/master-load.js';
+import { canEditDefaultCurrency, periodOf, LOCK_REASON_PERIOD_CLOSED }
+  from '../../operators/manager/default-currency-lock.js';
+import { getCurrentPeriodLock } from '../../operators/manager/period-close-orchestrator.js';
+import { listShipments } from '../../data/shipment-repo.js';
 
 const TOAST_MS = 4_000;
 
-function getApi() { return window.__vdg_drive_api; }
+function getApi()  { return window.__vdg_drive_api; }
+function getRepo() { return window.__vdg_repo; }
 
 function toast(type, msg) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message: msg, duration: TOAST_MS } }));
@@ -34,25 +39,36 @@ function selectableCurrencies() {
   try { return JSON.parse(bridge()); } catch { return LINE_CURRENCY_OPTIONS; }
 }
 
-function formHtml(settings) {
+function lockNoticeHtml(lock) {
+  if (lock.editable) return '';
+  const key = lock.reason === LOCK_REASON_PERIOD_CLOSED
+    ? 'settings.default_currency.locked_closed'
+    : 'settings.default_currency.locked_in_period';
+  return `<span class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+    ${t(key, { n: lock.jobCount })}</span>`;
+}
+
+function formHtml(settings, lock) {
   const curOpts = selectableCurrencies().map((c) =>
     `<option value="${c}"${c === settings[DEFAULT_CURRENCY_FIELD] ? ' selected' : ''}>${c}</option>`,
   ).join('');
+  const frozen = lock.editable ? '' : ' disabled';
   return `
     <form id="acct-settings-form" class="space-y-4 max-w-sm">
       <div class="flex flex-col gap-1">
         <label class="text-[11px] font-medium text-slate-500 uppercase tracking-wider" for="default-currency">
           ${t('settings.default_currency.label')}
         </label>
-        <select id="default-currency" name="${DEFAULT_CURRENCY_FIELD}"
-          class="border border-slate-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white">
+        <select id="default-currency" name="${DEFAULT_CURRENCY_FIELD}"${frozen}
+          class="border border-slate-200 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100${frozen ? ' bg-slate-50 text-slate-500' : ' bg-white'}">
           ${curOpts}
         </select>
         <span class="text-[11px] text-slate-400">${t('settings.default_currency.hint')}</span>
+        ${lockNoticeHtml(lock)}
       </div>
       <div class="flex gap-3 items-center">
-        <button type="submit"
-          class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+        <button type="submit"${frozen}
+          class="px-4 py-2 text-white text-sm rounded-lg ${frozen ? 'bg-slate-300' : 'bg-blue-600 hover:bg-blue-700'}">
           ${t('common.action.save')}
         </button>
         <span id="acct-settings-status" class="text-xs text-slate-400"></span>
@@ -76,15 +92,35 @@ export async function render(root) {
   let settings = window.__vdg_workspace_settings ?? (settingsRes.ok ? settingsRes.value : defaultSettings);
   window.__vdg_workspace_settings = settings;
 
+  // Owner 2026-08-14: the default may not move once the current period carries jobs. Bounded like
+  // every other read on a render path — an unavailable list degrades to "no jobs seen", i.e. the
+  // control stays usable rather than freezing the accountant out on a store hiccup; the save guard
+  // below re-checks against a fresh read before it writes.
+  const period   = periodOf(new Date());
+  const shipRes  = await safeMasterLoad(() => listShipments(getRepo(), null), 'acct-settings:ships');
+  const lock     = canEditDefaultCurrency(shipRes.ok ? shipRes.value : [], period,
+                                          getCurrentPeriodLock(period).locked);
+
   mount.innerHTML = `
     <h2 class="text-lg font-semibold text-slate-800 mb-4">${t('nav.accounting.settings')}</h2>
-    ${formHtml(settings)}`;
+    ${formHtml(settings, lock)}`;
 
   mount.querySelector('#acct-settings-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const statusEl = mount.querySelector('#acct-settings-status');
     statusEl.textContent = t('loading');
     try {
+      // Re-check at the write, not just at the render: the screen may have been open since before
+      // the period's first job was booked, and a disabled control is a hint, never the rule.
+      const fresh = await safeMasterLoad(() => listShipments(getRepo(), null), 'acct-settings:ships2');
+      const now   = canEditDefaultCurrency(fresh.ok ? fresh.value : [], periodOf(new Date()),
+                                           getCurrentPeriodLock(periodOf(new Date())).locked);
+      if (!now.editable) {
+        statusEl.textContent = t(now.reason === LOCK_REASON_PERIOD_CLOSED
+          ? 'settings.default_currency.locked_closed'
+          : 'settings.default_currency.locked_in_period', { n: now.jobCount });
+        return;
+      }
       // Spread over the CURRENT settings, never over defaults: this screen owns one field, and
       // rewriting the row from a partial object would blank fx_source and the second-eyes flag.
       const next = { ...settings, [DEFAULT_CURRENCY_FIELD]: new FormData(e.target).get(DEFAULT_CURRENCY_FIELD) };

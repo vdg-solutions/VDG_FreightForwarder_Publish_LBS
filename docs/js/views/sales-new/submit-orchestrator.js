@@ -2,7 +2,7 @@
 
 import { t } from '../../i18n/index.js';
 
-import { buildShipment } from './shipment-builder.js';
+import { buildShipment, deriveDirection } from './shipment-builder.js';
 import { ensureShipmentStateAliases } from '../../util/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../operators/fsm-ingest.js';
 import { autoAdvanceShipment } from '../../operators/fsm-auto-advance.js';
@@ -115,6 +115,27 @@ async function _jobNoTaken(repo, jobNo, excludeRef) {
   return matches.length > 0;
 }
 
+// Cross-tab TOCTOU (F-41-04): two submits can BOTH pass _jobNoTaken before either write lands —
+// the pre-check is check-then-write, not atomic, and the submit guard only covers one render.
+// So after the write, look again. The LOWEST shipment_ref keeps the contested number (the same
+// deterministic winner rule as bundle-file-heal / drive-file-dedup, so both sides agree without
+// coordination); the loser re-mints and re-saves. HBL/D-O mirror the Job No when auto-filled
+// (F-32-01), so a healed number carries them along. Cross-DEVICE collisions that sync in after
+// both sessions closed are not reachable from here — that residue is E-32's numbering redesign.
+async function _healJobNoCollision(repo, shipment, salesRepId) {
+  const jobNo = shipment.job_no;
+  if (!jobNo) return;
+  const rivals = await listEnvelopes(repo, (s) => s.job_no === jobNo && s.shipment_ref !== shipment.shipment_ref);
+  if (!rivals.length) return;
+  const winner = [shipment.shipment_ref, ...rivals.map((r) => r.shipment_ref)].sort()[0];
+  if (winner === shipment.shipment_ref) return; // we keep the number; the rival's session heals its own
+  const fresh = await assignJobNo(repo, await _repCodeFor(repo, salesRepId));
+  if (shipment.do_no === jobNo) shipment.do_no = fresh;
+  if (shipment.hbl === jobNo) shipment.hbl = fresh;
+  shipment.job_no = fresh;
+  await putShipment(repo, shipment);
+}
+
 // F-32-01: use the form-supplied Job No when present; on edit, preserve the shipment's prior
 // Job No (mirrors the state-preservation precedent above); otherwise generate one locally —
 // keeps submitForm/updateForm complete, independently-correct entry points for callers that
@@ -150,7 +171,9 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
 
   const publish = opts.publish !== false;
 
-  const dir = directionPrefix(state.direction);
+  // F-41-03 follow-up: the same derivation the record stores — an import job's ref must not
+  // mint under EX just because the form has no explicit direction field.
+  const dir = directionPrefix(deriveDirection(state));
   const ref = await _mintFreeShipmentRef(repo, dir, salesRepId);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
@@ -160,6 +183,7 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   // E-37: two records, split in Rust. The envelope goes to _shared/shipments where CS and the rep
   // both work; the sell side goes to the rep's fork, which CS holds no permission on.
   await putShipment(repo, shipment);
+  await _healJobNoCollision(repo, shipment, salesRepId);
   await registerFsmEntity(ref, shipment.state); // F-19-88 AC-01: make it a first-class FSM entity
 
   const warnings = [];
@@ -231,6 +255,7 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
   const shipment = buildShipment(stateInput, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
   shipment._ledger_version = (prior?._ledger_version || 0) + 1;
   await putShipment(repo, shipment);
+  await _healJobNoCollision(repo, shipment, salesRepId);
   await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state
 
   // Commission overwrite: delete existing CE records then write new set (PM-locked strategy).

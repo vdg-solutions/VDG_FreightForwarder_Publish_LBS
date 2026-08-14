@@ -14,6 +14,17 @@ const PARSER_VERSION = '1';
 // "just captured, not yet booked" reading.
 export const DEFAULT_INITIAL_STATE = 'Created';
 
+// F-41-03 follow-up (found by the E2E walk): the form never collects `direction`, so every
+// record carried null — the customs row stayed Unknown for the job's whole life and Arrived
+// could never leave. The product the user picked already SAYS the direction for the two
+// unambiguous cases; AIR/LCL stay null, which the FSM honestly reports as an unsupplied
+// dependency instead of guessing import jobs into the export FSM (F-37-07).
+export const DIRECTION_BY_PRODUCT = { 'FCL EXPORT': 'export', 'IMPORT FCL': 'import' };
+
+export function deriveDirection(state) {
+  return state.direction || DIRECTION_BY_PRODUCT[state.product] || null;
+}
+
 /**
  * buildShipment — maps collected form state to the canonical Shipment repo record.
  * Does NOT embed commission data (PM OQ-c: no double-storage — AC-08).
@@ -68,8 +79,15 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     seal_no:               state.seal_no               || null,
     volume_cbm:            parseFloat(state.volume_cbm) || null,
     atd:                   state.atd                   || null,
+    // F-41-03: phase evidence — each one is a checklist row the FSM reads straight off the record
+    ata:                   state.ata                   || null,
+    customs_cleared_at:    state.customs_cleared_at    || null,
+    haulage_signed_at:     state.haulage_signed_at     || null,
+    do_released_at:        state.do_released_at        || null,
+    cargo_released_at:     state.cargo_released_at     || null,
+    billing_paid_at:       state.billing_paid_at       || null,
     mode:                  (state.mode || '').toLowerCase() || null,
-    direction:             state.direction             || null,
+    direction:             deriveDirection(state),
     container_spec:        state.container_spec        || state.volume || null,
     // air fields
     airport_origin:        state.origin_iata           || null,
@@ -90,7 +108,9 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     commodity_description: state.commodity             || null,
     job_currency:          state.currency              || 'USD',
     roe_buying:            parseFloat(state.roe_buying) || null,
-    roe_debit:             parseFloat(state.roe_debit)  || null,
+    // F-41-05: the FORM field is roe_selling (collectFormState); the record key stays roe_debit.
+    // Reading state.roe_debit alone dropped every typed sell-side ROE on the floor.
+    roe_debit:             parseFloat(state.roe_selling ?? state.roe_debit) || null,
     // E-37: line_id is the join key between the two records a shipment is stored as (the buy side
     // travels with the envelope into _shared/shipments, the sell side stays in the rep's fork).
     // Same scheme as the materialized `pnl_line` rows, so one shipment has one line vocabulary.

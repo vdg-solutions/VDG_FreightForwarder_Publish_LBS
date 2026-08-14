@@ -124,7 +124,9 @@ async function handleActions(e, root, repo) {
       cell.innerHTML = `<span class="text-xs text-slate-500">${t('quote_list.already_converted')} <a href="#/shipments" class="text-blue-600 hover:underline">${existing.shipment_ref || existing.id}</a></span>`;
     } else {
       const q = quote;
-      const qs = new URLSearchParams({ quote_id: id, customer: q.customer || '', pol: q.pol || '', pod: q.pod || '', container: q.container_type || '' });
+      // F-41-01: the quote's creator IS the job's rep — the convert door carries it so the form
+      // opens already attributed (industry rule: salesperson derives from the quote).
+      const qs = new URLSearchParams({ quote_id: id, customer: q.customer || '', pol: q.pol || '', pod: q.pod || '', container: q.container_type || '', sales: q.created_by || '' });
       navigate(`/shipments/new?${qs.toString()}`);
     }
   }

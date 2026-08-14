@@ -65,7 +65,13 @@ const FIELD_SCREEN = {
   dim_l_cm: [SCREEN_DOCS], dim_w_cm: [SCREEN_DOCS], dim_h_cm: [SCREEN_DOCS],
   uld_type: [SCREEN_DOCS], chargeable_kg: [SCREEN_DOCS],
   atd: [SCREEN_BILL],
+  // F-41-03: phase evidence — arrival + delivery proof typed on the bill screen, payment on PNL
+  ata: [SCREEN_BILL], customs_cleared_at: [SCREEN_BILL], haulage_signed_at: [SCREEN_BILL],
+  do_released_at: [SCREEN_BILL], cargo_released_at: [SCREEN_BILL],
+  billing_paid_at: [SCREEN_PNL],
   roe_buying: [SCREEN_PNL], roe_selling: [SCREEN_PNL], currency: [SCREEN_PNL],
+  // F-41-02: the quote door — CS sees it at booking, Sales at PNL where the price lands
+  quote_pick: [SCREEN_BOOKING, SCREEN_PNL],
 };
 const DEFAULT_SCREENS = [SCREEN_BOOKING];
 
@@ -75,7 +81,7 @@ const DEFAULT_SCREENS = [SCREEN_BOOKING];
 export const REQ_SCREEN = {
   carrier_booking: SCREEN_BOOKING, quotation: SCREEN_PNL,
   dg_compliance: SCREEN_BOOKING, containers: SCREEN_BOOKING,
-  voyage_departed: SCREEN_BILL,
+  voyage_departed: SCREEN_BILL, vessel_arrived: SCREEN_BILL,
   customs: SCREEN_BILL, haulage: SCREEN_BILL, delivery_order: SCREEN_BILL, cargo_release: SCREEN_BILL,
   billing_paid: SCREEN_PNL, demdet_settled: SCREEN_PNL, claim_closed: SCREEN_PNL,
 };

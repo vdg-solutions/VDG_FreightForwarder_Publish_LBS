@@ -32,6 +32,7 @@ function dtInp(name, val) {
 // somebody forgot to translate (same rule as phase-timeline.js's POSITION_* consts)
 const NAME_COMMODITY = 'commodity';
 const NAME_ATD       = 'atd';
+const NAME_ATA       = 'ata';
 
 /** The extra grid cells, in DOM order: booking extras first, then bill/docs, then ATD. */
 export function docsExtHtml(d = {}) {
@@ -55,7 +56,13 @@ export function docsExtHtml(d = {}) {
     ${fld(t('sales_new.field.bill_type'),
           selFld('doc_type', BILL_TYPE_OPTIONS, d.doc_type, BILL_TYPE_LABEL_KEYS))}
     ${fld(t('sales_new.field.volume_cbm'),        num('volume_cbm', d.volume_cbm))}
-    ${fld(t('sales_new.field.atd'),               dateInp(NAME_ATD, d.atd))}`;
+    ${fld(t('sales_new.field.atd'),               dateInp(NAME_ATD, d.atd))}
+    ${fld(t('sales_new.field.ata'),               dateInp(NAME_ATA, d.ata))}
+    ${fld(t('sales_new.field.customs_cleared_at'), dateInp('customs_cleared_at', d.customs_cleared_at))}
+    ${fld(t('sales_new.field.haulage_signed_at'),  dateInp('haulage_signed_at', d.haulage_signed_at))}
+    ${fld(t('sales_new.field.do_released_at'),     dateInp('do_released_at', d.do_released_at))}
+    ${fld(t('sales_new.field.cargo_released_at'),  dateInp('cargo_released_at', d.cargo_released_at))}
+    ${fld(t('sales_new.field.billing_paid_at'),    dateInp('billing_paid_at', d.billing_paid_at))}`;
 }
 
 /** collectFormState delta for the ext fields — one list, so the collector cannot drift. */
@@ -64,4 +71,7 @@ export const DOCS_EXT_FIELDS = [
   'closing_si', 'closing_cy', 'empty_pickup_depot', 'full_return_depot',
   'place_of_receipt', 'place_of_delivery', 'notify_party', 'for_delivery',
   'seal_no', 'freight_terms', 'doc_type', 'volume_cbm', 'atd',
+  // F-41-03: phase evidence — each field is one ✗ row on the timeline turning ✓
+  'ata', 'customs_cleared_at', 'haulage_signed_at', 'do_released_at',
+  'cargo_released_at', 'billing_paid_at',
 ];
