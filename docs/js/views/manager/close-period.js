@@ -12,6 +12,7 @@ import { todayLocal } from '../../util/today-local.js';
 
 const SHEETJS_CDN      = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
 const MONTH_COUNT_BACK = 12;
+const OPENING_TOAST_MS = 8_000; // the opening-books line must outlast the "closed" toast beside it
 
 let _selectedPeriod  = null;
 let _checkResults    = [];
@@ -19,7 +20,12 @@ let _closedPeriods   = new Set();
 let _sheetJsLoaded   = false;
 
 function getRepo() { return window.__vdg_repo; }
+function getLedgerRepo() { return window.__vdg_ledger_repo; }
 function currentUser() { return window.__vdg_auth?.getCurrentUser?.()?.email || 'manager'; }
+
+function toast(type, message, duration) {
+  window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message, duration } }));
+}
 
 function _monthOptions() {
   const now  = new Date();
@@ -81,14 +87,16 @@ function renderPeriodSelect(root, periods, closed) {
   if (periods.length) _selectedPeriod = periods[0].key;
 }
 
-function renderLockBanner(root, period) {
+async function renderLockBanner(root, period) {
   const banner = root.querySelector('#lock-banner');
   if (!banner) return;
-  const lock = getCurrentPeriodLock(period);
+  // F-42-01: read from the lock registry the write gate obeys, so the banner and the refusal
+  // a user meets on save can never disagree.
+  const lock = await getCurrentPeriodLock(getRepo(), period);
   if (lock.locked) {
     banner.className = 'mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-center justify-between';
     banner.innerHTML = `
-      <span>🔒 ${t('close_period.banner.locked', { p: period, u: lock.record.closed_by })}</span>
+      <span>🔒 ${t('close_period.banner.locked', { p: period, u: lock.record.locked_by })}</span>
       <button id="btn-reopen" class="ml-4 px-3 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-700 focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-label="${t('close_period.action.reopen')}">${t('close_period.action.reopen')}</button>`;
   } else {
@@ -217,14 +225,14 @@ export async function render(root) {
     </div>`;
 
   renderPeriodSelect(root, months, _closedPeriods);
-  renderLockBanner(root, _selectedPeriod);
+  await renderLockBanner(root, _selectedPeriod);
 
   // Period change
-  root.querySelector('#period-select').addEventListener('change', (e) => {
+  root.querySelector('#period-select').addEventListener('change', async (e) => {
     _selectedPeriod = e.target.value;
     _checkResults   = [];
     renderChecklist(root, []);
-    renderLockBanner(root, _selectedPeriod);
+    await renderLockBanner(root, _selectedPeriod);
     root.querySelector('#btn-proceed').disabled = true;
   });
 
@@ -258,14 +266,23 @@ export async function render(root) {
     });
     if (!ok) return;
     try {
-      await closePeriod(repo, _selectedPeriod, currentUser(), _checkResults);
+      const snap = await closePeriod(repo, _selectedPeriod, currentUser(), _checkResults, getLedgerRepo());
       _closedPeriods.add(_selectedPeriod);
       renderPeriodSelect(root, months, _closedPeriods);
-      renderLockBanner(root, _selectedPeriod);
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t('close_period.toast.closed', { p: _selectedPeriod }) } }));
+      await renderLockBanner(root, _selectedPeriod);
+      toast('success', t('close_period.toast.closed', { p: _selectedPeriod }));
+      // F-42-02: say plainly whether the next period got its opening books. A close that
+      // carried nothing forward must not look identical to one that did.
+      if (snap.skipped) {
+        toast('warn', t('close_period.toast.opening_skipped'), OPENING_TOAST_MS);
+      } else if (snap.failed.length) {
+        toast('warn', t('close_period.toast.opening_partial', { n: snap.failed.length }), OPENING_TOAST_MS);
+      } else {
+        toast('info', t('close_period.toast.opening_saved', { n: snap.accountCount }), OPENING_TOAST_MS);
+      }
     } catch (err) {
       console.error('[period-close] close failed:', err); // DEV
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: err.message } }));
+      toast('error', err.message);
     }
   });
 
@@ -283,15 +300,15 @@ export async function render(root) {
     if (e.target.id === 'btn-confirm-reopen') {
       const reason = root.querySelector('#reopen-reason')?.value?.trim();
       if (!reason) return;
-      reopenPeriod(repo, _selectedPeriod, reason, currentUser()).then(() => {
+      reopenPeriod(repo, _selectedPeriod, reason, currentUser()).then(async () => {
         _closedPeriods.delete(_selectedPeriod);
         renderPeriodSelect(root, months, _closedPeriods);
-        renderLockBanner(root, _selectedPeriod);
+        await renderLockBanner(root, _selectedPeriod);
         root.querySelector('#reopen-form').classList.add('hidden');
-        window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('close_period.toast.reopened', { p: _selectedPeriod }) } }));
+        toast('info', t('close_period.toast.reopened', { p: _selectedPeriod }));
       }).catch((err) => {
         console.error('[period-close] reopen failed:', err); // DEV
-        window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: err.message } }));
+        toast('error', err.message);
       });
     }
     const viewBtn = e.target.closest('[data-view-check]');

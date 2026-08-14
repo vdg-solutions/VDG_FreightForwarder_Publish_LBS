@@ -1,8 +1,9 @@
 // write-gate.js — the one place a shipment/P&L mutation is allowed or refused (F-20-10/F-20-11).
 //
 // Two laws meet here, both decided in Rust and only SURFACED in JS:
-//   period lock — meta-pref `preferences.locked_periods` (written by the manager's settle flow),
-//                 membership judged by wasm `is_period_closed`;
+//   period lock — meta-pref `preferences.locked_periods` (written by period-lock-registry.js:
+//                 Close Period and the commission settle flow, F-42-01), membership judged by
+//                 wasm `is_period_closed`;
 //   license     — `license_status`'s `can_write` (grace = read-only), stamped on
 //                 window.__vdg_license_status at boot by license-boot-gate.js.
 //
@@ -15,8 +16,9 @@ const KIND_META_PREF   = 'meta-pref';
 const PREFS_META_KEY   = 'preferences';
 const MONTH_KEY_LEN    = 7; // 'YYYY-MM'
 
-// The meta-pref field the manager's settle flow writes. One name, one owner — the old
-// period-lock-ui.js copy (checkPeriodLock) duplicated the wasm law in JS and is deleted.
+// The meta-pref field the lock registry writes. One name, one owner — the old period-lock-ui.js
+// copy (checkPeriodLock) duplicated the wasm law in JS and is deleted, and F-42-01 removed the
+// three other places that separately claimed to know whether a period was closed.
 export const PREF_LOCKED_PERIODS_KEY = 'locked_periods';
 
 export class PeriodLockedError extends Error {

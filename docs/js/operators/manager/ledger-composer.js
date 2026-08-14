@@ -43,13 +43,17 @@ export function filterLegs(legs, { dateFrom, dateTo, minAmount, maxAmount, searc
 /// AC-07: legs need not be pre-sorted — sorted ascending by (date, seq) internally so the
 /// cumulative running_balance is chronologically correct regardless of caller/display order.
 /// balance_side 'Debit' -> running += debit - credit; 'Credit' -> running += credit - debit.
-export function computeRunningBalances(legs, balanceSide) {
+///
+/// F-42-02: `opening` is the số dư đầu kỳ the window starts from. It defaulted to 0 with no
+/// way to say otherwise, which made every filtered view claim the account began the window at
+/// zero — true only for the first period the business ever traded in.
+export function computeRunningBalances(legs, balanceSide, opening = 0) {
   const sorted = [...legs].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
     return (a.seq || 0) - (b.seq || 0);
   });
 
-  let running = 0;
+  let running = Number(opening) || 0;
   return sorted.map((leg) => {
     const delta = balanceSide === 'Credit'
       ? (leg.credit || 0) - (leg.debit || 0)

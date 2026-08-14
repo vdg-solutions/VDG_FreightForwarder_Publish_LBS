@@ -98,8 +98,8 @@ export async function render(root) {
   // below re-checks against a fresh read before it writes.
   const period   = periodOf(new Date());
   const shipRes  = await safeMasterLoad(() => listShipments(getRepo(), null), 'acct-settings:ships');
-  const lock     = canEditDefaultCurrency(shipRes.ok ? shipRes.value : [], period,
-                                          getCurrentPeriodLock(period).locked);
+  const periodLock = await getCurrentPeriodLock(getRepo(), period);
+  const lock     = canEditDefaultCurrency(shipRes.ok ? shipRes.value : [], period, periodLock.locked);
 
   mount.innerHTML = `
     <h2 class="text-lg font-semibold text-slate-800 mb-4">${t('nav.accounting.settings')}</h2>
@@ -112,9 +112,10 @@ export async function render(root) {
     try {
       // Re-check at the write, not just at the render: the screen may have been open since before
       // the period's first job was booked, and a disabled control is a hint, never the rule.
-      const fresh = await safeMasterLoad(() => listShipments(getRepo(), null), 'acct-settings:ships2');
-      const now   = canEditDefaultCurrency(fresh.ok ? fresh.value : [], periodOf(new Date()),
-                                           getCurrentPeriodLock(periodOf(new Date())).locked);
+      const fresh    = await safeMasterLoad(() => listShipments(getRepo(), null), 'acct-settings:ships2');
+      const thisMonth = periodOf(new Date());
+      const freshLock = await getCurrentPeriodLock(getRepo(), thisMonth);
+      const now = canEditDefaultCurrency(fresh.ok ? fresh.value : [], thisMonth, freshLock.locked);
       if (!now.editable) {
         statusEl.textContent = t(now.reason === LOCK_REASON_PERIOD_CLOSED
           ? 'settings.default_currency.locked_closed'

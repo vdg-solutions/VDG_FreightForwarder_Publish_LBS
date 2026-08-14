@@ -6,7 +6,8 @@ import { todayLocal } from '../../util/today-local.js';
 import {
   groupChartByType, filterLegs, computeRunningBalances, buildLedgerCSV,
 } from '../../operators/manager/ledger-composer.js';
-import { runAndRecord } from '../../operators/manager/ledger-reconciler.js';
+import { renderReconcileStatus, runReconciliationNow } from './ledger-reconcile-control.js';
+import { loadOpeningBalance, openingRowHtml } from './ledger-opening-balance.js';
 import { currentUserRole, ROLE_MANAGER } from '../../operators/manager/route-guard.js';
 import { mountRepostPanelIfReady } from './ledger-repost-panel.js';
 import { refreshReverseControl, renderReversalBadge, bindLegRowInteractions } from './ledger-reverse-control.js';
@@ -24,6 +25,7 @@ const RECON_TAG      = 'ledger:recon';
 const LEGS_TAG       = 'ledger:legs';
 const BALANCE_TAG    = 'ledger:balance';
 const REPOST_TAG     = 'ledger:repost-panel';
+const OPENING_TAG    = 'ledger:opening-balance';
 // F-19-75: below RENDER_MOUNT_TIMEOUT_MS (8000ms) so a stalled initial load's inline retry
 // paints before mount-view.js's outer mount-timeout fallback can fire.
 const VIEW_DATA_LOAD_BUDGET_MS = 6_000;
@@ -45,6 +47,7 @@ let _rawLegs          = [];
 let _filter           = defaultFilter();
 let _lastReconciliation = null; // F-23-06: latest reconciliation-log.jsonl record, or null
 let _selectedEntryId = null, _selectedLeg = null; // F-19-78: selected posted entry_id + its leg
+let _opening = null; // F-42-02: số dư đầu kỳ of the filter window, for the selected account
 
 function accountName(account) {
   return currentLocale() === 'vi' ? account.name_vi : account.name_en;
@@ -55,7 +58,8 @@ function fmtAmount(n) { return n ? Number(n).toLocaleString('vi-VN') : '—'; }
 function displayedRows() {
   if (!_selectedAccount) return [];
   const filtered = filterLegs(_rawLegs, _filter);
-  return computeRunningBalances(filtered, _selectedAccount.balance_side).slice().reverse();
+  return computeRunningBalances(filtered, _selectedAccount.balance_side, _opening?.live ?? 0)
+    .slice().reverse();
 }
 
 function shellHtml() {
@@ -133,7 +137,9 @@ function renderLegsTable(root) {
   const panel = root.querySelector('#legs-panel');
   const rows  = displayedRows();
 
-  if (!rows.length) {
+  // F-42-02: a window with no movement still has an opening balance, and "no legs" must not
+  // read as "nothing here" when the account carries a balance into the period.
+  if (!rows.length && !_opening?.live) {
     panel.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">${t('ledger.empty_legs')}</div>`;
     updateReverseControl(root);
     return;
@@ -168,7 +174,7 @@ function renderLegsTable(root) {
           <th class="px-3 py-1.5 text-right">${t('ledger.column.balance')}</th>
         </tr>
       </thead>
-      <tbody>${trs}</tbody>
+      <tbody>${openingRowHtml(_opening, fmtAmount)}${trs}</tbody>
     </table>`;
 
   panel.querySelectorAll('[data-source-id]').forEach((btn) => {
@@ -227,6 +233,11 @@ async function selectAccount(root, account) {
     return;
   }
   _rawLegs = legsRes.value;
+  // F-42-02: the window's opening balance — seeds the running column and heads the table.
+  const openRes = await safeMasterLoad(
+    () => loadOpeningBalance(repo, window.__vdg_repo, account.code, _filter.dateFrom), OPENING_TAG,
+  );
+  _opening = openRes.ok ? openRes.value : null;
   await refreshBalanceBanner(repo, account);
   renderLegsTable(root);
 }
@@ -244,43 +255,6 @@ function bindFilterInputs(root) {
   bind('f-min-amount', 'minAmount', false);
   bind('f-max-amount', 'maxAmount', false);
   bind('f-search',     'search',    false);
-}
-
-// F-23-06: reconciliation status line + unbalanced-entry list, driven by `_lastReconciliation`.
-function fmtRunDate(runAt) { return runAt ? new Date(runAt).toLocaleDateString('vi-VN') : ''; }
-
-function renderReconcileStatus(root) {
-  const status = root.querySelector('#reconcile-status');
-  if (!status) return;
-  const rec = _lastReconciliation;
-  if (!rec) { status.textContent = t('ledger.reconcile.never_run'); return; }
-  status.textContent = rec.balanced
-    ? t('ledger.reconcile.status_ok').replace('{date}', fmtRunDate(rec.run_at))
-    : t('ledger.reconcile.status_bad')
-        .replace('{date}', fmtRunDate(rec.run_at))
-        .replace('{n}', String(rec.unbalanced_ids?.length ?? 0));
-}
-
-// AC-07: manual trigger — disables the button while running, surfaces errors instead of a
-// stale/false "balanced" status (AC-09).
-async function runReconciliationNow(root) {
-  const repo = getLedgerRepo();
-  if (!repo) return;
-  const btn    = root.querySelector('#btn-reconcile-now');
-  const status = root.querySelector('#reconcile-status');
-  btn.disabled = true;
-  if (status) status.textContent = t('ledger.reconcile.running');
-
-  try {
-    _lastReconciliation = await runAndRecord(repo);
-    renderReconcileStatus(root);
-    renderUnbalancedList(root, repo, _lastReconciliation?.unbalanced_ids ?? []);
-  } catch (err) {
-    if (status) status.textContent = t('ledger.reconcile.error');
-    console.error('[ledger-viewer] reconcile failed:', err); // DEV
-  } finally {
-    btn.disabled = false;
-  }
 }
 
 function exportCsv() {
@@ -314,7 +288,7 @@ async function loadInitial(root, repo) {
   _accounts           = chartRes.value;
   _lastReconciliation = reconRes.ok ? reconRes.value : null; // reconciliation optional
   renderChartTree(root);
-  renderReconcileStatus(root);
+  renderReconcileStatus(root, _lastReconciliation);
   renderUnbalancedList(root, repo, _lastReconciliation?.unbalanced_ids ?? []);
 }
 
@@ -327,13 +301,16 @@ export async function render(root) {
   _filter             = defaultFilter();
   _lastReconciliation = null;
   _selectedEntryId    = null; _selectedLeg = null;
+  _opening            = null;
 
   // Paint shell first — before any Drive await — so a stalled load degrades to an inline
   // retry inside the painted shell instead of a pre-paint blank (AC-08).
   root.innerHTML = shellHtml();
   bindFilterInputs(root);
   root.querySelector('#btn-export-csv').addEventListener('click', exportCsv);
-  root.querySelector('#btn-reconcile-now').addEventListener('click', () => runReconciliationNow(root));
+  root.querySelector('#btn-reconcile-now').addEventListener('click', async () => {
+    _lastReconciliation = await runReconciliationNow(root, getLedgerRepo()) ?? _lastReconciliation;
+  });
 
   await loadInitial(root, repo);
 

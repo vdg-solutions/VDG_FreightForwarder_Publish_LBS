@@ -1,13 +1,19 @@
 // Operator — Period close/reopen logic + pre-close checks. Writes flow through the repo.
+//
+// F-42-01: "closed" is ONE thing now — a lock record in meta-pref `preferences.locked_periods`,
+// the list write-gate.js and Rust's period_lock.rs already enforce (period-lock-registry.js).
+// The old localStorage map and the read-by-nobody `shipment.period_locked` flag are gone: they
+// were extra copies of a fact, and the copy the UI showed was not the copy the gate obeyed.
+// F-42-02: closing balances are stamped on the close record — the opening books of the next
+// period (period-opening-balance.js).
 
-import { bulkPatch } from '../../cache/bulk-orchestrator.js';
 import { listShipments } from '../../data/shipment-repo.js';
+import { lockPeriod, unlockPeriod, findLock, lockedPeriodKeys } from './period-lock-registry.js';
+import { snapshotClosingBalances, CLOSING_BALANCES_FIELD } from './period-opening-balance.js';
 
 const PERIOD_CLOSE_KIND     = 'period_close';
 const PERIOD_REOPEN_KIND    = 'period_reopen';
-const PERIOD_LOCKED_FLAG    = 'period_locked';
 const REOPEN_TOKEN_FIELD    = 'reopen_token';
-const PERIOD_LOCKS_LS_KEY   = 'vdg.period_locks';
 const REASON_MAX_CHARS      = 500;
 const CHECK_COST_COVERAGE   = 'cost_coverage';
 const CHECK_BILLING_STATUS  = 'billing_status';
@@ -16,26 +22,25 @@ const CHECK_FX_LOCKED       = 'fx_locked';
 
 // ── lock state ────────────────────────────────────────────────────────────────
 
-function _loadLsLocks() {
-  try {
-    const raw = localStorage.getItem(PERIOD_LOCKS_LS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch { return {}; }
-}
-
-function _saveLsLocks(locks) {
-  try { localStorage.setItem(PERIOD_LOCKS_LS_KEY, JSON.stringify(locks)); }
-  catch { /* quota — non-fatal */ }
-}
-
 /**
- * Returns { locked: boolean, record?: object } for a YYYY-MM period.
+ * Lock state of a YYYY-MM period, read from the same list the write gate enforces — so the
+ * banner cannot say "open" while a write is being refused, or the reverse.
+ * @returns {Promise<{locked: boolean, record?: object}>}
  */
-export function getCurrentPeriodLock(period) {
-  if (!period) return { locked: false };
-  const locks = _loadLsLocks();
-  const record = locks[period];
+export async function getCurrentPeriodLock(repo, period) {
+  const record = await findLock(repo, period);
   return record ? { locked: true, record } : { locked: false };
+}
+
+/// Period keys currently closed — for the screen's 🔒 markers.
+export async function loadClosedPeriods(repo) {
+  try { return await lockedPeriodKeys(repo); } catch { return []; }
+}
+
+/// Close records (newest first per period is the caller's business) — the ledger reads these
+/// for the opening balances stamped at close.
+export async function listCloseRecords(repo) {
+  try { return await repo.list(PERIOD_CLOSE_KIND, null); } catch { return []; }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -121,79 +126,65 @@ export async function runPreCloseChecks(repo, period) {
 // ── close ─────────────────────────────────────────────────────────────────────
 
 /**
- * Closes a period: writes PeriodClose entity, patches shipments, updates localStorage.
+ * Closes a period: takes the write lock, stamps the closing balances, records the event.
+ *
+ * The lock goes FIRST on purpose. If a later step fails the books are frozen with no close
+ * record — recoverable by re-running the close (locking is idempotent) or by reopening. The
+ * opposite order fails the other way: a close record everyone trusts over books nobody locked,
+ * which is the exact defect F-42-01 exists to remove.
+ *
+ * @param {object} ledgerRepo  optional — without it the period still closes, but carries no
+ *                             opening books; the caller must say so rather than imply success.
+ * @returns {Promise<{accountCount:number, failed:string[], skipped:boolean}>} snapshot outcome
  */
-export async function closePeriod(repo, period, user, checklistSnapshot) {
+export async function closePeriod(repo, period, user, checklistSnapshot, ledgerRepo = null) {
+  await lockPeriod(repo, period, user);
+
+  let balances = [];
+  let failed   = [];
+  let skipped  = true;
+  if (ledgerRepo) {
+    const accounts = await ledgerRepo.chartOfAccounts();
+    ({ balances, failed } = await snapshotClosingBalances(ledgerRepo, accounts, period));
+    skipped = false;
+  }
+
   const id  = `pc-${period}-${Date.now()}`;
-  const rec = {
+  await repo.put(PERIOD_CLOSE_KIND, id, {
     id,
     period,
     closed_at:          new Date().toISOString(),
     closed_by:          user,
     checklist_snapshot: checklistSnapshot,
-  };
+    [CLOSING_BALANCES_FIELD]: balances,
+  });
 
-  await repo.put(PERIOD_CLOSE_KIND, id, rec);
-
-  if (repo) {
-    const shipments = await listShipments(repo, null);
-    const ids       = _shipmentsInPeriod(shipments, period).map((s) => s.id);
-    await bulkPatch(repo, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: true }));
-    window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: 'shipment' } }));
-  }
-
-  const locks    = _loadLsLocks();
-  locks[period]  = rec;
-  _saveLsLocks(locks);
+  return { accountCount: balances.length, failed, skipped };
 }
 
 // ── reopen ────────────────────────────────────────────────────────────────────
 
 /**
- * Reopens a period: writes PeriodReopen entity, patches shipments, clears lock.
+ * Reopens a period: records the event and releases the write lock. Releasing is the point —
+ * before F-42-01 this wrote a `period_reopen` row and left the lock in place, so a period the
+ * screen showed as reopened still refused every write.
  */
 export async function reopenPeriod(repo, period, reason, user) {
   if (!reason || reason.length > REASON_MAX_CHARS) throw new Error('Reason required (max 500 chars)');
 
   const id    = `pr-${period}-${Date.now()}`;
   const token = crypto.randomUUID?.() || `tok-${Date.now()}`;
-  const rec   = {
+  await repo.put(PERIOD_REOPEN_KIND, id, {
     id,
     period,
     reason,
     reopened_at:          new Date().toISOString(),
     reopened_by:          user,
     [REOPEN_TOKEN_FIELD]: token,
-  };
+  });
 
-  await repo.put(PERIOD_REOPEN_KIND, id, rec);
-
-  if (repo) {
-    const shipments = await listShipments(repo, null);
-    const ids       = _shipmentsInPeriod(shipments, period).map((s) => s.id);
-    await bulkPatch(repo, 'shipment', ids, (e) => ({ ...e, [PERIOD_LOCKED_FLAG]: false }));
-    window.dispatchEvent(new CustomEvent('vdg:entity-changed', { detail: { kind: 'shipment' } }));
-  }
-
-  const locks = _loadLsLocks();
-  delete locks[period];
-  _saveLsLocks(locks);
-
+  await unlockPeriod(repo, period);
   return { token };
 }
 
-/**
- * Reads L2 period_close records and returns set of locked periods.
- */
-export async function loadClosedPeriods(repo) {
-  try {
-    const records = await repo.list(PERIOD_CLOSE_KIND, null);
-    // latest close per period (reopen may cancel; check LS for truth)
-    const locks = _loadLsLocks();
-    return records
-      .filter((r) => !r._deleted && locks[r.period])
-      .map((r) => r.period);
-  } catch { return []; }
-}
-
-export { PERIOD_CLOSE_KIND, PERIOD_REOPEN_KIND, PERIOD_LOCKED_FLAG, REASON_MAX_CHARS };
+export { PERIOD_CLOSE_KIND, PERIOD_REOPEN_KIND, REASON_MAX_CHARS };

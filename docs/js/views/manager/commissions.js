@@ -12,6 +12,7 @@ import {
 } from '../../operators/manager/commission-calculator.js';
 import { compose as composeRules } from '../../operators/manager/commission-composer.js';
 import { bulkPut }            from '../../cache/bulk-orchestrator.js';
+import { lockPeriod, readLockedPeriods } from '../../operators/manager/period-lock-registry.js';
 import { PREF_LOCKED_PERIODS_KEY } from '../../data/write-gate.js';
 import { safeMasterLoad }     from '../../util/master-load.js';
 import { listShipments } from '../../data/shipment-repo.js';
@@ -224,11 +225,11 @@ export async function render(root) {
 
     if (repo) {
       await bulkPut(repo, PAYOUT_KIND, entities);
-      // Lock period in preferences
-      const lockedPeriods = [...(_prefs[PREF_LOCKED_PERIODS_KEY] || []),
-        { period_key: key, locked_at: now, locked_by: manager }];
-      await repo.put('meta-pref', PREFS_META_KEY, { ..._prefs, [PREF_LOCKED_PERIODS_KEY]: lockedPeriods });
-      _prefs = { ..._prefs, [PREF_LOCKED_PERIODS_KEY]: lockedPeriods };
+      // F-42-01: settling a period freezes it, through the same registry the Close Period screen
+      // and the write gate use. This used to splice the list inline — a second writer of the
+      // same fact, and the only one, since closePeriod never touched it.
+      await lockPeriod(repo, key, manager);
+      _prefs   = { ..._prefs, [PREF_LOCKED_PERIODS_KEY]: await readLockedPeriods(repo) };
       _payouts = await repo.list(PAYOUT_KIND, null);
     }
 
