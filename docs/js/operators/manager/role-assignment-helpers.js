@@ -40,16 +40,38 @@ export function _driveOpsFromAcl(entries, kind = null) {
   }));
 }
 
+// F-42-03: Drive's files.list index is EVENTUALLY CONSISTENT. A folder created moments earlier
+// — users/{user_prefix}, which the Add User flow creates immediately before calling assignRole —
+// answers "not found" to a name query for a second or two after files.create returned its id.
+// Taking that first miss as truth failed EVERY user add on a fresh fork: assignRole threw, the
+// user row was rolled back, and the folder was left orphaned in the customer's Drive. Verified
+// live on the LBS workspace 2026-08-14 — the same lookup that threw resolved the folder a minute
+// later. So a miss is retried before it is believed; a genuinely absent path still throws, just
+// ~4s later, and that path is a hard error either way.
+const PATH_LOOKUP_ATTEMPTS   = 4;
+const PATH_LOOKUP_BACKOFF_MS = 700;
+
+function _wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+async function _findSegment(driveApi, parentId, segment, backoffMs) {
+  for (let attempt = 1; attempt <= PATH_LOOKUP_ATTEMPTS; attempt++) {
+    const folder = await driveApi.listChildFolder(parentId, segment);
+    if (folder) return folder;
+    if (attempt < PATH_LOOKUP_ATTEMPTS) await _wait(backoffMs * attempt);
+  }
+  return null;
+}
+
 /// Wildcards resolve to the containing folder itself — Drive permission grants are inherited
 /// by everything nested under a shared folder, so '*' -> workspace root and 'users/*' -> the
 /// 'users' folder, never a per-child fan-out.
-export async function resolvePathToFolderId(driveApi, rootId, path) {
+export async function resolvePathToFolderId(driveApi, rootId, path, backoffMs = PATH_LOOKUP_BACKOFF_MS) {
   if (path === WILDCARD_PATH) return rootId;
   const trimmed = path.endsWith(WILDCARD_SUFFIX) ? path.slice(0, -WILDCARD_SUFFIX.length) : path;
 
   let current = rootId;
   for (const segment of trimmed.split('/').filter(Boolean)) {
-    const folder = await driveApi.listChildFolder(current, segment);
+    const folder = await _findSegment(driveApi, current, segment, backoffMs);
     if (!folder) throw new Error(`ACL path not found: ${path} (missing "${segment}")`);
     current = folder.id;
   }
