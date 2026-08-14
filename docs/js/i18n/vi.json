@@ -141,6 +141,7 @@
   "phase.timeline":"Tiến trình lô hàng",
   "phase.off_path":"Lô hàng đã rời tiến trình chuẩn ({state}).",
   "phase.no_pending":"Không còn việc tồn ở bước này.",
+  "phase.advance_conditions":"Điều kiện để chuyển sang «{state}»",
   "phase.req.unverified":"chưa xác nhận được",
   "phase.req.carrier_booking":"Xác nhận booking hãng tàu",
   "phase.req.quotation":"Báo giá được duyệt",

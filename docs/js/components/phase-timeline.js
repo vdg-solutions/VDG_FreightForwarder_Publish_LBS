@@ -30,11 +30,13 @@ const ARIA_CURRENT_NONE = 'false';
 const STATUS_MET        = 'met';
 const STATUS_UNKNOWN    = 'unknown';
 
-const STATUS_ICON = { met: '✓', missing: '!', unknown: '·' };
-const STATUS_CLASS = {
+// Owner 2026-08-14: the mark carries the verdict, the words stay black — a whole row of red
+// reads as an error, when it is only "not done yet". ✗ red / ✓ green is the entire vocabulary.
+const STATUS_ICON = { met: '✓', missing: '✗', unknown: '·' };
+const ICON_CLASS = {
   met:     'text-emerald-600',
-  missing: 'text-rose-600 font-medium',
-  unknown: 'text-slate-500',
+  missing: 'text-rose-600 font-semibold',
+  unknown: 'text-slate-400',
 };
 // The node on the rail: passed is filled, the one the job sits in is ringed, ahead is an outline.
 const NODE_CLASS = {
@@ -100,12 +102,15 @@ export function renderTimeline(timeline, { focus = null } = {}) {
     : '';
   const shown = timeline.phases.find((p) => p.state === focus)
     || timeline.phases.find((p) => p.position === POSITION_CURRENT);
+  // The rows are the guard conditions of the NEXT transition, so the panel says which state they
+  // unlock — without the destination, a list of red marks reads as a pile of errors.
+  const next = shown ? timeline.phases[timeline.phases.indexOf(shown) + 1]?.state ?? null : null;
   return `
     ${banner}
     <ol class="flex items-start w-full" aria-label="${esc(t('phase.timeline'))}">
       ${steps}
     </ol>
-    ${detailPanel(shown)}`;
+    ${detailPanel(shown, next)}`;
 }
 
 function phaseStep(phase, index, total, focus) {
@@ -150,27 +155,32 @@ function phaseStep(phase, index, total, focus) {
 
 /** What the phase in focus is still waiting on. A phase with nothing outstanding says so — an
  *  empty panel would read as "we did not check". */
-function detailPanel(phase) {
+function detailPanel(phase, next) {
   if (!phase) return '';
   const rows = phase.requirements.map(reqRow).join('');
   const body = rows
     ? `<ul class="mt-1.5 space-y-1">${rows}</ul>`
     : `<div class="mt-1 text-[11px] text-slate-500">${esc(t('phase.no_pending'))}</div>`;
+  // A phase with a successor titles its list as that transition's conditions; the last phase has
+  // nowhere to go, so its own name is the honest header.
+  const heading = next && rows
+    ? t('phase.advance_conditions', { state: stateLabel(next) })
+    : stateLabel(phase.state);
   return `
     <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-      <div class="text-xs font-semibold text-slate-700">${esc(stateLabel(phase.state))}</div>
+      <div class="text-xs font-semibold text-slate-700">${esc(heading)}</div>
       ${body}
     </div>`;
 }
 
 function reqRow(req) {
-  const cls  = STATUS_CLASS[req.status] ?? '';
+  const mark = ICON_CLASS[req.status] ?? ICON_CLASS.unknown;
   const icon = STATUS_ICON[req.status] ?? STATUS_ICON.unknown;
   return `<li>
       <button type="button" data-req="${esc(req.code)}" title="${esc(req.detail || '')}"
         class="flex items-start gap-1.5 text-[11px] text-left w-full rounded px-1 py-0.5
-               hover:bg-slate-100 hover:underline ${cls}">
-        <span class="shrink-0 w-3 text-center">${esc(icon)}</span>
+               text-slate-700 hover:bg-slate-100 hover:underline">
+        <span class="shrink-0 w-3 text-center font-semibold ${mark}">${esc(icon)}</span>
         <span>${esc(requirementLine(req))}</span>
       </button>
     </li>`;

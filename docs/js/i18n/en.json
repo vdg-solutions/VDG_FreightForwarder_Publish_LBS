@@ -141,6 +141,7 @@
   "phase.timeline":"Shipment progress",
   "phase.off_path":"This shipment left the standard process ({state}).",
   "phase.no_pending":"Nothing outstanding at this step.",
+  "phase.advance_conditions":"Conditions to advance to “{state}”",
   "phase.req.unverified":"not verified yet",
   "phase.req.carrier_booking":"Carrier booking confirmed",
   "phase.req.quotation":"Quotation accepted",
