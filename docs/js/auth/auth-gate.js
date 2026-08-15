@@ -17,6 +17,7 @@ import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
 import { sqlCountEntities, setStoreScope } from '../cache/store-client.js';
 import { readCachedRole, writeCachedRole, clearCachedRole, readCachedIdentityRaw } from './role-cache.js';
 import { emailPrefix } from '../util/email-prefix.js';
+import { setResolvedRoles, hasRole, ROLE_MANAGER } from './session-roles.js';
 // F-37-06: the answer-vs-cannot-tell rule moved to its own leaf so the data layer can ask the
 // same question without dragging this module's sign-in chain in. Re-exported for existing callers.
 import { isUndecidable as _isUndecidable } from './undecidable.js';
@@ -46,48 +47,17 @@ export class RoleProbeTimeoutError extends Error {
   }
 }
 
-// Resolved role token for the current sign-in session (fork id / sentinel — NOT an authority).
-let _resolvedRole = null;
-// #28: the actual authority — the role SET read from admin/users.jsonl. hasRole(ROLE_MANAGER) used to
-// answer "does the Drive probe sentinel equal __MANAGER__", i.e. it inferred authority from
-// which FOLDER the user could see. Permission is read from the ACL record now, and every caller
-// asks hasRole() for the specific role it needs.
-let _resolvedRoles = [];
+// F-42-05: session role state + the roles-resolved announcement moved to session-roles.js at the
+// 350-line cap. Re-exported here because ~20 modules already import these from auth-gate.
+export {
+  ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE, ROLE_ACCOUNTANT,
+  ROLE_AUDITOR, ROLES_RESOLVED_EVENT, currentSalesRepId, currentRoles, hasRole,
+} from './session-roles.js';
 
-export const ROLE_MANAGER          = 'Manager';
-export const ROLE_SALES_MANAGER    = 'SalesManager';
-export const ROLE_SALES_REP        = 'SalesRep';
-export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
-export const ROLE_ACCOUNTANT       = 'Accountant';
-export const ROLE_AUDITOR          = 'Auditor';
-
-// ── public helpers ────────────────────────────────────────────────────────────
-
-export function currentSalesRepId() {
-  return _resolvedRole;
-}
-
-/// The roles this session holds. Empty until the ACL record resolves — callers gate on a role,
-/// never on emptiness meaning "allow".
-export function currentRoles() {
-  return [..._resolvedRoles];
-}
-
-export function hasRole(role) {
-  return _resolvedRoles.includes(role);
-}
-
-/// Keeps the fork token and the role set in lockstep at every assignment point, so no path can
-/// set one and forget the other. Roles may be supplied explicitly (from the ACL record) or
-/// derived from the token when there is no record to read.
+/// Keeps the fork token and the role set in lockstep. Roles come from the ACL record when there
+/// is one, else from the token (_rolesForToken).
 function _setResolved(token, roles = null) {
-  _resolvedRole  = token;
-  _resolvedRoles = roles ?? _rolesForToken(token);
-  // Published for the route guard: sign-in resolves the role set long before repo-init builds
-  // window.__vdg_current_user, and gating on the later snapshot bounced a real manager to
-  // /pending-access on every cold boot (#28 regression, caught on the pilot).
-  if (typeof window !== 'undefined') window.__vdg_session_roles = [..._resolvedRoles];
-  return token;
+  return setResolvedRoles(token, roles ?? _rolesForToken(token));
 }
 
 /// Token -> roles when no authority record is available at all.

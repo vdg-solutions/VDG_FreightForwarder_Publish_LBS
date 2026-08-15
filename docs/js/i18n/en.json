@@ -376,6 +376,7 @@
   "nav.workspace.shipments": "Shipments",
   "nav.sales.create_shipment": "Create Shipment",
   "nav.sales.my_shipments": "My Shipments",
+  "nav.sales.quotes": "Quotes",
   "nav.masters.customers": "Customers",
   "nav.masters.local_charges": "Local Charges",
   "nav.masters.units": "Units of Measure",

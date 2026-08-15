@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate } from '../router.js';
-import { hasRole } from '../auth/auth-gate.js';
+import { hasRole, ROLES_RESOLVED_EVENT } from '../auth/auth-gate.js';
 import { t } from '../i18n/index.js';
 import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole,
   ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE }
@@ -28,6 +28,12 @@ const V1_ITEMS = [
 
   // F-24-09: allowRoles matches route-guard's /sales prefix map (SalesRep | Manager).
   { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_shipments',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // F-42-04: the quote list had no nav entry at all — the topbar's "new quote" button created
+  // deals that only a typed URL could find again, and step 1 of the sales flow (quote -> job)
+  // was a one-way street. Owner 2026-08-15, on being shown the gap: "không có". SalesManager is
+  // included because the deal is theirs too (access_policy.rs admits them to /sales); CS is not —
+  // CS opens the job, it does not price it (the same split access_policy.rs:31 already draws).
+  { group: 'sales',     route: '/sales/quote',         labelKey: 'nav.sales.quotes',                 icon: 'quote',  allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_MANAGER] },
   // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
   // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
   // explanation. A visible menu item that always fails. Now matches the /manager route-guard
@@ -77,8 +83,7 @@ const V1_GROUPS = [
 
 // F-15-46 v2-restore: original SALES non-v1 entries
 // const HIDDEN_SALES_V2 = [
-//   { route: '/sales/quote',     label: 'Quotes',       icon: 'quote', disabled: true },
-//   { route: '/sales/quote/new', label: 'New Quote',    icon: 'plus',  disabled: true, sub: true },
+//   (quote list promoted to V1_ITEMS by F-42-04 — no longer hidden)
 //   { route: '/sales/me',        label: 'My Workspace', icon: 'tag',   disabled: true },
 //   { route: '/sales/analytics', label: 'Analytics',    icon: 'dollar', disabled: true },
 // ];
@@ -162,6 +167,9 @@ class VdgSidebar extends LitElement {
     };
     this._onBackdrop      = () => { this._drawerOpen = false; };
     this._onLocaleChanged = () => this.requestUpdate();
+    // F-42-05: the menu is role-gated, and this component mounts before sign-in resolves —
+    // without this the first (role-less) filter result stuck for the whole session.
+    this._onRolesResolved = () => this.requestUpdate();
     this._onGroupToggle   = (key) => {
       this._collapsed = toggleCollapsed(this._collapsed, key);
       try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, serializeCollapsed(this._collapsed)); }
@@ -176,6 +184,7 @@ class VdgSidebar extends LitElement {
     window.addEventListener('vdg:breakpoint-changed', this._onBreakpt);
     window.addEventListener('vdg:sidebar-toggle',     this._onToggle);
     window.addEventListener(LOCALE_CHANGE_EVENT,      this._onLocaleChanged);
+    window.addEventListener(ROLES_RESOLVED_EVENT,     this._onRolesResolved);
     try { this._collapsed = parseCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY)); }
     catch { /* storage disabled: default all-expanded */ this._collapsed = new Set(); }
     try { this._desktopCollapsed = parseDesktopCollapsed(localStorage.getItem(DESKTOP_COLLAPSED_KEY)); }
@@ -188,6 +197,7 @@ class VdgSidebar extends LitElement {
     window.removeEventListener('vdg:breakpoint-changed', this._onBreakpt);
     window.removeEventListener('vdg:sidebar-toggle',     this._onToggle);
     window.removeEventListener(LOCALE_CHANGE_EVENT,      this._onLocaleChanged);
+    window.removeEventListener(ROLES_RESOLVED_EVENT,     this._onRolesResolved);
   }
 
   // #28: the role SET from admin/users.jsonl. A user holding several roles sees the union of
@@ -271,7 +281,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build a3b8792">v0.3.53</span>
+        <span class="font-mono whitespace-nowrap" title="build 1ffe5f3">v0.3.54</span>
       </div>
     `;
   }

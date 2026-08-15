@@ -1,7 +1,7 @@
 // Topbar — route title, user avatar, sync chip, SW update banner
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { currentSalesRepId, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
+import { currentSalesRepId, hasRole, ROLE_MANAGER, ROLES_RESOLVED_EVENT } from '../auth/auth-gate.js';
 import { readCachedProfile } from '../auth/profile-cache.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../i18n/index.js';
@@ -77,6 +77,9 @@ class VdgTopbar extends LitElement {
     this._onOutbox        = (e) => { this._outboxCount = e.detail?.count ?? 0; };
     this._onSwUpdate      = () => { if (!sessionStorage.getItem(SW_DISMISS_KEY)) this._swUpdate = true; };
     this._onLocaleChanged = (e) => { this._locale = e.detail?.locale ?? currentLocale(); this._computeBreadcrumb(); };
+    // F-42-05: the quote button and the manager mode-toggle are role-gated, and this component
+    // mounts before sign-in resolves — re-render when the role set actually lands.
+    this._onRolesResolved = () => this.requestUpdate();
     this._onHashChange    = () => { this._computeBreadcrumb(); };
     this._onBreakpt       = (e) => { this._mobile = e.detail.mobile; };
     this._onQuotaWarn     = () => { this._quotaWarn = true; };
@@ -100,6 +103,7 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:outbox-changed',      this._onOutbox);
     window.addEventListener('vdg:sw-update-available', this._onSwUpdate);
     window.addEventListener('vdg:locale-changed',      this._onLocaleChanged);
+    window.addEventListener(ROLES_RESOLVED_EVENT,      this._onRolesResolved);
     window.addEventListener('hashchange',              this._onHashChange);
     window.addEventListener('vdg:breakpoint-changed',  this._onBreakpt);
     window.addEventListener('vdg:quota-warning',       this._onQuotaWarn);
@@ -122,6 +126,7 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:outbox-changed',      this._onOutbox);
     window.removeEventListener('vdg:sw-update-available', this._onSwUpdate);
     window.removeEventListener('vdg:locale-changed',      this._onLocaleChanged);
+    window.removeEventListener(ROLES_RESOLVED_EVENT,      this._onRolesResolved);
     window.removeEventListener('hashchange',              this._onHashChange);
     window.removeEventListener('vdg:breakpoint-changed',  this._onBreakpt);
     window.removeEventListener('vdg:quota-warning',       this._onQuotaWarn);
