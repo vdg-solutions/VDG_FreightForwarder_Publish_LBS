@@ -11,6 +11,18 @@ export const WORKSPACE_NAME = (() => {
   return raw.startsWith('WORKSPACE_NAME_') ? 'LBS' : raw;
 })();
 
+// F-42-07: the tenant's ACTUAL Drive folder, stamped into the bundle at publish time from
+// tenants/<id>.json. Until this existed a tenant build carried only a NAME, and every signed-in
+// account resolved that name against ITS OWN Drive, owner-first — so a user who happened to own a
+// folder called "LBS" was bound to their own private folder instead of the customer's workspace,
+// and the first-run rule ("admin/ not seeded → the creator is Manager") then made them Manager of
+// it. Observed live: sol.vdg01 opening the customer's published build landed in sol.vdg01's own
+// retired LBS folder. A name is a search term; identity is an id.
+const BUILD_ROOT_ID = (() => {
+  const raw = '17hMgfvZLnPTfuB8A-HTSyk1t-ytxcVoU';
+  return raw.startsWith('WORKSPACE_ROOT_ID_') ? '' : raw; // unsubstituted = dev build, resolve by name
+})();
+
 const DRIVE_ROOT_PARENT_ID = 'root';
 
 // F-24-20: Drive query boolean term for "shared to me, not owned by me" — named so the
@@ -84,6 +96,20 @@ async function _verifyPinnedRoot(id) {
 }
 
 async function _resolveWorkspaceRoot(name) {
+  // F-42-07: a tenant build IS bound to one folder. Verify it and stop — no pin, no name search,
+  // no shared fallback. Those three exist to FIND a workspace; here we already know which one,
+  // and every one of them is a way to be bound to the wrong Drive. Cannot see it (403/404 under
+  // drive.file) = not a member of this tenant: answer null and let the caller fall through to the
+  // employee fork path, exactly as an unshared root does today.
+  if (BUILD_ROOT_ID) {
+    try {
+      return await _verifyPinnedRoot(BUILD_ROOT_ID);
+    } catch (err) {
+      if (err?.status === 404 || err?.status === 403) return null;
+      throw err; // transient carries no verdict — never silently unbind the tenant
+    }
+  }
+
   const pinned = _readRootPin(name);
   if (pinned) {
     try {

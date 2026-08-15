@@ -30,10 +30,11 @@ const V1_ITEMS = [
   { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_shipments',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   // F-42-04: the quote list had no nav entry at all — the topbar's "new quote" button created
   // deals that only a typed URL could find again, and step 1 of the sales flow (quote -> job)
-  // was a one-way street. Owner 2026-08-15, on being shown the gap: "không có". SalesManager is
-  // included because the deal is theirs too (access_policy.rs admits them to /sales); CS is not —
-  // CS opens the job, it does not price it (the same split access_policy.rs:31 already draws).
-  { group: 'sales',     route: '/sales/quote',         labelKey: 'nav.sales.quotes',                 icon: 'quote',  allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_MANAGER] },
+  // was a one-way street. Owner 2026-08-15, on being shown the gap: "không có".
+  // F-42-06 (owner: "báo giá là chỉ sales làm nha"): the sales desk only — KEEP-CONSISTENT-WITH
+  // access_policy.rs's "/sales/quote" rule. A Manager who also sells holds SalesRep on their user
+  // record and gets the entry through that hat, not through being the manager.
+  { group: 'sales',     route: '/sales/quote',         labelKey: 'nav.sales.quotes',                 icon: 'quote',  allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER] },
   // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
   // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
   // explanation. A visible menu item that always fails. Now matches the /manager route-guard
@@ -281,7 +282,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 1ffe5f3">v0.3.54</span>
+        <span class="font-mono whitespace-nowrap" title="build 0184d50">v0.3.55</span>
       </div>
     `;
   }

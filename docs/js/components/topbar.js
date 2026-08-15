@@ -1,7 +1,7 @@
 // Topbar — route title, user avatar, sync chip, SW update banner
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { currentSalesRepId, hasRole, ROLE_MANAGER, ROLES_RESOLVED_EVENT } from '../auth/auth-gate.js';
+import { currentSalesRepId, hasRole, ROLE_MANAGER, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../auth/auth-gate.js';
 import { readCachedProfile } from '../auth/profile-cache.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../i18n/index.js';
@@ -11,6 +11,16 @@ import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js
 import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 import { renderUserMenu, renderSwBanner } from './topbar-menus.js';
 import { putEnvelope } from '../data/shipment-repo.js';
+
+// F-42-06 (owner: "báo giá là chỉ sales làm nha", "theo thông lệ quốc tế"). The button used to
+// read `hasRole(ROLE_MANAGER) ? '' : button` — "everyone EXCEPT the manager", which handed a
+// quote shortcut to Accounting, Audit, CS and a not-yet-provisioned account alike. Quoting is the
+// sales desk's act: the rep who owns the account, and the sales manager who carries key accounts
+// of their own. KEEP-CONSISTENT-WITH access_policy.rs's "/sales/quote" rule — a route the user
+// cannot open must not be offered a button.
+function canQuote() {
+  return hasRole(ROLE_SALES_REP) || hasRole(ROLE_SALES_MANAGER);
+}
 
 const SW_DISMISS_KEY            = 'vdg.sw.update.dismissed';
 const SUPPORTED_LOCALES         = ['vi', 'en'];
@@ -277,13 +287,13 @@ class VdgTopbar extends LitElement {
             onSyncNow: () => this._onChipClick(state),
           })}
           ${hasRole(ROLE_MANAGER) && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}
-          ${hasRole(ROLE_MANAGER) ? '' : html`
+          ${canQuote() ? html`
             <button @click="${() => navigate('/sales/quote/new')}"
                     class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1.5 px-3 text-[13px] font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
               ${t('topbar.new_quote')}
             </button>
-          `}
+          ` : ''}
           <button @click="${() => navigate('/help')}"
                   class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center px-3 text-[13px] font-medium rounded-md text-slate-600 hover:bg-slate-100 transition">
             ${t('help')}
