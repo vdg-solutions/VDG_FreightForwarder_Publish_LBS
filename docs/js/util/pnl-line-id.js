@@ -1,3 +1,4 @@
+import { listWhere } from '../data/repo-query.js';
 // util/pnl-line-id.js — F-57-01. One ID scheme for `pnl_line`, used by BOTH entry paths.
 //
 // The manual form (views/sales-new/submit-orchestrator.js) minted `${ref}-L1`, `${ref}-L2`…
@@ -44,7 +45,12 @@ export function isPnlLineIdFor(id, ref) {
  * @returns {Promise<number>} rows deleted
  */
 export async function deletePnlLinesFor(repo, ref) {
-  const rows = await repo.list(
+  // E-43: this passed the predicate to `repo.list`, which is a wasm-bindgen export taking ONE
+  // argument — the filter was dropped, so it listed EVERY pnl_line and then deleted them all.
+  // Saving one shipment's P&L wiped every other shipment's: measured live, after the second save
+  // the table held three rows and all three belonged to the shipment just saved.
+  const rows = await listWhere(
+    repo,
     KIND_PNL_LINE,
     (r) => r?.shipment_ref === ref || isPnlLineIdFor(r?.id, ref),
   ).catch(() => []);
