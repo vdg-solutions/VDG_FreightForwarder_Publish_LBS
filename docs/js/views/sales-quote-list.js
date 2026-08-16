@@ -1,5 +1,6 @@
 // F-12-10 — Quotation list view (all states, role-filtered)
 
+import { listWhere } from '../data/repo-query.js';
 import { currentSalesRepId, hasRole, ROLE_MANAGER } from '../auth/auth-gate.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../operators/quote-orchestrator.js';
 import { navigate } from '../router.js';
@@ -71,7 +72,7 @@ function quoteRow(q, isM) {
 
 async function loadQuotes(repo, salesId, isM) {
   const filter = isM ? null : (q) => (q.created_by || '').toLowerCase() === salesId.toLowerCase();
-  return repo.list(KIND_QUOTATIONS, filter).catch(() => []);
+  return listWhere(repo, KIND_QUOTATIONS, filter).catch(() => []);
 }
 
 function renderTable(root, quotes, isM) {

@@ -10,6 +10,7 @@
 
 import { readRevenue, readRevenueFor, revenuePrefixFor, writeRevenue, deleteRevenue }
   from './shipment-revenue-repo.js';
+import { listWhere } from './repo-query.js';
 import { recordShipmentChange } from '../sync/shipment-audit.js';
 import { assertWritable } from './write-gate.js';
 
@@ -72,7 +73,7 @@ export async function getEnvelope(repo, ref) {
 }
 
 export async function listEnvelopes(repo, predicate = null) {
-  return repo.list(KIND_SHIPMENT, predicate);
+  return listWhere(repo, KIND_SHIPMENT, predicate);
 }
 
 export async function deleteShipment(repo, ref) {
@@ -118,7 +119,7 @@ export async function getShipment(repo, ref) {
 }
 
 export async function listShipments(repo, predicate = null) {
-  const envelopes = await repo.list(KIND_SHIPMENT, predicate);
+  const envelopes = await listWhere(repo, KIND_SHIPMENT, predicate);
   return joinMany(await readRevenueFor(repo, envelopes), envelopes);
 }
 

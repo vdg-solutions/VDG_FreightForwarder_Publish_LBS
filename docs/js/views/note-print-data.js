@@ -3,6 +3,7 @@
 // Split out of note-print.js so that file stays presentation-only (and under the 350-line cap).
 // Everything here is a pure read through window.__vdg_repo — no Drive call, no mutation.
 
+import { listWhere } from '../data/repo-query.js';
 import { getShipment } from '../data/shipment-repo.js';
 
 export const NOTE_TYPE_DEBIT  = 'debit';
@@ -82,7 +83,7 @@ export async function loadNoteData(
 
   // Materialized pnl_line rows are the source of truth (both entry paths write them since
   // F-57-01); the shipment's embedded copy is the fallback for older records.
-  let rows = await repo.list(KIND_PNL_LINE, (l) => l?.shipment_ref === shipmentRef).catch(() => []);
+  let rows = await listWhere(repo, KIND_PNL_LINE, (l) => l?.shipment_ref === shipmentRef).catch(() => []);
   if (!rows?.length) rows = shipment.pnl_lines || [];
 
   const lines = rows.map((l) => toNoteLine(l, noteType)).filter(Boolean);

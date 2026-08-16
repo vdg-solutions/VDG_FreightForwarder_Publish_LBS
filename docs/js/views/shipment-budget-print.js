@@ -1,4 +1,5 @@
 // F-12-08 — NI-style "PROFIT-LOSS BUDGET" per-shipment print form
+import { listWhere } from '../data/repo-query.js';
 import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';
 import { t } from '../i18n/index.js';
@@ -21,7 +22,7 @@ async function loadLines(ref) {
   const repo = window.__vdg_repo;
   if (!repo) return [];
   try {
-    return await repo.list('pnl_line', (l) => l.shipment_ref === ref);
+    return await listWhere(repo, 'pnl_line', (l) => l.shipment_ref === ref);
   } catch { return []; }
 }
 
