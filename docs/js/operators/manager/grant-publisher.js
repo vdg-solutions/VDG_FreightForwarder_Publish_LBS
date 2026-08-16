@@ -20,9 +20,14 @@ export function grantFileOp(userPrefix, op = DRIVE_OP_GRANT_ROLE_FILE, result = 
 
 /// Write the grant and share it reader to `email` alone. Idempotent: an existing file is PATCHed in
 /// place so its fileId — and the permission already on it — survives a role change.
-export async function publishGrant(api, wasm, { rootId, workspace, email, userPrefix, roleToken }) {
+export async function publishGrant(api, wasm, { rootId, workspace, email, userPrefix, roleToken, areas = null }) {
   if (!userPrefix) return null;
-  const content = wasm.grant_file_build(email, workspace, userPrefix, roleToken);
+  // E-43: with the folder ids, the file stops being a badge and becomes the user's MANIFEST — the
+  // only way an employee can reach a granted folder, since they hold nothing on the workspace root
+  // and Drive returns an empty list (not an error) for a parent they cannot read.
+  const content = areas?.length
+    ? wasm.grant_file_build_with_areas(email, workspace, userPrefix, roleToken, JSON.stringify(areas))
+    : wasm.grant_file_build(email, workspace, userPrefix, roleToken);
   const name    = wasm.grant_file_target_name(workspace, userPrefix);
 
   const folder   = await api.getOrCreateFolder(rootId, GRANTS_DIR);

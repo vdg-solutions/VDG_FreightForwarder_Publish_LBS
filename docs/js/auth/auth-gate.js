@@ -9,7 +9,7 @@
 import { getCurrentUser, signOut, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
 import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord } from './workspace-acl.js';
-import { readGrant } from './grant-file.js';
+import { readGrant, rememberGrantAreas } from './grant-file.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT, DRIVE_ERROR_KIND_FILE_PERMISSION } from './drive-error-classifier.js';
@@ -161,6 +161,10 @@ async function _probeInner(user) {
   // the real user_prefix (a collision appended random digits, so the fork name is not guessable).
   const grant = await readGrant(wsName, prefix, user.email);
   if (grant.roles.length > 0) {
+    // E-43: the manifest is the only map an employee has — they hold nothing on the workspace root,
+    // so every folder they were granted is unreachable by path. Stash it before the role resolves,
+    // because the data layer starts resolving folders the moment boot continues.
+    rememberGrantAreas(grant.areas);
     const role = grant.userPrefix.toUpperCase();
     _setResolved(role, grant.roles);
     writeCachedRole(user.email, role, grant.roles);

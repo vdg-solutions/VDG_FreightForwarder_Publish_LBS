@@ -2,6 +2,7 @@ import { getFile, uploadFile, getOrCreateFolder, findWorkspaceRoot } from '../au
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { MASTER_REGISTRY } from './master-registry.js';
 import { healDuplicateBundle } from './bundle-file-heal.js';
+import { recallGrantAreas } from '../auth/grant-file.js';
 
 // F-37-02: the revenue audit trail is deliberately NOT here. A log inherits the ACL of the thing
 // it describes, and revenue history describes a record CS was never granted — listing it as a
@@ -95,7 +96,16 @@ export class WasmIoPort {
   async _resolveFolder(kind) {
     if (this.folderIds.has(kind)) return this.folderIds.get(kind);
     const rootId = await findWorkspaceRoot(activeWorkspaceName());
-    if (!rootId) throw new Error('Workspace root not found');
+    if (!rootId) {
+      // E-43: an employee holds no permission on the workspace root — `resolve_grants` never emits
+      // it, and granting it would inherit read into every table. So there is nothing to descend
+      // from, and Drive will not help: a `'<root>' in parents` list from an account that cannot
+      // read the root returns 200 with an EMPTY array. The manifest in their grant file carries the
+      // folder ids the manager resolved when granting, which is the only map they have.
+      const viaManifest = await this._resolveFromManifest(kind);
+      if (viaManifest) return viaManifest;
+      throw new Error('Workspace root not found');
+    }
 
     let folderId;
     // An explicit override wins outright: it is the only way to say "this kind does NOT live
@@ -111,6 +121,47 @@ export class WasmIoPort {
     this.folderIds.set(kind, folderId);
     this._folderKind.set(folderId, kind);
     return folderId;
+  }
+
+  /// The employee route: find this kind's folder among the ids the manager wrote into the grant
+  /// file. The manifest is keyed by the SAME path the fan-out granted, so the match is exact — no
+  /// name search, and no ambiguity between `_shared/customers` and `shared/masters/customers`,
+  /// which a name lookup cannot tell apart.
+  ///
+  /// A kind that lives in this user's own fork (`users/<prefix>/<kind>`) resolves off the fork
+  /// entry: the fork itself is granted, so its children can be created and listed from there.
+  async _resolveFromManifest(kind) {
+    const areas = recallGrantAreas();
+    if (!areas.length) return null;
+
+    const kindPath = KIND_PATH_OVERRIDES[kind] ?? (_isTeamMaster(kind) || LOG_KINDS.includes(kind)
+      ? `${MASTERS_PATH}/${kind}`
+      : null);
+    if (kindPath) {
+      const exact = areas.find((a) => a.path === kindPath);
+      if (exact) { this.folderIds.set(kind, exact.folder_id); this._folderKind.set(exact.folder_id, kind); return exact.folder_id; }
+      // Granted one level up (`_shared/<ref>` when the kind lives in `_shared/<ref>/<sub>`), so
+      // walk the remainder from the granted anchor.
+      const anchor = areas
+        .filter((a) => kindPath.startsWith(`${a.path}/`))
+        .sort((a, b) => b.path.length - a.path.length)[0];
+      if (anchor) {
+        const rest = kindPath.slice(anchor.path.length + 1);
+        const id   = await this._ensureNestedFolder(anchor.folder_id, rest);
+        this.folderIds.set(kind, id); this._folderKind.set(id, kind);
+        return id;
+      }
+      return null;
+    }
+
+    // Per-user kind: its home is this user's own fork.
+    const prefix = this.userEmail.split('@')[0].toLowerCase();
+    const fork   = areas.find((a) => a.path === `${USERS_PATH}/${prefix}`)
+                ?? areas.find((a) => a.path.startsWith(`${USERS_PATH}/`) && !a.path.includes('/', USERS_PATH.length + 1));
+    if (!fork) return null;
+    const id = await this._ensureNestedFolder(fork.folder_id, kind);
+    this.folderIds.set(kind, id); this._folderKind.set(id, kind);
+    return id;
   }
 
   // Resolve each path segment ONCE per session. The boot migrators (seed/master-scope/priced-ref)

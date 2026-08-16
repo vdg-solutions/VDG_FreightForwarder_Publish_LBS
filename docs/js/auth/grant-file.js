@@ -60,6 +60,20 @@ export function parseGrant(json, email, workspace) {
   return [...grant.roles];
 }
 
+/// E-43: the manifest half — `[{path, folder_id}]` the manager resolved when they granted. Same
+/// address and workspace checks as parseGrant, because a manifest from another company's grant
+/// would point this session at another company's folders. An older grant file carries no `areas`
+/// and yields [], which the caller reads as "fall back to the root walk".
+export function parseGrantAreas(json, email, workspace) {
+  let grant;
+  try { grant = JSON.parse(json); } catch { return []; }
+  if (!grant || typeof grant.email !== 'string') return [];
+  if (grant.email.toLowerCase() !== String(email || '').toLowerCase()) return [];
+  if (String(grant.workspace || '').toLowerCase() !== String(workspace || '').toLowerCase()) return [];
+  if (!Array.isArray(grant.areas)) return [];
+  return grant.areas.filter((a) => a && typeof a.path === 'string' && typeof a.folder_id === 'string');
+}
+
 /// The signed-in user's grant, found from what they actually know at sign-in: the workspace they
 /// are entering and the local-part of their own email. The file reports the real `user_prefix`
 /// back, and every later lookup uses that.
@@ -73,8 +87,24 @@ export async function readGrant(workspace, emailBase, email) {
     const userPrefix = userPrefixFromGrantName(file.name, workspace);
     if (!userPrefix) continue;
     const res   = await getFile(file.id);
-    const roles = parseGrant(res?.content || '', email, workspace);
-    if (roles.length > 0) return { userPrefix, roles };
+    const json  = res?.content || '';
+    const roles = parseGrant(json, email, workspace);
+    if (roles.length > 0) return { userPrefix, roles, areas: parseGrantAreas(json, email, workspace) };
   }
-  return { userPrefix: null, roles: [] };
+  return { userPrefix: null, roles: [], areas: [] };
+}
+
+/// Where the session caches its manifest so the data layer can reach it without re-reading Drive.
+/// Session-scoped on purpose: a stale manifest in localStorage would outlive a revoke, and the
+/// grant file is re-read on every sign-in anyway.
+export const GRANT_AREAS_KEY = 'vdg.grant.areas';
+
+export function rememberGrantAreas(areas) {
+  try { sessionStorage.setItem(GRANT_AREAS_KEY, JSON.stringify(areas || [])); }
+  catch { /* storage-less context (tests) — the data layer falls back to the root walk */ }
+}
+
+export function recallGrantAreas() {
+  try { return JSON.parse(sessionStorage.getItem(GRANT_AREAS_KEY) || '[]'); }
+  catch { return []; }
 }

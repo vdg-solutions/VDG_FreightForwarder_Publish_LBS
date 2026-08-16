@@ -168,6 +168,14 @@ export function get_validation_errors(): any;
 export function grant_file_build(email: string, workspace: string, user_prefix: string, roles: string): string;
 
 /**
+ * E-43: the manifest form. `areas_json` is `[{path, folder_id}]` — the ids the caller resolved
+ * while applying the permissions, so the employee never has to find them. An unparseable list is
+ * an error, not an empty manifest: silently writing a grant with no ids would leave the user with
+ * a file that reads fine and resolves nothing.
+ */
+export function grant_file_build_with_areas(email: string, workspace: string, user_prefix: string, roles: string, areas_json: string): string;
+
+/**
  * Post-boot verification seam. auth-gate reads the grant file BEFORE wasm loads and carries its
  * own minimal mirror (`grant-file.js`); this export is what the mirror is tested against.
  */
@@ -437,6 +445,7 @@ export interface InitOutput {
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
     readonly grant_file_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly grant_file_build_with_areas: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
     readonly grant_file_roles: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly grant_file_target_name: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
@@ -545,9 +554,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10752: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10754: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4572: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10776: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10778: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4596: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -66,14 +66,14 @@ export class RoleAssignmentService {
     const acl    = await this.resolveAcl(role, userPrefix, extraRoles);
     const rootId = await this._requireRoot();
 
-    const { granted, skipped } = await this._grantAll(rootId, email, acl);
+    const { granted, skipped, areas } = await this._grantAll(rootId, email, acl);
     // F-37-05: the other end of the cross product. Without this an Accountant hired before this
     // user silently never sees anything they publish — nothing errors, the invoices just never
     // arrive. Ordered after the fork's own grant, which is what creates the fork.
     await this._backGrantNewFork(rootId, userPrefix);
     // #30: publish the role set to the user themselves. Ordered AFTER the folder grants so a
     // failed cascade never leaves a readable grant promising access that was not actually given.
-    await this._publishGrant(rootId, email, userPrefix, roleSetToken(role, extraRoles));
+    await this._publishGrant(rootId, email, userPrefix, roleSetToken(role, extraRoles), areas);
 
     const existing = await this._userRepo.get(email);
     const result   = await this._userRepo.upsert(_buildUserRecord(existing, email, role, userPrefix, extraRoles));
@@ -113,6 +113,10 @@ export class RoleAssignmentService {
 
     for (const entry of toRevoke) await this._revokeEntry(rootId, email, entry);
     const { skipped } = await this._grantAll(rootId, email, toGrant);
+    // The manifest must describe the WHOLE new ACL, not just the delta that was granted now —
+    // a role change that only widens by one ref would otherwise rewrite the grant file with a
+    // one-entry manifest and strip the user's access to everything they already had.
+    const areas = await this._resolveAreas(rootId, newAcl);
 
     // #30: a renamed fork leaves the OLD grant file still shared. readGrant takes the first
     // candidate it can parse, so a stale file could keep handing out the previous role set —
@@ -120,7 +124,7 @@ export class RoleAssignmentService {
     if (oldUserPrefix && oldUserPrefix !== newUserPrefix) {
       await this._unpublishGrant(rootId, email, oldUserPrefix);
     }
-    await this._publishGrant(rootId, email, newUserPrefix, roleSetToken(newRole, extraRoles));
+    await this._publishGrant(rootId, email, newUserPrefix, roleSetToken(newRole, extraRoles), areas);
 
     const existing = await this._userRepo.get(email);
     await this._userRepo.upsert(_buildUserRecord(existing, email, newRole, newUserPrefix, extraRoles));
@@ -183,10 +187,10 @@ export class RoleAssignmentService {
     return name;
   }
 
-  async _publishGrant(rootId, email, userPrefix, roleToken) {
+  async _publishGrant(rootId, email, userPrefix, roleToken, areas = null) {
     if (!userPrefix) return null;
     return publishGrant(this._api, this._wasm || window.__vdg_wasm, {
-      rootId, workspace: this._requireWorkspaceName(), email, userPrefix, roleToken,
+      rootId, workspace: this._requireWorkspaceName(), email, userPrefix, roleToken, areas,
     });
   }
 
@@ -196,31 +200,59 @@ export class RoleAssignmentService {
     });
   }
 
+  /// path -> folder id for every entry that names ONE folder. A wildcard names a folder per fork
+  /// and has no single id, so it is omitted rather than guessed; the client falls back to its own
+  /// fork for those. A path that cannot be resolved is skipped, not fatal — a partial manifest is
+  /// still better than none, and the reconciler reports what is missing.
+  async _resolveAreas(rootId, entries) {
+    const areas = [];
+    for (const entry of entries) {
+      if (entry.path === WILDCARD_PATH || splitInteriorWildcard(entry.path)) continue;
+      try {
+        areas.push({ path: entry.path, folder_id: await resolvePathToFolderId(this._api, rootId, entry.path) });
+      } catch (err) {
+        console.warn(`[role-assignment] manifest: cannot resolve ${entry.path}:`, err.message); // DEV
+      }
+    }
+    return areas;
+  }
+
   async _grantAll(rootId, email, entries) {
     const granted = [];
     const skipped = [];
+    // E-43: the folder ids resolved here are the ONLY copy anyone will ever have cheaply. An
+    // employee holds no permission on the workspace root, so they cannot walk down to find these
+    // folders — and Drive answers a parent-scoped list from an account that cannot read the parent
+    // with an empty array rather than an error. Handing the ids to them in their grant file costs
+    // nothing extra, because resolving them is already the first step of granting them.
+    const areas = [];
     try {
       for (const entry of entries) {
-        await this._grantEntryResilient(rootId, email, entry, granted, skipped);
+        await this._grantEntryResilient(rootId, email, entry, granted, skipped, areas);
       }
     } catch (err) {
       await this._rollback(granted);
       throw err;
     }
-    return { granted, skipped };
+    return { granted, skipped, areas };
   }
 
   /// Grants one ACL entry, tolerating drive.file's appNotAuthorizedToChild: for the wildcard
   /// root it fans out to app-visible child folders; a specific subfolder is recorded in
   /// `skipped`. Any other error propagates (caller rolls back). Mutates `granted`/`skipped`.
-  async _grantEntryResilient(rootId, email, entry, granted, skipped) {
+  async _grantEntryResilient(rootId, email, entry, granted, skipped, areas = null) {
     // An interior wildcard names one subfolder of EVERY fork, so it has no single folder id.
     if (splitInteriorWildcard(entry.path)) {
       granted.push(...await grantAcrossForks(this._api, resolvePathToFolderId, rootId, email, entry));
       return;
     }
     try {
-      const result = await this._grantEntry(rootId, email, entry);
+      const folderId = await resolvePathToFolderId(this._api, rootId, entry.path);
+      // Recorded whether or not the permission was newly written: an idempotent re-grant still
+      // has to appear in the manifest, or a user provisioned twice ends up with fewer areas than
+      // a user provisioned once.
+      if (areas && entry.path !== WILDCARD_PATH) areas.push({ path: entry.path, folder_id: folderId });
+      const result = await this._grantEntry(rootId, email, entry, folderId);
       if (result) granted.push(result);
     } catch (err) {
       if (!_isNotAuthorizedToChild(err)) throw err;
@@ -257,8 +289,8 @@ export class RoleAssignmentService {
 
   /// AC-02: idempotent — no-op (returns null) when the email already holds this exact
   /// Drive role on the folder.
-  async _grantEntry(rootId, email, entry) {
-    const folderId  = await resolvePathToFolderId(this._api, rootId, entry.path);
+  async _grantEntry(rootId, email, entry, preResolvedFolderId = null) {
+    const folderId  = preResolvedFolderId ?? await resolvePathToFolderId(this._api, rootId, entry.path);
     const driveRole = entry.access === ACCESS_WRITE ? DRIVE_ROLE_WRITER : DRIVE_ROLE_READER;
     const perms     = await this._api.listPermissions(folderId);
     if (perms.some((p) => p.emailAddress === email && p.role === driveRole)) return null;
