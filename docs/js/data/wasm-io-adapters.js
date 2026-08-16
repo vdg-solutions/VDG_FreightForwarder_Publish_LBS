@@ -138,20 +138,12 @@ export class WasmIoPort {
       ? `${MASTERS_PATH}/${kind}`
       : null);
     if (kindPath) {
-      const exact = areas.find((a) => a.path === kindPath);
-      if (exact) { this.folderIds.set(kind, exact.folder_id); this._folderKind.set(exact.folder_id, kind); return exact.folder_id; }
-      // Granted one level up (`_shared/<ref>` when the kind lives in `_shared/<ref>/<sub>`), so
-      // walk the remainder from the granted anchor.
-      const anchor = areas
-        .filter((a) => kindPath.startsWith(`${a.path}/`))
-        .sort((a, b) => b.path.length - a.path.length)[0];
-      if (anchor) {
-        const rest = kindPath.slice(anchor.path.length + 1);
-        const id   = await this._ensureNestedFolder(anchor.folder_id, rest);
-        this.folderIds.set(kind, id); this._folderKind.set(id, kind);
-        return id;
-      }
-      return null;
+      // Same anchor rule the path-addressed adapters use — one implementation, so a kind and a
+      // raw path can never disagree about which folder they mean.
+      const id = await this._resolveDirFromManifest(kindPath);
+      if (!id) return null;
+      this.folderIds.set(kind, id); this._folderKind.set(id, kind);
+      return id;
     }
 
     // Per-user kind: its home is this user's own fork.
@@ -293,8 +285,27 @@ export class WasmIoPort {
 
   async _resolveDir(dirPath) {
     const rootId = await findWorkspaceRoot(activeWorkspaceName());
-    if (!rootId) throw new Error('Workspace root not found');
-    return this._ensureNestedFolder(rootId, dirPath);
+    if (rootId) return this._ensureNestedFolder(rootId, dirPath);
+    // E-43: the ws_* adapters address folders by PATH, not by kind, so they needed the manifest
+    // route too. Without it `_resolveFolder` worked and every path-addressed write still died —
+    // measured: a shipment saved locally and its per-record flush failed at ws_read_file with the
+    // whole outbox behind it. The anchor is the LONGEST granted prefix, so a specific grant always
+    // beats a shorter ancestor, and the remainder is walked from there.
+    const viaManifest = await this._resolveDirFromManifest(dirPath);
+    if (viaManifest) return viaManifest;
+    throw new Error('Workspace root not found');
+  }
+
+  async _resolveDirFromManifest(dirPath) {
+    const areas = recallGrantAreas();
+    if (!areas.length) return null;
+    const exact = areas.find((a) => a.path === dirPath);
+    if (exact) return exact.folder_id;
+    const anchor = areas
+      .filter((a) => dirPath.startsWith(`${a.path}/`))
+      .sort((a, b) => b.path.length - a.path.length)[0];
+    if (!anchor) return null;
+    return this._ensureNestedFolder(anchor.folder_id, dirPath.slice(anchor.path.length + 1));
   }
 
   async ws_list_dir(dirPath) {

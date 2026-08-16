@@ -116,8 +116,12 @@ async function renderView(route) {
 window.addEventListener('vdg:navigate', (e) => renderView(e.detail.route));
 
 window.addEventListener('vdg:sync-error', (e) => {
-  const { kind, id } = e.detail || {};
-  console.warn(`[sync] Đồng bộ thất bại: ${kind} ${id}`); // DEV
+  // E-43: this logged `${kind} ${id}` and the drain never sends an `id` — every sync failure read
+  // as "<kind> undefined" and carried no diagnosis at all, while the event had the reason and the
+  // raw Drive error in it the whole time. Hours went into re-deriving what was already in hand.
+  const { kind, period, reason, error } = e.detail || {};
+  console.warn(`[sync] Đồng bộ thất bại: ${kind}${period ? `/${period}` : ''} — ${reason || 'không rõ'}`,
+    error || ''); // DEV
 });
 
 // F-24-17: outbox dropped a row instead of retrying forever (schema drift or a
