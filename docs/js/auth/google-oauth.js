@@ -220,8 +220,14 @@ export async function rebuildSessionFromStoredToken() {
 export async function hydrateSessionFromToken(resp) {
   const expMs  = _persistAccessToken(resp);
   const expSec = Math.floor(expMs / 1000);
+  // E-43: clearing on "not granted" is only safe when the response actually SAYS so. A silent
+  // re-mint can come back without a `scope` field at all, and treating that silence as a refusal
+  // wiped a grant the live token demonstrably carried — measured: the manager's token listed
+  // `auth/drive` while the flag it had just cleared said the scope was missing, so boot stopped at
+  // "Chưa cấp quyền Google Drive" with full permission in hand. Absence of evidence is not
+  // evidence of absence; the same rule the role probe follows.
   if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
-  else clearDriveScopeGrant(); // scope declined at consent — never record a grant
+  else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
   const info = await _fetchUserinfo(resp.access_token);
   localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken({
     email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
