@@ -50,30 +50,45 @@ export async function unpublishGrant(api, wasm, { rootId, workspace, email, user
   if (match) await api.deletePermission(file.id, match.id);
 }
 
+/// The roster row's role set, tolerating the legacy shape (role + extra_roles) alongside `roles`.
+function rolesOf(user) {
+  return (user.roles?.length ? user.roles : [user.role, ...(user.extra_roles || [])]).filter(Boolean);
+}
+
 /// Users provisioned BEFORE grant files existed have none, and with authority moved off the fork
-/// inference that means no roles at all — they would each land on /pending-access. Publishes only
-/// what is MISSING (a role change always republishes through assignRole/changeRole) and reports
-/// rather than throws: one unwritable user must not stop the rest, and a manager who is not the
-/// workspace owner may legitimately fail on some.
+/// inference that means no roles at all — they would each land on /pending-access.
+///
+/// E-43: this used to test only whether a file of that NAME existed and `continue` if it did, so a
+/// grant file carrying an obsolete role set survived forever — the one repair path that exists for
+/// a divergence could not repair anything, only fill gaps. It now READS the file and compares it to
+/// what the roster says, and rewrites on difference. `publishGrant` PATCHes in place, so the fileId
+/// and the reader permission already on it both survive the rewrite.
+///
+/// Reports rather than throws: one unwritable user must not stop the rest, and a manager who is not
+/// the workspace owner may legitimately fail on some.
 export async function backfillGrants(api, wasm, { rootId, workspace, users }) {
-  const result = { published: [], failed: [] };
+  const result = { published: [], repaired: [], failed: [] };
   const folder = await api.getOrCreateFolder(rootId, GRANTS_DIR);
-  const have   = new Set((await api.listChildren(folder.id)).map((f) => f.name));
+  const byName = new Map((await api.listChildren(folder.id)).map((f) => [f.name, f]));
 
   for (const user of users) {
     const userPrefix = user.user_prefix;
     if (!userPrefix) continue;          // no fork yet — assignRole publishes when one is made
-    if (have.has(wasm.grant_file_target_name(workspace, userPrefix))) continue;
-
-    // A legacy record carries role + extra_roles rather than roles; both must survive.
-    const roles = (user.roles?.length ? user.roles : [user.role, ...(user.extra_roles || [])])
-      .filter(Boolean);
+    const roles = rolesOf(user);
     if (roles.length === 0) continue;   // an empty set is not a grant — nothing to hand out
+
+    const roleToken = roles.join(',');
+    const existing  = byName.get(wasm.grant_file_target_name(workspace, userPrefix));
     try {
-      await publishGrant(api, wasm, {
-        rootId, workspace, email: user.email, userPrefix, roleToken: roles.join(','),
-      });
-      result.published.push(user.email);
+      if (existing) {
+        // A read failure is NOT "the file is wrong": rewriting on a transient error would churn
+        // every grant on every 5xx. Only a file we actually read and found different is repaired.
+        const current = (await api.getFile(existing.id))?.content || '';
+        const wanted  = wasm.grant_file_build(user.email, workspace, userPrefix, roleToken);
+        if (current === wanted) continue;
+      }
+      await publishGrant(api, wasm, { rootId, workspace, email: user.email, userPrefix, roleToken });
+      (existing ? result.repaired : result.published).push(user.email);
     } catch (err) {
       result.failed.push({ email: user.email, error: err.message });
       console.warn(`[grant-publisher] backfill failed for ${user.email}:`, err.message); // DEV

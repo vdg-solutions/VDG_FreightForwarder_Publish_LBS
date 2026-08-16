@@ -16,7 +16,9 @@ import { SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
 import { createTokenAnchor, ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from './token-anchor.js';
 
 const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
-const DRIVE_SCOPE              = 'https://www.googleapis.com/auth/drive.file';
+// Must equal google-oauth.js::DRIVE_SCOPE — see the measurement recorded there for why this is
+// the full Drive scope and not `drive.file`.
+const DRIVE_SCOPE              = 'https://www.googleapis.com/auth/drive';
 const ID_TOKEN_KEY             = 'vdg.auth.id_token';
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';

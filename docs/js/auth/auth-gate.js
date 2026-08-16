@@ -12,7 +12,8 @@ import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord } from './worksp
 import { readGrant } from './grant-file.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
-import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
+import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT, DRIVE_ERROR_KIND_FILE_PERMISSION } from './drive-error-classifier.js';
+import { isBoundBuild } from './workspace-root.js';
 import { MANAGER_SENTINEL } from '../util/sales-rep-i18n.js';
 import { sqlCountEntities, setStoreScope } from '../cache/store-client.js';
 import { readCachedRole, writeCachedRole, clearCachedRole, readCachedIdentityRaw } from './role-cache.js';
@@ -39,6 +40,17 @@ const LOGIN_OVERLAY_STYLE     = 'position:fixed;inset:0;z-index:50;background:#f
 // screen. Swallowing them is how an expired access token turned the workspace OWNER into a
 // pending-access account: the 401 fell through to "fork exists, no grant" = zero roles, which the
 // route guard then parked on /pending-access.
+
+/// The probe ran, reached Drive, and still could not decide. Distinct from NOT_PROVISIONED (a
+/// decided "this account is not in the workspace") and from a transport failure. Undecidable by
+/// construction, so `isUndecidable` claims it and no caller may cache it as a role.
+export class RoleUndeterminedError extends Error {
+  constructor(reason) {
+    super(`Role undetermined: ${reason}`);
+    this.name = 'RoleUndeterminedError';
+    this.driveErrorKind = DRIVE_ERROR_KIND_FILE_PERMISSION;
+  }
+}
 
 export class RoleProbeTimeoutError extends Error {
   constructor() {
@@ -166,6 +178,16 @@ async function _probeInner(user) {
     return forkToken;
   }
 
+  // E-43: "could not determine" is NOT "not provisioned", and it must never be cached as one.
+  // In a tenant build the workspace folder demonstrably exists, so a null rootId says only that
+  // THIS account cannot see it — a permission gap, not an absent account. Answering
+  // NOT_PROVISIONED there and writing it to the role cache turned a permission gap (and any
+  // transient Drive index lag behind it) into a verdict that stuck for the whole session, so a
+  // reload could not clear it. Observed live on a Manager who held write on eight areas.
+  if (isBoundBuild() && !rootId) {
+    throw new RoleUndeterminedError(
+      'workspace root is not visible to this account — permissions have not been applied to it');
+  }
   _setResolved(NOT_PROVISIONED_ID);
   writeCachedRole(user.email, NOT_PROVISIONED_ID, []);
   return NOT_PROVISIONED_ID;

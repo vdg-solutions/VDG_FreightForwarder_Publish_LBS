@@ -8,11 +8,23 @@ const CLIENT_ID            = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps
 const TOKEN_KEY            = 'vdg.auth.id_token';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY = 'vdg.auth.access_token_exp';
-const DRIVE_SCOPE_KEY      = 'vdg.auth.drive_scope_granted';
+// E-43: VERSIONED on purpose. The flag records "this browser already consented", and it used to
+// record it for `drive.file`. Widening the scope without renaming the key would leave every
+// existing session carrying a '1' that means the OLD scope — hasDriveScopeGrant would answer true,
+// the app would never re-prompt, and every Drive call would keep failing exactly as before. A new
+// key makes the old grant invisible, so the consent runs once and heals itself.
+const DRIVE_SCOPE_KEY      = 'vdg.auth.drive_scope_granted.v2';
 const ROLE_CACHE_KEY       = 'vdg.role.cache';
 const GIS_SCRIPT_URL       = 'https://accounts.google.com/gsi/client';
 const GIS_SCRIPT_TIMEOUT   = 10_000; // ms
-const DRIVE_SCOPE          = 'https://www.googleapis.com/auth/drive.file';
+// E-43 — MEASURED, not chosen for convenience. Under `drive.file` a file is authorized per
+// (app, USER, file) at the moment that user's session creates or picks it. A folder the MANAGER's
+// session created and then shared is NOT authorized for the EMPLOYEE's session: measured live on
+// the LBS workspace, sol.vdg01 held reader on its grant file and writer on its own fork, and its
+// own session got `sharedWithMe` = [] and 404 on files.get BY ID for both. Every employee was
+// therefore unreachable-by-construction and resolved as NOT_PROVISIONED. Sharing is enforced by
+// Drive; USING what was shared needs a scope that can see files this session did not create.
+const DRIVE_SCOPE          = 'https://www.googleapis.com/auth/drive';
 const USERINFO_URL         = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime when expires_in absent
 const USERINFO_FETCH_TIMEOUT_MS = 8000; // F-57-01 AC-01: matches SAFE_AWAIT_DEFAULT_MS/REPO_INIT_TIMEOUT_MS convention

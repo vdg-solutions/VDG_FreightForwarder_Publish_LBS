@@ -77,6 +77,12 @@ export function findWorkspaceRoot(name) {
 // post-provision reload resolves the freshly-created root.
 export function resetWorkspaceRootCache() { _rootCache.clear(); }
 
+/// Whether this build carries a tenant's folder id (F-42-07). It changes what a null root MEANS:
+/// in an unbound build null is "no such workspace"; in a bound one the workspace demonstrably
+/// exists and null says only "this account cannot see it". Collapsing the two is what let a
+/// permission gap surface as NOT_PROVISIONED — the account reads as not existing.
+export function isBoundBuild() { return BUILD_ROOT_ID !== ''; }
+
 // The root the app is BOUND to is identity, not a search result. Once a root has resolved, its
 // id is pinned here and later sessions verify the pin with one files.get instead of re-running
 // the owner-wide search — because the search is a name lookup, and a name is forgeable by
