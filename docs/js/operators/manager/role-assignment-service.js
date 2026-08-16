@@ -112,11 +112,17 @@ export class RoleAssignmentService {
     const toGrant  = newAcl.filter((n) => !_aclHas(oldAcl, n));
 
     for (const entry of toRevoke) await this._revokeEntry(rootId, email, entry);
-    const { skipped } = await this._grantAll(rootId, email, toGrant);
-    // The manifest must describe the WHOLE new ACL, not just the delta that was granted now —
-    // a role change that only widens by one ref would otherwise rewrite the grant file with a
-    // one-entry manifest and strip the user's access to everything they already had.
-    const areas = await this._resolveAreas(rootId, newAcl);
+    // E-43: grant the WHOLE new ACL, not the delta. `_grantEntry` is idempotent — it reads the
+    // folder's permissions and no-ops when this email already holds the role — so re-granting what
+    // is already there costs one listPermissions per folder and nothing else. The delta form looked
+    // efficient and was a repair path that could not repair: re-running changeRole with unchanged
+    // roles diffed to an EMPTY set, so a user whose permissions predated a policy change kept
+    // missing every folder that policy added. Measured live: sol.vdg01 carried Manager+SalesRep and
+    // held nothing at all on the twelve master-data folders; the write came back 404 (Drive's answer
+    // for a folder this app may not touch for this user), and 155 records sat in the outbox.
+    const { skipped, areas } = await this._grantAll(rootId, email, newAcl);
+    // `_grantAll` resolved every path on the way through, so the manifest is a by-product of the
+    // grant rather than a second walk over the same folders.
 
     // #30: a renamed fork leaves the OLD grant file still shared. readGrant takes the first
     // candidate it can parse, so a stale file could keep handing out the previous role set —
