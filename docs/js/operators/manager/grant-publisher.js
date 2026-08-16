@@ -71,7 +71,7 @@ function rolesOf(user) {
 ///
 /// Reports rather than throws: one unwritable user must not stop the rest, and a manager who is not
 /// the workspace owner may legitimately fail on some.
-export async function backfillGrants(api, wasm, { rootId, workspace, users }) {
+export async function backfillGrants(api, wasm, { rootId, workspace, users, resolveAreas = null }) {
   const result = { published: [], repaired: [], failed: [] };
   const folder = await api.getOrCreateFolder(rootId, GRANTS_DIR);
   const byName = new Map((await api.listChildren(folder.id)).map((f) => [f.name, f]));
@@ -89,11 +89,21 @@ export async function backfillGrants(api, wasm, { rootId, workspace, users }) {
         // A read failure is NOT "the file is wrong": rewriting on a transient error would churn
         // every grant on every 5xx. Only a file we actually read and found different is repaired.
         const current = (await api.getFile(existing.id))?.content || '';
-        const wanted  = wasm.grant_file_build(user.email, workspace, userPrefix, roleToken);
+        // A file with no manifest is out of date even when its ROLES are right — that is exactly
+        // the pre-E-43 shape, and leaving it alone is what would keep every existing employee
+        // locked out. Compare against the manifest form when one can be built.
+        const areasNow = resolveAreas ? await resolveAreas(user) : null;
+        const wanted   = areasNow?.length
+          ? wasm.grant_file_build_with_areas(user.email, workspace, userPrefix, roleToken, JSON.stringify(areasNow))
+          : wasm.grant_file_build(user.email, workspace, userPrefix, roleToken);
         if (current === wanted) continue;
+        await publishGrant(api, wasm, { rootId, workspace, email: user.email, userPrefix, roleToken, areas: areasNow });
+        result.repaired.push(user.email);
+        continue;
       }
-      await publishGrant(api, wasm, { rootId, workspace, email: user.email, userPrefix, roleToken });
-      (existing ? result.repaired : result.published).push(user.email);
+      const areas = resolveAreas ? await resolveAreas(user) : null;
+      await publishGrant(api, wasm, { rootId, workspace, email: user.email, userPrefix, roleToken, areas });
+      result.published.push(user.email);
     } catch (err) {
       result.failed.push({ email: user.email, error: err.message });
       console.warn(`[grant-publisher] backfill failed for ${user.email}:`, err.message); // DEV

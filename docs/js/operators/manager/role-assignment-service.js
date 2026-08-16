@@ -163,10 +163,20 @@ export class RoleAssignmentService {
 
   /// #30: publish grants for users provisioned before grant files existed. Manager-boot task.
   async backfillGrants() {
+    const rootId = await this._requireRoot();
     return backfillGrants(this._api, this._wasm || window.__vdg_wasm, {
-      rootId:    await this._requireRoot(),
+      rootId,
       workspace: this._requireWorkspaceName(),
       users:     await this._userRepo.list(),
+      // E-43: a backfilled grant must carry the folder ids too, or it repairs the ROLES and leaves
+      // the user with a manifest-less file — which reads fine and resolves nothing, because they
+      // have no root to descend from. Resolved per user from their own ACL, by the same function
+      // that resolves them at assign time.
+      resolveAreas: async (user) => {
+        const roles = (user.roles?.length ? user.roles : [user.role, ...(user.extra_roles || [])]).filter(Boolean);
+        const acl   = await this.resolveAcl(roles[0], user.user_prefix, roles.slice(1));
+        return this._resolveAreas(rootId, acl);
+      },
     });
   }
 
