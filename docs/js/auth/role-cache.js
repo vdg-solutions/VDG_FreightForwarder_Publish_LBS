@@ -9,6 +9,7 @@
 // employee lost every role they had until the TTL expired.
 
 import { ROLE_CACHE_KEY } from './google-oauth.js';
+import { GRANT_AREAS_KEY } from './grant-file.js';
 
 const ROLE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min — refresh on each session
 
@@ -30,6 +31,10 @@ export function writeCachedRole(email, role, roles = null) {
 
 export function clearCachedRole() {
   localStorage.removeItem(ROLE_CACHE_KEY);
+  // E-43: the grant manifest answers the same question as the role cache — what this user was
+  // granted — and is written by the same probe. Dropping one without the other leaves a session
+  // holding folder ids for access it may no longer have.
+  try { localStorage.removeItem(GRANT_AREAS_KEY); } catch { /* nothing stored */ }
 }
 
 // F-57-01 AC-04: TTL-unbounded raw read — a degraded cold-boot restore is a best-effort local

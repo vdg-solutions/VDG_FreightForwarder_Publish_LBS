@@ -94,17 +94,27 @@ export async function readGrant(workspace, emailBase, email) {
   return { userPrefix: null, roles: [], areas: [] };
 }
 
-/// Where the session caches its manifest so the data layer can reach it without re-reading Drive.
-/// Session-scoped on purpose: a stale manifest in localStorage would outlive a revoke, and the
-/// grant file is re-read on every sign-in anyway.
+/// Where the session keeps its manifest so the data layer can reach it without re-reading Drive.
+///
+/// localStorage, NOT sessionStorage. It was session-scoped first, on the reasoning that a stale
+/// manifest would outlive a revoke — but the manifest is only written when the ROLE PROBE runs, and
+/// a warm role cache short-circuits that probe. So a second tab, or any reload with a cached role,
+/// had a role and no manifest, and every Drive read threw "Workspace root not found" (measured: a
+/// shipment saved locally and its bundle write failed). It shares the role cache's lifetime because
+/// it answers the same question — what this user was granted — and `clearCachedRole` drops both.
 export const GRANT_AREAS_KEY = 'vdg.grant.areas';
 
 export function rememberGrantAreas(areas) {
-  try { sessionStorage.setItem(GRANT_AREAS_KEY, JSON.stringify(areas || [])); }
+  if (!Array.isArray(areas) || areas.length === 0) return; // never overwrite a good manifest with nothing
+  try { localStorage.setItem(GRANT_AREAS_KEY, JSON.stringify(areas)); }
   catch { /* storage-less context (tests) — the data layer falls back to the root walk */ }
 }
 
 export function recallGrantAreas() {
-  try { return JSON.parse(sessionStorage.getItem(GRANT_AREAS_KEY) || '[]'); }
+  try { return JSON.parse(localStorage.getItem(GRANT_AREAS_KEY) || '[]'); }
   catch { return []; }
+}
+
+export function clearGrantAreas() {
+  try { localStorage.removeItem(GRANT_AREAS_KEY); } catch { /* nothing stored */ }
 }
