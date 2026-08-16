@@ -158,6 +158,11 @@ export function collectFormState(root) {
     hbl:              hasHbl ? jobNo : null,
     job_file_no:      g('job_file_no'),
     product:          g('product'),
+    // E-43: this key was MISSING while `validateNiForm` refuses to publish without it, so
+    // `state.direction` was always undefined and EVERY publish failed with "Chưa chọn chiều
+    // xuất/nhập" — including jobs whose hidden `direction` input plainly held `export`. Nothing
+    // could ever reach the ledger; measured live on two shipments that had every other field.
+    direction:        g('direction'),
     sales_rep:        g('sales_rep'),
     customer:         g('customer'),
     shipper:          g('shipper'),
