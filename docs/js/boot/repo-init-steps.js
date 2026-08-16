@@ -20,6 +20,7 @@ import { globalizeBridgeExports } from '../wasm-loader.js';
 import { rehydrateFsmStates } from '../operators/fsm-ingest.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
+import { recallGrantAreas } from '../auth/grant-file.js';
 
 const IDB_OP_TIMEOUT_MS  = 8000;
 const PREFS_META_KEY     = 'preferences';
@@ -299,6 +300,16 @@ async function _deferredManagerInit(user, driveApi, ledgerRepo, userRepo, repo) 
     return; // background — retries next boot; never onboarding on a transient error
   }
   if (!wsRootId) {
+    // E-43: a null root is "no workspace" only for someone who would be able to SEE one. A Manager
+    // who does not own the root holds no permission on it — `resolve_grants` never emits the root,
+    // and granting it would inherit read into every table — so `files.get` answers 404 for them by
+    // design. If their grant manifest names folders, the workspace demonstrably exists and they are
+    // already provisioned into it; sending them to onboarding there offers to CREATE A SECOND
+    // WORKSPACE in their own Drive, which is exactly how a duplicate "LBS" folder appeared.
+    if (recallGrantAreas().length > 0) {
+      console.warn('[repo-init] manager without root access — provisioned via manifest, skipping onboarding'); // DEV
+      return;
+    }
     location.hash = ONBOARDING_ROUTE;
     return;
   }
