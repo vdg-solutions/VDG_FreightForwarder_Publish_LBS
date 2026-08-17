@@ -16,6 +16,16 @@
 // Manager-only and bounded: one writer converts, everyone else simply starts seeing record files
 // through delta; MAX_RECORDS_PER_SWEEP keeps a large backlog from stalling boot.
 
+// A run's ledger of what it has already written, keyed `dir/name`. Drive's files.list is
+// eventually consistent, so a file created a moment ago may still be absent from the next
+// listing — asking Drive "does it exist yet" and believing the "no" is how a second copy of the
+// same record gets created. Observed live: `_shared/customers` came out of the first sweep
+// holding CUST-1786900391809.json TWICE. The E-42 lesson, in a new place: never trust an empty
+// result right after a create.
+//
+// Scoped to ONE migration call, never to the module: a ledger that outlives its run would skip a
+// write the NEXT run legitimately needs.
+
 const BUNDLE_SUFFIX         = '.jsonl';
 const RECORD_SUFFIX         = '.json';
 const MONTH_RE              = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -24,7 +34,10 @@ const MAX_RECORDS_PER_SWEEP = 25;
 /// One kind's sweep over ONE folder. `ws` = the generic workspace-file port ({ ws_list_dir,
 /// ws_read_file, ws_write_file }) and `trashFile(fileId)` the recoverable delete.
 /// `from` is the folder being drained; `spec.dir` is always the destination.
-export async function explodeBundles(ws, trashFile, spec, from = spec.dir) {
+export async function explodeBundles(ws, trashFile, spec, from = spec.dir, ledger = new Map()) {
+  // An earlier run may have left two files claiming one id (see _writtenThisRun). Heal first, so
+  // the existence check below reads a folder where a name means exactly one file.
+  if (!spec.partitioned) await dedupeByName(ws, trashFile, spec.dir);
   const home    = await ws.ws_list_dir(from);
   const bundles = (home.files ?? []).filter((f) => f.name.endsWith(BUNDLE_SUFFIX));
   let written   = 0;
@@ -46,16 +59,13 @@ export async function explodeBundles(ws, trashFile, spec, from = spec.dir) {
 
       const dir  = partition ? `${spec.dir}/${partition}` : spec.dir;
       const name = `${row.id}${RECORD_SUFFIX}`;
-      const existing = await ws.ws_read_file(dir, name);
-      if (_settled(existing, row)) continue;
-
-      // Create-or-overwrite with the bundle row. No CAS: the manager is the only converter,
-      // and a CONCURRENT app write to the same record carries a higher _rev, which _settled
-      // recognizes on the next sweep instead of this write clobbering it silently.
-      await ws.ws_write_file(dir, name, JSON.stringify(row) + '\n',
-        existing?.found ? existing.id : '', '');
-      written += 1;
-      report.written += 1;
+      // No CAS: the manager is the only converter, and a CONCURRENT app write to the same record
+      // carries a higher _rev, which _settled recognizes on the next sweep instead of this write
+      // clobbering it silently.
+      if (await _writeRecord(ws, ledger, dir, name, row)) {
+        written += 1;
+        report.written += 1;
+      }
     }
 
     if (allSettled && !report.stopped) {
@@ -69,7 +79,7 @@ export async function explodeBundles(ws, trashFile, spec, from = spec.dir) {
 
 /// Carry already-per-record files across a home that moved. Same settled-at-destination rule as
 /// the bundle path — the source file is only trashed once its copy is provably at least as new.
-async function _relocateRecords(ws, trashFile, spec, from, budget) {
+async function _relocateRecords(ws, trashFile, spec, from, budget, ledger) {
   const listing = await ws.ws_list_dir(from);
   const records = (listing.files ?? []).filter((f) => f.name.endsWith(RECORD_SUFFIX));
   let moved = 0;
@@ -83,15 +93,38 @@ async function _relocateRecords(ws, trashFile, spec, from, budget) {
 
     const partition = _partitionOf(row, '', spec);
     const dir       = partition ? `${spec.dir}/${partition}` : spec.dir;
-    const existing  = await ws.ws_read_file(dir, file.name);
-    if (!_settled(existing, row)) {
-      await ws.ws_write_file(dir, file.name, JSON.stringify(row) + '\n',
-        existing?.found ? existing.id : '', '');
-      moved += 1;
-    }
+    if (await _writeRecord(ws, ledger, dir, file.name, row)) moved += 1;
     await trashFile(file.id);
   }
   return { moved, stopped: false };
+}
+
+/// Create-or-update one record file, at most once per run per (dir, name).
+async function _writeRecord(ws, ledger, dir, name, row) {
+  const key = `${dir}/${name}`;
+  if (ledger.has(key)) return false;               // already placed by this run
+  const existing = await ws.ws_read_file(dir, name);
+  if (_settled(existing, row)) { ledger.set(key, existing.id); return false; }
+  const res = await ws.ws_write_file(dir, name, JSON.stringify(row) + '\n',
+    existing?.found ? existing.id : '', '');
+  ledger.set(key, res?.id ?? true);
+  return true;
+}
+
+/// Two files with one name is not a variant of "exists" — it is a table with two rows claiming one
+/// key. Keep the LAST one listed and trash the rest, before anything reads the folder.
+async function dedupeByName(ws, trashFile, dir) {
+  const listing = await ws.ws_list_dir(dir).catch(() => null);
+  if (!listing) return 0;
+  const seen = new Map();
+  let trashed = 0;
+  for (const f of listing.files ?? []) {
+    if (!f.name.endsWith(RECORD_SUFFIX)) continue;
+    const prior = seen.get(f.name);
+    if (prior) { await trashFile(prior.id); trashed += 1; }
+    seen.set(f.name, f);
+  }
+  return trashed;
 }
 
 /// Which subfolder of the destination a row belongs in.
@@ -153,22 +186,23 @@ export async function migratePerRecordKinds({ wasm, ws, trashFile, moveFile, isM
   if (!isManager) return [];
   const specs = wasm?.per_record_kinds?.() ?? [];
   const reports = [];
+  const ledger = new Map();  // this run's write ledger — see _writeRecord
   if (typeof moveFile === 'function') {
     reports.push(...await relocateFolders(ws, moveFile, wasm?.folder_relocations?.() ?? []));
   }
   for (const spec of specs) {
     try {
-      const report = await explodeBundles(ws, trashFile, spec);
+      const report = await explodeBundles(ws, trashFile, spec, spec.dir, ledger);
       for (const from of spec.legacy_dirs ?? []) {
         if (from === spec.dir) continue;
-        const legacy = await explodeBundles(ws, trashFile, spec, from);
+        const legacy = await explodeBundles(ws, trashFile, spec, from, ledger);
         report.bundles += legacy.bundles;
         report.written += legacy.written;
         report.trashed += legacy.trashed;
         report.stopped = report.stopped || legacy.stopped;
         if (report.stopped) break;
         const carried = await _relocateRecords(ws, trashFile, spec, from,
-          MAX_RECORDS_PER_SWEEP - report.written);
+          MAX_RECORDS_PER_SWEEP - report.written, ledger);
         report.moved  += carried.moved;
         report.stopped = report.stopped || carried.stopped;
         if (report.stopped) break;
