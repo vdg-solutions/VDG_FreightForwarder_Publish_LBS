@@ -8,7 +8,7 @@
 
 import { getCurrentUser, signOut, hasDriveScopeGrant, wasPreviouslySignedIn, rebuildSessionFromStoredToken } from './google-oauth.js';
 import { findWorkspaceRoot, findSharedSubfolder, listChildFolder, DriveApiError } from './drive-api.js';
-import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord } from './workspace-acl.js';
+import { readWorkspaceAcl, roleTokenFromRecord, rolesFromRecord, ROSTER_FOLDER_NAME } from './workspace-acl.js';
 import { readGrant, rememberGrantAreas } from './grant-file.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../util/safe-await.js';
@@ -27,7 +27,7 @@ export { isUndecidable } from './undecidable.js';
 const MANAGER_ID            = MANAGER_SENTINEL; // single source, F-19-66
 const UNKNOWN_ID            = 'OTHER';
 const NOT_PROVISIONED_ID    = 'NOT_PROVISIONED';
-const ADMIN_FOLDER_NAME     = 'admin';
+
 const USERS_FOLDER_NAME     = 'users';
 const DRIVE_PROBE_TIMEOUT_MS     = 5000;           // F-15-19 AC-4: surface banner if probe hangs
 const AUTH_DETECT_ROLE_TIMEOUT_MS = SAFE_AWAIT_DEFAULT_MS; // F-19-01: outer safeAwait guard
@@ -131,9 +131,10 @@ async function _probeInner(user) {
     // root makes it visible to every invitee, which used to hand each of them MANAGER. The role
     // comes from admin/users.jsonl (the ACL contract); the folder probe is the first-run fallback.
     try {
-      const adminFolder = await listChildFolder(rootId, ADMIN_FOLDER_NAME);
-      if (adminFolder) {
-        const acl = await readWorkspaceAcl(adminFolder.id, user.email);
+      // `admin/` is gone (owner 2026-08-17) — the roster is an ordinary table folder.
+      const rosterFolder = await listChildFolder(rootId, ROSTER_FOLDER_NAME);
+      if (rosterFolder) {
+        const acl = await readWorkspaceAcl(rosterFolder.id, user.email);
         if (!acl.seeded) {                       // nobody provisioned yet — creator's first run
           _setResolved(MANAGER_ID, [ROLE_MANAGER]);
           writeCachedRole(user.email, MANAGER_ID, [ROLE_MANAGER]);

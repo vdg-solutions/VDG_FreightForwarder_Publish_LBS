@@ -156,7 +156,9 @@ async function dedupeByName(ws, trashFile, dir) {
   for (const f of listing.files ?? []) {
     if (!f.name.endsWith(RECORD_SUFFIX)) continue;
     const prior = seen.get(f.name);
-    if (prior) { await trashFile(prior.id); trashed += 1; }
+    // The parent goes with it: a duplicate written by someone else can only be DETACHED,
+    // never trashed (drive-file-retire.js).
+    if (prior) { await trashFile(prior.id, listing.folderId); trashed += 1; }
     seen.set(f.name, f);
   }
   return trashed;
@@ -214,6 +216,34 @@ export async function relocateFolders(ws, moveFile, pairs) {
   return reports;
 }
 
+/// Finish the cut. A migration exists to end the past's influence, and a legacy folder left
+/// standing has not ended anything: `_shared/shipments` emptied of rows is still a folder inside
+/// the wholesale-granted zone, so the day some path writes there again, everyone reads it.
+///
+/// Three hard conditions, because this deletes structure: the folder must be NAMED by the
+/// framework's own legacy declaration, it must be EMPTY of files, and every child folder must be
+/// empty too — measured, on the spot, never inferred from an earlier report.
+export async function retireEmptyLegacy(ws, trashFile, paths) {
+  const report = [];
+  for (const path of paths) {
+    const listing = await ws.ws_list_dir(path).catch(() => null);
+    if (!listing) continue;
+    const files   = (listing.files ?? []).filter((f) => !f.mimeType?.endsWith('.folder'));
+    const folders = (listing.files ?? []).filter((f) => f.mimeType?.endsWith('.folder'));
+    if (files.length) { report.push({ path, kept: `${files.length} files` }); continue; }
+
+    let allChildrenEmpty = true;
+    for (const child of folders) {
+      const sub = await ws.ws_list_dir(`${path}/${child.name}`).catch(() => null);
+      if (sub && (sub.files ?? []).length) { allChildrenEmpty = false; continue; }
+      await trashFile(child.id, listing.folderId);
+    }
+    if (!allChildrenEmpty) { report.push({ path, kept: 'a child still holds rows' }); continue; }
+    report.push({ path, retired: true });
+  }
+  return report;
+}
+
 /// Boot entry: manager only, every registered kind, fire-and-forget from the caller.
 /// The kind list, its destination, its partitioning and its old addresses all come from the
 /// framework — this module decides nothing about layout, it only moves bytes.
@@ -241,6 +271,12 @@ export async function migratePerRecordKinds({ wasm, ws, trashFile, moveFile, isM
         report.moved  += carried.moved;
         report.stopped = report.stopped || carried.stopped;
         if (report.stopped) break;
+      }
+      // The folder the rows came out of is itself part of the past. Retired only when this run
+      // has just seen it empty — the whole point of the migration is that nothing is left behind.
+      const legacy = (spec.legacy_dirs ?? []).filter((d) => d !== spec.dir);
+      if (legacy.length && !report.stopped) {
+        report.legacy = await retireEmptyLegacy(ws, trashFile, legacy);
       }
       reports.push(report);
     } catch (err) {

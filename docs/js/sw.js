@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vb88b4c1';
+const STATIC_CACHE     = 'vdg-static-vbdb1f44';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-vb88b4c1';
+const DRIVE_META_CACHE = 'vdg-drive-meta-vbdb1f44';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -159,7 +159,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps b88b4c1 → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps bdb1f44 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

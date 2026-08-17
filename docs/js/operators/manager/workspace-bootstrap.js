@@ -23,7 +23,7 @@ const TEAM_AUDIENCE = 'team';
 //   shipments — Accounting is not a reader
 //   billing   — CS is not a reader
 //   awbs      — same audience as shipments
-//   commission_rules / admin / grants — administration
+//   commission_rules / roster / user-audit-log / grants — administration
 export const WALLED_TABLES = ['user', 'user_audit_log', 'commission_rules'];
 
 // Every table the WHOLE COMPANY may read lives directly under `_shared`, one folder per table
@@ -45,8 +45,11 @@ export const SHARED_SUBFOLDERS = [
 // #30: `grants` holds one read-only grant file per user. E-43: it appears in resolve_grants as a
 // Manager-only row, which is what lets a Manager who does not own the root administer at all
 // (F-42-08). It still never reaches an employee — the row's reader set is [Manager].
+// `admin/` is gone: it only ever held two tables, and a folder that exists to say
+// "administration" says nothing a policy row does not (owner 2026-08-17). The roster is
+// `roster/`, deliberately NOT `users/` — that name is the per-user fork namespace.
 export const ROOT_FOLDERS = [
-  'users', 'admin', 'admin/users', 'admin/audit-log', 'grants',
+  'users', 'roster', 'user-audit-log', 'grants',
   'shipments', 'billing', 'awbs', 'commission_rules',
 ];
 // Must equal PENDING_DIR in data_repo/priced_ref_store.rs and boundary/protection_table.rs.
