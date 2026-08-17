@@ -239,7 +239,11 @@ export async function retireEmptyLegacy(ws, trashFile, paths) {
       await trashFile(child.id, listing.folderId);
     }
     if (!allChildrenEmpty) { report.push({ path, kept: 'a child still holds rows' }); continue; }
-    report.push({ path, retired: true });
+    // ...and the folder ITSELF. An earlier version emptied the children and then reported
+    // `retired: true` while the folder was still sitting there — a report that says a thing was
+    // done when it was not is the same defect this whole migration kept tripping over.
+    const outcome = await trashFile(listing.folderId, null);
+    report.push({ path, retired: outcome ?? true });
   }
   return report;
 }
@@ -287,5 +291,10 @@ export async function migratePerRecordKinds({ wasm, ws, trashFile, moveFile, isM
       reports.push({ kind: spec.kind, error: String(err?.message || err).slice(0, 200) });
     }
   }
+  // Last: the containers the old layout left behind, deepest first so a parent is only judged
+  // after its children are gone.
+  const containers = (wasm?.legacy_containers?.() ?? [])
+    .slice().sort((a, b) => b.split('/').length - a.split('/').length);
+  if (containers.length) reports.push({ containers: await retireEmptyLegacy(ws, trashFile, containers) });
   return reports;
 }

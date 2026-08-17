@@ -208,6 +208,8 @@ export function import_pnl_excel_wasm(bytes: Uint8Array): any;
  */
 export function is_period_closed(entity_kind: string, entity_etd_ms: bigint, locked_periods_json: string): boolean;
 
+export function legacy_containers(): any;
+
 /**
  * F-20-11: classify AND arm the wasm write gate in one move. The boot gate calls THIS —
  * the verdict that reaches the repo's put/delete never round-trips through a JS value a
@@ -455,6 +457,7 @@ export interface InitOutput {
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
+    readonly legacy_containers: () => number;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
     readonly license_status: (a: number, b: number, c: bigint) => number;
     readonly per_record_kinds: () => number;
@@ -557,9 +560,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10755: (a: number, b: number, c: number, d: number) => void;
     readonly __wasm_bindgen_func_elem_10757: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4575: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10759: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4577: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
