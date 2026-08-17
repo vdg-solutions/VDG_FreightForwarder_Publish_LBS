@@ -117,13 +117,45 @@ function _settled(existing, row) {
   return Number(cur._rev ?? 0) >= Number(row._rev ?? 0);
 }
 
+/// A table whose HOME moved but whose store has no registry row (`awb_store`, the ledger).
+/// The files are re-parented rather than rewritten: ids and versions survive, so the delta
+/// engine's witness table stays valid and nothing re-downloads. Declared by the framework
+/// (`cache_policy::FOLDER_RELOCATIONS`) for the same reason `legacy_dirs` is.
+export async function relocateFolders(ws, moveFile, pairs) {
+  const reports = [];
+  for (const { from, to } of pairs) {
+    try {
+      const src = await ws.ws_list_dir(from);
+      const files = (src.files ?? []).filter((f) => !f.mimeType || !f.mimeType.endsWith('.folder'));
+      if (!files.length) continue;
+      const dst = await ws.ws_list_dir(to);
+      const taken = new Set((dst.files ?? []).map((f) => f.name));
+      let moved = 0;
+      for (const f of files) {
+        // A name already at the destination is the previous run's work — moving a second copy
+        // in would leave two files claiming one period, which is the duplicate-bundle class.
+        if (taken.has(f.name)) continue;
+        await moveFile(f.id, dst.folderId, src.folderId);
+        moved += 1;
+      }
+      reports.push({ from, to, moved });
+    } catch (err) {
+      console.warn('[per-record-migrator] relocate', from, '->', to, 'failed:', err.message); // DEV
+    }
+  }
+  return reports;
+}
+
 /// Boot entry: manager only, every registered kind, fire-and-forget from the caller.
 /// The kind list, its destination, its partitioning and its old addresses all come from the
 /// framework — this module decides nothing about layout, it only moves bytes.
-export async function migratePerRecordKinds({ wasm, ws, trashFile, isManager }) {
+export async function migratePerRecordKinds({ wasm, ws, trashFile, moveFile, isManager }) {
   if (!isManager) return [];
   const specs = wasm?.per_record_kinds?.() ?? [];
   const reports = [];
+  if (typeof moveFile === 'function') {
+    reports.push(...await relocateFolders(ws, moveFile, wasm?.folder_relocations?.() ?? []));
+  }
   for (const spec of specs) {
     try {
       const report = await explodeBundles(ws, trashFile, spec);

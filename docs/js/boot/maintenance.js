@@ -16,6 +16,8 @@ export function runBootMaintenance(driveApi, ioPort) {
       wasm: window.__vdg_wasm,
       ws: ioPort,
       trashFile: (fileId) => driveApi.driveFetch('PATCH', `/files/${fileId}`, { trashed: true }),
+      moveFile: (fileId, addParent, removeParent) => driveApi.driveFetch(
+        'PATCH', `/files/${fileId}?addParents=${addParent}&removeParents=${removeParent}`, {}),
       isManager: (window.__vdg_current_user?.roles || []).includes('Manager'),
     }))
     .then((reports) => {

@@ -141,6 +141,8 @@ export function drain_events(): any;
  */
 export function exec(sql: string): void;
 
+export function folder_relocations(): any;
+
 /**
  * Look up cached FX rate. JS must ingest relevant months first.
  * Returns FxRateEntry as JsValue on success.
@@ -438,6 +440,7 @@ export interface InitOutput {
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly drain_events: (a: number) => void;
     readonly exec: (a: number, b: number, c: number) => void;
+    readonly folder_relocations: () => number;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -554,9 +557,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10786: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10788: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4606: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10792: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10794: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4612: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
