@@ -3,10 +3,11 @@
 // operators/backup-exporter.js).
 // F-28-02: `local-charges` / `units-of-measure` flip from `audience: 'private'` (their old
 // per-user storage) to `team`. cache/master-scope-migrator.js sweeps each user's stranded
-// per-user records into shared/masters at boot so the flip doesn't strand existing data.
+// per-user records into the shared zone at boot so the flip doesn't strand existing data.
 //
-// audience: who must be able to READ the kind — 'team' (whole workspace, shared/masters/<kind>)
-//           or 'private' (one user, users/{prefix}/<kind>). Drives the storage path.
+// audience: who must be able to READ the kind — 'team' (whole workspace) or 'private' (one
+//           user). WHERE it lands is the framework's call (cache_policy::PER_RECORD_REGISTRY);
+//           this field states the audience, which is what the protection table is keyed on.
 // writers:  roles allowed to create/edit the kind (see operators/manager/route-guard.js).
 // seed:     bundled seed file fetched by the view's seed migration, or null when the view
 //           has no file-backed seed (e.g. inline defaults, or no seeding at all).

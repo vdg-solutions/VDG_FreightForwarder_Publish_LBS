@@ -6,7 +6,6 @@
 
 import { getOrCreateFolder, findWorkspaceRoot } from '../auth/drive-api.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
-import { MASTER_REGISTRY } from './master-registry.js';
 import { recallGrantAreas } from '../auth/grant-file.js';
 
 // F-37-02: the revenue audit trail is deliberately NOT here. A log inherits the ACL of the thing
@@ -15,30 +14,16 @@ import { recallGrantAreas } from '../auth/grant-file.js';
 // without touching the split. It falls through to the per-user fork below, which IS the wall.
 // A residue guard in tests/unit/f-37-02-shipment-audit.test.mjs fails the build if it appears here.
 export const LOG_KINDS   = ['error_log', 'audit_log'];
-export const MASTERS_PATH = 'shared/masters';
 export const USERS_PATH   = 'users';
 
-// E-37: `shipment` left the per-user fallback. CS and the sales rep both write the job file,
-// so no single fork can hold it — the envelope is a protected ref (`_shared/shipments`) whose
-// reader set is what keeps Accounting out of a draft. Its revenue half stays per-user under
-// `shipment_revenue`, which needs no entry here precisely BECAUSE the fork fallback IS the
-// ACL that hides it from CS.
+// Only the kinds whose home is neither this user's fork nor the storage registry. Every table
+// with a registry row (cache_policy::PER_RECORD_REGISTRY) is addressed by PATH through the
+// per-record adapters, so it never reaches this map — the framework already knows where it lives.
+// What is left is the two shared LOGS, which are appended bundles rather than tables.
 export const KIND_PATH_OVERRIDES = {
-  user: 'admin/users',
-  user_audit_log: 'admin',
   error_log: '_shared/error-log',
   audit_log: '_shared/logs/audit-log',
-  shipment: '_shared/shipments'
 };
-
-// Registry lookup replaces the old MASTER_KINDS membership check. A kind absent from the
-// registry is not necessarily a bug — most entity kinds (shipments, quotes, pnl, commission
-// entries, outbox…) are per-user by default and were never master-declared; they keep
-// today's per-user fallback below. Only a registered `team` entry routes to shared/masters.
-export function isTeamMaster(kind) {
-  const entry = MASTER_REGISTRY[kind];
-  return Boolean(entry) && entry.audience === 'team';
-}
 
 // Resolve each path segment ONCE per session. The boot migrators (seed/master-scope/priced-ref)
 // all resolve masters/<kind>, re-doing getOrCreateFolder for the shared 'masters' segment every
@@ -79,11 +64,9 @@ export async function resolveFolder(port, kind) {
 
   let folderId;
   // An explicit override wins outright: it is the only way to say "this kind does NOT live
-  // in the signed-in user's fork", and the shipment envelope depends on that being
-  // unconditional rather than a side effect of also being a master or a log.
-  if (KIND_PATH_OVERRIDES[kind] || isTeamMaster(kind) || LOG_KINDS.includes(kind)) {
-    const kindPath = KIND_PATH_OVERRIDES[kind] ?? `${MASTERS_PATH}/${kind}`;
-    folderId = await ensureNestedFolder(port, rootId, kindPath);
+  // in the signed-in user's fork".
+  if (KIND_PATH_OVERRIDES[kind]) {
+    folderId = await ensureNestedFolder(port, rootId, KIND_PATH_OVERRIDES[kind]);
   } else {
     const prefix = port.userEmail.split('@')[0].toLowerCase();
     folderId = await ensureNestedFolder(port, rootId, `${USERS_PATH}/${prefix}/${kind}`);
@@ -95,8 +78,8 @@ export async function resolveFolder(port, kind) {
 
 /// The employee route: find this kind's folder among the ids the manager wrote into the grant
 /// file. The manifest is keyed by the SAME path the fan-out granted, so the match is exact — no
-/// name search, and no ambiguity between `_shared/customers` and `shared/masters/customers`,
-/// which a name lookup cannot tell apart.
+/// name search, and no ambiguity between two folders that share a leaf name, which a name
+/// lookup cannot tell apart.
 ///
 /// A kind that lives in this user's own fork (`users/<prefix>/<kind>`) resolves off the fork
 /// entry: the fork itself is granted, so its children can be created and listed from there.
@@ -104,9 +87,7 @@ export async function resolveFromManifest(port, kind) {
   const areas = recallGrantAreas();
   if (!areas.length) return null;
 
-  const kindPath = KIND_PATH_OVERRIDES[kind] ?? (isTeamMaster(kind) || LOG_KINDS.includes(kind)
-    ? `${MASTERS_PATH}/${kind}`
-    : null);
+  const kindPath = KIND_PATH_OVERRIDES[kind] ?? null;
   if (kindPath) {
     // Same anchor rule the path-addressed adapters use — one implementation, so a kind and a
     // raw path can never disagree about which folder they mean.

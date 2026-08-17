@@ -15,45 +15,40 @@
 
 import { MASTER_REGISTRY } from '../../data/master-registry.js';
 
-const SHARED_DIR = '_shared';
-const MASTERS_DIR = 'shared/masters';
+const SHARED_DIR    = '_shared';
 const TEAM_AUDIENCE = 'team';
-// E-43: the policy table now governs the master-data folders too, so resolvePathToFolderId walks
-// `shared/masters/<kind>` at assign time and THROWS on a missing segment. Those folders used to
-// appear only when someone first wrote that kind — so assigning a role on a fresh workspace failed
-// for whichever masters nobody had touched yet. Derived from MASTER_REGISTRY (already pinned to the
-// Rust registry by master-kind-parity.test.mjs) rather than hand-listed, so a new kind cannot drift.
-export function masterSubfolderPaths(registry = MASTER_REGISTRY) {
-  return Object.entries(registry)
-    .filter(([, e]) => e.audience === TEAM_AUDIENCE)
-    .map(([kind]) => `${MASTERS_DIR}/${kind}`);
-}
-// One folder per PROTECTED REF (seed/permissions/protection-table.json). This list must cover the
-// table, because resolve_grants emits `_shared/{ref}` for every ref and resolvePathToFolderId
-// THROWS "ACL path not found" on a missing segment: a ref with no folder makes assigning the role
-// that maintains it fail outright. The three rate refs were missing here, so assigning the Pricing
-// hat only worked once something else had lazily created their folders — an ordering accident, not
-// a guarantee. Exported so the alignment stays asserted (F-24-15 AC-03/AC-04).
+
+// Tables whose reader set is NOT everyone. They sit OUTSIDE the wholesale zone on purpose:
+// inheritance only ever widens, so a folder inside `_shared` cannot be kept from anyone.
+//   shipments — Accounting is not a reader
+//   billing   — CS is not a reader
+//   awbs      — same audience as shipments
+//   commission_rules / admin / grants — administration
+export const WALLED_TABLES = ['user', 'user_audit_log', 'commission_rules'];
+
+// Every table the WHOLE COMPANY may read lives directly under `_shared`, one folder per table
+// (owner 2026-08-17). That is what makes provisioning a reader ONE sharing operation instead of
+// fifteen: Drive permissions inherit downward, so a read on `_shared` reaches every table under
+// it. Derived from MASTER_REGISTRY — already pinned to the Rust storage registry by
+// master-kind-parity.test.mjs — so a new kind cannot drift out of the zone.
+//
+// The refs with their own governance queue are here too: the queue hangs off the table folder,
+// and both halves of a priced kind now share one home instead of the two it used to have.
 export const SHARED_SUBFOLDERS = [
-  'customers', 'fx-rates', 'ledger',        // Accountant's refs
-  'air-rates', 'local-charges', 'ocean-tariff', // the Pricing hat's rate refs (#24)
-  // E-37: the job file left the sales rep's fork — CS and Sales both write it, so no single fork
-  // can hold it — and publish materializes the financial snapshot into `billing`, which is the
-  // only shipment area Accounting is granted. Both are CONFIDENTIAL refs: a role outside their
-  // reader set gets no permission at all, so these folders must exist before anyone is assigned.
-  'shipments', 'billing',
-  // E-43: awbs had storage (_shared/awbs) and no policy row, so nothing was ever granted on it
-  // and no folder was ever pre-created. Both halves are fixed together.
-  'awbs',
+  ...Object.entries(MASTER_REGISTRY)
+    .filter(([, e]) => e.audience === TEAM_AUDIENCE)
+    .map(([kind]) => kind)
+    .filter((kind) => !WALLED_TABLES.includes(kind)),
+  'fx-rates', 'ledger',   // bespoke stores, still tables the policy table governs
 ];
-// #30: `grants` holds one read-only grant file per user. It is created here but NEVER appears in
-// resolve_grants — a permission on the folder would inherit down to every child and hand each user
-// everyone else's role set, which is the exact leak the per-file share exists to prevent.
-// E-43: `grants` DOES appear in resolve_grants now — as a Manager-only row, which is what lets a
-// Manager who does not own the root read the grant files and administer at all (F-42-08). It still
-// never reaches an employee: the row's reader set is [Manager], so nobody else is emitted anything.
-// `admin/users` is the `user` master kind's folder (KIND_PATH_OVERRIDES), granted by the same row.
-export const ROOT_FOLDERS = ['users', 'admin', 'admin/users', 'grants'];
+
+// #30: `grants` holds one read-only grant file per user. E-43: it appears in resolve_grants as a
+// Manager-only row, which is what lets a Manager who does not own the root administer at all
+// (F-42-08). It still never reaches an employee — the row's reader set is [Manager].
+export const ROOT_FOLDERS = [
+  'users', 'admin', 'admin/users', 'admin/audit-log', 'grants',
+  'shipments', 'billing', 'awbs', 'commission_rules',
+];
 // Must equal PENDING_DIR in data_repo/priced_ref_store.rs and boundary/protection_table.rs.
 export const PENDING_DIR = '_pending';
 
@@ -80,11 +75,11 @@ export async function bootstrapAclTargetFolders(driveApi, wsRootId) {
     }
   }
 
-  // users + admin + grants at root level, and every master-data folder the policy table governs.
-  // Nested paths ('admin/users', 'shared/masters/<kind>') walk segment by segment — the same walk
-  // resolvePathToFolderId does at assign time, so what bootstrap creates is exactly what it looks
-  // for. One failure never blocks the rest (F-24-15).
-  for (const path of [...ROOT_FOLDERS, ...masterSubfolderPaths()]) {
+  // The walled tables and the administration folders, at root level beside `_shared`. Nested
+  // paths ('admin/users') walk segment by segment — the same walk resolvePathToFolderId does at
+  // assign time, so what bootstrap creates is exactly what it looks for. One failure never
+  // blocks the rest (F-24-15).
+  for (const path of ROOT_FOLDERS) {
     try {
       let parent = wsRootId;
       for (const segment of path.split('/').filter(Boolean)) {

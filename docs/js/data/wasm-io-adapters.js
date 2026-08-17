@@ -1,6 +1,6 @@
 import { getFile, uploadFile } from '../auth/drive-api.js';
 import { healDuplicateBundle } from './bundle-file-heal.js';
-import { isTeamMaster, resolveFolder, resolveFromManifest, ensureNestedFolder,
+import { resolveFolder, resolveFromManifest, ensureNestedFolder,
   resolveDir, resolveDirFromManifest } from './wasm-folder-resolve.js';
 
 export class WasmIoPort {
@@ -71,7 +71,7 @@ export class WasmIoPort {
   async _ensureNestedFolder(rootId, path) { return ensureNestedFolder(this, rootId, path); }
 
   async drive_read_bundle(kind, period) {
-    let fileName = isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
+    let fileName = `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
@@ -89,7 +89,7 @@ export class WasmIoPort {
   }
 
   async drive_write_bundle(kind, period, newContent, etag) {
-    let fileName = isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
+    let fileName = `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);

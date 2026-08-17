@@ -2,7 +2,7 @@
 // units-of-measure per-user records into the now-shared master.
 //
 // master-registry.js flipped these two kinds to audience:'team', so the resolver in
-// wasm-io-adapters.js now reads/writes them under shared/masters/<kind>. Records a user
+// the framework now reads/writes them under the shared zone. Records a user
 // already wrote under the OLD users/{prefix}/<kind> path would be stranded there — this
 // module reads that old path directly (the folder resolver no longer points at it) and
 // replays each record through repo.put(kind, id, record), the normal per-record write path.

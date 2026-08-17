@@ -8,7 +8,7 @@ const KIND_LINE             = 'pnl_line';
 const KIND_CUSTOMER         = 'customers';
 // F-57-01: 'carriers' (plural) is the MASTER_REGISTRY key. The old singular 'carrier' was not a
 // registered kind, so _isTeamMaster() returned false and every import wrote the carrier master to
-// users/<prefix>/carrier/ instead of shared/masters/carriers/ — the dedupe list read back empty,
+// users/<prefix>/carrier/ instead of the shared carriers table — the dedupe list read back empty,
 // so each import re-created the same carriers and the quote form's dropdown never saw any of them.
 const KIND_CARRIER          = 'carriers';
 const KIND_COMMISSION_ENTRY = 'commission_entry';

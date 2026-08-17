@@ -1,5 +1,5 @@
 // cache/priced-ref-migrator.js — F-28-14(d): one-time boot sweep materializing each
-// priced master bundle (shared/masters/<kind>/all.jsonl) into its governance ref
+// priced master table (_shared/<kind>/<id>.json) into its governance ref
 // (_shared/<kind>/state.json) so the master TABLE and the governance panel stop
 // diverging (F-28-12 D-2). Mirrors master-scope-migrator.js's per-kind loop shape.
 //
@@ -29,7 +29,7 @@ export function pricedRefKinds(registry = MASTER_REGISTRY) {
 }
 
 /**
- * @param {object} repo        WasmEntityRepo — list(kind) reads shared/masters/<kind>/all.jsonl
+ * @param {object} repo        WasmEntityRepo — list(kind) reads the table through the framework
  * @param {Record<string,object>} pricedRepos  window.__vdg_priced_repos: refName -> PricedRefRepo
  * @param {string[]} kinds     defaults to pricedRefKinds() (test seam)
  * @param {number} _ms         injectable timeout (test seam)
@@ -50,7 +50,7 @@ async function _migrateKind(repo, pricedRepo, kind, _ms) {
   if (!pricedRepo) return { kind, found: 0, migrated: 0, reason: 'no-ref-repo' };
 
   // Source = exactly what the master TABLE reads: repo.list flows through WasmIoPort ->
-  // shared/masters/<kind>/all.jsonl and yields rows with the repo-canonical top-level `id`
+  // the table and yields rows with the repo-canonical top-level `id`
   // (air-rates mirrors rate_id -> id at the write path; local-charges is id-native).
   const listRes = await safeAwait(repo.list(kind, null), _ms, () => [], `priced-ref-migrator:list:${kind}`);
   if (!listRes.ok) return { kind, found: 0, migrated: 0, reason: 'read-failed' }; // retry next boot

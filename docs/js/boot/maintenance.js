@@ -20,7 +20,7 @@ export function runBootMaintenance(driveApi, ioPort) {
     }))
     .then((reports) => {
       for (const r of reports ?? []) {
-        if (r.written || r.trashed) console.log('[per-record-migrator]', r.kind, r); // DEV
+        if (r.written || r.trashed || r.moved) console.log('[per-record-migrator]', r.kind, r); // DEV
       }
     })
     .catch((err) => console.warn('[VDG] per-record migration skipped:', err.message)); // DEV
