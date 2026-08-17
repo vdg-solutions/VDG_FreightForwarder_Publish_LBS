@@ -1,5 +1,5 @@
-// submit-guard.js — re-entrancy guard for the shared NI-form submit handler (F-32-02).
-// Double-click Save (or a slow network) fired the #ni-form submit handler twice, each
+// submit-guard.js — re-entrancy guard for the shared shipment-form submit handler (F-32-02).
+// Double-click Save (or a slow network) fired the #shipment-form submit handler twice, each
 // call minting its own shipment_ref/job_no → two shipments with duplicate legal doc
 // numbers. One guard instance per form render(); the in-flight flag flips to true
 // synchronously, before any await, so a second invocation racing in while the first is

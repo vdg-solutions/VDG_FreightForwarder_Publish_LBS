@@ -1,5 +1,5 @@
 // section-docs-ext.js — E-39: the booking/documentation fields the customer's job sheet carries
-// beyond the original NI header (booking no, reefer, cut-offs, depots, bill parties, seal, ATD).
+// beyond the original shipment header (booking no, reefer, cut-offs, depots, bill parties, seal, ATD).
 //
 // Rendered INTO the section-A grid (sales-new-form.js injects it after sectionAHtml) so the cells
 // share the same 3-column rhythm — phase-screens.js then decides which cells each screen shows.

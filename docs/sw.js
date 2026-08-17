@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vdb0bdfd';
+const STATIC_CACHE     = 'vdg-static-vcdceddd';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-vdb0bdfd';
+const DRIVE_META_CACHE = 'vdg-drive-meta-vcdceddd';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -51,8 +51,10 @@ const BOOT_GRAPH = [
   'js/auth/drive-error-classifier.js',
   'js/auth/drive-folder-dedup.js',
   'js/auth/drive-folder-memo.js',
+  'js/auth/drive-permissions.js',
   'js/auth/google-oauth.js',
   'js/auth/grant-file.js',
+  'js/auth/id-token.js',
   'js/auth/profile-cache.js',
   'js/auth/role-cache.js',
   'js/auth/session-roles.js',
@@ -70,6 +72,7 @@ const BOOT_GRAPH = [
   'js/boot/repo-bootstrap.js',
   'js/boot/repo-diag.js',
   'js/boot/repo-init-fallback.js',
+  'js/boot/repo-init-manager.js',
   'js/boot/repo-init-steps.js',
   'js/cache/seed-migrator.js',
   'js/cache/store-client.js',
@@ -101,6 +104,7 @@ const BOOT_GRAPH = [
   'js/data/shipment-repo.js',
   'js/data/shipment-revenue-repo.js',
   'js/data/store-io-adapters.js',
+  'js/data/wasm-folder-resolve.js',
   'js/data/wasm-io-adapters.js',
   'js/data/write-gate.js',
   'js/helpers/show-confirm.js',
@@ -155,7 +159,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps db0bdfd → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps cdceddd → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

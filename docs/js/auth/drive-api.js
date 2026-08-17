@@ -3,7 +3,8 @@
 import { clearDriveScopeGrant } from './google-oauth.js';
 import { globalOwnerQuery, dedupeGlobalOwnerFolders, moveToParent } from './drive-folder-dedup.js';
 import { rememberFolder, recallFolder } from './drive-folder-memo.js';
-import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from './drive-error-classifier.js';
+import { classifyDriveError, DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT, DRIVE_ERROR_KIND_RATE_LIMITED }
+  from './drive-error-classifier.js';
 import { getAccessToken, refreshAccessTokenSilently, reconnectDriveInteractive, recoverFromUnauthorized } from './access-token.js';
 
 // F-19-72: token lifecycle moved to access-token.js (350-line cap) — re-exported here so
@@ -24,6 +25,11 @@ const DRIVE_UPLOAD_BASE       = 'https://www.googleapis.com/upload/drive/v3';
 const FOLDER_MIME             = 'application/vnd.google-apps.folder';
 const RATE_LIMIT_BASE_MS      = 1_000;
 const RATE_LIMIT_MAX_ATTEMPTS = 3;
+
+// The sharing limit refills over minutes, not milliseconds — a 1s backoff just burns the next
+// attempt. 8s/16s/32s ≈ one minute of patience, which is what a grant fan-out needs to finish.
+const SHARING_LIMIT_BASE_MS      = 8_000;
+const SHARING_LIMIT_MAX_ATTEMPTS = 3;
 
 // F-34-03 AC-04: 429 (rate-limit) + 503 (transient Drive unavailability) both back off and
 // retry the same bounded way — a persistent 503 falls through to the existing !res.ok /
@@ -118,6 +124,15 @@ export async function driveFetch(method, path, body = undefined, attempt = 0) {
     if (res.status === 429) error.rateLimited = true;
     error.driveErrorKind = classifyDriveError(error);                                        // AC-04: tag every 403
     if (error.driveErrorKind === DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT) clearDriveScopeGrant(); // AC-05
+    // The sharing limit only becomes visible in the BODY, so it cannot join RETRYABLE_STATUSES
+    // above — the status alone is 403, indistinguishable from a real permission denial.
+    if (error.driveErrorKind === DRIVE_ERROR_KIND_RATE_LIMITED) {
+      error.rateLimited = true;
+      if (attempt < SHARING_LIMIT_MAX_ATTEMPTS) {
+        await _sleep(SHARING_LIMIT_BASE_MS * Math.pow(2, attempt));
+        return driveFetch(method, path, body, attempt + 1);
+      }
+    }
     throw error;
   }
 
@@ -238,22 +253,9 @@ export async function listChildren(parentId) {
   return res.files || [];
 }
 
-export async function putPermission(fileId, email, role) {
-  return driveFetch('POST', `/files/${fileId}/permissions`, {
-    type:         'user',
-    role,
-    emailAddress: email,
-  });
-}
-
-export async function listPermissions(fileId) {
-  const res = await driveFetch('GET', `/files/${fileId}/permissions?fields=permissions(id,emailAddress,role)&spaces=drive`);
-  return res.permissions || [];
-}
-
-export async function deletePermission(fileId, permissionId) {
-  await driveFetch('DELETE', `/files/${fileId}/permissions/${permissionId}`);
-}
+// Sharing calls live in drive-permissions.js (350-line cap); re-exported so every caller
+// keeps reaching them through driveApi.
+export { putPermission, listPermissions, deletePermission } from './drive-permissions.js';
 
 // ── file read/write ───────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-// sales-new-form.js — 4-section NI form orchestrator (F-15-27)
+// sales-new-form.js — 4-section shipment form orchestrator (F-15-27)
 
 import { t } from '../i18n/index.js';
 import { saveDraft } from './sales-new/draft-manager.js';
@@ -18,7 +18,6 @@ import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
 import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
 import { summarizeLineCurrencies, DEFAULT_HEADER_CURRENCY } from './sales-new-form/pnl-line-fx.js';
-import { computeVndInvariant } from './sales-new-form/pnl-save-validations.js';
 
 const AUTOSAVE_DELAY_MS = 1500;
 
@@ -86,13 +85,13 @@ export async function renderForm(root, opts = {}) {
           <div class="text-xs text-slate-500 mt-0.5">${formSubtitle}</div>
         </div>
       </div>
-      <form id="ni-form" class="space-y-4">
+      <form id="shipment-form" class="space-y-4">
         ${sectionAHtml(d, customers, reps)}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ''}
         ${revenueVisible ? sectionDHtml(d, { isManager }) : ''}
-        <div id="ni-currency-summary" class="hidden text-[11px] text-slate-500 px-1"></div>
-        <div id="ni-form-errors"
+        <div id="shipment-currency-summary" class="hidden text-[11px] text-slate-500 px-1"></div>
+        <div id="shipment-form-errors"
           class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2">
         </div>
         ${_renderActionBar(d.publish_state)}
@@ -124,7 +123,7 @@ export async function renderForm(root, opts = {}) {
     // tabs used to store an all-blank draft, so the next visit greeted the rep with
     // "Bản nháp đã khôi phục" over nothing.
     let dirty = false;
-    const form = root.querySelector('#ni-form');
+    const form = root.querySelector('#shipment-form');
     form?.addEventListener('input', () => {
       dirty = true;
       clearTimeout(autosaveTimer);
@@ -152,13 +151,13 @@ export function collectFormState(root) {
     mode:             g('mode') || 'SEA',
     mbl:              g('mbl'),
     // F-32-01 QA rework DEFECT-01: hbl must be derived HERE, not only in buildShipment —
-    // validateNiForm's save-gate runs on this state before buildShipment ever sees it.
+    // validateShipmentForm's save-gate runs on this state before buildShipment ever sees it.
     job_no:           jobNo,
     has_hbl:          hasHbl,
     hbl:              hasHbl ? jobNo : null,
     job_file_no:      g('job_file_no'),
     product:          g('product'),
-    // E-43: this key was MISSING while `validateNiForm` refuses to publish without it, so
+    // E-43: this key was MISSING while `validateShipmentForm` refuses to publish without it, so
     // `state.direction` was always undefined and EVERY publish failed with "Chưa chọn chiều
     // xuất/nhập" — including jobs whose hidden `direction` input plainly held `export`. Nothing
     // could ever reach the ledger; measured live on two shipments that had every other field.
@@ -197,68 +196,9 @@ export function collectFormState(root) {
   };
 }
 
-// → string[] (empty = valid); negative margin is NOT a blocker (AC-03)
-//
-// F-41-01: two gates are PUBLISH gates, not save gates. CS opens the job at the booking window,
-// before any B/L number or charge line exists — blocking that save blocked the whole CS-first
-// flow the process is built on. Publish is the handover to Accounting, which is where a job
-// without a bill number or a single line stops being a working file and starts being a mistake.
-// Default publish:true keeps every existing caller/test on the strict path.
-export function validateNiForm(state, { publish = true } = {}) {
-  const errs = [];
-  if (publish && !state.mbl && !state.hbl && !state.job_file_no) {
-    errs.push(t('sales_new.validation.no_bill'));
-  }
-  if (!state.customer) {
-    errs.push(t('sales_new.validation.no_customer'));
-  }
-  // The job's owner must exist from birth: the revenue fork, the publish fork and the Job No
-  // namespace are all addressed by it — an unattributed save writes into nobody's folders.
-  if (!state.sales_rep) {
-    errs.push(t('sales_new.validation.no_sales_rep'));
-  }
-  // F-41-07: the customs checklist row is keyed on direction, so a job saved without one can
-  // never leave Arrived on its own evidence. Only blocks on publish — a booking-window draft may
-  // legitimately not know yet — and only bites when the product did not already settle it.
-  if (publish && !state.direction) {
-    errs.push(t('sales_new.validation.no_direction'));
-  }
-  const hasLine = (state.lines || []).some((l) => l.vnd_pay > 0 || l.vnd_collect > 0);
-  if (publish && !hasLine) {
-    errs.push(t('sales_new.validation.no_lines'));
-  }
-  // F-29-01 AC-05: amount without currency, or non-VND without fx_rate — hard block per side
-  let lineCurrencyMissing = false;
-  let lineFxMissing       = false;
-  for (const l of state.lines || []) {
-    if (l.buy_amt && !l.buy_currency)   lineCurrencyMissing = true;
-    if (l.sell_amt && !l.sell_currency) lineCurrencyMissing = true;
-    if (l.buy_currency && l.buy_currency !== 'VND' && l.buy_amt && !l.buy_fx_rate) {
-      lineFxMissing = true;
-    }
-    if (l.sell_currency && l.sell_currency !== 'VND' && l.sell_amt && !l.sell_fx_rate) {
-      lineFxMissing = true;
-    }
-  }
-  // F-29-02 AC-04: same hard block, extended to mục C commission rows
-  for (const l of state.commission_lines || []) {
-    if (l.amount_fx && !l.currency) lineCurrencyMissing = true;
-    if (l.currency && l.currency !== 'VND' && l.amount_fx && !l.fx_rate) lineFxMissing = true;
-  }
-  if (lineCurrencyMissing) errs.push(t('sales_new.validation.line_currency_required'));
-  if (lineFxMissing) {
-    errs.push(t('sales_new.validation.line_fx_required'));
-    errs.push(t('sales_new.validation.line_fx_no_rate_hint'));
-  }
-
-  // F-29-04 VR-02: defensive Σvnd invariant — carried per-line VND must match the recomputed sum
-  const inv = computeVndInvariant(state);
-  if (!inv.match) {
-    errs.push(t('sales_new.validation.vnd_invariant')
-      .replace('{expected}', inv.expected).replace('{actual}', inv.actual).replace('{delta}', inv.delta));
-  }
-  return errs;
-}
+// F-41-01 publish-vs-save gate moved to its own module (350-line cap); re-exported so every
+// existing importer of validateShipmentForm keeps resolving through this file.
+export { validateShipmentForm } from './sales-new-form/validate-shipment-form.js';
 
 function _renderActionBar(publishState) {
   if (publishState === 'published') {
@@ -301,7 +241,7 @@ function _renderActionBar(publishState) {
 // warning compared every line cell against the header, so it fired on a blank form and reported
 // cells while saying "dòng"; the count is what people actually wanted to see.
 function _renderCurrencySummary(root, summary) {
-  const el = root.querySelector('#ni-currency-summary');
+  const el = root.querySelector('#shipment-currency-summary');
   if (!el) return;
   if (summary.length === 0) { el.classList.add('hidden'); return; }
   const items = summary.map((s) =>

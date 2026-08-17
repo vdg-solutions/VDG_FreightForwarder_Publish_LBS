@@ -18,7 +18,7 @@ async function _resolveReference(fxRepo, fxDate, currency) {
 }
 
 // Only check a side that actually carries an amount — an untouched/padding row has no fx data
-// to evaluate, same gating as validateNiForm's VR-01 hard-block (amount present → checks apply).
+// to evaluate, same gating as validateShipmentForm's VR-01 hard-block (amount present → checks apply).
 async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate }) {
   if (!amount || !currency) return;
   const referenceRate = await _resolveReference(fxRepo, fxDate, currency);

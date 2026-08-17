@@ -10,6 +10,7 @@ const DRIVE_OP_GRANT_READ  = 'grant_read';
 const DRIVE_OP_RESULT_OK   = 'ok';
 const DRIVE_OP_REVOKE      = 'revoke';
 const REASON_NOT_AUTH_CHILD = 'appNotAuthorizedToChild';
+const REASON_SHARING_RATE_LIMIT = 'sharingRateLimitExceeded';
 
 // ── module-level helpers ─────────────────────────────────────────────────────
 
@@ -19,6 +20,14 @@ const REASON_NOT_AUTH_CHILD = 'appNotAuthorizedToChild';
 /// The reason string is embedded in DriveApiError.message (`Drive API 403: {..."reason":...}`).
 export function _isNotAuthorizedToChild(err) {
   return err?.status === 403 && String(err?.message || '').includes(REASON_NOT_AUTH_CHILD);
+}
+
+/// Drive's sharing burst limit, which arrives as a 403 like every permission denial. drive-api
+/// already retries it; this is the verdict the CALLER needs — the grants written before it are
+/// valid, so the run must keep them instead of rolling back (see _grantAll).
+export function _isSharingRateLimited(err) {
+  return err?.rateLimited === true
+    || (err?.status === 403 && String(err?.message || '').includes(REASON_SHARING_RATE_LIMIT));
 }
 
 /// #24 wire format for the wasm bridge: primary role first, secondary hats after, comma-separated.

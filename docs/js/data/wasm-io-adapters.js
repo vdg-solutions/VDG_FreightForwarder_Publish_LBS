@@ -1,38 +1,7 @@
-import { getFile, uploadFile, getOrCreateFolder, findWorkspaceRoot } from '../auth/drive-api.js';
-import { activeWorkspaceName } from '../operators/workspace-registry.js';
-import { MASTER_REGISTRY } from './master-registry.js';
+import { getFile, uploadFile } from '../auth/drive-api.js';
 import { healDuplicateBundle } from './bundle-file-heal.js';
-import { recallGrantAreas } from '../auth/grant-file.js';
-
-// F-37-02: the revenue audit trail is deliberately NOT here. A log inherits the ACL of the thing
-// it describes, and revenue history describes a record CS was never granted — listing it as a
-// shared log would move `selling_amount: 1000 -> 1200` into the folder CS reads, undoing the split
-// without touching the split. It falls through to the per-user fork below, which IS the wall.
-// A residue guard in tests/unit/f-37-02-shipment-audit.test.mjs fails the build if it appears here.
-const LOG_KINDS = ['error_log', 'audit_log'];
-const MASTERS_PATH = 'shared/masters';
-const USERS_PATH   = 'users';
-// E-37: `shipment` left the per-user fallback. CS and the sales rep both write the job file,
-// so no single fork can hold it — the envelope is a protected ref (`_shared/shipments`) whose
-// reader set is what keeps Accounting out of a draft. Its revenue half stays per-user under
-// `shipment_revenue`, which needs no entry here precisely BECAUSE the fork fallback IS the
-// ACL that hides it from CS.
-const KIND_PATH_OVERRIDES = {
-  user: 'admin/users',
-  user_audit_log: 'admin',
-  error_log: '_shared/error-log',
-  audit_log: '_shared/logs/audit-log',
-  shipment: '_shared/shipments'
-};
-
-// Registry lookup replaces the old MASTER_KINDS membership check. A kind absent from the
-// registry is not necessarily a bug — most entity kinds (shipments, quotes, pnl, commission
-// entries, outbox…) are per-user by default and were never master-declared; they keep
-// today's per-user fallback below. Only a registered `team` entry routes to shared/masters.
-function _isTeamMaster(kind) {
-  const entry = MASTER_REGISTRY[kind];
-  return Boolean(entry) && entry.audience === 'team';
-}
+import { isTeamMaster, resolveFolder, resolveFromManifest, ensureNestedFolder,
+  resolveDir, resolveDirFromManifest } from './wasm-folder-resolve.js';
 
 export class WasmIoPort {
   constructor(db, driveApi, userEmail) {
@@ -93,94 +62,16 @@ export class WasmIoPort {
   // Storage methods (cache_get/cache_list/cache_put/cache_delete/cache_get_meta/cache_put_meta) live in the
   // StoreIoPort subclass now — this base keeps only the Drive/event/ledger half the port shares.
 
-  async _resolveFolder(kind) {
-    if (this.folderIds.has(kind)) return this.folderIds.get(kind);
-    const rootId = await findWorkspaceRoot(activeWorkspaceName());
-    if (!rootId) {
-      // E-43: an employee holds no permission on the workspace root — `resolve_grants` never emits
-      // it, and granting it would inherit read into every table. So there is nothing to descend
-      // from, and Drive will not help: a `'<root>' in parents` list from an account that cannot
-      // read the root returns 200 with an EMPTY array. The manifest in their grant file carries the
-      // folder ids the manager resolved when granting, which is the only map they have.
-      const viaManifest = await this._resolveFromManifest(kind);
-      if (viaManifest) return viaManifest;
-      throw new Error('Workspace root not found');
-    }
+  // Where a kind or a path lives is its own question — wasm-folder-resolve.js answers it.
+  // Kept as methods so the StoreIoPort subclass and the existing tests keep their handle on it.
+  async _resolveFolder(kind) { return resolveFolder(this, kind); }
 
-    let folderId;
-    // An explicit override wins outright: it is the only way to say "this kind does NOT live
-    // in the signed-in user's fork", and the shipment envelope depends on that being
-    // unconditional rather than a side effect of also being a master or a log.
-    if (KIND_PATH_OVERRIDES[kind] || _isTeamMaster(kind) || LOG_KINDS.includes(kind)) {
-      const kindPath = KIND_PATH_OVERRIDES[kind] ?? `${MASTERS_PATH}/${kind}`;
-      folderId = await this._ensureNestedFolder(rootId, kindPath);
-    } else {
-      const prefix = this.userEmail.split('@')[0].toLowerCase();
-      folderId = await this._ensureNestedFolder(rootId, `${USERS_PATH}/${prefix}/${kind}`);
-    }
-    this.folderIds.set(kind, folderId);
-    this._folderKind.set(folderId, kind);
-    return folderId;
-  }
+  async _resolveFromManifest(kind) { return resolveFromManifest(this, kind); }
 
-  /// The employee route: find this kind's folder among the ids the manager wrote into the grant
-  /// file. The manifest is keyed by the SAME path the fan-out granted, so the match is exact — no
-  /// name search, and no ambiguity between `_shared/customers` and `shared/masters/customers`,
-  /// which a name lookup cannot tell apart.
-  ///
-  /// A kind that lives in this user's own fork (`users/<prefix>/<kind>`) resolves off the fork
-  /// entry: the fork itself is granted, so its children can be created and listed from there.
-  async _resolveFromManifest(kind) {
-    const areas = recallGrantAreas();
-    if (!areas.length) return null;
-
-    const kindPath = KIND_PATH_OVERRIDES[kind] ?? (_isTeamMaster(kind) || LOG_KINDS.includes(kind)
-      ? `${MASTERS_PATH}/${kind}`
-      : null);
-    if (kindPath) {
-      // Same anchor rule the path-addressed adapters use — one implementation, so a kind and a
-      // raw path can never disagree about which folder they mean.
-      const id = await this._resolveDirFromManifest(kindPath);
-      if (!id) return null;
-      this.folderIds.set(kind, id); this._folderKind.set(id, kind);
-      return id;
-    }
-
-    // Per-user kind: its home is this user's own fork.
-    const prefix = this.userEmail.split('@')[0].toLowerCase();
-    const fork   = areas.find((a) => a.path === `${USERS_PATH}/${prefix}`)
-                ?? areas.find((a) => a.path.startsWith(`${USERS_PATH}/`) && !a.path.includes('/', USERS_PATH.length + 1));
-    if (!fork) return null;
-    const id = await this._ensureNestedFolder(fork.folder_id, kind);
-    this.folderIds.set(kind, id); this._folderKind.set(id, kind);
-    return id;
-  }
-
-  // Resolve each path segment ONCE per session. The boot migrators (seed/master-scope/priced-ref)
-  // all resolve masters/<kind>, re-doing getOrCreateFolder for the shared 'masters' segment every
-  // time — dozens of sequential Drive round-trips that blew their 8s bounds on a cold cache. Cache
-  // per (parentId,name), and dedupe concurrent resolves of the same segment onto one in-flight call.
-  async _ensureNestedFolder(rootId, path) {
-    let current = rootId;
-    for (const part of path.split('/')) {
-      const key = `${current}/${part}`;
-      let id = this._pathSegment.get(key);
-      if (!id) {
-        let inflight = this._segInflight.get(key);
-        if (!inflight) {
-          inflight = getOrCreateFolder(current, part).then((f) => f.id).finally(() => this._segInflight.delete(key));
-          this._segInflight.set(key, inflight);
-        }
-        id = await inflight;
-        this._pathSegment.set(key, id);
-      }
-      current = id;
-    }
-    return current;
-  }
+  async _ensureNestedFolder(rootId, path) { return ensureNestedFolder(this, rootId, path); }
 
   async drive_read_bundle(kind, period) {
-    let fileName = _isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
+    let fileName = isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
@@ -198,7 +89,7 @@ export class WasmIoPort {
   }
 
   async drive_write_bundle(kind, period, newContent, etag) {
-    let fileName = _isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
+    let fileName = isTeamMaster(kind) ? 'all.jsonl' : `${period}.jsonl`;
     if (kind === 'user_audit_log') fileName = 'user-audit-log.jsonl';
     
     const folderId = await this._resolveFolder(kind);
@@ -283,30 +174,9 @@ export class WasmIoPort {
   // kernel = ∅. Path knowledge lives in the Rust stores; this only resolves segments
   // (cached), lists, reads and writes. Empty fileId/etag = create / no CAS precondition.
 
-  async _resolveDir(dirPath) {
-    const rootId = await findWorkspaceRoot(activeWorkspaceName());
-    if (rootId) return this._ensureNestedFolder(rootId, dirPath);
-    // E-43: the ws_* adapters address folders by PATH, not by kind, so they needed the manifest
-    // route too. Without it `_resolveFolder` worked and every path-addressed write still died —
-    // measured: a shipment saved locally and its per-record flush failed at ws_read_file with the
-    // whole outbox behind it. The anchor is the LONGEST granted prefix, so a specific grant always
-    // beats a shorter ancestor, and the remainder is walked from there.
-    const viaManifest = await this._resolveDirFromManifest(dirPath);
-    if (viaManifest) return viaManifest;
-    throw new Error('Workspace root not found');
-  }
+  async _resolveDir(dirPath) { return resolveDir(this, dirPath); }
 
-  async _resolveDirFromManifest(dirPath) {
-    const areas = recallGrantAreas();
-    if (!areas.length) return null;
-    const exact = areas.find((a) => a.path === dirPath);
-    if (exact) return exact.folder_id;
-    const anchor = areas
-      .filter((a) => dirPath.startsWith(`${a.path}/`))
-      .sort((a, b) => b.path.length - a.path.length)[0];
-    if (!anchor) return null;
-    return this._ensureNestedFolder(anchor.folder_id, dirPath.slice(anchor.path.length + 1));
-  }
+  async _resolveDirFromManifest(dirPath) { return resolveDirFromManifest(this, dirPath); }
 
   async ws_list_dir(dirPath) {
     const folderId = await this._resolveDir(dirPath);

@@ -1,4 +1,4 @@
-// sales-new.js — route entry; thin wrapper over NI 4-section form (F-15-27)
+// sales-new.js — route entry; thin wrapper over 4-section shipment form (F-15-27)
 
 import { t } from '../i18n/index.js';
 import { navigate } from '../router.js';
@@ -6,7 +6,7 @@ import { currentSalesRepId, currentRoles } from '../auth/auth-gate.js';
 import { selfRepCandidate, customerRepFor } from '../operators/sales-rep-derivation.js';
 import { getActiveSalesReps } from '../operators/sales-registry.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
-import { renderForm, collectFormState, validateNiForm, shipmentToDraft, jumpToFirstError } from './sales-new-form.js';
+import { renderForm, collectFormState, validateShipmentForm, shipmentToDraft, jumpToFirstError } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
 import { createSubmitGuard } from './sales-new/submit-guard.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
@@ -263,7 +263,7 @@ export async function render(root, opts = {}) {
   // is ever consumed per user action.
   const guardedSubmit = createSubmitGuard();
 
-  root.querySelector('#ni-form')?.addEventListener('submit', async (e) => {
+  root.querySelector('#shipment-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const intent  = e.submitter?.dataset?.intent === 'save' ? 'save' : 'publish';
     const saveBtn    = formMount.querySelector('#ni-save-btn');
@@ -272,11 +272,11 @@ export async function render(root, opts = {}) {
     await guardedSubmit([saveBtn, publishBtn], async () => {
       const publish = intent === 'publish';
       const state   = collectFormState(formMount);
-      const errors  = validateNiForm(state, { publish });
+      const errors  = validateShipmentForm(state, { publish });
       if (errors.length) {
         highlightErrors(root, errors);
         jumpToFirstError(root); // E-39: the flagged field may sit on another screen
-        const errEl = root.querySelector('#ni-form-errors');
+        const errEl = root.querySelector('#shipment-form-errors');
         if (errEl) {
           errEl.innerHTML = errors.map((err) => `<div>&#x2022; ${err}</div>`).join('');
           errEl.classList.remove('hidden');
@@ -292,7 +292,7 @@ export async function render(root, opts = {}) {
         state._fx_overrides = overrides;
       }
       // F-41-01: the record's owner is what the FORM resolved (select → derivation chain), never
-      // the session fallback alone — validateNiForm has already refused an empty pick.
+      // the session fallback alone — validateShipmentForm has already refused an empty pick.
       const repFinal = state.sales_rep || salesRepId;
       try {
         if (isEdit) {

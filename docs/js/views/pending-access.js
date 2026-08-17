@@ -11,7 +11,7 @@
 import { t } from '../i18n/index.js';
 import { navigate } from '../router.js';
 import { activeWorkspaceName } from '../operators/workspace-registry.js';
-import { runFirstRunProvision } from '../boot/license-boot-gate.js';
+import { runFirstRunProvision, isAlreadyProvisionedLocally } from '../boot/license-boot-gate.js';
 import { clearRoleCache } from '../auth/auth-gate.js';
 import { currentUserRole, normalizeRole, homeRouteForRole, ROLE_READ_ONLY } from '../operators/manager/route-guard.js';
 
@@ -67,6 +67,10 @@ export function render(root) {
 async function _offerCreateIfGreenfield(root) {
   const driveApi = window.__vdg_drive_api;
   if (!driveApi) return;
+  // Local membership evidence outranks the probe below: an employee holds no permission on the
+  // root, so findWorkspaceRoot answers null for them exactly as it does for a real first run.
+  // Offering "create workspace" there is how the duplicate LBS folder got made.
+  if (isAlreadyProvisionedLocally()) return;
   let existingRoot;
   try {
     existingRoot = await driveApi.findWorkspaceRoot(activeWorkspaceName());

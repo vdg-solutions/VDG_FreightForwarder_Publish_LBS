@@ -1,4 +1,4 @@
-// F-12-08 — NI-style "PROFIT-LOSS BUDGET" per-shipment print form
+// F-12-08 — budget-style "PROFIT-LOSS BUDGET" per-shipment print form
 import { listWhere } from '../data/repo-query.js';
 import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../util/sales-rep-i18n.js';

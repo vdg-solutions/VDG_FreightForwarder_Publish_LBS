@@ -9,9 +9,11 @@ import { publishGrant, unpublishGrant, backfillGrants, grantFileOp } from './gra
 // F-37-05: `users/*/billing_published` is a CROSS PRODUCT — see fork-grants.js for why it has to
 // be maintained from both ends and why CS needs none of it.
 import { roleSetToken, resolvePathToFolderId, _aclHas, _driveOpsFromAcl,
-  _isNotAuthorizedToChild, _buildUserRecord } from './role-assignment-helpers.js';
-import { splitInteriorWildcard, grantAcrossForks, revokeAcrossForks, grantNewForkToReaders }
+  _isNotAuthorizedToChild, _isSharingRateLimited, _buildUserRecord } from './role-assignment-helpers.js';
+import { splitInteriorWildcard, grantAcrossForks, grantNewForkToReaders }
   from './fork-grants.js';
+// The raw Drive permission primitives (put/list/delete) live next door, api-first.
+import { grantChildFolders, grantEntry, revokeEntry, rollbackGrants } from './grant-cascade.js';
 
 const WILDCARD_PATH      = '*';
 const WILDCARD_SUFFIX    = '/*';
@@ -111,7 +113,7 @@ export class RoleAssignmentService {
     const toRevoke = oldAcl.filter((o) => !_aclHas(newAcl, o));
     const toGrant  = newAcl.filter((n) => !_aclHas(oldAcl, n));
 
-    for (const entry of toRevoke) await this._revokeEntry(rootId, email, entry);
+    for (const entry of toRevoke) await revokeEntry(this._api, rootId, email, entry);
     // E-43: grant the WHOLE new ACL, not the delta. `_grantEntry` is idempotent — it reads the
     // folder's permissions and no-ops when this email already holds the role — so re-granting what
     // is already there costs one listPermissions per folder and nothing else. The delta form looked
@@ -151,7 +153,7 @@ export class RoleAssignmentService {
 
     const acl    = await this.resolveAcl(role, userPrefix);
     const rootId = await this._requireRoot();
-    for (const entry of acl) await this._revokeEntry(rootId, email, entry);
+    for (const entry of acl) await revokeEntry(this._api, rootId, email, entry);
     // #30: revoked folders but a still-readable grant would leave the user signing in with a full
     // role set and empty screens — worse to diagnose than a clean "no access".
     if (userPrefix) await this._unpublishGrant(rootId, email, userPrefix);
@@ -247,7 +249,11 @@ export class RoleAssignmentService {
         await this._grantEntryResilient(rootId, email, entry, granted, skipped, areas);
       }
     } catch (err) {
-      await this._rollback(granted);
+      // A sharing rate limit is not a failed grant. The permissions already written are correct,
+      // and `_grantEntry` skips them on the next run (it reads listPermissions first), so the
+      // operation converges by being re-run. Rolling back would destroy that progress AND spend
+      // more sharing ops undoing it — the one thing the limit is telling us not to do.
+      if (!_isSharingRateLimited(err)) await rollbackGrants(this._api, granted);
       throw err;
     }
     return { granted, skipped, areas };
@@ -268,61 +274,16 @@ export class RoleAssignmentService {
       // has to appear in the manifest, or a user provisioned twice ends up with fewer areas than
       // a user provisioned once.
       if (areas && entry.path !== WILDCARD_PATH) areas.push({ path: entry.path, folder_id: folderId });
-      const result = await this._grantEntry(rootId, email, entry, folderId);
+      const result = await grantEntry(this._api, rootId, email, entry, folderId);
       if (result) granted.push(result);
     } catch (err) {
       if (!_isNotAuthorizedToChild(err)) throw err;
       if (entry.path === WILDCARD_PATH) {
-        await this._grantChildFolders(rootId, email, entry.access, granted, skipped);
+        await grantChildFolders(this._api, rootId, email, entry.access, granted, skipped);
       } else {
         skipped.push({ path: entry.path, reason: REASON_NOT_AUTH_CHILD });
       }
     }
-  }
-
-  /// Wildcard-root fallback: grant `access` on each app-visible child FOLDER of `rootId`
-  /// individually, so one hand-created file at the workspace root no longer blocks the
-  /// manager's whole-workspace grant. drive.file only lists app-created children, so the
-  /// offending stray file is never touched. Idempotent per folder; folders that are themselves
-  /// blocked by a nested stray go to `skipped`.
-  async _grantChildFolders(rootId, email, access, granted, skipped) {
-    const driveRole = access === ACCESS_WRITE ? DRIVE_ROLE_WRITER : DRIVE_ROLE_READER;
-    const children  = typeof this._api.listChildren === 'function'
-      ? await this._api.listChildren(rootId)
-      : [];
-    for (const child of children.filter((c) => c.mimeType === DRIVE_FOLDER_MIME)) {
-      try {
-        const perms = await this._api.listPermissions(child.id);
-        if (perms.some((p) => p.emailAddress === email && p.role === driveRole)) continue;
-        const perm = await this._api.putPermission(child.id, email, driveRole);
-        granted.push({ folderId: child.id, permissionId: perm.id });
-      } catch (err) {
-        if (!_isNotAuthorizedToChild(err)) throw err;
-        skipped.push({ path: child.name, reason: REASON_NOT_AUTH_CHILD });
-      }
-    }
-  }
-
-  /// AC-02: idempotent — no-op (returns null) when the email already holds this exact
-  /// Drive role on the folder.
-  async _grantEntry(rootId, email, entry, preResolvedFolderId = null) {
-    const folderId  = preResolvedFolderId ?? await resolvePathToFolderId(this._api, rootId, entry.path);
-    const driveRole = entry.access === ACCESS_WRITE ? DRIVE_ROLE_WRITER : DRIVE_ROLE_READER;
-    const perms     = await this._api.listPermissions(folderId);
-    if (perms.some((p) => p.emailAddress === email && p.role === driveRole)) return null;
-    const perm = await this._api.putPermission(folderId, email, driveRole);
-    return { folderId, permissionId: perm.id };
-  }
-
-  async _revokeEntry(rootId, email, entry) {
-    if (splitInteriorWildcard(entry.path)) {
-      await revokeAcrossForks(this._api, resolvePathToFolderId, rootId, email, entry);
-      return;
-    }
-    const folderId = await resolvePathToFolderId(this._api, rootId, entry.path);
-    const perms    = await this._api.listPermissions(folderId);
-    const match    = perms.find((p) => p.emailAddress === email);
-    if (match) await this._api.deletePermission(folderId, match.id);
   }
 
   /// Grants this fork's cross-product subfolders to everyone whose role already reads them. Who
@@ -337,13 +298,6 @@ export class RoleAssignmentService {
       (u) => this.resolveAcl(u.role, u.user_prefix, u.extra_roles || []),
       users, rootId, userPrefix,
     );
-  }
-
-  async _rollback(granted) {
-    for (const g of granted) {
-      try { await this._api.deletePermission(g.folderId, g.permissionId); }
-      catch (err) { console.error('[role-assignment] rollback delete failed:', err); } // DEV — best-effort compensation
-    }
   }
 
   async _assertNotLastManager(email) {

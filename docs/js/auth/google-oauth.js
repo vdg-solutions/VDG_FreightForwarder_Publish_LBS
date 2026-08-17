@@ -3,9 +3,12 @@
 
 import { ensureWindowOpen } from './window-open-guard.js';
 import { PROFILE_KEY, writeCachedProfile } from './profile-cache.js';
+// The synthetic id-token codec (parse/build/re-stamp) lives next door — no GIS, no client id.
+import { TOKEN_KEY, parseIdToken, buildUser, encodeSyntheticIdToken, restampStoredIdTokenExp }
+  from './id-token.js';
+export { parseIdToken };
 
 const CLIENT_ID            = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com';
-const TOKEN_KEY            = 'vdg.auth.id_token';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY = 'vdg.auth.access_token_exp';
 // E-43: VERSIONED on purpose. The flag records "this browser already consented", and it used to
@@ -57,38 +60,6 @@ export { ROLE_CACHE_KEY };
 
 let _currentUser = null; // in-memory cache after parse
 
-// ── JWT helpers ───────────────────────────────────────────────────────────────
-
-export function parseIdToken(token) {
-  try {
-    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    const json   = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
-        .join('')
-    );
-    return JSON.parse(json);
-  } catch {
-    /* malformed token — treat as missing */
-    return null;
-  }
-}
-
-function buildUser(token) {
-  const payload = parseIdToken(token);
-  if (!payload) return null;
-  const nowSec = Math.floor(Date.now() / 1000);
-  if (payload.exp && payload.exp < nowSec) return null; // expired
-  return {
-    email:    payload.email   || '',
-    name:     payload.name    || '',
-    picture:  payload.picture || '',
-    sub:      payload.sub     || '',
-    id_token: token,
-  };
-}
-
 // ── public API ────────────────────────────────────────────────────────────────
 
 export function getCurrentUser() {
@@ -131,23 +102,11 @@ export function clearDriveScopeGrant() { localStorage.removeItem(DRIVE_SCOPE_KEY
 // no new localStorage key.
 export function wasPreviouslySignedIn() { return localStorage.getItem(ACCESS_TOKEN_EXP_KEY) != null; }
 
-// Single source of the unsigned header.payload. format consumed by parseIdToken. UTF-8 safe.
-function _encodeSyntheticIdToken(payload) {
-  const header = btoa(JSON.stringify({ alg: 'none' }));
-  const body   = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-  return `${header}.${body}.`;
-}
-
-// Extend the synthetic id-token session to a new expiry (the fresh access-token exp) WITHOUT
-// changing identity — silent renewal keeps the same user, just a later exp. No-op if no id-token.
+// The codec lives in id-token.js; the in-memory user cache is this module's, so invalidating
+// it stays here. Identity is unchanged by a re-stamp — only the expiry moves.
 export function restampIdTokenExp(accessExpMs) {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return false;
-  const payload = parseIdToken(token);
-  if (!payload) return false;
-  payload.exp = Math.floor(accessExpMs / 1000);          // pin to new access-token exp
-  localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken(payload));
-  _currentUser = null;                                   // force rebuild; email/sub unchanged
+  if (!restampStoredIdTokenExp(accessExpMs)) return false;
+  _currentUser = null;   // force rebuild; email/sub unchanged
   return true;
 }
 
@@ -204,7 +163,7 @@ export async function rebuildSessionFromStoredToken() {
     if (!info?.sub) return null;
     const storedExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
     const expMs = Math.max(storedExp, Date.now() + REVIVED_SESSION_MIN_TTL_MS);
-    localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken({
+    localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
       email: info.email, name: info.name, picture: info.picture, sub: info.sub,
       exp: Math.floor(expMs / 1000),
     }));
@@ -229,7 +188,7 @@ export async function hydrateSessionFromToken(resp) {
   if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
   else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
   const info = await _fetchUserinfo(resp.access_token);
-  localStorage.setItem(TOKEN_KEY, _encodeSyntheticIdToken({
+  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
     email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
   }));
   writeCachedProfile(info);
