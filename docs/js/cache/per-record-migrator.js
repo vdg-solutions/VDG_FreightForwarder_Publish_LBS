@@ -41,20 +41,30 @@ export async function explodeBundles(ws, trashFile, spec, from = spec.dir, ledge
   // An earlier run may have left two files claiming one id (see _writeRecord). Heal first, so
   // the existence check below reads a folder where a name means exactly one file.
   if (!spec.partitioned) await dedupeByName(ws, trashFile, spec.dir);
-  const home    = await ws.ws_list_dir(from);
-  const bundles = (home.files ?? []).filter((f) => f.name.endsWith(BUNDLE_SUFFIX));
+  const home = await ws.ws_list_dir(from);
+  // A legacy folder can hold a NEIGHBOUR's bundle. `admin/` held both the audit log and the
+  // roster, and a sweep that took every *.jsonl there read `users.jsonl`, recognised none of its
+  // rows, and retired the file — the roster was lost until it was pulled back out of the trash.
+  // When the framework names the file, take only that one.
+  const mine = (name) => (from === spec.dir || !spec.legacy_bundle) ? true : name === spec.legacy_bundle;
+  const bundles = (home.files ?? []).filter((f) => f.name.endsWith(BUNDLE_SUFFIX) && mine(f.name));
   let written   = 0;
   const report  = { kind: spec.kind, from, bundles: bundles.length, written: 0, trashed: 0, moved: 0, stopped: false };
 
   for (const bundle of bundles) {
     const data = await ws.ws_read_file(from, bundle.name);
     if (!data?.found) continue;
-    const rows = String(data.content ?? '').split('\n')
+    const parsed = String(data.content ?? '').split('\n')
       .map((l) => l.trim()).filter(Boolean)
-      .map((l) => { try { return JSON.parse(l); } catch { return null; } })
-      .filter((r) => r && typeof r === 'object' && r.id);
+      .map((l) => { try { return JSON.parse(l); } catch { return null; } });
+    const rows = parsed.filter((r) => r && typeof r === 'object' && r.id);
 
-    let allSettled = true;
+    // THE SAFETY RULE. A bundle leaves only when its rows have demonstrably arrived somewhere
+    // else. Rows we could not parse, and rows with no `id` to key a file by, are rows we did not
+    // move — and a file whose every row was dropped is not an empty file, it is one we failed to
+    // read. Treating "nothing recognised" as "nothing to do" is exactly how `admin/users.jsonl`
+    // was retired with the whole roster still inside it.
+    let allSettled = rows.length > 0 && rows.length === parsed.length;
     for (const row of rows) {
       const partition = _partitionOf(row, bundle.name, spec);
       if (partition === null) { allSettled = false; continue; } // no coordinate — leave it, loudly
