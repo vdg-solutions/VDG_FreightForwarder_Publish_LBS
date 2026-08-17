@@ -120,14 +120,57 @@ export async function resolveDir(port, dirPath) {
   throw new Error('Workspace root not found');
 }
 
-export async function resolveDirFromManifest(port, dirPath) {
+export async function resolveDirFromManifest(port, dirPath, allowRefresh = true) {
   const areas = recallGrantAreas();
-  if (!areas.length) return null;
-  const exact = areas.find((a) => a.path === dirPath);
-  if (exact) return exact.folder_id;
-  const anchor = areas
-    .filter((a) => dirPath.startsWith(`${a.path}/`))
-    .sort((a, b) => b.path.length - a.path.length)[0];
-  if (!anchor) return null;
-  return ensureNestedFolder(port, anchor.folder_id, dirPath.slice(anchor.path.length + 1));
+  const anchorIn = (list) => {
+    const exact = list.find((a) => a.path === dirPath);
+    if (exact) return { folder_id: exact.folder_id, rest: '' };
+    const a = list
+      .filter((x) => dirPath.startsWith(`${x.path}/`))
+      .sort((x, y) => y.path.length - x.path.length)[0];
+    return a ? { folder_id: a.folder_id, rest: dirPath.slice(a.path.length + 1) } : null;
+  };
+
+  const hit = areas.length ? anchorIn(areas) : null;
+  if (hit) return hit.rest ? ensureNestedFolder(port, hit.folder_id, hit.rest) : hit.folder_id;
+
+  // The manifest is a CACHE of folder ids, and a table's home can MOVE. When it does, an employee
+  // holding no permission on the root has a map that no longer names the place — measured live:
+  // the roster moved to `roster/`, the manifest still said `admin`, and every screen that needed a
+  // colleague's name died with "Workspace root not found".
+  //
+  // Moving a table is two moves: the DATA and the PERMISSION. The manager's re-grant republishes
+  // the grant file; this is the other half — re-read it before failing, so a client heals itself
+  // instead of waiting for someone to notice. Once per session: a path that is genuinely not
+  // granted must still fail fast, not re-fetch on every call.
+  if (!allowRefresh || _manifestRefreshed) return null;
+  _manifestRefreshed = true;
+  const fresh = await _refreshManifest(port);
+  if (!fresh.length) return null;
+  const retry = anchorIn(fresh);
+  if (!retry) return null;
+  return retry.rest ? ensureNestedFolder(port, retry.folder_id, retry.rest) : retry.folder_id;
 }
+
+/// One re-read of this user's grant file, per session. Returns the areas it now names.
+let _manifestRefreshed = false;
+
+async function _refreshManifest(port) {
+  try {
+    const { readGrant, rememberGrantAreas } = await import('../auth/grant-file.js');
+    const email = String(port.userEmail || '');
+    const grant = await readGrant(activeWorkspaceName(), email.split('@')[0].toLowerCase(), email);
+    const areas = grant?.areas ?? [];
+    rememberGrantAreas(areas);
+    // The ids just changed under every cached resolution, so the memo has to go with them.
+    port.folderIds.clear();
+    port._pathSegment.clear();
+    return areas;
+  } catch (err) {
+    console.warn('[folder-resolve] grant refresh failed:', err.message); // DEV — next boot retries
+    return [];
+  }
+}
+
+/// Test seam: a fresh session starts having refreshed nothing.
+export function _resetManifestRefresh() { _manifestRefreshed = false; }

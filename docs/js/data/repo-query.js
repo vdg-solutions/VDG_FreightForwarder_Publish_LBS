@@ -24,37 +24,31 @@ export async function listWhere(repo, kind, predicate = null) {
   return (Array.isArray(rows) ? rows : []).filter(predicate);
 }
 
-/// Equality filter on ONE column — the shape an index can answer.
+/// Equality filter on ONE column.
 ///
-/// A table is a folder and a record is a file, so `listWhere` costs a listing plus a download per
-/// row. When the framework declares that column indexed, this asks the index instead and downloads
-/// only the matches. It is the SAME answer either way: the reader reconciles the index against the
-/// folder listing before trusting it, so a missing or stale index costs downloads, never accuracy.
-///
-/// Callers do not choose. They say what they want; whether an index exists is the framework's to
-/// know — `equalsWhere(repo, 'local-charges', 'carrier', 'ONEY')` reads identically on a table
-/// with an index and on one without.
+/// It reads the LOCAL store and filters there — `repo.list` is the SQLite/OPFS cache, so this
+/// costs zero Drive calls. That is the correction to a mistake worth recording: the first version
+/// of this function routed the query through the Drive-side index, which meant a folder listing
+/// plus a download per match, for a table already sitting on the machine. It made queries slower
+/// and called it acceleration. Drive is the source of truth; the client is where you ask questions.
 export async function equalsWhere(repo, kind, column, value) {
-  if (typeof repo?.index_ids_where === 'function') {
-    try {
-      const hit = await repo.index_ids_where(kind, column, String(value));
-      const ids = new Set(hit?.ids ?? []);
-      if (ids.size === 0) return [];
-      // The index answers with IDS; the rows still come from the repo, which is what keeps the
-      // index free of row content and therefore free of a second copy of the truth.
-      const rows = await repo.list(kind, null);
-      return (Array.isArray(rows) ? rows : []).filter((r) => ids.has(r?.id));
-    } catch {
-      /* an index failure is not a query failure — fall through to the scan below */
-    }
-  }
   return listWhere(repo, kind, (r) => String(r?.[column] ?? '') === String(value));
 }
 
 /// Is `value` already taken on a UNIQUE column? Returns the id holding it, or null.
-/// Null means free — and it is trustworthy for the same reason: the listing is reconciled first.
-/// A column the framework has NOT declared unique answers null too, because this store has no
-/// opinion to offer there; a caller must not read that silence as "checked".
+///
+/// THIS is what the Drive-side index is for, and the one thing the local database cannot do.
+/// SQLite sees only what THIS client has hydrated, so two people creating the same tax code both
+/// pass their own uniqueness check and collide on Drive, where nothing was watching. The index
+/// file is the single shared witness — reconciled against the folder listing before it answers,
+/// so it is as good as a scan and much cheaper.
+///
+/// Still advisory, and honestly so: Drive has no transaction spanning the check and the write, so
+/// two clients racing at the same instant can both pass. It closes the ordinary case (someone
+/// re-typing a customer that already exists), not the simultaneous one.
+///
+/// A column the framework has NOT declared unique answers null — meaning "no opinion", never
+/// "checked, and it is free".
 export async function uniqueHolder(repo, kind, column, value, byId = '') {
   if (typeof repo?.index_unique_holder !== 'function') return null;
   return repo.index_unique_holder(kind, column, String(value), String(byId)) ?? null;

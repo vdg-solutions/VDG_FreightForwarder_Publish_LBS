@@ -3,6 +3,7 @@
 
 import { runRepoInitBounded } from './repo-init-steps.js';
 import { pushDiag, DIAG_KIND_REPO_INIT_OK, DIAG_KIND_REPO_INIT_TIMEOUT } from './repo-diag.js';
+import { visibleDeadline } from '../util/visible-deadline.js';
 
 // Total budget for the render-critical boot chain. 8s was too tight: on a COLD cache the
 // wasm-init step downloads the ~2.1MB vdg_freight_bg.wasm and compiles it, then hits Drive for
@@ -45,14 +46,15 @@ export async function runRepoInit(user, bootFn) {
   const startedAt     = performance.now();
   const stepRef       = { value: 'init' };
 
-  let timer;
-  const timeoutPromise = new Promise((_, rej) => {
-    timer = setTimeout(
-      () => rej(new RepoInitTimeoutError(stepRef.value,
-                                         Math.round(performance.now() - startedAt))),
-      REPO_INIT_TIMEOUT_MS,
-    );
-  });
+  // Measured in VISIBLE time, not wall-clock. A plain setTimeout is deferred in a hidden tab, so
+  // this budget once reported `step=wasm-init elapsedMs=382471` - a 30-second timer firing six and
+  // a half minutes late. And the right question is not "how long has this taken" but "how long has
+  // the PERSON waited": while the tab is hidden nobody is waiting, so that time must not count.
+  const deadline = visibleDeadline(
+    REPO_INIT_TIMEOUT_MS,
+    (visibleMs) => new RepoInitTimeoutError(stepRef.value, visibleMs),
+  );
+  const timeoutPromise = deadline.promise;
 
   // AC-06: pass existing db so retry reuses open IDBDatabase; callback fires on first open
   const innerPromise = runRepoInitBounded(
@@ -62,7 +64,7 @@ export async function runRepoInit(user, bootFn) {
 
   try {
     const singletons = await Promise.race([innerPromise, timeoutPromise]);
-    clearTimeout(timer);
+    deadline.cancel();
     if (singletons) {
       _singletons.db       = singletons.db;
       _singletons.poller   = singletons.poller;
@@ -75,7 +77,7 @@ export async function runRepoInit(user, bootFn) {
     pushDiag({ kind: DIAG_KIND_REPO_INIT_OK, step: stepRef.value, elapsedMs,
                ts: new Date().toISOString() });
   } catch (err) {
-    clearTimeout(timer);
+    deadline.cancel();
     if (err?.name === 'RepoInitTimeoutError') {
       // AC-04: telemetry on timeout
       console.warn(`[repo-init-timeout] step=${err.step} elapsedMs=${err.elapsedMs}`); // DEV
