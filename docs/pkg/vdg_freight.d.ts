@@ -31,6 +31,30 @@ export class WasmEntityRepo {
      */
     fx_months_to_ingest(): Promise<any>;
     get(kind: string, id: string): Promise<any>;
+    /**
+     * Ids of every record of `kind` whose `column` equals `value`.
+     *
+     * Resolves `{ ids, reads }`. `reads` is how many record files had to be downloaded to answer
+     * — the honest measure of whether the index earned its keep, and the number a test asserts on
+     * instead of trusting a log line. 0 = the index covered the folder; N = it covered nothing and
+     * this was a plain scan, which is still the RIGHT answer, just the slow one.
+     */
+    index_ids_where(kind: string, column: string, value: string): Promise<any>;
+    /**
+     * Same, for a record that left the table.
+     */
+    index_note_delete(kind: string, id: string): Promise<any>;
+    /**
+     * Fold a written record into every index its table declares. Best-effort by contract: the
+     * read path reconciles, so a skipped update is a slower query and never a wrong one.
+     */
+    index_note_write(kind: string, id: string, version: string, row_json: string): Promise<any>;
+    /**
+     * The record already holding `value` on a UNIQUE column, or null. Null means the value is
+     * free, and that is only trustworthy because the reader reconciles against the folder listing
+     * before answering.
+     */
+    index_unique_holder(kind: string, column: string, value: string, by_id: string): Promise<any>;
     lgr_append_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_append_log(file: string, record_json: string): Promise<any>;
     lgr_ensure_seed_file(file_name: string, content: string): Promise<any>;
@@ -200,6 +224,12 @@ export function import_document_excel_wasm(bytes: Uint8Array): any;
  * P&L Excel import → ImportReport<PnlImportRowDto> as JsValue.
  */
 export function import_pnl_excel_wasm(bytes: Uint8Array): any;
+
+/**
+ * Which columns of a kind are indexed, so a caller can tell a cheap filter from an expensive one
+ * WITHOUT guessing. Declared in cache_policy; nothing here decides it.
+ */
+export function indexed_columns_of(kind: string): any;
 
 /**
  * Returns true when `entity_etd_ms` falls within a locked period.
@@ -456,6 +486,7 @@ export interface InitOutput {
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
+    readonly indexed_columns_of: (a: number, b: number) => number;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
     readonly legacy_containers: () => number;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
@@ -517,6 +548,10 @@ export interface InitOutput {
     readonly wasmentityrepo_fx_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_fx_months_to_ingest: (a: number) => number;
     readonly wasmentityrepo_get: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_index_ids_where: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasmentityrepo_index_note_delete: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_index_note_write: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
+    readonly wasmentityrepo_index_unique_holder: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly wasmentityrepo_lgr_append_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_append_log: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_lgr_ensure_seed_file: (a: number, b: number, c: number, d: number, e: number) => number;
@@ -560,9 +595,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10757: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10759: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4577: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_11030: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11032: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4850: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
