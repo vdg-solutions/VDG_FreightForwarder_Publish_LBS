@@ -30,6 +30,9 @@ const BUNDLE_SUFFIX         = '.jsonl';
 const RECORD_SUFFIX         = '.json';
 const MONTH_RE              = /^\d{4}-(0[1-9]|1[0-2])$/;
 const MAX_RECORDS_PER_SWEEP = 25;
+// Must equal PENDING_DIR in workspace-bootstrap.js / protection_table.rs — the proposal queue is
+// a nested TABLE, never a partition of its parent.
+const PENDING_DIR           = '_pending';
 
 /// One kind's sweep over ONE folder. `ws` = the generic workspace-file port ({ ws_list_dir,
 /// ws_read_file, ws_write_file }) and `trashFile(fileId)` the recoverable delete.
@@ -82,23 +85,43 @@ export async function explodeBundles(ws, trashFile, spec, from = spec.dir, ledge
 /// Carry already-per-record files across a home that moved. Same settled-at-destination rule as
 /// the bundle path — the source file is only trashed once its copy is provably at least as new.
 async function _relocateRecords(ws, trashFile, spec, from, budget, ledger) {
-  const listing = await ws.ws_list_dir(from);
-  const records = (listing.files ?? []).filter((f) => f.name.endsWith(RECORD_SUFFIX));
+  // A partitioned kind's old home holds PARTITION FOLDERS, not records — its files live one level
+  // down. Looking only at the top level found nothing and reported success, which is why
+  // `_shared/shipments/2026-09` sat untouched while the sweep said it had converged.
+  const roots = spec.partitioned ? await _partitionDirs(ws, from) : [from];
   let moved = 0;
-  for (const file of records) {
-    if (moved >= budget) return { moved, stopped: true };
-    const data = await ws.ws_read_file(from, file.name);
-    if (!data?.found) continue;
-    let row = null;
-    try { row = JSON.parse(String(data.content ?? '').trim()); } catch { row = null; }
-    if (!row || typeof row !== 'object' || !row.id) continue;
+  for (const dirPath of roots) {
+    const listing = await ws.ws_list_dir(dirPath);
+    const records = (listing.files ?? []).filter((f) => f.name.endsWith(RECORD_SUFFIX));
+    for (const file of records) {
+      if (moved >= budget) return { moved, stopped: true };
+      const data = await ws.ws_read_file(dirPath, file.name);
+      if (!data?.found) continue;
+      let row = null;
+      try { row = JSON.parse(String(data.content ?? '').trim()); } catch { row = null; }
+      if (!row || typeof row !== 'object' || !row.id) continue;
 
-    const partition = _partitionOf(row, '', spec);
-    const dir       = partition ? `${spec.dir}/${partition}` : spec.dir;
-    if (await _writeRecord(ws, ledger, dir, file.name, row)) moved += 1;
-    await trashFile(file.id, listing.folderId);
+      // The partition comes from the SOURCE FOLDER's name when it has one: that is where the
+      // record has been living, and a home is identity, not content (cache_policy::home_period).
+      const here      = dirPath.slice(from.length + 1);
+      const partition = here || _partitionOf(row, '', spec) || '';
+      const dir       = partition ? `${spec.dir}/${partition}` : spec.dir;
+      if (await _writeRecord(ws, ledger, dir, file.name, row)) moved += 1;
+      await trashFile(file.id, listing.folderId);
+    }
   }
   return { moved, stopped: false };
+}
+
+/// `<from>` plus every partition folder under it — `_pending` is a governance queue, not a
+/// partition, so it never joins the sweep.
+async function _partitionDirs(ws, from) {
+  const listing = await ws.ws_list_dir(from).catch(() => null);
+  if (!listing) return [from];
+  const subs = (listing.files ?? [])
+    .filter((f) => f.mimeType?.endsWith('.folder') && f.name !== PENDING_DIR)
+    .map((f) => `${from}/${f.name}`);
+  return [from, ...subs];
 }
 
 /// Create-or-update one record file, at most once per run per (dir, name).
