@@ -35,7 +35,7 @@ const MAX_RECORDS_PER_SWEEP = 25;
 /// ws_read_file, ws_write_file }) and `trashFile(fileId)` the recoverable delete.
 /// `from` is the folder being drained; `spec.dir` is always the destination.
 export async function explodeBundles(ws, trashFile, spec, from = spec.dir, ledger = new Map()) {
-  // An earlier run may have left two files claiming one id (see _writtenThisRun). Heal first, so
+  // An earlier run may have left two files claiming one id (see _writeRecord). Heal first, so
   // the existence check below reads a folder where a name means exactly one file.
   if (!spec.partitioned) await dedupeByName(ws, trashFile, spec.dir);
   const home    = await ws.ws_list_dir(from);
@@ -69,7 +69,9 @@ export async function explodeBundles(ws, trashFile, spec, from = spec.dir, ledge
     }
 
     if (allSettled && !report.stopped) {
-      await trashFile(bundle.id);
+      // The file may belong to whoever wrote it — pass the parent so a non-owner can detach it
+      // instead of failing the whole kind on a 403 (drive-file-retire.js).
+      await trashFile(bundle.id, home.folderId);
       report.trashed += 1;
     }
     if (report.stopped) break;
@@ -94,7 +96,7 @@ async function _relocateRecords(ws, trashFile, spec, from, budget, ledger) {
     const partition = _partitionOf(row, '', spec);
     const dir       = partition ? `${spec.dir}/${partition}` : spec.dir;
     if (await _writeRecord(ws, ledger, dir, file.name, row)) moved += 1;
-    await trashFile(file.id);
+    await trashFile(file.id, listing.folderId);
   }
   return { moved, stopped: false };
 }
@@ -209,7 +211,11 @@ export async function migratePerRecordKinds({ wasm, ws, trashFile, moveFile, isM
       }
       reports.push(report);
     } catch (err) {
+      // A swallowed failure reads as "nothing to do", which is how a 403 on one kind let a whole
+      // migration report 0 moved and look finished. The error goes in the REPORT, not only the
+      // console, so the caller can tell "converged" from "could not".
       console.warn('[per-record-migrator]', spec.kind, 'sweep failed:', err.message); // DEV — next boot retries
+      reports.push({ kind: spec.kind, error: String(err?.message || err).slice(0, 200) });
     }
   }
   return reports;

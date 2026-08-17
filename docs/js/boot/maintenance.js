@@ -15,7 +15,10 @@ export function runBootMaintenance(driveApi, ioPort) {
     .then((m) => m.migratePerRecordKinds({
       wasm: window.__vdg_wasm,
       ws: ioPort,
-      trashFile: (fileId) => driveApi.driveFetch('PATCH', `/files/${fileId}`, { trashed: true }),
+      // Not a plain trash: the account that created a file owns it, and only an owner may trash.
+      // A non-owner detaches it from the folder instead — see drive-file-retire.js.
+      trashFile: (fileId, parentId) => import('../data/drive-file-retire.js')
+        .then((m) => m.retireFile(driveApi, fileId, parentId)),
       moveFile: (fileId, addParent, removeParent) => driveApi.driveFetch(
         'PATCH', `/files/${fileId}?addParents=${addParent}&removeParents=${removeParent}`, {}),
       isManager: (window.__vdg_current_user?.roles || []).includes('Manager'),
