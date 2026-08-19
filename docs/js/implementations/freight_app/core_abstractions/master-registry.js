@@ -1,0 +1,50 @@
+// data/master-registry.js — single source of truth for master-data kind ownership.
+// F-28-01: replaces the two hand-maintained MASTER_KINDS arrays (wasm-io-adapters.js,
+// operators/backup-exporter.js).
+// F-28-02: `local-charges` / `units-of-measure` flip from `audience: 'private'` (their old
+// per-user storage) to `team`. cache/master-scope-migrator.js sweeps each user's stranded
+// per-user records into the shared zone at boot so the flip doesn't strand existing data.
+//
+// audience: who must be able to READ the kind — 'team' (whole workspace) or 'private' (one
+//           user). WHERE it lands is the framework's call (cache_policy::PER_RECORD_REGISTRY);
+//           this field states the audience, which is what the protection table is keyed on.
+// writers:  roles allowed to create/edit the kind (see operators/manager/route-guard.js).
+// seed:     bundled seed file fetched by the view's seed migration, or null when the view
+//           has no file-backed seed (e.g. inline defaults, or no seeding at all).
+// tier:     'priced' feeds a price/PNL calculation (governance-sensitive); else 'reference'.
+import { ROLE_MANAGER, ROLE_SALES_REP, ROLE_ACCOUNTANT } from './roles.js';
+
+const SEED_BASE = 'seed/masters';
+
+export const MASTER_REGISTRY = {
+  customers:          { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: null,                                    tier: 'reference' },
+  carriers:           { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
+  services:           { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
+  user:               { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
+  airports:           { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/airports.jsonl`,          tier: 'reference' },
+  flights:            { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/flights.jsonl`,           tier: 'reference' },
+  'airline-carriers': { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/airline-carriers.jsonl`,  tier: 'reference' },
+  'uld-types':        { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/uld-types.jsonl`,         tier: 'reference' },
+  'air-rates':        { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/air-rates.jsonl`,         tier: 'priced'    },
+  'ocean-carriers':   { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/ocean-carriers.jsonl`,    tier: 'reference' },
+  // F-28-15: capstone slice (e) — priced ocean-tariff kind, area co-lands in protection_table.rs.
+  'ocean-tariff':     { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/ocean-tariff.jsonl`,      tier: 'priced'    },
+  user_audit_log:     { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
+  // F-57-01: the manager writes the per-rep commission split here and the REP reads it back
+  // during P&L commit — two different people, so a per-user audience meant the rep resolved
+  // null from their own folder and their commission silently computed to zero. Team-scoped.
+  commission_rules:   { audience: 'team',    writers: [ROLE_MANAGER],                 seed: null,                                    tier: 'reference' },
+  'local-charges':    { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/local-charges.jsonl`,     tier: 'priced'    },
+  'units-of-measure': { audience: 'team',    writers: [ROLE_SALES_REP, ROLE_MANAGER], seed: `${SEED_BASE}/units-of-measure.jsonl`,  tier: 'reference' },
+  // F-18-11: alias-only registry over the 6 Rust-FSM-backed ShipmentState canonical values.
+  // Manager may edit aliases/labels on the 6 seeded rows only — never add/remove a row.
+  'shipment-states':  { audience: 'team',    writers: [ROLE_MANAGER],                 seed: `${SEED_BASE}/shipment-states.jsonl`,   tier: 'reference' },
+  // Single-row workspace policy (fx source, air-rates second eyes, default currency). It used to
+  // be a loose `_shared/workspace.json` read by a bespoke driveFetch, which meant every reader
+  // paid a Drive round-trip and nothing refreshed it — a loose file carries no kind, so the 30s
+  // delta engine never saw it. Registered here it lives in the DB like every other kind: readers
+  // hit the local store, and sync_delta picks up an accounting change within a tick.
+  // #31: Accountant writes it too — the default currency and the FX source are finance policy,
+  // which is accounting's call, not an administration one.
+  workspace_settings: { audience: 'team',    writers: [ROLE_MANAGER, ROLE_ACCOUNTANT], seed: null,                                   tier: 'reference' },
+};

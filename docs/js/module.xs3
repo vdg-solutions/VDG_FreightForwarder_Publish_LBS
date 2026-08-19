@@ -1,0 +1,9 @@
+// system-root contract — client-js-root (frontend/js).
+system-root a architecture-module; path "js/src".
+system-root responsibility compose-the-app-select-storage-adapter-and-mount-ui.
+system-root public-boundary-dtos <>.
+system-root public-ports <>.
+system-root public-entry-functions <>.
+system-root emitted-core-events <>.
+system-root accepted-core-events <>.
+system-root dependency-allowlist <kernel-module storage-module freight-app-module ui-module>.

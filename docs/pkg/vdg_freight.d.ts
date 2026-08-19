@@ -65,7 +65,7 @@ export class WasmEntityRepo {
     lgr_list_legs(year: number, acc_code: string, from: string, to: string): Promise<any>;
     lgr_record_posted(posted_index: string, entry_ids_json: string): Promise<any>;
     /**
-     * Orphan purge only — see LedgerStore::remove_entry for why this is not a general delete.
+     * Orphan purge only — see LedgerStoreOperator::remove_entry for why this is not a general delete.
      */
     lgr_remove_entry(year: number, entry_id: string): Promise<any>;
     lgr_replace_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
@@ -83,7 +83,7 @@ export class WasmEntityRepo {
     pref_write_state(ref_name: string, dto_json: string): Promise<any>;
     put(kind: string, id: string, body: any): Promise<any>;
     sync_delta(): Promise<any>;
-    users_ensure_seeded(email: string, name: string): Promise<any>;
+    users_ensure_seeded(email: string, name: string, workspace: string): Promise<any>;
     users_get(email: string): Promise<any>;
     users_list(): Promise<any>;
     users_list_all(): Promise<any>;
@@ -226,12 +226,6 @@ export function import_document_excel_wasm(bytes: Uint8Array): any;
 export function import_pnl_excel_wasm(bytes: Uint8Array): any;
 
 /**
- * Which columns of a kind are indexed, so a caller can tell a cheap filter from an expensive one
- * WITHOUT guessing. Declared in cache_policy; nothing here decides it.
- */
-export function indexed_columns_of(kind: string): any;
-
-/**
  * Returns true when `entity_etd_ms` falls within a locked period.
  * `locked_periods_json` = meta-pref `preferences.locked_periods` verbatim —
  * `[{"period_key":"YYYY-MM"|"YYYY-Qn",...}]`. Law lives in operators/period_lock.rs.
@@ -246,12 +240,6 @@ export function legacy_containers(): any;
  * devtools user could edit. Every call re-arms; the latest classification wins.
  */
 export function license_arm(license_str: string, current_unix_ts: bigint): any;
-
-/**
- * Lifecycle status of a license at `current_unix_ts` (active/grace/blocked/invalid),
- * checked against the compiled-in `WORKSPACE_ROOT`.
- */
-export function license_status(license_str: string, current_unix_ts: bigint): any;
 
 export function per_record_kinds(): any;
 
@@ -486,11 +474,9 @@ export interface InitOutput {
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
-    readonly indexed_columns_of: (a: number, b: number) => number;
     readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
     readonly legacy_containers: () => number;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
-    readonly license_status: (a: number, b: number, c: bigint) => number;
     readonly per_record_kinds: () => number;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -577,7 +563,7 @@ export interface InitOutput {
     readonly wasmentityrepo_pref_write_state: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
-    readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_list: (a: number) => number;
     readonly wasmentityrepo_users_list_all: (a: number) => number;
@@ -595,9 +581,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_11030: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11032: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4850: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_10690: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10701: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_7862: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

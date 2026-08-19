@@ -1,0 +1,9 @@
+// ui-module contract — client-js-root (frontend/js).
+ui-module a architecture-module; path "js/implementations/ui".
+ui-module responsibility own-views-components-router-the-driving-edge.
+ui-module public-boundary-dtos <>.
+ui-module public-ports <>.
+ui-module public-entry-functions <>.
+ui-module emitted-core-events <>.
+ui-module accepted-core-events <>.
+ui-module dependency-allowlist <kernel-module storage-module freight-app-module>.

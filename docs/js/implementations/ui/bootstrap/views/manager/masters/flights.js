@@ -1,0 +1,205 @@
+// Flights master CRUD grid — F-16-03
+// Route: /masters/flights
+
+import { hasRole } from '../../../../../freight_app/core_abstractions/session-roles.js';
+import { ROLE_MANAGER } from '../../../../../freight_app/core_abstractions/roles.js';
+import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
+import {
+  validateFlightNo, validateAirportIata, validateAirlineIata,
+} from '../../../../../kernel/core_abstractions/util/iata-validators.js';
+import { showConfirm } from '../../../helpers/show-confirm.js';
+import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+
+const KIND        = 'flights';
+const KIND_PREFIX = 'FLT';
+const SEED_URL    = 'seed/masters/flights.jsonl';
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function genId() { return `${KIND_PREFIX}-${Date.now()}`; }
+
+function buildModal(entity) {
+  const e = entity || {};
+  return `
+    <dialog id="master-modal" class="rounded-xl border border-slate-200 shadow-xl p-0 w-full max-w-md backdrop:bg-black/30">
+      <form id="modal-form" method="dialog" class="p-6 space-y-4">
+        <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t('masters.flights.edit_title') : t('masters.flights.add_button')}</div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.flight_no')} <span class="text-red-500">*</span></label>
+          <input id="m-flight_no" type="text" maxlength="6" value="${escHtml(e.flight_no)}" required placeholder="e.g. VN422"
+                 class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          <span id="m-err-fn" class="hidden text-xs text-red-600"></span>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.carrier_iata')} <span class="text-red-500">*</span></label>
+          <input id="m-carrier" type="text" maxlength="2" value="${escHtml(e.carrier_iata_code)}" required placeholder="e.g. VN"
+                 class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          <span id="m-err-carrier" class="hidden text-xs text-red-600"></span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.origin_iata')} <span class="text-red-500">*</span></label>
+            <input id="m-origin" type="text" maxlength="3" value="${escHtml(e.origin_iata)}" required placeholder="e.g. SGN"
+                   class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <span id="m-err-origin" class="hidden text-xs text-red-600"></span>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.dest_iata')} <span class="text-red-500">*</span></label>
+            <input id="m-dest" type="text" maxlength="3" value="${escHtml(e.dest_iata)}" required placeholder="e.g. HAN"
+                   class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <span id="m-err-dest" class="hidden text-xs text-red-600"></span>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.schedule')}</label>
+          <input id="m-schedule" type="time" value="${escHtml(e.schedule)}"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="flex gap-3 pt-2 border-t border-slate-100">
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg">${t('common.action.save')}</button>
+          <button type="button" id="btn-modal-cancel" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">${t('common.action.cancel')}</button>
+        </div>
+      </form>
+    </dialog>`;
+}
+
+function openModal(root, entity, onSave) {
+  root.querySelector('#master-modal')?.remove();
+  root.insertAdjacentHTML('beforeend', buildModal(entity));
+  const dialog = root.querySelector('#master-modal');
+  dialog.showModal();
+  dialog.querySelector('#btn-modal-cancel').addEventListener('click', () => dialog.close());
+  dialog.querySelector('#modal-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fn      = dialog.querySelector('#m-flight_no').value.trim().toUpperCase();
+    const carrier = dialog.querySelector('#m-carrier').value.trim().toUpperCase();
+    const origin  = dialog.querySelector('#m-origin').value.trim().toUpperCase();
+    const dest    = dialog.querySelector('#m-dest').value.trim().toUpperCase();
+    const sched   = dialog.querySelector('#m-schedule').value.trim() || null;
+
+    const setErr = (id, msg) => {
+      const el = dialog.querySelector(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.toggle('hidden', !msg);
+    };
+    setErr('#m-err-fn', ''); setErr('#m-err-carrier', ''); setErr('#m-err-origin', ''); setErr('#m-err-dest', '');
+
+    const fnErr = validateFlightNo(fn);
+    if (fnErr) { setErr('#m-err-fn', fnErr); return; }
+    const cErr = validateAirlineIata(carrier);
+    if (cErr) { setErr('#m-err-carrier', cErr); return; }
+    const oErr = validateAirportIata(origin);
+    if (oErr) { setErr('#m-err-origin', oErr); return; }
+    const dErr = validateAirportIata(dest);
+    if (dErr) { setErr('#m-err-dest', dErr); return; }
+
+    const updated = {
+      ...(entity || {}),
+      id:                entity?.id || genId(),
+      flight_no:         fn,
+      carrier_iata_code: carrier,
+      origin_iata:       origin,
+      dest_iata:         dest,
+    };
+    if (sched) updated.schedule = sched; else delete updated.schedule;
+    await onSave(updated);
+    dialog.close();
+  });
+}
+
+function rowHtml(e, isM) {
+  const actions = isM ? `
+    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('common.action.edit')}</button>
+    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('common.action.delete')}</button>` : '';
+  return `
+    <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
+      <td class="px-3 py-2 font-mono">${escHtml(e.flight_no)}</td>
+      <td class="px-3 py-2 font-mono">${escHtml(e.carrier_iata_code)}</td>
+      <td class="px-3 py-2 font-mono">${escHtml(e.origin_iata)}</td>
+      <td class="px-3 py-2 font-mono">${escHtml(e.dest_iata)}</td>
+      <td class="px-3 py-2">${escHtml(e.schedule)}</td>
+      ${isM ? `<td class="px-3 py-2">${actions}</td>` : ''}
+    </tr>`;
+}
+
+export async function render(root) {
+  const isM  = hasRole(ROLE_MANAGER);
+  const repo = window.__vdg_repo;
+  const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
+
+  root.innerHTML = `
+    <div class="p-6 max-w-[1100px] mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <div class="text-lg font-semibold text-slate-900">${t('masters.flights.title')}</div>
+        ${isM ? `<button id="btn-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">+ ${t('masters.flights.add_button')}</button>` : ''}
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+            <tr>
+              <th class="px-3 py-2 text-left">${t('flights.col.flight_no')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.carrier')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.origin')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.destination')}</th>
+              <th class="px-3 py-2 text-left">${t('flights.col.schedule')}</th>
+              ${actCol}
+            </tr>
+          </thead>
+          <tbody id="m-tbody"></tbody>
+        </table>
+        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('flights.empty')}</div>
+      </div>
+      <div id="m-status" class="text-xs text-slate-400 mt-2">Loading...</div>
+    </div>`;
+
+  let items = [];
+
+  // F-20-01: bounded — a stalled Drive read/write on a fresh workspace resolves to an
+  // actionable retry instead of hanging at "Loading...".
+  async function reload() {
+    const tbody    = root.querySelector('#m-tbody');
+    const emptyEl  = root.querySelector('#m-empty');
+    const statusEl = root.querySelector('#m-status');
+    if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
+
+    const listRes = await boundedList(repo, KIND, 'flights:list');
+    if (!listRes.ok) {
+      if (tbody) tbody.innerHTML = '';
+      emptyEl?.classList.add('hidden');
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('retry'), reload);
+      return;
+    }
+    items = listRes.value;
+    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, () => genId(), 'flights:seed');
+    if (tbody) tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
+    if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
+    if (statusEl) statusEl.textContent = '';
+  }
+
+  await reload();
+
+  root.querySelector('#btn-add')?.addEventListener('click', () => {
+    openModal(root, null, async (entity) => { await repo.put(KIND, entity.id, entity); await reload(); });
+  });
+
+  root.querySelector('#m-tbody')?.addEventListener('click', async (ev) => {
+    const editBtn = ev.target.closest('.btn-edit');
+    if (editBtn) {
+      const entity = items.find((i) => i.id === editBtn.dataset.id);
+      if (entity) openModal(root, entity, async (u) => { await repo.put(KIND, u.id, u); await reload(); });
+    }
+    const delBtn = ev.target.closest('.btn-delete');
+    if (delBtn) {
+      const ok = await showConfirm({
+        title: t('flights.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
+      });
+      if (!ok) return;
+      items = items.filter((i) => i.id !== delBtn.dataset.id);
+      root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
+      await repo.delete(KIND, delBtn.dataset.id);
+    }
+  });
+}
