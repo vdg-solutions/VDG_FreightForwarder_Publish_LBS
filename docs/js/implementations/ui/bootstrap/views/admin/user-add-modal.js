@@ -1,21 +1,18 @@
 // user-add-modal.js — Add User modal for the admin Users view (F-24-04).
-// F-24-07 partial fix: SalesRep add provisions the ACL folder (users/{user_prefix}) before
-// granting Drive perms, so assignRole doesn't fail on a folder that hasn't been created yet.
 // F-24-08 D-03: assignRole failure after the user record was upserted rolls back via
 // UserRepo.remove(email) — no orphaned row with zero Drive grants.
 // F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
+// The users/{prefix} fork folder is get-or-created by the Rust grant cascade, not here.
 
 import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { deriveUserPrefix, allocateUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
-import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
 
 
 function getUserRepo()   { return window.__vdg_user_repo; }
 function getRoleService() { return window.__vdg_role_assignment_service; }
-function getDriveApi()   { return window.__vdg_drive_api; }
 
 function showError(overlay, message) {
   const err = overlay.querySelector('#add-err');
@@ -23,7 +20,7 @@ function showError(overlay, message) {
   err.classList.remove('hidden');
 }
 
-/// AC-03: submit -> (SalesRep only) ensure Drive folder exists -> assignRole -> refresh.
+/// AC-03: submit -> assignRole (cascade creates the fork folder) -> refresh.
 export function openAddUserModal({ onAdded } = {}) {
   const overlay = document.createElement('div');
   overlay.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center';
@@ -80,9 +77,8 @@ async function _onSubmit(overlay, onAdded) {
 
   if (!roles.length) return showError(overlay, t('admin.users.error.role_required'));
   const roleService = getRoleService();
-  const driveApi     = getDriveApi();
   const userRepo     = getUserRepo();
-  if (!roleService || !driveApi || !userRepo) return showError(overlay, 'Workspace not ready');
+  if (!roleService || !userRepo) return showError(overlay, 'Workspace not ready');
 
   // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
   // #30: allocated here, against the current roster, so two users sharing an email local-part
@@ -101,14 +97,8 @@ async function _onSubmit(overlay, onAdded) {
     });
 
     try {
-      // F-24-07 partial: create the ACL folder first — assignRole's resolvePathToFolderId
-      // throws if users/{user_prefix} doesn't exist yet. #28: every user owns a fork now, so this
-      // runs for every role, not only SalesRep.
-      if (userPrefix) {
-        const wsRoot = await driveApi.findWorkspaceRoot(activeWorkspaceName());
-        if (!wsRoot) throw new Error('Workspace root not found');
-        await driveApi.getOrCreateFolderPath(wsRoot, `users/${userPrefix}`);
-      }
+      // The grant cascade get-or-creates users/{user_prefix} itself now — the JS pre-create
+      // lived here while role EDIT (same cascade, no pre-create) failed on missing forks.
       // Returns { user, skipped } — skipped = ACL folders drive.file couldn't grant because
       // they hold non-app-created files (appNotAuthorizedToChild). Non-fatal; surfaced below.
       const assignResult = await roleService.assignRole(email, role, userPrefix, roles.slice(1));

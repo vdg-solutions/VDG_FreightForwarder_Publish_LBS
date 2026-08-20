@@ -9,6 +9,7 @@ import { USERS_PATH, KIND_PATH_OVERRIDES } from '../../core_abstractions/storage
 import { readGrant } from '../../core_abstractions/grant-reader.js';
 import { activeWorkspaceName } from '../../core_abstractions/workspace-registry.js';
 import { recallGrantAreas } from '../../core_abstractions/grant-file.js';
+import { emailPrefix } from '../../../kernel/core_abstractions/util/email-prefix.js';
 
 // Where the shared logs and the users tree live is contract: storage/core_abstractions/storage-layout.js.
 
@@ -55,7 +56,7 @@ async function resolveFolder(port, kind) {
   if (KIND_PATH_OVERRIDES[kind]) {
     folderId = await ensureNestedFolder(port, rootId, KIND_PATH_OVERRIDES[kind]);
   } else {
-    const prefix = port.userEmail.split('@')[0].toLowerCase();
+    const prefix = emailPrefix(port.userEmail);
     folderId = await ensureNestedFolder(port, rootId, `${USERS_PATH}/${prefix}/${kind}`);
   }
   port.folderIds.set(kind, folderId);
@@ -85,7 +86,7 @@ async function resolveFromManifest(port, kind) {
   }
 
   // Per-user kind: its home is this user's own fork.
-  const prefix = port.userEmail.split('@')[0].toLowerCase();
+  const prefix = emailPrefix(port.userEmail);
   const fork   = areas.find((a) => a.path === `${USERS_PATH}/${prefix}`)
               ?? areas.find((a) => a.path.startsWith(`${USERS_PATH}/`) && !a.path.includes('/', USERS_PATH.length + 1));
   if (!fork) return null;
@@ -146,7 +147,7 @@ async function _refreshManifest(port) {
   try {
     const { rememberGrantAreas } = await import('../../core_abstractions/grant-file.js');
     const email = String(port.userEmail || '');
-    const grant = await readGrant(activeWorkspaceName(), email.split('@')[0].toLowerCase(), email);
+    const grant = await readGrant(activeWorkspaceName(), emailPrefix(email), email);
     const areas = grant?.areas ?? [];
     rememberGrantAreas(areas);
     // The ids just changed under every cached resolution, so the memo has to go with them.

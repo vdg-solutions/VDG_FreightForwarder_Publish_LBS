@@ -10,6 +10,7 @@ import { bootstrapAclTargetFolders } from '../../core_abstractions/ports/governa
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../storage/core_abstractions/workspace-registry.js';
 import { safeMasterLoad } from '../../../kernel/core_abstractions/util/master-load.js';
+import { emailPrefix } from '../../../kernel/core_abstractions/util/email-prefix.js';
 
 export async function renderOnboardingWizard(container, onDone) {
   container.innerHTML = `
@@ -73,12 +74,12 @@ export async function renderOnboardingWizard(container, onDone) {
 }
 
 async function _inviteSales(email, wsRootId, driveApi, container) {
-  const prefix = email.split('@')[0].toLowerCase();
+  const prefix = emailPrefix(email);
 
   // Delegate to user-provisioning (single source of truth). If repo not ready during
   // initial setup, inviteSales skips users.jsonl write gracefully.
   const repo = window.__vdg_repo || null;
-  await inviteSales(email, email.split('@')[0], driveApi, repo, wsRootId);
+  await inviteSales(email, prefix, driveApi, repo, wsRootId);
 
   const list = container.querySelector('#invited-list');
   const li   = document.createElement('li');

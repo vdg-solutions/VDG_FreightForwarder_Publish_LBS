@@ -13,6 +13,9 @@ import { showConfirm }       from '../../helpers/show-confirm.js';
 
 const TOAST_MS = 4_000;
 
+// Deactivated accounts are hidden by default; the status dropdown still exposes them.
+const DEFAULT_ACTIVE_FILTER = 'active';
+
 const USER_REPO_READY_EVENT = 'vdg:user-repo-ready';
 
 function getUserRepo()    { return window.__vdg_user_repo; }
@@ -23,7 +26,7 @@ function toast(type, message) {
 }
 
 let _allUsers = [];
-let _filter   = { search: '', role: '', activeFilter: '' };
+let _filter   = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
 
 function shellHtml() {
   return `
@@ -115,7 +118,7 @@ function bindFilterBar(root) {
 export async function render(root) {
   if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
-  _filter = { search: '', role: '', activeFilter: '' };
+  _filter = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
   root.innerHTML = shellHtml();
   root.querySelector('#usr-filter-bar').innerHTML = filterBarHtml(_filter);
   bindFilterBar(root);
