@@ -2,24 +2,19 @@
 // Pure DOM rendering, no repo/Drive calls — users-view.js owns state + wiring.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { ROLE_VALUES } from '../../../core_abstractions/ports/manager/users-view-composer.js';
-
-const ROLE_LABEL_KEYS = {
-  Manager:    'admin.users.role.manager',
-  SalesRep:   'admin.users.role.sales_rep',
-  Accountant: 'admin.users.role.accountant',
-  Auditor:    'admin.users.role.auditor',
-};
+import { ROLE_VALUES, ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 
 const SKELETON_ROWS = 4;
 
 function roleLabel(role) { return t(ROLE_LABEL_KEYS[role] || role); }
 
-// #24: hats ride next to the primary role so the grid answers "who keeps the rate cards?"
-const HAT_LABEL_KEYS = { Pricing: 'admin.users.hat.pricing' };
-function hatBadges(user) {
-  return (user.extra_roles || [])
-    .map((h) => `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">${t(HAT_LABEL_KEYS[h] || h)}</span>`)
+// #24: the full role SET rides in the cell — the store projects one `roles` array (there is no
+// extra_roles field), so the primary reads as text and every further role as a badge.
+function roleCell(user) {
+  const all = (Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role]).filter(Boolean);
+  const [primary, ...rest] = all;
+  return roleLabel(primary) + rest
+    .map((r) => `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">${roleLabel(r)}</span>`)
     .join('');
 }
 
@@ -78,7 +73,7 @@ export function renderUsersTable(container, users) {
     <tr class="border-t border-slate-100 text-xs" data-user-email="${u.email}">
       <td class="px-3 py-2">${u.email}</td>
       <td class="px-3 py-2">${u.display_name || ''}</td>
-      <td class="px-3 py-2">${roleLabel(u.role)}${hatBadges(u)}</td>
+      <td class="px-3 py-2">${roleCell(u)}</td>
       <td class="px-3 py-2">${u.user_prefix || '—'}</td>
       <td class="px-3 py-2">${activeBadge(u.active)}</td>
       <td class="px-3 py-2">${fmtDate(u.last_active)}</td>
