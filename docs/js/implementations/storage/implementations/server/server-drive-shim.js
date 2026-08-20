@@ -14,9 +14,16 @@ import { apiFetch } from '../../core_abstractions/backend.js';
 import { ApiError } from '../../core_abstractions/api-error.js';
 import { DriveApiError } from '../../core_abstractions/drive-errors.js';
 import { classifyDriveError } from '../../core_abstractions/drive-error-classifier.js';
+import { BUILD_ROOT_ID } from '../../core_abstractions/workspace-config.js';
 
 const FOLDER_MIME       = 'application/vnd.google-apps.folder';
 const ROOT_ALIAS        = 'root';
+
+// F-42-07 meets client-server: a bound build asks for its tenant's Drive folder id, but this
+// server serves exactly ONE workspace (the license already matched it) — so the bound id IS the
+// server's root. Without the alias every root lookup 404s and the app reads "Workspace root not
+// found" while signed in as the owner.
+function aliasId(id) { return BUILD_ROOT_ID && id === BUILD_ROOT_ID ? ROOT_ALIAS : id; }
 const HTTP_OK           = 200;
 const HTTP_NO_CONTENT   = 204;
 const HTTP_NOT_FOUND    = 404;
@@ -58,7 +65,7 @@ function toFile(n) {
 function parseQ(q) {
   const out = { parent: null, name: null, nameContains: null, folderOnly: null, sharedWithMe: false, ownedByMe: false };
   let m;
-  if ((m = q.match(/'([^']+)' in parents/)))       out.parent = m[1];
+  if ((m = q.match(/'([^']+)' in parents/)))       out.parent = aliasId(m[1]);
   if ((m = q.match(/name\s*=\s*'([^']*)'/)))       out.name = m[1];
   if ((m = q.match(/name contains '([^']*)'/)))    out.nameContains = m[1];
   if (q.includes(`mimeType='${FOLDER_MIME}'`))     out.folderOnly = true;
@@ -135,18 +142,18 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
       if (method === 'POST') {
         if (body instanceof FormData) {
           const { metadata, content } = await multipartParts(body);
-          const parent = metadata.parents?.[0] ?? ROOT_ALIAS;
+          const parent = aliasId(metadata.parents?.[0] ?? ROOT_ALIAS);
           const node = await apiFetch('POST', '/ws/nodes', { parentId: parent, name: metadata.name, content });
           return ok(toFile(node), { etag: node.etag });
         }
-        const parent = body?.parents?.[0] ?? ROOT_ALIAS;
+        const parent = aliasId(body?.parents?.[0] ?? ROOT_ALIAS);
         const node = await apiFetch('POST', '/ws/nodes',
           { parentId: parent, name: body?.name, folder: body?.mimeType === FOLDER_MIME, content: '' });
         return ok(toFile(node), { etag: node.etag });
       }
     }
 
-    const id = seg[1];
+    const id = aliasId(seg[1]);
     // /files/:id/permissions[/:pid] — acknowledged; the server's ACL is the grant file.
     if (seg[2] === 'permissions') {
       if (method === 'GET')    return ok({ permissions: [] });
@@ -169,7 +176,7 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
       }
       const patch = {};
       const addParent = url.searchParams.get('addParents');
-      if (addParent) patch.parentId = addParent;
+      if (addParent) patch.parentId = aliasId(addParent);
       if (body?.name !== undefined) patch.name = body.name;
       if (body?.trashed === true) patch.trashed = true;
       if (Object.keys(patch).length === 0) {
