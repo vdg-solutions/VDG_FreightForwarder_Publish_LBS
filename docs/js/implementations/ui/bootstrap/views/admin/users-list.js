@@ -2,7 +2,7 @@
 // Pure DOM rendering, no repo/Drive calls — users-view.js owns state + wiring.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { ROLE_VALUES } from '../../../../freight_app/operators/manager/users-view-composer.js';
+import { ROLE_VALUES } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 
 const ROLE_LABEL_KEYS = {
   Manager:    'admin.users.role.manager',

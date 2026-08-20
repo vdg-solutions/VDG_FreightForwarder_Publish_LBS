@@ -1,8 +1,8 @@
 // Airports master CRUD grid — F-16-03
 // Route: /masters/airports
 
-import { hasRole } from '../../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
 import {
   validateAirportIata, validateAirportIcao, checkIataUnique,

@@ -1,7 +1,7 @@
-import { COMMISSION_PCT } from '../../../freight_app/operators/sales-analytics-compute.js';
-import { computeKpis, computeLeaderboard, computeTopCustomers, computeLaneHeatmap, computeMonthlyBars, computeBillingFunnel } from '../../../freight_app/core_abstractions/ports/sales-analytics-compute.js';
+import { COMMISSION_PCT } from '../../core_abstractions/ports/flows/sales-analytics-compute.js';
+import { computeKpis, computeLeaderboard, computeTopCustomers, computeLaneHeatmap, computeMonthlyBars, computeBillingFunnel } from '../../core_abstractions/ports/flows/sales-analytics-compute.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { listShipments } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 

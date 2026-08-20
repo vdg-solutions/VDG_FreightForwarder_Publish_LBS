@@ -5,11 +5,11 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { classifyDocument } from '../sales-new/doc-auto-detect.js';
-import { computeChargeableKg } from '../../../../freight_app/operators/air-rate-calculator.js';
-import { slugify } from '../../../../freight_app/operators/pnl-commit-orchestrator.js';
-import { loadWasm } from '../../../../freight_app/implementations/wasm-loader.js';
-import { getEmbedding } from '../../../../freight_app/implementations/semantic-search.js';
-import { customerRepFor } from '../../../../freight_app/operators/sales-rep-derivation.js';
+import { loadWasm } from '../../../core_abstractions/ports/wasm-loader.js';
+import { getEmbedding } from '../../../implementations/semantic-search.js';
+import { computeChargeableKg } from '../../../core_abstractions/ports/flows/air-rate-calculator.js';
+import { slugify } from '../../../core_abstractions/ports/flows/pnl-commit-orchestrator.js';
+import { customerRepFor } from '../../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { directionFromProduct } from './section-header.js';
 
 // F-41-07: keep the direction control honest about who decided. A product that names the

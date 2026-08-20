@@ -11,51 +11,46 @@
 // spent hidden is not time the user waited, so it must not be counted, and a tab that comes back
 // after an hour must not be greeted with a timeout it earned while nobody was looking.
 
-const TICK_MS = 1000;
+import { nowMs } from '../ports/clock.js';
+import { startInterval, stopInterval } from '../ports/timer.js';
+import { isPageVisible, onVisibilityChange } from '../ports/visibility.js';
 
-const isVisible = () =>
-  typeof document === 'undefined' || document.visibilityState === 'visible';
+const TICK_MS = 1000;
 
 /// A promise that rejects with `makeError(visibleElapsedMs)` after `budgetMs` of VISIBLE time.
 /// Never resolves; race it against real work. Call the returned `cancel()` when that work settles,
 /// or the interval outlives the boot.
 export function visibleDeadline(budgetMs, makeError, tickMs = TICK_MS) {
   let visibleMs = 0;
-  let last      = Date.now();
+  let last      = nowMs();
   // The state the CURRENT slice began in. Billing by the state at the END of a slice charged a
   // hidden stretch as visible whenever the tab came back mid-slice — the first version of this
   // file did exactly that, and its own test caught it.
-  let sliceVisible = isVisible();
-  let timer  = null;
-  let onFlip = null;
+  let sliceVisible = isPageVisible();
+  let timer   = null;
+  let offFlip = null;
 
   const cancel = () => {
-    if (timer !== null) { clearInterval(timer); timer = null; }
-    if (onFlip && typeof document !== 'undefined' && document.removeEventListener) {
-      document.removeEventListener('visibilitychange', onFlip);
-      onFlip = null;
-    }
+    if (timer !== null) { stopInterval(timer); timer = null; }
+    if (offFlip) { offFlip(); offFlip = null; }
   };
 
   const promise = new Promise((_resolve, reject) => {
     // Close the open slice and start a new one. Called on every tick AND on every visibility flip,
     // so a slice never spans a boundary and is always billed by the state it was actually in.
     const settle = () => {
-      const now = Date.now();
+      const now = nowMs();
       if (sliceVisible) visibleMs += now - last;
       last = now;
-      sliceVisible = isVisible();
+      sliceVisible = isPageVisible();
       if (visibleMs >= budgetMs) {
         cancel();
         reject(makeError(Math.round(visibleMs)));
       }
     };
 
-    timer = setInterval(settle, tickMs);
-    if (typeof document !== 'undefined' && document.addEventListener) {
-      onFlip = settle;
-      document.addEventListener('visibilitychange', onFlip);
-    }
+    timer   = startInterval(settle, tickMs);
+    offFlip = onVisibilityChange(settle);
   });
 
   return { promise, cancel };

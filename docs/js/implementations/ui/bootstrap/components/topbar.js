@@ -1,8 +1,8 @@
 // Topbar — route title, user avatar, sync chip, SW update banner
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { currentSalesRepId, hasRole, ROLES_RESOLVED_EVENT } from '../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER, ROLE_SALES_REP, ROLE_SALES_MANAGER } from '../../../freight_app/core_abstractions/roles.js';
+import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
 import { readCachedProfile } from '../../../storage/core_abstractions/profile-cache.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../../../kernel/core_abstractions/i18n/index.js';
@@ -11,7 +11,7 @@ import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAri
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
 import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 import { renderUserMenu, renderSwBanner } from './topbar-menus.js';
-import { putEnvelope } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { putEnvelope } from '../../core_abstractions/ports/data/shipment-repo.js';
 
 // F-42-06 (owner: "báo giá là chỉ sales làm nha", "theo thông lệ quốc tế"). The button used to
 // read `hasRole(ROLE_MANAGER) ? '' : button` — "everyone EXCEPT the manager", which handed a

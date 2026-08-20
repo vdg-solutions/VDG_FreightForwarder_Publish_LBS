@@ -2,8 +2,8 @@
 
 import { APP_VERSION } from '../../kernel/core_abstractions/version.js';
 import { t } from '../../kernel/core_abstractions/i18n/index.js';
-import { onEvent } from '../../freight_app/core_abstractions/wma-engine.js';
-import { loadKindWmaState, saveKindWmaState } from '../../freight_app/operators/sync/wma-store.js';
+import { onEvent } from '../core_abstractions/ports/sync/wma-engine.js';
+import { loadKindWmaState, saveKindWmaState } from '../core_abstractions/ports/sync/wma-store.js';
 
 const NEW_FEATURE_BANNER_DAYS = 7;
 const BREAKPOINT_TABLET_PX    = 768;

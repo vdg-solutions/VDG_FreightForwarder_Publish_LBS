@@ -1,4 +1,4 @@
-import { loadWasm } from '../../../freight_app/implementations/wasm-loader.js';
+import { loadWasm } from '../../core_abstractions/ports/wasm-loader.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { runImport } from './upload-report.js';
 

@@ -5,7 +5,7 @@
 // F-28-04 §B — no per-field cherry-pick). Never writes state.json itself.
 
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
-import { currentUserId } from '../../../../../freight_app/operators/manager/route-guard.js';
+import { currentUserId } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 
 const TOAST_MS      = 4_000;

@@ -1,10 +1,10 @@
 // F-12-08 — budget-style "PROFIT-LOSS BUDGET" per-shipment print form
-import { listWhere } from '../../../freight_app/core_abstractions/repo-query.js';
+import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.js';
-import { getShipment } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
 
 const COMPANY_NAME    = 'VDG FREIGHT SERVICES CO., LTD';
 const COMPANY_ADDRESS = '123 Nguyen Hue, District 1, Ho Chi Minh City, Vietnam';

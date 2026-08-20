@@ -50,20 +50,19 @@ export async function deferredManagerInit(user, driveApi, ledgerRepo, userRepo, 
   }
 
   // ACL target folders
-  const { bootstrapAclTargetFolders } = await import('../../implementations/freight_app/operators/manager/workspace-bootstrap.js');
-  await bootstrapAclTargetFolders(driveApi, wsRootId).catch(() => {});
+  await window.__vdg_wasm.governance_bootstrap_acl_folders({ root_id: wsRootId }).catch(() => {});
 
   // Ledger + user seed
   ledgerRepo.ensureSeedFiles().catch(() => {});
   userRepo.ensureSeeded(user).catch(() => {});
 
   // Auto reconcile
-  const { maybeAutoReconcile } = await import('../../implementations/freight_app/operators/manager/ledger-reconciler.js');
+  const { maybeAutoReconcile } = await import('../../implementations/ui/core_abstractions/ports/manager/ledger-reconciler.js');
   maybeAutoReconcile(ledgerRepo);
 
   // Pre-warm IDB cache
-  const { prefetchDashboard } = await import('../../implementations/freight_app/operators/cache/route-prefetch.js');
-  const { ensureShipmentStateAliases } = await import('../../implementations/freight_app/operators/util/shipment-state-aliases.js');
+  const { prefetchDashboard } = await import('../../implementations/ui/core_abstractions/ports/cache/route-prefetch.js');
+  const { ensureShipmentStateAliases } = await import('../../implementations/ui/core_abstractions/ports/flows/shipment-state-aliases.js');
   const WARM_KINDS = [
     'shipment', 'pnl_line', 'billing', 'approval_request', 'customers',
     'exception', 'quotation', 'commission_rules', 'user', // F-39-01: canonical user-master kind

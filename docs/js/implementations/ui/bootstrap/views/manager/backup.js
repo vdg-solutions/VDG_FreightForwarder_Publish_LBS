@@ -1,8 +1,8 @@
 // F-15-09 — Manager Backup / DR view — route /manager/backup
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
-import { exportWorkspace } from '../../../../freight_app/operators/backup-exporter.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { exportWorkspace } from '../../../core_abstractions/ports/flows/backup-exporter.js';
 import { t }               from '../../../../kernel/core_abstractions/i18n/index.js';
 
 function getRepo()     { return window.__vdg_repo; }

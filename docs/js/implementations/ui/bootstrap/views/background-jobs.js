@@ -1,5 +1,5 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { jobTracker } from '../../../freight_app/operators/sync/job-tracker.js';
+import { jobTracker } from '../../core_abstractions/ports/sync/job-tracker.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
 class BackgroundJobsView extends LitElement {

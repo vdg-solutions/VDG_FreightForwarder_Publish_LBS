@@ -12,13 +12,16 @@ import '../implementations/ui/bootstrap/components/orphan-folder-banner-element.
 import '../implementations/ui/bootstrap/components/cmd-palette.js';
 import { initRouter, navigate } from '../implementations/ui/bootstrap/router.js';
 // WASM is loaded in boot/repo-init-steps.js critical path (before bootApp)
-import { requireAuth, configureAuthGate } from '../implementations/freight_app/operators/auth/auth-gate.js';
-import { currentSalesRepId, hasRole } from '../implementations/freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../implementations/freight_app/core_abstractions/roles.js';
+import { requireAuth } from '../implementations/ui/core_abstractions/ports/auth/auth-gate.js';
+import { currentSalesRepId, hasRole } from '../implementations/ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../implementations/ui/core_abstractions/roles.js';
 import { renderLoginPage } from '../implementations/ui/bootstrap/views/login.js';
+import { createPlatform } from './platform/index.js';
+import { composeAuth } from './compose-ui/auth.js';
+import { configureAuthPlatform } from './platform/auth.js';
 import { composeStorage } from '../implementations/storage/bootstrap/compose.js';
-import '../implementations/freight_app/bootstrap/compose.js'; // binds the use-case ports
-import { currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from '../implementations/freight_app/operators/manager/route-guard.js';
+import '../implementations/kernel/bootstrap/compose.js'; // binds kernel platform ports
+import { currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from '../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { enforceRouteGuard } from '../implementations/ui/bootstrap/route-enforcer.js';
 import { initGoogleSignIn, requestDriveScopeGrant } from '../implementations/storage/core_abstractions/oauth.js';
 import { renderDriveGate } from './boot/drive-gate.js';
@@ -34,7 +37,7 @@ import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
 import { renderRepoInitTimeoutBanner } from './boot/repo-init-fallback.js';
 import { initMigrationOverlay } from '../implementations/ui/bootstrap/migration-overlay.js';
-import '../implementations/freight_app/operators/sync/job-tracker.js'; // Start background job tracker
+import './platform/sync-schedulers.js'; // Start background job tracker
 
 // F-14-16 breakpoint constants
 const BREAKPOINT_TABLET_PX  = 768;
@@ -244,7 +247,7 @@ export function bootApp(user, db) {
     btn.textContent = 'Refresh Role';
     btn.className   = 'fixed bottom-4 right-4 z-50 px-3 py-1 bg-slate-700 text-white text-xs rounded';
     btn.onclick     = async () => {
-      const { detectRoleViaDrive } = await import('../implementations/freight_app/operators/auth/auth-gate.js');
+      const { detectRoleViaDrive } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
       await detectRoleViaDrive(user, { force: true });
       location.reload();
     };
@@ -261,7 +264,20 @@ export function bootApp(user, db) {
   // feature still works — it just no longer competes with boot for bandwidth.
 }
 
+/// The wasm module, loaded once. boot/repo-init-steps.js imports the same URL (the module cache
+/// dedupes it) and does the export globalization + vdg:wasm-ready dispatch.
+async function loadWasmModule() {
+  if (window.__vdg_wasm) return window.__vdg_wasm;
+  const mod = await import(new URL('pkg/vdg_freight.js', document.baseURI).href);
+  await mod.default();
+  window.__vdg_wasm = mod;
+  return mod;
+}
+
 async function main() {
+  // Every auth decision is a wasm call, so the bundle must be in flight before the gate runs.
+  // Kicked off first so it overlaps the locale + storage awaits below instead of adding to them.
+  const wasmReady = loadWasmModule();
   initMigrationOverlay(); // "syncing data" overlay listens for migration start/done events
   initStoreLockedScreen(); // before any store op — an old-build tab holding OPFS must surface, not starve boot
   // SW registration lives solely in sw-register.js (invoked from index.html).
@@ -269,7 +285,7 @@ async function main() {
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
   initAccessTokenRefresh({                           // reconnect-chip listener only (no proactive refresh)
     onReconnected: async (user) => {                 // the app's role re-resolve, injected — the adapter never imports the gate
-      const { detectRoleViaDrive } = await import('../implementations/freight_app/operators/auth/auth-gate.js');
+      const { detectRoleViaDrive } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
       await detectRoleViaDrive(user, { force: true });
     },
   });
@@ -280,7 +296,13 @@ async function main() {
 
   try {
     await composeStorage(); // which storage authority this page talks to — decided once, before anything reads it
-    configureAuthGate({ renderLoginPage }); // the gate mounts the login VIEW through this hook (ui is above freight_app)
+    // The gate's decisions are wasm now, so the module has to be up before it is asked anything.
+    // Started at the top of main() so the fetch overlaps the locale + storage awaits above; boot's
+    // own wasm step then finds it loaded.
+    const wasm = await wasmReady;
+    wasm.freight_app_init(createPlatform({ repo: null, currentUser: () => window.__vdg_current_user || null }));
+    configureAuthPlatform({ renderLoginPage }); // the gate mounts the login VIEW through this hook
+    composeAuth(wasm);
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
     // AC-07: RoleProbeTimeoutError → existing legacy renderLoadingBanner (F-15-19 path preserved)

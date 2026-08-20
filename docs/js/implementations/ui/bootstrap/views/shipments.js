@@ -1,14 +1,14 @@
 import '../components/detail-panel.js';
 import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shipment-state-resolver.js';
 import { UNKNOWN_STATE } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
-import { ensureShipmentStateAliases } from '../../../freight_app/core_abstractions/ports/shipment-state-aliases.js';
+import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { shipmentLane } from '../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
-import { hasRole } from '../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../freight_app/core_abstractions/roles.js';
-import { listShipments } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
+import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
 

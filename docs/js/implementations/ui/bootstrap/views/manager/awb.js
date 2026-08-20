@@ -1,11 +1,11 @@
 // AWB admin grid — F-16-02
 // Route: /manager/awb
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }              from '../../router.js';
 import { t }                     from '../../../../kernel/core_abstractions/i18n/index.js';
-import { AwbDriveRepo }          from '../../../../storage/implementations/drive/awb-drive-repo.js';
+import { awbRepo }               from '../../../core_abstractions/ports/storage/awb-repo.js';
 
 // AC-10: jsPDF lazy CDN — not bundled, loaded on first Export PDF click
 const JSPDF_CDN   = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
@@ -13,13 +13,7 @@ const TOAST_MS    = 4_000;
 const STATUS_ALL  = 'All';
 const STATUS_OPTS = ['All', 'Drafted', 'SISubmitted', 'Released', 'DeliveryProof'];
 
-let _repo  = null;
 let _jsPdf = null;
-
-function getRepo() {
-  if (!_repo) _repo = new AwbDriveRepo();
-  return _repo;
-}
 
 function toast(type, msg) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message: msg, duration: TOAST_MS } }));
@@ -123,10 +117,9 @@ export async function render(root) {
   if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   const ym   = new Date().toISOString().slice(0, 7);
-  const repo = getRepo();
   let entries = [];
   try {
-    entries = await repo.listByMonth(ym);
+    entries = await awbRepo.listByMonth(ym);
   } catch (err) {
     console.warn('[awb] load failed:', err.message); // DEV
   }

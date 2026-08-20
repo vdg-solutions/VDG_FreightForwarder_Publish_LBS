@@ -1,13 +1,10 @@
 // Manager Cash Flow & AR — F-14-05
 
-import {
-  composeAR, composeAP, composeTimeline,
-  AR_CURRENT_DAYS, AR_BUCKET_31_60, AR_BUCKET_61_90,
-  CREDIT_UTILIZATION_WARN_PCT, CREDIT_UTILIZATION_EXCEEDED_PCT,
-} from '../../../../freight_app/operators/manager/ar-composer.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
-import { navigate }  from '../../router.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { composeAR, composeAP, composeTimeline, AR_CURRENT_DAYS, AR_BUCKET_31_60, AR_BUCKET_61_90, CREDIT_UTILIZATION_WARN_PCT, CREDIT_UTILIZATION_EXCEEDED_PCT }
+  from '../../../core_abstractions/ports/manager/ar-composer.js';
+import { navigate } from '../../router.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 

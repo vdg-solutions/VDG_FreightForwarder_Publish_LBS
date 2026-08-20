@@ -1947,5 +1947,13 @@
   "sales_new.direction_option.import": "Nhập",
   "sales_new.validation.no_direction": "Chưa chọn chiều xuất/nhập",
   "settings.default_currency.locked_in_period": "Kỳ này đã có {n} lô hàng — không đổi được tiền tệ mặc định cho tới kỳ sau",
-  "settings.default_currency.locked_closed": "Kỳ đã khoá sổ — không nhận thay đổi chính sách"
+  "settings.default_currency.locked_closed": "Kỳ đã khoá sổ — không nhận thay đổi chính sách",
+  "master_merge.title": "Gộp {kind}",
+  "master_merge.target": "Bản giữ lại",
+  "master_merge.source": "Bản bị xoá",
+  "master_merge.confirm": "Gộp",
+  "master_merge.cancel": "Huỷ",
+  "master_merge.must_differ": "Bản giữ lại và bản bị xoá phải khác nhau.",
+  "master_merge.no_diff": "Không có trường nào khác nhau.",
+  "master_merge.diff_header": "Các trường khác nhau (lấy theo bản giữ lại):"
 }

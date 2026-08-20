@@ -11,6 +11,7 @@
 // The auth gate runs before the wasm module loads, so boundary/grant_file.rs is unreachable here.
 // This is a deliberate, minimal mirror of parse_grant; f-30 asserts the two stay in step.
 
+import { kvGet, kvSet, kvRemove } from '../../kernel/core_abstractions/ports/key-value.js';
 
 // Mirrors boundary/grant_file.rs.
 export const GRANTS_DIR     = 'grants';
@@ -85,15 +86,15 @@ export const GRANT_AREAS_KEY = 'vdg.grant.areas';
 
 export function rememberGrantAreas(areas) {
   if (!Array.isArray(areas) || areas.length === 0) return; // never overwrite a good manifest with nothing
-  try { localStorage.setItem(GRANT_AREAS_KEY, JSON.stringify(areas)); }
+  try { kvSet(GRANT_AREAS_KEY, JSON.stringify(areas)); }
   catch { /* storage-less context (tests) — the data layer falls back to the root walk */ }
 }
 
 export function recallGrantAreas() {
-  try { return JSON.parse(localStorage.getItem(GRANT_AREAS_KEY) || '[]'); }
+  try { return JSON.parse(kvGet(GRANT_AREAS_KEY) || '[]'); }
   catch { return []; }
 }
 
 export function clearGrantAreas() {
-  try { localStorage.removeItem(GRANT_AREAS_KEY); } catch { /* nothing stored */ }
+  try { kvRemove(GRANT_AREAS_KEY); } catch { /* nothing stored */ }
 }

@@ -1,8 +1,8 @@
 // Manager Notifications Center — F-14-14
 
-import { NOTIFICATION_TYPES } from '../../../../freight_app/operators/manager/notification-composer.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { NOTIFICATION_TYPES } from '../../../core_abstractions/ports/manager/notification-composer.js';
 import { navigate }   from '../../router.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 

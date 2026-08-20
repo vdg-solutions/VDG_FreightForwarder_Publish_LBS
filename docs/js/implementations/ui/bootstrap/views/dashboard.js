@@ -1,8 +1,8 @@
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { buildDistribution } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
 import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shipment-state-resolver.js';
-import { ensureShipmentStateAliases } from '../../../freight_app/core_abstractions/ports/shipment-state-aliases.js';
-import { listShipments } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
 
 const CLOSED_LIKE_STATES  = ['Closed', 'Delivered']; // F-18-11: KPI "active" excludes these
 

@@ -5,8 +5,8 @@
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { allocateUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../../../freight_app/operators/manager/users-view-composer.js';
-import { ROLE_LABEL_KEYS } from '../../../../freight_app/operators/manager/users-view-composer.js';
+import { allocateUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
+import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 
 
 function getUserRepo()    { return window.__vdg_user_repo; }

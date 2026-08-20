@@ -1,7 +1,7 @@
 // F-12-10 — New quotation form (Draft creation)
 
-import { currentSalesRepId } from '../../../freight_app/core_abstractions/session-roles.js';
-import { saveDraft } from '../../../freight_app/operators/quote-orchestrator.js';
+import { currentSalesRepId } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { saveDraft } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
 import { navigate } from '../router.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 

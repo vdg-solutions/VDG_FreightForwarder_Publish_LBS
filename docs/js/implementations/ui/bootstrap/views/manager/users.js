@@ -1,15 +1,15 @@
 // F-15-15 — Sales user management (/manager/users)
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }      from '../../router.js';
 import {
   inviteSales, promoteToManager, disableUser, editProfile,
-} from '../../../../freight_app/operators/user-provisioning.js';
+} from '../../../core_abstractions/ports/flows/user-provisioning.js';
 import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { openEditModal, openInviteModal } from './users-modals.js';
-import { auditRootSharing } from '../../../../freight_app/operators/manager/root-sharing-audit.js';
+import { auditRootSharing } from '../../../core_abstractions/ports/governance/root-sharing-audit.js';
 
 const KIND_USER         = 'user';
 const ROLE_ADMIN        = 'admin';

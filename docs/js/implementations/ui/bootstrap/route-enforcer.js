@@ -1,10 +1,10 @@
 // route-enforcer.js — the side-effecting half of the route guard: toast + navigate away. The
-// decision (freight_app/operators/manager/route-guard.js::routeGuard) is pure; this is the UI
+// decision (freight_app operators/governance/route_access.rs) is Rust; this is the UI
 // edge that acts on it, called from app.js::renderView.
 
 import { navigate } from './router.js';
 import { t } from '../../kernel/core_abstractions/i18n/index.js';
-import { routeGuard } from '../../freight_app/operators/manager/route-guard.js';
+import { routeGuard } from '../core_abstractions/ports/governance/route-guard.js';
 
 const TOAST_EVENT       = 'vdg:toast';
 const TOAST_TYPE_WARN   = 'warn';

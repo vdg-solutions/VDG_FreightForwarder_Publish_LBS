@@ -1,9 +1,9 @@
 // sales-me-due-soon.js — "sắp tới hạn thanh toán" list section for sales-me view (F-48-01
 // tier 3/4 floor). Sibling to sales-me-overdue.js (deliberately non-overlapping: overdue.js
 // is past-due, this is not-yet-due within the warn window). Reuses the SAME
-// computeDueSoonRows() the badge/notification tick in due-soon-checker.js calls — no second
-// copy of the date-window logic (AC-05d).
-import { computeDueSoonRows } from '../../../freight_app/operators/sync/due-soon-checker.js';
+// computeDueSoonRows() the badge/notification tick calls — no second copy of the date-window
+// logic (AC-05d).
+import { computeDueSoonRows } from '../../core_abstractions/ports/sync/due-soon.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
 function fmtVnd(n) {

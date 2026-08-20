@@ -1,16 +1,16 @@
 // Manager Sales Performance & Commission — F-14-06
 
 import '../../components/sparkline.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }            from '../../router.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
-import { computeCommissions, computeSparkline, buildPeriodKey, SPARKLINE_MONTHS, KIND_PNL_LINE } from '../../../../freight_app/operators/manager/commission-calculator.js';
-import { KIND_SHIPMENT } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
-import { compose as composeRules } from '../../../../freight_app/operators/manager/commission-composer.js';
+import { KIND_SHIPMENT } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { computeCommissions, computeSparkline, buildPeriodKey, SPARKLINE_MONTHS, KIND_PNL_LINE } from '../../../core_abstractions/ports/manager/commission-calculator.js';
+import { compose as composeRules } from '../../../core_abstractions/ports/manager/commission-composer.js';
 import { t }                        from '../../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText }         from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
-import { listShipments } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
 
 const DEFAULT_PERIOD_MODE    = 'month';
 const KIND_COMMISSION_RULES  = 'commission_rules';

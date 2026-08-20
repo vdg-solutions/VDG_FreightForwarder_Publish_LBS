@@ -1,12 +1,10 @@
 // Manager Period Close — F-14-11
 
-import {
-  getCurrentPeriodLock, runPreCloseChecks, closePeriod, reopenPeriod, loadClosedPeriods,
-  PERIOD_CLOSE_KIND, REASON_MAX_CHARS,
-} from '../../../../freight_app/operators/manager/period-close-orchestrator.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
-import { navigate }   from '../../router.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { getCurrentPeriodLock, runPreCloseChecks, closePeriod, reopenPeriod, loadClosedPeriods, PERIOD_CLOSE_KIND, REASON_MAX_CHARS }
+  from '../../../core_abstractions/ports/governance/period-close.js';
+import { navigate } from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';

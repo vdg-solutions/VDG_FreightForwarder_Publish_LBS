@@ -4,15 +4,15 @@
 // only aliases/label_vi/label_en are editable, mirrors units-of-measure.js structurally minus
 // the add/delete affordances. Manager-only writers (Q3) also gates the migration trigger below.
 
-import { hasRole } from '../../../../../freight_app/core_abstractions/session-roles.js';
-import { currentUserRole } from '../../../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_MANAGER } from '../../../../../freight_app/core_abstractions/roles.js';
-import { MASTER_REGISTRY } from '../../../../../freight_app/core_abstractions/master-registry.js';
-import { runSeedMigrations } from '../../../../../freight_app/core_abstractions/ports/seed-migrator.js';
+import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
+import { runSeedMigrations } from '../../../../core_abstractions/ports/cache/seed-migrator.js';
+import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
+import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
-import { migrateLegacyShipmentState } from '../../../../../freight_app/operators/shipment-state-migrator.js';
-import { SHIPMENT_STATES_SEED_MIGRATION } from '../../../../../freight_app/operators/util/shipment-state-aliases.js';
-import { SHIPMENT_STATES_KIND } from '../../../../../freight_app/core_abstractions/ports/shipment-state-aliases.js';
+import { migrateLegacyShipmentState } from '../../../../core_abstractions/ports/flows/shipment-state-migrator.js';
+import { SHIPMENT_STATES_SEED_MIGRATION } from '../../../../core_abstractions/ports/flows/shipment-state-aliases.js';
+import { SHIPMENT_STATES_KIND } from '../../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { openModal } from './shipment-states-modal.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
@@ -31,7 +31,7 @@ function escHtml(s) {
 // F-18-11 AC-04: registry-driven writer gate — mirrors units-of-measure.js/local-charges.js.
 function canWrite() {
   const role = hasRole(ROLE_MANAGER) ? ROLE_MANAGER : currentUserRole();
-  return MASTER_REGISTRY[KIND].writers.includes(role);
+  return canWriteMaster(KIND, role);
 }
 
 async function loadStates(repo) {

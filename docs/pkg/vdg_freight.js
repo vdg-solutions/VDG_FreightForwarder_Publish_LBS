@@ -751,34 +751,6 @@ export function access_roles_from_record(record_json) {
 }
 
 /**
- * Full air-rate result for the UI: chargeable weight, matched break tier, freight total.
- * `breaks_json` = `[{"min_kg":45,"rate_per_kg":3.5}, ...]`. Returns null when no tier applies.
- * @param {number} actual
- * @param {number} l
- * @param {number} w
- * @param {number} h
- * @param {string} breaks_json
- * @returns {any}
- */
-export function air_calc_result(actual, l, w, h, breaks_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(breaks_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.air_calc_result(retptr, actual, l, w, h, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
  * Applies a lifecycle event to the entity's stored state via the real
  * ShipmentFsm, persists the new state, and appends a transition record.
  * @param {string} entity_id
@@ -803,6 +775,196 @@ export function apply_fsm_event(entity_id, event) {
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function auth_adopt_session(req) {
+    const ret = wasm.auth_adopt_session(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function auth_clear_role_cache(req) {
+    const ret = wasm.auth_clear_role_cache(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function auth_detect_role(req) {
+    const ret = wasm.auth_detect_role(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function auth_has_role(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.auth_has_role(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function auth_require_auth(req) {
+    const ret = wasm.auth_require_auth(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function auth_session_roles(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.auth_session_roles(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function auth_set_resolved_roles(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.auth_set_resolved_roles(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function cache_bulk_put(req) {
+    const ret = wasm.cache_bulk_put(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function cache_can_write_master(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.cache_can_write_master(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function cache_find_match(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.cache_find_match(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function cache_migrate_master_scope(req) {
+    const ret = wasm.cache_migrate_master_scope(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function cache_migrate_per_record_kinds(req) {
+    const ret = wasm.cache_migrate_per_record_kinds(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function cache_migrate_priced_refs(req) {
+    const ret = wasm.cache_migrate_priced_refs(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function cache_route_prefetch(req) {
+    const ret = wasm.cache_route_prefetch(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function cache_run_seed_migrations(req) {
+    const ret = wasm.cache_run_seed_migrations(addHeapObject(req));
+    return takeObject(ret);
 }
 
 /**
@@ -877,64 +1039,6 @@ export function check_quotation_transition(from_state, event) {
 }
 
 /**
- * Compute SalesShare + CompanyRetained commission entries.
- * `deductions_json` = `{"corp_tax_vnd": 1000000, "customer_kickback_vnd": 500000, "line_commission_vnd": 200000}`
- * Returns `{ sales_share: CommissionEntry, company_retained: CommissionEntry }`.
- * @param {string} shipment_json
- * @param {string} rule_id
- * @param {string} deductions_json
- * @returns {any}
- */
-export function commission_compute(shipment_json, rule_id, deductions_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(shipment_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(rule_id, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(deductions_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        wasm.commission_compute(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * Resolve which CommissionRule applies to a sales rep for a given shipment.
- * Returns the matched CommissionRule as JsValue (for JS to cache and pass back).
- * @param {string} sales_id
- * @param {string} shipment_json
- * @returns {any}
- */
-export function commission_resolve_rule(sales_id, shipment_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(sales_id, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(shipment_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.commission_resolve_rule(retptr, ptr0, len0, ptr1, len1);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
  * Single-source profit waterfall for the UI: margin → TNDN(20%) → net → sales/LBS split.
  * `sales_pct_0_100` is the manager-set share (0–100). Returns whole-VND figures.
  * `clamp_negatives`: true for payout (loss → zero), false for the sales-form
@@ -959,18 +1063,6 @@ export function commission_waterfall(margin_vnd, com_deductions_vnd, sales_pct_0
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
-}
-
-/**
- * @param {number} actual
- * @param {number} l
- * @param {number} w
- * @param {number} h
- * @returns {number}
- */
-export function compute_chargeable_kg(actual, l, w, h) {
-    const ret = wasm.compute_chargeable_kg(actual, l, w, h);
-    return ret;
 }
 
 /**
@@ -1000,25 +1092,150 @@ export function compute_due_soon(billing_json, today_str, warn_days) {
 }
 
 /**
- * @param {number} actual
- * @param {number} l
- * @param {number} w
- * @param {number} h
- * @param {string} breaks_json
- * @returns {number | undefined}
+ * Drops the remembered cross-fork scans, for the delta path.
+ * @param {any} req
+ * @returns {Promise<any>}
  */
-export function compute_freight(actual, l, w, h, breaks_json) {
+export function data_clear_fork_scan(req) {
+    const ret = wasm.data_clear_fork_scan(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_current_revision(req) {
+    const ret = wasm.data_current_revision(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_delete_pnl_lines(req) {
+    const ret = wasm.data_delete_pnl_lines(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_delete_shipment(req) {
+    const ret = wasm.data_delete_shipment(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_get_envelope(req) {
+    const ret = wasm.data_get_envelope(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_get_shipment(req) {
+    const ret = wasm.data_get_shipment(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_join_loaded(req) {
+    const ret = wasm.data_join_loaded(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_list_envelopes(req) {
+    const ret = wasm.data_list_envelopes(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_list_where(req) {
+    const ret = wasm.data_list_where(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function data_pnl_line_id(req) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(breaks_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.compute_freight(retptr, actual, l, w, h, ptr0, len0);
+        wasm.data_pnl_line_id(retptr, addHeapObject(req));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r2 = getDataViewMemory0().getFloat64(retptr + 8 * 1, true);
-        return r0 === 0 ? undefined : r2;
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_publish_billing(req) {
+    const ret = wasm.data_publish_billing(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_published_for(req) {
+    const ret = wasm.data_published_for(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_put_envelope(req) {
+    const ret = wasm.data_put_envelope(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_put_shipment(req) {
+    const ret = wasm.data_put_shipment(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function data_write_gate(req) {
+    const ret = wasm.data_write_gate(addHeapObject(req));
+    return takeObject(ret);
 }
 
 /**
@@ -1061,11 +1278,621 @@ export function exec(sql) {
 }
 
 /**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_accept_quote(req) {
+    const ret = wasm.flows_accept_quote(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_active_sales_reps(req) {
+    const ret = wasm.flows_active_sales_reps(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
  * @returns {any}
  */
-export function folder_relocations() {
-    const ret = wasm.folder_relocations();
+export function flows_air_calc(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_air_calc(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_assert_rep_code(req) {
+    const ret = wasm.flows_assert_rep_code(addHeapObject(req));
     return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_assign_job_no(req) {
+    const ret = wasm.flows_assign_job_no(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_assign_rep_code(req) {
+    const ret = wasm.flows_assign_rep_code(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_auto_advance(req) {
+    const ret = wasm.flows_auto_advance(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_build_entries_from_commission(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_build_entries_from_commission(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_build_entries_from_shipment(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_build_entries_from_shipment(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_build_reversal_entry(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_build_reversal_entry(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_chargeable_kg(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_chargeable_kg(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_clear_sales_registry(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_clear_sales_registry(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_commit_pnl_report(req) {
+    const ret = wasm.flows_commit_pnl_report(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_customer_rep(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_customer_rep(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_derive_sales_rep(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_derive_sales_rep(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_disable_user(req) {
+    const ret = wasm.flows_disable_user(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_edit_profile(req) {
+    const ret = wasm.flows_edit_profile(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_ensure_rep_code(req) {
+    const ret = wasm.flows_ensure_rep_code(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_ensure_state_aliases(req) {
+    const ret = wasm.flows_ensure_state_aliases(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_export_workspace(req) {
+    const ret = wasm.flows_export_workspace(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_format_job_no(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_format_job_no(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_generate_quote_id(req) {
+    const ret = wasm.flows_generate_quote_id(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_invite_sales(req) {
+    const ret = wasm.flows_invite_sales(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_license_error_key(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_license_error_key(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_license_resolve(req) {
+    const ret = wasm.flows_license_resolve(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_migrate_shipment_states(req) {
+    const ret = wasm.flows_migrate_shipment_states(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_next_local_seq(req) {
+    const ret = wasm.flows_next_local_seq(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_persist_advanced_state(req) {
+    const ret = wasm.flows_persist_advanced_state(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_post_commission(req) {
+    const ret = wasm.flows_post_commission(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_post_reversal(req) {
+    const ret = wasm.flows_post_reversal(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_post_shipment(req) {
+    const ret = wasm.flows_post_shipment(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_promote_to_manager(req) {
+    const ret = wasm.flows_promote_to_manager(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_quote_converted(req) {
+    const ret = wasm.flows_quote_converted(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_register_entity(req) {
+    const ret = wasm.flows_register_entity(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_rehydrate_fsm(req) {
+    const ret = wasm.flows_rehydrate_fsm(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_rep_code_valid(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_rep_code_valid(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_repo_max_seq(req) {
+    const ret = wasm.flows_repo_max_seq(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_sales_analytics(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_sales_analytics(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_sales_commission(req) {
+    const ret = wasm.flows_sales_commission(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_sales_rep_by_prefix(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_sales_rep_by_prefix(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_save_quote_draft(req) {
+    const ret = wasm.flows_save_quote_draft(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_self_rep_candidate(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_self_rep_candidate(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_send_quote(req) {
+    const ret = wasm.flows_send_quote(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_shipment_affordance(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_shipment_affordance(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_slugify(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_slugify(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function flows_void_apply(req) {
+    const ret = wasm.flows_void_apply(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function flows_void_plan(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.flows_void_plan(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Installed once by js/bootstrap (after the wasm module is ready and the repo exists).
+ * @param {any} platform
+ */
+export function freight_app_init(platform) {
+    wasm.freight_app_init(addHeapObject(platform));
 }
 
 /**
@@ -1210,146 +2037,458 @@ export function get_validation_errors() {
 }
 
 /**
- * @param {string} email
- * @param {string} workspace
- * @param {string} user_prefix
- * @param {string} roles
- * @returns {string}
+ * @param {any} req
+ * @returns {Promise<any>}
  */
-export function grant_file_build(email, workspace, user_prefix, roles) {
-    let deferred6_0;
-    let deferred6_1;
+export function governance_assign_role(req) {
+    const ret = wasm.governance_assign_role(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_audit_root_sharing(req) {
+    const ret = wasm.governance_audit_root_sharing(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_backfill_grants(req) {
+    const ret = wasm.governance_backfill_grants(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_bootstrap_acl_folders(req) {
+    const ret = wasm.governance_bootstrap_acl_folders(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_can_edit_default_currency(req) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(email, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(workspace, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(user_prefix, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passStringToWasm0(roles, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len3 = WASM_VECTOR_LEN;
-        wasm.grant_file_build(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
+        wasm.governance_can_edit_default_currency(retptr, addHeapObject(req));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr5 = r0;
-        var len5 = r1;
-        if (r3) {
-            ptr5 = 0; len5 = 0;
-            throw takeObject(r2);
+        if (r2) {
+            throw takeObject(r1);
         }
-        deferred6_0 = ptr5;
-        deferred6_1 = len5;
-        return getStringFromWasm0(ptr5, len5);
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred6_0, deferred6_1, 1);
     }
 }
 
 /**
- * E-43: the manifest form. `areas_json` is `[{path, folder_id}]` — the ids the caller resolved
- * while applying the permissions, so the employee never has to find them. An unparseable list is
- * an error, not an empty manifest: silently writing a grant with no ids would leave the user with
- * a file that reads fine and resolves nothing.
- * @param {string} email
- * @param {string} workspace
- * @param {string} user_prefix
- * @param {string} roles
- * @param {string} areas_json
- * @returns {string}
+ * @param {any} req
+ * @returns {Promise<any>}
  */
-export function grant_file_build_with_areas(email, workspace, user_prefix, roles, areas_json) {
-    let deferred7_0;
-    let deferred7_1;
+export function governance_change_role(req) {
+    const ret = wasm.governance_change_role(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_classify_root_permissions(req) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(email, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(workspace, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(user_prefix, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passStringToWasm0(roles, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len3 = WASM_VECTOR_LEN;
-        const ptr4 = passStringToWasm0(areas_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len4 = WASM_VECTOR_LEN;
-        wasm.grant_file_build_with_areas(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
+        wasm.governance_classify_root_permissions(retptr, addHeapObject(req));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr6 = r0;
-        var len6 = r1;
-        if (r3) {
-            ptr6 = 0; len6 = 0;
-            throw takeObject(r2);
+        if (r2) {
+            throw takeObject(r1);
         }
-        deferred7_0 = ptr6;
-        deferred7_1 = len6;
-        return getStringFromWasm0(ptr6, len6);
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred7_0, deferred7_1, 1);
     }
 }
 
 /**
- * Post-boot verification seam. auth-gate reads the grant file BEFORE wasm loads and carries its
- * own minimal mirror (`grant-file.js`); this export is what the mirror is tested against.
- * @param {string} json
- * @param {string} email
- * @param {string} workspace
- * @returns {string}
+ * @param {any} req
+ * @returns {Promise<any>}
  */
-export function grant_file_roles(json, email, workspace) {
-    let deferred4_0;
-    let deferred4_1;
+export function governance_close_period(req) {
+    const ret = wasm.governance_close_period(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_close_records(req) {
+    const ret = wasm.governance_close_records(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_ensure_workspace_root(req) {
+    const ret = wasm.governance_ensure_workspace_root(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_error_records(req) {
+    const ret = wasm.governance_error_records(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_filter_sidebar(req) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(email, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(workspace, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        wasm.grant_file_roles(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        wasm.governance_filter_sidebar(retptr, addHeapObject(req));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        deferred4_0 = r0;
-        deferred4_1 = r1;
-        return getStringFromWasm0(r0, r1);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred4_0, deferred4_1, 1);
     }
 }
 
 /**
- * @param {string} workspace
- * @param {string} user_prefix
- * @returns {string}
+ * @param {any} req
+ * @returns {Promise<any>}
  */
-export function grant_file_target_name(workspace, user_prefix) {
-    let deferred3_0;
-    let deferred3_1;
+export function governance_find_lock(req) {
+    const ret = wasm.governance_find_lock(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_first_run_provision(req) {
+    const ret = wasm.governance_first_run_provision(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_home_route(req) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(workspace, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(user_prefix, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.grant_file_target_name(retptr, ptr0, len0, ptr1, len1);
+        wasm.governance_home_route(retptr, addHeapObject(req));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        deferred3_0 = r0;
-        deferred3_1 = r1;
-        return getStringFromWasm0(r0, r1);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_is_already_provisioned(req) {
+    const ret = wasm.governance_is_already_provisioned(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_load_settings(req) {
+    const ret = wasm.governance_load_settings(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_lock_period(req) {
+    const ret = wasm.governance_lock_period(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_locked_periods(req) {
+    const ret = wasm.governance_locked_periods(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_merge_diff(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_merge_diff(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_merge_records(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_merge_records(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_normalize_role(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_normalize_role(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_opening_balance(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_opening_balance(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_period_math(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_period_math(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_period_of(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_period_of(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_pre_close_checks(req) {
+    const ret = wasm.governance_pre_close_checks(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_prune_error_log(req) {
+    const ret = wasm.governance_prune_error_log(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_purge_error_month(req) {
+    const ret = wasm.governance_purge_error_month(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_regrant_everyone(req) {
+    const ret = wasm.governance_regrant_everyone(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_reopen_period(req) {
+    const ret = wasm.governance_reopen_period(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_repoint_refs(req) {
+    const ret = wasm.governance_repoint_refs(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_revoke_role(req) {
+    const ret = wasm.governance_revoke_role(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_route_guard(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_route_guard(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_save_settings(req) {
+    const ret = wasm.governance_save_settings(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function governance_unlock_period(req) {
+    const ret = wasm.governance_unlock_period(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function governance_user_roles(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.governance_user_roles(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
 
@@ -1424,32 +2563,6 @@ export function import_pnl_excel_wasm(bytes) {
 }
 
 /**
- * Returns true when `entity_etd_ms` falls within a locked period.
- * `locked_periods_json` = meta-pref `preferences.locked_periods` verbatim —
- * `[{"period_key":"YYYY-MM"|"YYYY-Qn",...}]`. Law lives in operators/period_lock.rs.
- * @param {string} entity_kind
- * @param {bigint} entity_etd_ms
- * @param {string} locked_periods_json
- * @returns {boolean}
- */
-export function is_period_closed(entity_kind, entity_etd_ms, locked_periods_json) {
-    const ptr0 = passStringToWasm0(entity_kind, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(locked_periods_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.is_period_closed(ptr0, len0, entity_etd_ms, ptr1, len1);
-    return ret !== 0;
-}
-
-/**
- * @returns {any}
- */
-export function legacy_containers() {
-    const ret = wasm.legacy_containers();
-    return takeObject(ret);
-}
-
-/**
  * F-20-11: classify AND arm the wasm write gate in one move. The boot gate calls THIS —
  * the verdict that reaches the repo's put/delete never round-trips through a JS value a
  * devtools user could edit. Every call re-arms; the latest classification wins.
@@ -1465,11 +2578,746 @@ export function license_arm(license_str, current_unix_ts) {
 }
 
 /**
+ * @param {any} req
  * @returns {any}
  */
-export function per_record_kinds() {
-    const ret = wasm.per_record_kinds();
+export function manager_air_pnl(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_air_pnl(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ap_payables(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ap_payables(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ar_aging(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ar_aging(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ar_timeline(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ar_timeline(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_audit_log_csv(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_audit_log_csv(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_audit_log_range(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_audit_log_range(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_audit_log_sort(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_audit_log_sort(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_commission_rules(req) {
+    const ret = wasm.manager_commission_rules(addHeapObject(req));
     return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_commission_sparkline(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_commission_sparkline(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_commissions(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_commissions(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_customer360(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_customer360(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_customer_mode_mix(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_customer_mode_mix(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_dashboard(req) {
+    const ret = wasm.manager_dashboard(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_email_valid(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_email_valid(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_exception_escalate(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_exception_escalate(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_exception_mttr(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_exception_mttr(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_exception_per_sales(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_exception_per_sales(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_exception_trends(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_exception_trends(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_exceptions_sorted(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_exceptions_sorted(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_ledger_apply_repost(req) {
+    const ret = wasm.manager_ledger_apply_repost(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_ledger_auto_reconcile(req) {
+    const ret = wasm.manager_ledger_auto_reconcile(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_balance_sheet(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_balance_sheet(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_chart_groups(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_chart_groups(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_csv(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_csv(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_filter_legs(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_filter_legs(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_ledger_plan_repost(req) {
+    const ret = wasm.manager_ledger_plan_repost(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_pnl(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_pnl(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_pnl_monthly(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_pnl_monthly(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_ledger_purge_orphans(req) {
+    const ret = wasm.manager_ledger_purge_orphans(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function manager_ledger_reconcile(req) {
+    const ret = wasm.manager_ledger_reconcile(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_running_balances(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_running_balances(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_ledger_trial_balance(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_ledger_trial_balance(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_notification_from_event(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_notification_from_event(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_notifications_time_based(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_notifications_time_based(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_period_key(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_period_key(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_pnl_buy_sell(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_pnl_buy_sell(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_pnl_drill(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_pnl_drill(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_pnl_pivot(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_pnl_pivot(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_user_prefix(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_user_prefix(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_users_filter(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_users_filter(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function manager_users_sort(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.manager_users_sort(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 /**
@@ -1881,155 +3729,6 @@ export function shipment_auto_advance(entity_id, shipment_json) {
 }
 
 /**
- * The record Accounting is handed at publish, derived from the JOINED shipment.
- *
- * `published_json` is the snapshots already published for this shipment (from the same fork), used
- * only to work out the next revision — an amendment supersedes rather than overwrites, so a second
- * publish cannot erase the figures an invoice was already raised from.
- *
- * Errors when the shipment carries no sell side: that is what a shipment looks like when it was
- * read by somebody with no access to the revenue fork, and publishing it would invoice zero.
- * @param {string} shipment_json
- * @param {string} published_json
- * @param {string} published_at
- * @param {string} published_by
- * @returns {string}
- */
-export function shipment_billing_snapshot(shipment_json, published_json, published_at, published_by) {
-    let deferred6_0;
-    let deferred6_1;
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(shipment_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(published_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(published_at, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        const ptr3 = passStringToWasm0(published_by, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len3 = WASM_VECTOR_LEN;
-        wasm.shipment_billing_snapshot(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr5 = r0;
-        var len5 = r1;
-        if (r3) {
-            ptr5 = 0; len5 = 0;
-            throw takeObject(r2);
-        }
-        deferred6_0 = ptr5;
-        deferred6_1 = len5;
-        return getStringFromWasm0(ptr5, len5);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred6_0, deferred6_1, 1);
-    }
-}
-
-/**
- * `{ "envelope": [{field,from,to}], "revenue": [...] }` — what changed, already sorted into the
- * two halves that have different readers, so the caller only chooses a store and never a side.
- *
- * An empty `before_json` is a create and yields history from null. Passing two ENVELOPE records
- * (the state-change path) is correct and returns an empty revenue list.
- * @param {string} before_json
- * @param {string} after_json
- * @returns {string}
- */
-export function shipment_change_set(before_json, after_json) {
-    let deferred4_0;
-    let deferred4_1;
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(before_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(after_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.shipment_change_set(retptr, ptr0, len0, ptr1, len1);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr3 = r0;
-        var len3 = r1;
-        if (r3) {
-            ptr3 = 0; len3 = 0;
-            throw takeObject(r2);
-        }
-        deferred4_0 = ptr3;
-        deferred4_1 = len3;
-        return getStringFromWasm0(ptr3, len3);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred4_0, deferred4_1, 1);
-    }
-}
-
-/**
- * True when a revenue half carries anything at all. JS must not answer this itself: what counts as
- * revenue is the same contract as the split, and a CS-created job's EMPTY half is the difference
- * between writing nothing and writing a revenue record into the wrong person's fork.
- * @param {string} revenue_json
- * @returns {boolean}
- */
-export function shipment_has_revenue(revenue_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(revenue_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.shipment_has_revenue(retptr, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return r0 !== 0;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * Rejoin for a reader holding both halves. An empty `revenue_json` is the CS case — the folder
- * was never granted — and yields the envelope unchanged rather than an error. The caller must
- * already have decided that the absence is an ANSWER and not a failed read.
- * @param {string} envelope_json
- * @param {string} revenue_json
- * @returns {string}
- */
-export function shipment_join(envelope_json, revenue_json) {
-    let deferred4_0;
-    let deferred4_1;
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(envelope_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(revenue_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.shipment_join(retptr, ptr0, len0, ptr1, len1);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr3 = r0;
-        var len3 = r1;
-        if (r3) {
-            ptr3 = 0; len3 = 0;
-            throw takeObject(r2);
-        }
-        deferred4_0 = ptr3;
-        deferred4_1 = len3;
-        return getStringFromWasm0(ptr3, len3);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred4_0, deferred4_1, 1);
-    }
-}
-
-/**
  * `{ current, off_path, phases: [{ state, position, requirements }] }`.
  *
  * The state comes from the FSM state map when the entity is registered, and from the record's own
@@ -2065,39 +3764,6 @@ export function shipment_phases(entity_id, shipment_json) {
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
         wasm.__wbindgen_export5(deferred4_0, deferred4_1, 1);
-    }
-}
-
-/**
- * `{ "envelope": {...}, "revenue": {...} }` — the two records to write.
- * Errors when a P&L line has no `line_id`; see `boundary::shipment_split::split`.
- * @param {string} shipment_json
- * @returns {string}
- */
-export function shipment_split(shipment_json) {
-    let deferred3_0;
-    let deferred3_1;
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(shipment_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.shipment_split(retptr, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        var ptr2 = r0;
-        var len2 = r1;
-        if (r3) {
-            ptr2 = 0; len2 = 0;
-            throw takeObject(r2);
-        }
-        deferred3_0 = ptr2;
-        deferred3_1 = len2;
-        return getStringFromWasm0(ptr2, len2);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-        wasm.__wbindgen_export5(deferred3_0, deferred3_1, 1);
     }
 }
 
@@ -2366,6 +4032,234 @@ export function store_put_wma(key, body) {
 }
 
 /**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_audit_append(req) {
+    const ret = wasm.sync_audit_append(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_audit_read(req) {
+    const ret = wasm.sync_audit_read(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_audit_verify_chain(req) {
+    const ret = wasm.sync_audit_verify_chain(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function sync_delta_tick_plan(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.sync_delta_tick_plan(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function sync_drain_plan(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.sync_drain_plan(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_due_soon_check(req) {
+    const ret = wasm.sync_due_soon_check(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_due_soon_mark(req) {
+    const ret = wasm.sync_due_soon_mark(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_due_soon_rows(req) {
+    const ret = wasm.sync_due_soon_rows(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_error_capture(req) {
+    const ret = wasm.sync_error_capture(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function sync_job_event(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.sync_job_event(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_quota_check(req) {
+    const ret = wasm.sync_quota_check(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_user_audit_read(req) {
+    const ret = wasm.sync_user_audit_read(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_user_audit_write(req) {
+    const ret = wasm.sync_user_audit_write(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function sync_wma_dismiss(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.sync_wma_dismiss(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_wma_load(req) {
+    const ret = wasm.sync_wma_load(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function sync_wma_on_event(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.sync_wma_on_event(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {any}
+ */
+export function sync_wma_predict(req) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.sync_wma_predict(retptr, addHeapObject(req));
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return takeObject(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * @param {any} req
+ * @returns {Promise<any>}
+ */
+export function sync_wma_save(req) {
+    const ret = wasm.sync_wma_save(addHeapObject(req));
+    return takeObject(ret);
+}
+
+/**
  * `taken_json` is the JSON array of prefixes already in use; `seed` is a caller-supplied random
  * 0..9999 so two managers adding at once don't both pick the same suffix.
  * @param {string} email
@@ -2454,115 +4348,6 @@ export function verify_license(license_str, current_unix_ts) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verify_license(ptr0, len0, current_unix_ts);
     return takeObject(ret);
-}
-
-/**
- * @param {string} commission_json
- * @param {string} chart_json
- * @param {string} rules_json
- * @returns {any}
- */
-export function wasm_build_entries_from_commission(commission_json, chart_json, rules_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(commission_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(chart_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(rules_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        wasm.wasm_build_entries_from_commission(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * @param {string} shipment_json
- * @param {string} chart_json
- * @param {string} rules_json
- * @returns {any}
- */
-export function wasm_build_entries_from_shipment(shipment_json, chart_json, rules_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(shipment_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(chart_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(rules_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        wasm.wasm_build_entries_from_shipment(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * @param {string} legs_json
- * @param {string} chart_json
- * @param {string} actor_id
- * @returns {any}
- */
-export function wasm_build_reversal_entry(legs_json, chart_json, actor_id) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(legs_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(chart_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        const ptr2 = passStringToWasm0(actor_id, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len2 = WASM_VECTOR_LEN;
-        wasm.wasm_build_reversal_entry(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * @param {string} shipments_json
- * @param {string} lines_json
- * @returns {any}
- */
-export function wasm_compute_sales_analytics(shipments_json, lines_json) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passStringToWasm0(shipments_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len0 = WASM_VECTOR_LEN;
-        const ptr1 = passStringToWasm0(lines_json, wasm.__wbindgen_export, wasm.__wbindgen_export2);
-        const len1 = WASM_VECTOR_LEN;
-        wasm.wasm_compute_sales_analytics(retptr, ptr0, len0, ptr1, len1);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return takeObject(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
 }
 
 /**
@@ -2706,8 +4491,59 @@ function __wbg_get_imports() {
         __wbg__wbg_cb_unref_33c39e13d73b25f6: function(arg0) {
             getObject(arg0)._wbg_cb_unref();
         },
-        __wbg_access_token_dc7a78c311d6815c: function() { return handleError(function (arg0) {
+        __wbg_access_token_6eedcb6a715f9a81: function() { return handleError(function (arg0) {
             const ret = getObject(arg0).access_token();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_active_workspace_name_34199f555594d97b: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_active_workspace_name();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_cache_clear_a0387cf57b49f627: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_cache_clear();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_cache_read_484704bd5b59e3c9: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_cache_read();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_cache_write_5465a3329a590dfb: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).auth_cache_write(getObject(arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_current_user_b2f75c0329853da4: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_current_user();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_has_cached_workspace_55141e05bfc6aa91: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_has_cached_workspace();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_probe_role_242369aa610343b2: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).auth_probe_role(getObject(arg1), getStringFromWasm0(arg2, arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_publish_roles_c8d1f247d8d0795f: function(arg0, arg1, arg2) {
+            getObject(arg0).auth_publish_roles(getObject(arg1), arg2 !== 0);
+        },
+        __wbg_auth_remember_grant_areas_c81cce54a6392f0c: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).auth_remember_grant_areas(getObject(arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_revive_session_215a3dc8cf092b1f: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_revive_session();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_set_store_scope_d1a959d9bbb2cc37: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).auth_set_store_scope(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_sign_out_a0016aea0d0e45e3: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_sign_out();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_auth_was_previously_signed_in_b48d5cee1faee41d: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).auth_was_previously_signed_in();
             return addHeapObject(ret);
         }, arguments); },
         __wbg_buffer_9e4d98d0766fb908: function(arg0) {
@@ -2722,28 +4558,118 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).byteOffset;
             return ret;
         },
-        __wbg_cache_delete_280efd040891e725: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        __wbg_cache_delete_dfc95014190b29e2: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             const ret = getObject(arg0).cache_delete(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_cache_get_908947e8d105cbba: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        __wbg_cache_delete_file_b1fb1f017213357a: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_delete_file(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_fetch_text_a0527558066cc0f3: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_fetch_text(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_find_folder_f3773a5f877a027c: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).cache_find_folder(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_get_228034dd8d0666f2: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             const ret = getObject(arg0).cache_get(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_cache_get_meta_997da6aaa52cbf9a: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_cache_get_e693c5bea748f30c: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).cache_get(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_get_file_cf91c68d95daa029: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_get_file(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_get_meta_646fc5bb8bc98f9f: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).cache_get_meta(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_cache_list_02aae335058375f7: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_cache_list_4f9f5c17f878805a: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).cache_list(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_cache_put_d6e55680cfeab06f: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
+        __wbg_cache_list_b59250b712c6142e: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_list(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_list_children_a06ef13345eb55a4: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_list_children(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_local_date_d32b882f4d0c1a27: function(arg0, arg1, arg2) {
+            const ret = getObject(arg1).cache_local_date(arg2);
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg_cache_meta_get_b5f4256d33a75e37: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_meta_get(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_meta_put_ef95201f76cc0939: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).cache_meta_put(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_move_file_3c412bc75551abf4: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
+            const ret = getObject(arg0).cache_move_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_priced_envelope_0b5aadaad0d155c8: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).cache_priced_envelope(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_priced_seed_081b8b64c9f7bb21: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).cache_priced_seed(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_put_11940809b51485b3: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
             const ret = getObject(arg0).cache_put(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getObject(arg5));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_cache_put_meta_85ffa8ade46665de: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        __wbg_cache_put_8da44f208243777a: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
+            const ret = getObject(arg0).cache_put(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getObject(arg5));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_put_meta_3cd20ea05c52f226: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = getObject(arg0).cache_put_meta(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_replay_shipment_710d6cb088903928: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).cache_replay_shipment(getObject(arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_seed_key_ce9eaa034832f98b: function(arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg1).cache_seed_key(getStringFromWasm0(arg2, arg3), getObject(arg4));
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg_cache_trash_file_1ce9efaa6dddd5ab: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).cache_trash_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_workspace_root_6b583c34940272a3: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).cache_workspace_root();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_ws_list_dir_c988e9d87b2619ca: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).cache_ws_list_dir(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_ws_read_file_58d764e875b2a7b4: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).cache_ws_read_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_cache_ws_write_file_22e3b19ee399618f: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+            const ret = getObject(arg0).cache_ws_write_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getStringFromWasm0(arg7, arg8));
             return addHeapObject(ret);
         }, arguments); },
         __wbg_call_5575218572ead796: function() { return handleError(function (arg0, arg1, arg2) {
@@ -2758,11 +4684,31 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).createSyncAccessHandle();
             return addHeapObject(ret);
         },
-        __wbg_current_user_email_50cd82993df612a1: function() { return handleError(function (arg0) {
+        __wbg_current_user_email_9d827465970c8274: function() { return handleError(function (arg0) {
             const ret = getObject(arg0).current_user_email();
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_dispatch_event_afd2853c97741bb1: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        __wbg_data_audit_append_f2428718bcf387cc: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
+            const ret = getObject(arg0).data_audit_append(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getStringFromWasm0(arg7, arg8), getObject(arg9), getObject(arg10));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_data_clear_fork_scan_212d75b0bfef11f9: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).data_clear_fork_scan(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_data_fork_read_jsonl_0e5a31d60392ee53: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).data_fork_read_jsonl(getStringFromWasm0(arg1, arg2), arg3 >>> 0);
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_data_io_user_email_f903db5d2d92c7aa: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).data_io_user_email();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_data_license_status_59c59cd03ee0de4a: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).data_license_status();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_dispatch_event_dd65d6d255bc8bb3: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = getObject(arg0).dispatch_event(getStringFromWasm0(arg1, arg2), getObject(arg3));
             return addHeapObject(ret);
         }, arguments); },
@@ -2770,35 +4716,35 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).done;
             return ret;
         },
-        __wbg_drive_bundle_target_2310d42a3b370f2d: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        __wbg_drive_bundle_target_2ed05a3815b0e7be: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             const ret = getObject(arg0).drive_bundle_target(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_changes_a0f936fe50b85e1d: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_drive_changes_1a1895873583c5ac: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).drive_changes(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_folder_kind_d575ca60c918aeb3: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_drive_folder_kind_24c3f7c1225cde06: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).drive_folder_kind(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_list_bundles_ef5f848c7aa1873d: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_drive_list_bundles_63961ec5851d4e60: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).drive_list_bundles(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_read_bundle_84cb76719bc82770: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        __wbg_drive_read_bundle_07045989551df6c4: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             const ret = getObject(arg0).drive_read_bundle(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_read_file_2921f2598c694c04: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_drive_read_file_c878d1ecaf383422: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).drive_read_file(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_start_page_token_3d7a5bd2f6ca8df2: function() { return handleError(function (arg0) {
+        __wbg_drive_start_page_token_78090cffc702e0b8: function() { return handleError(function (arg0) {
             const ret = getObject(arg0).drive_start_page_token();
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_drive_write_bundle_5c14f6394e5db556: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+        __wbg_drive_write_bundle_622fc9b2d1f11f02: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
             const ret = getObject(arg0).drive_write_bundle(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getStringFromWasm0(arg7, arg8));
             return addHeapObject(ret);
         }, arguments); },
@@ -2810,10 +4756,62 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).entries();
             return addHeapObject(ret);
         },
+        __wbg_events_emit_dae4fa6124fea242: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).events_emit(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_fill_36d0880093490529: function(arg0, arg1, arg2, arg3) {
             const ret = getObject(arg0).fill(arg1, arg2 >>> 0, arg3 >>> 0);
             return addHeapObject(ret);
         },
+        __wbg_flows_active_workspace_6e164c5ff073397f: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).flows_active_workspace();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_cas_upload_d29acbbb1261ed4c: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+            const ret = getObject(arg0).flows_cas_upload(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getStringFromWasm0(arg7, arg8));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_fetch_text_e3a0ca8683ab0773: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).flows_fetch_text(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_fsm_auto_advance_af2f270a96ac07b6: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).flows_fsm_auto_advance(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_fsm_register_b3fd41dcf82fea5f: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).flows_fsm_register(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_get_or_create_file_d43739d53583402b: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
+            const ret = getObject(arg0).flows_get_or_create_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_ledger_call_4a1f7b2127949b22: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).flows_ledger_call(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_license_arm_dbd2bec8d522be28: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).flows_license_arm(getStringFromWasm0(arg1, arg2), arg3);
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_mint_quote_ref_6aefed4435c53295: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).flows_mint_quote_ref(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_shipments_call_928f0d13a493aae2: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).flows_shipments_call(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_today_local_d46066f5a830002e: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).flows_today_local();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_flows_zip_download_84a8950fd83e5eb9: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).flows_zip_download(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_flush_93543a40f3947793: function() { return handleError(function (arg0) {
             getObject(arg0).flush();
         }, arguments); },
@@ -2903,6 +4901,62 @@ function __wbg_get_imports() {
             const ret = getObject(arg0)[arg1 >>> 0];
             return addHeapObject(ret);
         },
+        __wbg_get_with_ref_key_6412cf3094599694: function(arg0, arg1) {
+            const ret = getObject(arg0)[getObject(arg1)];
+            return addHeapObject(ret);
+        },
+        __wbg_governance_audit_append_dde6af3cdc45c97c: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+            const ret = getObject(arg0).governance_audit_append(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getObject(arg7));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_ledger_accounts_c3c3c749125ce3d4: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).governance_ledger_accounts();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_ledger_balance_32bf3911d6dd7ac2: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).governance_ledger_balance(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_membership_evidence_5f1d746691139199: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).governance_membership_evidence();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_sleep_dff2d00341d8d1a1: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).governance_sleep(arg1 >>> 0);
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_user_audit_write_4cca818a9b859ed3: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+            const ret = getObject(arg0).governance_user_audit_write(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getObject(arg5), getObject(arg6), getObject(arg7));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_users_get_dd23454a5072d363: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).governance_users_get(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_users_list_97ea354abd06e233: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).governance_users_list();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_users_remove_3ad2f652f3f7c34b: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).governance_users_remove(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_users_upsert_722c99ec30fa6a28: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).governance_users_upsert(getObject(arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_workspace_name_b3540785347b8cc6: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).governance_workspace_name();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_workspace_root_2f5cdf34e95ee758: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).governance_workspace_root();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_governance_workspace_try_8373c5747fa4aa45: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).governance_workspace_try(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_instanceof_ArrayBuffer_2a7bb09fee70c2da: function(arg0) {
             let result;
             try {
@@ -2975,24 +5029,56 @@ function __wbg_get_imports() {
             const ret = Symbol.iterator;
             return addHeapObject(ret);
         },
-        __wbg_ledger_append_leg_d9f64fcb8a356cab: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        __wbg_ledger_append_leg_57fe86db2d39dce4: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             const ret = getObject(arg0).ledger_append_leg(arg1 >>> 0, getStringFromWasm0(arg2, arg3), getObject(arg4));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ledger_get_chart_fca010e58263a587: function() { return handleError(function (arg0) {
+        __wbg_ledger_append_reconciliation_37e7aba20e882fa4: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).ledger_append_reconciliation(getObject(arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_append_repost_c30233176e8deaad: function() { return handleError(function (arg0, arg1) {
+            const ret = getObject(arg0).ledger_append_repost(getObject(arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_chart_of_accounts_388696b5cbc1a70b: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).ledger_chart_of_accounts();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_get_chart_6976a62f589b95e4: function() { return handleError(function (arg0) {
             const ret = getObject(arg0).ledger_get_chart();
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ledger_get_rules_6e174a7865b69b3f: function() { return handleError(function (arg0) {
+        __wbg_ledger_get_rules_9a61083d9bde9de5: function() { return handleError(function (arg0) {
             const ret = getObject(arg0).ledger_get_rules();
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ledger_is_posted_8c26ddd753b33cc2: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_ledger_is_posted_60c1f39400b1bcd6: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).ledger_is_posted(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ledger_record_posted_76cfbc8ee1382009: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+        __wbg_ledger_last_reconciliation_d2df4dc1cdfcd3a3: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).ledger_last_reconciliation();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_list_legs_f4b0445b364689c4: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).ledger_list_legs(arg1, getStringFromWasm0(arg2, arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_posting_rules_5b0f0e74d5695efc: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).ledger_posting_rules();
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_record_posted_0aa9056034c53243: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = getObject(arg0).ledger_record_posted(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_remove_entry_66c30b01374d1e09: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).ledger_remove_entry(arg1, getStringFromWasm0(arg2, arg3));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_ledger_replace_leg_65678954625e3272: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).ledger_replace_leg(arg1, getStringFromWasm0(arg2, arg3), getObject(arg4));
             return addHeapObject(ret);
         }, arguments); },
         __wbg_length_589238bdcf171f0e: function(arg0) {
@@ -3007,11 +5093,14 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).localStorage;
             return isLikeNone(ret) ? 0 : addHeapObject(ret);
         }, arguments); },
+        __wbg_log_190abd8adeceead9: function(arg0, arg1) {
+            console.log(getStringFromWasm0(arg0, arg1));
+        },
+        __wbg_log_1c95b7def501e544: function(arg0, arg1, arg2, arg3, arg4) {
+            getObject(arg0).log(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+        },
         __wbg_log_6b5af08dd293697f: function(arg0) {
             console.log(getObject(arg0));
-        },
-        __wbg_log_ad36e940a81b7334: function(arg0, arg1) {
-            console.log(getStringFromWasm0(arg0, arg1));
         },
         __wbg_message_6fc0a1f59fcc247b: function(arg0) {
             const ret = getObject(arg0).message;
@@ -3060,7 +5149,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10701(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_15667(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -3078,7 +5167,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return __wasm_bindgen_func_elem_10701(a, state0.b, arg0, arg1);
+                        return __wasm_bindgen_func_elem_15667(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -3113,8 +5202,20 @@ function __wbg_get_imports() {
             const ret = Date.now();
             return ret;
         },
+        __wbg_now_ms_47ba08813a289a90: function(arg0) {
+            const ret = getObject(arg0).now_ms();
+            return ret;
+        },
         __wbg_parse_1f9d3f9cbc8a7da2: function() { return handleError(function (arg0, arg1) {
             const ret = JSON.parse(getStringFromWasm0(arg0, arg1));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_prefs_get_863c360447cb4e9f: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).prefs_get(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_prefs_set_de62d83c66097065: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).prefs_set(getStringFromWasm0(arg1, arg2), getObject(arg3));
             return addHeapObject(ret);
         }, arguments); },
         __wbg_prototypesetcall_d721637c7ca66eb8: function(arg0, arg1, arg2) {
@@ -3139,10 +5240,38 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).read(getObject(arg1), getObject(arg2));
             return ret;
         }, arguments); },
+        __wbg_records_delete_2455598d9bd55bd3: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).records_delete(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_records_get_8f893fe3bf03fd20: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+            const ret = getObject(arg0).records_get(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_records_get_meta_e16b2a708051f3a0: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).records_get_meta(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_records_list_6f8bca23b9307db6: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).records_list(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_records_put_7e2b2ce5af828871: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5) {
+            const ret = getObject(arg0).records_put(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getObject(arg5));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_records_put_meta_22e7c87c55ec6f07: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).records_put_meta(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_resolve_d82363d90af6928a: function(arg0) {
             const ret = Promise.resolve(getObject(arg0));
             return addHeapObject(ret);
         },
+        __wbg_session_current_user_c1df46fab79849ca: function() { return handleError(function (arg0) {
+            const ret = getObject(arg0).session_current_user();
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_setItem_ab73a1e4497df37e: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             getObject(arg0).setItem(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
         }, arguments); },
@@ -3203,6 +5332,36 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).subarray(arg1 >>> 0, arg2 >>> 0);
             return addHeapObject(ret);
         },
+        __wbg_sync_crypto_secure_a44ab6e158a26f01: function(arg0) {
+            const ret = getObject(arg0).sync_crypto_secure();
+            return ret;
+        },
+        __wbg_sync_sha256_hex_810dc7f275f96451: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).sync_sha256_hex(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_sync_today_local_26b0b592d0dbb75c: function(arg0, arg1) {
+            const ret = getObject(arg1).sync_today_local();
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg_sync_token_991745b6b47a4c8f: function(arg0, arg1) {
+            const ret = getObject(arg1).sync_token();
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
+        __wbg_sync_wma_get_561fc930d98cbd76: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = getObject(arg0).sync_wma_get(getStringFromWasm0(arg1, arg2));
+            return addHeapObject(ret);
+        }, arguments); },
+        __wbg_sync_wma_put_bfc692b74372b25a: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).sync_wma_put(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_then_05edfc8a4fea5106: function(arg0, arg1, arg2) {
             const ret = getObject(arg0).then(getObject(arg1), getObject(arg2));
             return addHeapObject(ret);
@@ -3225,6 +5384,10 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).value;
             return addHeapObject(ret);
         },
+        __wbg_workspace_call_c4c6294e0aab008c: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+            const ret = getObject(arg0).workspace_call(getStringFromWasm0(arg1, arg2), getObject(arg3));
+            return addHeapObject(ret);
+        }, arguments); },
         __wbg_write_0d7b7d5ddb95d78a: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = getObject(arg0).write(getArrayU8FromWasm0(arg1, arg2), getObject(arg3));
             return ret;
@@ -3233,30 +5396,30 @@ function __wbg_get_imports() {
             const ret = getObject(arg0).write(getObject(arg1), getObject(arg2));
             return ret;
         }, arguments); },
-        __wbg_ws_delete_file_7657389d27e60ab3: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_ws_delete_file_40f450fc278b8fb3: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).ws_delete_file(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ws_list_dir_64a03480f0408186: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_ws_list_dir_5b7adf4377bf5da3: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = getObject(arg0).ws_list_dir(getStringFromWasm0(arg1, arg2));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ws_read_file_70cda029de067e58: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
+        __wbg_ws_read_file_95b6fbe3a6dd6d26: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
             const ret = getObject(arg0).ws_read_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
             return addHeapObject(ret);
         }, arguments); },
-        __wbg_ws_write_file_dd9dfdf05d1784d6: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
+        __wbg_ws_write_file_64eb5c08ebf877fc: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) {
             const ret = getObject(arg0).ws_write_file(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4), getStringFromWasm0(arg5, arg6), getStringFromWasm0(arg7, arg8), getStringFromWasm0(arg9, arg10));
             return addHeapObject(ret);
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 1845, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_10690);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 2694, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_15656);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 1295, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_7862);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 2144, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, __wasm_bindgen_func_elem_12828);
             return addHeapObject(ret);
         },
         __wbindgen_cast_0000000000000003: function(arg0) {
@@ -3293,14 +5456,14 @@ function __wbg_get_imports() {
     };
 }
 
-function __wasm_bindgen_func_elem_7862(arg0, arg1) {
-    wasm.__wasm_bindgen_func_elem_7862(arg0, arg1);
+function __wasm_bindgen_func_elem_12828(arg0, arg1) {
+    wasm.__wasm_bindgen_func_elem_12828(arg0, arg1);
 }
 
-function __wasm_bindgen_func_elem_10690(arg0, arg1, arg2) {
+function __wasm_bindgen_func_elem_15656(arg0, arg1, arg2) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        wasm.__wasm_bindgen_func_elem_10690(retptr, arg0, arg1, addHeapObject(arg2));
+        wasm.__wasm_bindgen_func_elem_15656(retptr, arg0, arg1, addHeapObject(arg2));
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         if (r1) {
@@ -3311,8 +5474,8 @@ function __wasm_bindgen_func_elem_10690(arg0, arg1, arg2) {
     }
 }
 
-function __wasm_bindgen_func_elem_10701(arg0, arg1, arg2, arg3) {
-    wasm.__wasm_bindgen_func_elem_10701(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
+function __wasm_bindgen_func_elem_15667(arg0, arg1, arg2, arg3) {
+    wasm.__wasm_bindgen_func_elem_15667(arg0, arg1, addHeapObject(arg2), addHeapObject(arg3));
 }
 
 const CustomerIndexFinalization = (typeof FinalizationRegistry === 'undefined')

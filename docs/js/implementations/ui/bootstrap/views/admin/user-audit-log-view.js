@@ -2,11 +2,11 @@
 // admin/user-audit-log.jsonl with date-range filter + CSV export. Wired to UserAuditLog (F-24-06
 // sync/user-audit-log.js), same DI-off-window convention as users-view.js.
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
-import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../../../freight_app/operators/manager/user-audit-log-composer.js';
+import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
 function getUserAuditLog() { return window.__vdg_user_audit_log; }

@@ -3,13 +3,13 @@
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 import { buildShipment, deriveDirection } from './shipment-builder.js';
-import { ensureShipmentStateAliases } from '../../../../freight_app/core_abstractions/ports/shipment-state-aliases.js';
-import { registerFsmEntity } from '../../../../freight_app/core_abstractions/ports/fsm-ingest.js';
-import { autoAdvanceShipment } from '../../../../freight_app/operators/fsm-auto-advance.js';
-import { ensureRepCode } from '../../../../freight_app/core_abstractions/ports/rep-code-registry.js';
-import { assignJobNo } from '../../../../freight_app/operators/job-no-gen.js';
-import { pnlLineId, deletePnlLinesFor } from '../../../../freight_app/core_abstractions/pnl-line-id.js';
-import { putShipment, deleteShipment, getEnvelope, listEnvelopes } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { pnlLineId, deletePnlLinesFor } from '../../../core_abstractions/ports/data/pnl-line-id.js';
+import { putShipment, deleteShipment, getEnvelope, listEnvelopes } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { ensureShipmentStateAliases } from '../../../core_abstractions/ports/flows/shipment-state-aliases.js';
+import { registerFsmEntity } from '../../../core_abstractions/ports/flows/fsm-ingest.js';
+import { autoAdvanceShipment } from '../../../core_abstractions/ports/flows/fsm-auto-advance.js';
+import { ensureRepCode } from '../../../core_abstractions/ports/flows/rep-code-registry.js';
+import { assignJobNo } from '../../../core_abstractions/ports/flows/job-no-gen.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
 const KIND_USER = 'user';
@@ -303,6 +303,6 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
  * asks where the invoice is.
  */
 async function _handOverToAccounting(repo, shipment) {
-  const { publishBilling } = await import('../../../../freight_app/operators/data/billing-publish-repo.js');
+  const { publishBilling } = await import('../../../core_abstractions/ports/data/billing-publish-repo.js');
   await publishBilling(repo, shipment, {});
 }

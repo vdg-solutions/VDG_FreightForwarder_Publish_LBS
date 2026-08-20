@@ -10,8 +10,8 @@ import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstracti
 
 const CHART_FILE_NAME          = 'chart-of-accounts.json';
 const POSTING_RULES_FILE_NAME  = 'posting-rules.json';
-const CHART_SEED_URL           = 'js/implementations/freight_app/operators/data/ledger-seed/chart-of-accounts.json';
-const POSTING_RULES_SEED_URL   = 'js/implementations/freight_app/operators/data/ledger-seed/posting-rules.json';
+const CHART_SEED_URL           = 'js/implementations/storage/implementations/drive/ledger-seed/chart-of-accounts.json';
+const POSTING_RULES_SEED_URL   = 'js/implementations/storage/implementations/drive/ledger-seed/posting-rules.json';
 const RECONCILIATION_LOG_FILE  = 'reconciliation-log.jsonl';
 const REPOST_LOG_FILE          = 'repost-log.jsonl';
 

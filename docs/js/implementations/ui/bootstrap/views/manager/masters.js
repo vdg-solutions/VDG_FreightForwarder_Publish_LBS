@@ -1,10 +1,10 @@
 // Manager Master Data Management — F-14-10
 
 import '../../components/dup-wizard.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }       from '../../router.js';
-import { findMatch }      from '../../../../freight_app/core_abstractions/master-deduper.js';
+import { findMatch }      from '../../../core_abstractions/ports/cache/master-deduper.js';
 import { showConfirm }    from '../../helpers/show-confirm.js';
 import { t }              from '../../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';

@@ -5,11 +5,11 @@ import { t, currentLocale }  from '../../../../kernel/core_abstractions/i18n/ind
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import {
   groupChartByType, filterLegs, computeRunningBalances, buildLedgerCSV,
-} from '../../../../freight_app/operators/manager/ledger-composer.js';
+} from '../../../core_abstractions/ports/manager/ledger-composer.js';
 import { renderReconcileStatus, runReconciliationNow } from './ledger-reconcile-control.js';
 import { loadOpeningBalance, openingRowHtml } from './ledger-opening-balance.js';
-import { currentUserRole } from '../../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { currentUserRole } from '../../../core_abstractions/ports/governance/route-guard.js';
 import { mountRepostPanelIfReady } from './ledger-repost-panel.js';
 import { refreshReverseControl, renderReversalBadge, bindLegRowInteractions } from './ledger-reverse-control.js';
 import { renderUnbalancedList } from './ledger-viewer-unbalanced.js';

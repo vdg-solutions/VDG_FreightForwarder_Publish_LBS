@@ -1,8 +1,8 @@
 // F-33-01 — In-app user guide, 3 role pages (manager / accountant / sales)
 
-import { hasRole } from '../../../freight_app/core_abstractions/session-roles.js';
-import { currentUserRole } from '../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../../../ui/core_abstractions/roles.js';
+import { currentUserRole } from '../../core_abstractions/ports/governance/route-guard.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { mdToHtml } from './help-md.js';
 

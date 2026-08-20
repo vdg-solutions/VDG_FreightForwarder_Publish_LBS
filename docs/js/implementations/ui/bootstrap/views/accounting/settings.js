@@ -9,19 +9,18 @@
 // seeds each line's currency select. No arithmetic reads it — every conversion is per line and
 // every total is in VND — so this is a starting point, not a control over money.
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER, ROLE_ACCOUNTANT } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER, ROLE_ACCOUNTANT } from '../../../../ui/core_abstractions/roles.js';
 import { navigate } from '../../router.js';
-import { t }        from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
-import { loadWorkspaceSettings, saveWorkspaceSettings, DEFAULT_CURRENCY_FIELD }
-  from '../../../../freight_app/operators/manager/workspace-settings.js';
+import { loadWorkspaceSettings, saveWorkspaceSettings, DEFAULT_CURRENCY_FIELD } from '../../../core_abstractions/ports/governance/workspace-settings.js';
 import { LINE_CURRENCY_OPTIONS, DEFAULT_HEADER_CURRENCY } from '../sales-new-form/pnl-line-fx.js';
 import { safeMasterLoad } from '../../../../kernel/core_abstractions/util/master-load.js';
+import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
 import { canEditDefaultCurrency, periodOf, LOCK_REASON_PERIOD_CLOSED }
-  from '../../../../freight_app/operators/manager/default-currency-lock.js';
-import { getCurrentPeriodLock } from '../../../../freight_app/operators/manager/period-close-orchestrator.js';
-import { listShipments } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
+  from '../../../core_abstractions/ports/governance/default-currency-lock.js';
+import { getCurrentPeriodLock } from '../../../core_abstractions/ports/governance/period-close.js';
 
 const TOAST_MS = 4_000;
 

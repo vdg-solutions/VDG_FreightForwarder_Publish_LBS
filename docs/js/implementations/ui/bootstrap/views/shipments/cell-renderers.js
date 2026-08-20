@@ -4,10 +4,10 @@
 // that draws or acts on a single ROW lives here.
 
 import { t, fmtNumber } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
-import { chooseShipmentAffordance, runShipmentAffordance } from '../../../../freight_app/operators/shipment-void-delete.js';
+import { chooseShipmentAffordance, runShipmentAffordance } from '../../../core_abstractions/ports/flows/shipment-void-delete.js';
 
 export function statusRenderer(params) {
   const el = document.createElement('status-badge');

@@ -3,7 +3,7 @@
 // views/manager/masters/shipment-states.js's canWrite()-gated migration section.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { planRepost, applyRepost, purgeOrphans } from '../../../../freight_app/operators/manager/ledger-repost.js';
+import { planRepost, applyRepost, purgeOrphans } from '../../../core_abstractions/ports/manager/ledger-repost.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 
 const REPOST_YEAR = new Date().getFullYear();

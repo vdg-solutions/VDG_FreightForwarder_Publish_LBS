@@ -13,7 +13,7 @@
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 // The role labels already exist and are pinned to the Rust enum by role-catalog-parity; a second
 // `role.*` key family here would be a second place to forget a role.
-import { ROLE_LABEL_KEYS } from '../../../freight_app/operators/manager/users-view-composer.js';
+import { ROLE_LABEL_KEYS } from '../../core_abstractions/ports/manager/users-view-composer.js';
 
 export const PHASE_FOCUS_EVENT = 'vdg:phase-focus';
 // E-40 (F-40-03): a requirement row is a DOOR, not a caption — clicking it announces the

@@ -2,11 +2,11 @@
 // Route: /masters/local-charges
 // Sales tra cứu biểu phí local charge theo hãng tàu; tên Việt, VAT kép, search alias.
 
-import { runSeedMigrations } from '../../../../../freight_app/core_abstractions/ports/seed-migrator.js';
+import { runSeedMigrations } from '../../../../core_abstractions/ports/cache/seed-migrator.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
-import { currentUserRole } from '../../../../../freight_app/operators/manager/route-guard.js';
-import { readSettings, SECOND_EYES_FIELD } from '../../../../../freight_app/operators/manager/workspace-settings.js';
-import { MASTER_REGISTRY } from '../../../../../freight_app/core_abstractions/master-registry.js';
+import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
+import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
+import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { openModal, statusLabels } from './local-charges-modal.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
@@ -71,7 +71,7 @@ function uomLabel(u) {
 // (window.__vdg_current_user.role via currentUserRole()) — QA simulates a non-maintainer by
 // overriding that one boot field, never the private auth-gate _resolvedRole.
 function canWrite(role) {
-  return MASTER_REGISTRY[KIND].writers.includes(role);
+  return canWriteMaster(KIND, role);
 }
 
 function rowHtml(c, unitLabel, carrierLabel, isEditor) {

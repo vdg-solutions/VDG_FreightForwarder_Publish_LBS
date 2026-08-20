@@ -1,12 +1,10 @@
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate } from '../router.js';
-import { hasRole, ROLES_RESOLVED_EVENT } from '../../../freight_app/core_abstractions/session-roles.js';
+import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole } from '../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE } from '../../../freight_app/core_abstractions/roles.js';
-import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed,
-         toggleCollapsed, isGroupCollapsed, activeGroupKey,
-         DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
+import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
+import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole } from '../../core_abstractions/ports/governance/route-guard.js';
+import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed, toggleCollapsed, isGroupCollapsed, activeGroupKey, DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
 
 const DRAWER_BREAKPOINT_PX = 768;
 const V1_BUTTON_COUNT      = 5;   // AC-01/02 invariant
@@ -281,7 +279,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 8009238">v0.3.79</span>
+        <span class="font-mono whitespace-nowrap" title="build fddaca8">v0.3.80</span>
       </div>
     `;
   }

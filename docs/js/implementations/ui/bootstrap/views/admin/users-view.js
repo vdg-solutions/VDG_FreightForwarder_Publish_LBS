@@ -1,11 +1,11 @@
 // Admin Users view — F-24-04. Manager-only /admin/users: table + filter/search + Add/Edit/
 // Deactivate, wired to UserRepoPort (F-24-02) + RoleAssignmentService (F-24-03).
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
-import { filterUsers, sortUsersByEmail } from '../../../../freight_app/operators/manager/users-view-composer.js';
+import { filterUsers, sortUsersByEmail } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { filterBarHtml, renderUsersTable, renderUsersSkeleton, bindRowActions } from './users-list.js';
 import { openAddUserModal }  from './user-add-modal.js';
 import { openEditUserModal } from './user-edit-modal.js';

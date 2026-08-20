@@ -5,11 +5,13 @@
 // licence check (reverifyPersistedLicense needs it) — this was a latent hang on the
 // NOT_PROVISIONED branch before F-17-03 reordered it.
 
-import { currentSalesRepId, currentRoles, hasRole } from '../../implementations/freight_app/core_abstractions/session-roles.js';
+import { currentSalesRepId, currentRoles, hasRole } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
 import { emailPrefix } from '../../implementations/kernel/core_abstractions/util/email-prefix.js';
-import { ROLE_MANAGER } from '../../implementations/freight_app/core_abstractions/roles.js';
+import { ROLE_MANAGER } from '../../implementations/ui/core_abstractions/roles.js';
 import { safeAwait } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
+import { createPlatform } from '../platform/index.js';
+import { composeUi } from '../compose-ui/index.js';
 import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
 import { bindLedgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 
@@ -23,14 +25,12 @@ function _forkPrefixFromSession() {
   return token && !SENTINEL_TOKEN.test(token) ? token.toLowerCase() : null;
 }
 import { setStoreScope, localStore } from '../../implementations/storage/core_abstractions/local-store.js';
-import { resolveUserRole } from '../../implementations/freight_app/operators/manager/route-guard.js';
+import { resolveUserRole } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { loadLocale } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { APP_VERSION } from '../../implementations/kernel/core_abstractions/version.js';
-import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
-import { LicenseGate, prefsLicenseStore } from '../../implementations/freight_app/operators/license-gate.js';
 import { runLicenseGate } from './license-boot-gate.js';
-import { globalizeBridgeExports } from '../../implementations/freight_app/implementations/wasm-loader.js';
-import { rehydrateFsmStates } from '../../implementations/freight_app/core_abstractions/ports/fsm-ingest.js';
+import { globalizeBridgeExports } from './wasm-loader.js';
+import { rehydrateFsmStates } from '../../implementations/ui/core_abstractions/ports/flows/fsm-ingest.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
 import { deferredManagerInit } from './repo-init-manager.js';
@@ -126,10 +126,6 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // the port through here.
   window.__vdg_io        = ioPort;
 
-  // F-19-88 AC-04/05: rehydrate the WASM FSM map from the repo (reload + pre-existing
-  // rollback orphans) — non-fatal bound so a large shipment list never hangs boot.
-  await safeAwait(rehydrateFsmStates(repo), IDB_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
-
   // 6. Initial user identity (no network, instant)
   // #28: identity carries the ROLE SET. `role` stays as roles[0] purely so older readers and
   // existing ledger records keep parsing — nothing gates on it any more.
@@ -143,12 +139,22 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
     user_prefix: emailPrefix(user.email),
   };
 
+  // 6b. The Rust freight_app use-cases get their platform (records over the repo, session, prefs,
+  // events, workspace, http), and every ui port is bound to a wasm export — before any view renders.
+  wasmMod.freight_app_init(createPlatform({ repo, currentUser: () => window.__vdg_current_user || null }));
+  composeUi(wasmMod);
+
+  // F-19-88 AC-04/05: rehydrate the WASM FSM map from the repo (reload + pre-existing
+  // rollback orphans) — non-fatal bound so a large shipment list never hangs boot. It runs
+  // AFTER the platform and the ui ports are wired: the sweep is a use-case now, and a
+  // use-case has nothing to read the repo through until freight_app_init has happened.
+  await safeAwait(rehydrateFsmStates(repo), IDB_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
+
   // 7. License gate — enforced for EVERY role, no branch (AC-01..07).
   fsm.dispatch(BootEvent.REPO_BUILT); // repo stack live → GATING_LICENSE
   stepRef.value = STEP_LICENSE_GATE;
-  const gate = new LicenseGate(prefsLicenseStore(localStore()));
   const app  = document.getElementById('app');
-  const gateResult = await runLicenseGate({ gate, container: app });
+  const gateResult = await runLicenseGate({ container: app });
   if (!gateResult.proceed) { fsm.dispatch(BootEvent.LICENSE_GATE); return null; } // gate screen owns the DOM
 
   // 8. RENDER — everything past this point is non-blocking
@@ -158,7 +164,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   fsm.dispatch(BootEvent.RENDERED); // → READY (terminal): real view owns the DOM now
 
   // 9. Deferred init (fire-and-forget)
-  _deferredInit(user, db, driveApi, repo, ioPort);
+  _deferredInit(user, db, driveApi, repo);
 
   return { db, poller: null, auditLog: null };
 }
@@ -167,7 +173,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
 // Runs after bootFn → view is already rendered.
 // Errors are logged, never crash the app.
 
-async function _deferredInit(user, db, driveApi, repo, ioPort) {
+async function _deferredInit(user, db, driveApi, repo) {
   const store = localStore();
   try {
     // Locale from user prefs (may switch from 'vi' to user pref)
@@ -180,59 +186,46 @@ async function _deferredInit(user, db, driveApi, repo, ioPort) {
       if (locale !== 'vi') await loadLocale(locale);
     }
 
-    // Delta tick — thin timer over the WASM delta engine (repo.sync_delta). All sync
-    // decisions live in Rust (data_repo/sync_delta.rs).
-    const { DeltaTick } = await import('../../implementations/freight_app/operators/sync/delta-tick.js');
-    const deltaTick = new DeltaTick(driveApi, () => repo);
-    deltaTick.start();
-
-    // Outbox drain scheduler (F-19-80 AC-01/03/09) — wires vdg:sync-now / vdg:sync-force-retry
-    // / online / a bounded backoff interval to repo.drain_outbox(); without this the manual
-    // "Đồng bộ" click and post-reconnect resume dispatched into the void.
-    const { startOutboxDrainScheduler } = await import('../../implementations/freight_app/operators/sync/outbox-drain-scheduler.js');
-    startOutboxDrainScheduler({ getRepo: () => repo });
+    // Delta tick + outbox drain — thin timers over data_repo's engine (repo.sync_delta /
+    // repo.drain_outbox). Every schedule decision (interval, backoff, pause, the hourly quota
+    // piggyback) lives in Rust (freight_app/operators/sync). Without the drain wiring the manual
+    // "Đồng bộ" click and the post-reconnect resume dispatched into the void (F-19-80).
+    const { startDeltaTick, startOutboxDrain } = await import('../platform/sync-schedulers.js');
+    startDeltaTick({ getRepo: () => repo });
+    startOutboxDrain({ getRepo: () => repo });
 
     // Audit log. F-37-02: the instance used to be constructed and dropped on the floor — nothing
     // held it, `runRepoInitBounded` returned auditLog: null, and every `_auditLog?.append(...)`
     // in role-assignment-service optional-chained into nothing. The trail was empty by
     // construction, which is indistinguishable from a workspace where nobody ever changed a role.
-    const { AuditLog } = await import('../../implementations/freight_app/operators/sync/audit-log.js');
-    window.__vdg_audit_log = new AuditLog(
-      () => window.__vdg_auth?.getCurrentUser?.(),
-      () => currentSalesRepId(),
-    );
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import('../platform/sync-trails.js');
+    window.__vdg_audit_log = createAuditLog({
+      getUser: () => window.__vdg_auth?.getCurrentUser?.(),
+      getRole: () => currentSalesRepId(),
+    });
 
     // Master-scope migration (F-28-02): local-charges/units-of-measure flipped to team
     // audience — sweep each user's stranded per-user records into shared once, guarded by
     // an IDB meta flag. Fire-and-forget: bounded internally by safeAwait, never blocks boot.
-    const { migrateMasterScope } = await import('../../implementations/freight_app/operators/cache/master-scope-migrator.js');
-    const masterScopePrefix = user.email.split('@')[0].toLowerCase();
-    migrateMasterScope(
-      repo, driveApi, store,
-      () => driveApi.findWorkspaceRoot(activeWorkspaceName()), masterScopePrefix,
-    ).catch((err) => console.warn('[VDG] master-scope migration error:', err.message)); // DEV
+    wasmMod.cache_migrate_master_scope({})
+      .catch((err) => console.warn('[VDG] master-scope migration error:', err.message)); // DEV
 
-    // Error log
-    const { initErrorLog } = await import('../../implementations/freight_app/operators/sync/error-log.js');
-    initErrorLog(driveApi, () => window.__vdg_auth?.getCurrentUser?.(), () => APP_VERSION);
+    // Error log — browser hooks here, both bounds (no writes while auth is dead, the per-session
+    // cap) in Rust.
+    installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
 
     // Storage upkeep (error-log retention, per-record bundle explode, re-grant after a move) —
-    // all fire-and-forget. `ioPort` has to reach here for real: this used to name a variable that
-    // did not exist in this scope, so every boot logged "maintenance skipped: ioPort is not
-    // defined" and none of it ever ran on the deploy.
+    // all fire-and-forget. The per-record sweep reaches the workspace tree through the freight_app
+    // platform now, so nothing but the Drive api has to be threaded down here.
     import('./maintenance.js')
-      .then((m) => m.runBootMaintenance(driveApi, ioPort))
+      .then((m) => m.runBootMaintenance(driveApi))
       .catch((err) => console.warn('[VDG] boot maintenance skipped:', err.message)); // DEV
 
     // Payment due-soon checker (F-48-01) — tier 3/4 main-thread badge/notify, one shared
     // compute_due_soon call, 100% local (no Drive/token). Tiers 1/2 registration lives in
     // sw-register.js (already wired at boot's service-worker registration call).
-    const { initDueSoonChecker } = await import('../../implementations/freight_app/operators/sync/due-soon-checker.js');
-    initDueSoonChecker();
-
-    // Drive root resolution is still needed by the ACL/provisioning services below — those
-    // administer Drive itself. The DATA repos take nothing: they read the WASM store.
-    const findWorkspaceRoot = () => driveApi.findWorkspaceRoot(activeWorkspaceName());
+    const { startDueSoonChecker } = await import('../platform/sync-due-soon.js');
+    startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
 
     const { LedgerDriveRepo } = await import('../../implementations/storage/implementations/drive/ledger-drive-repo.js');
     const ledgerRepo = new LedgerDriveRepo();
@@ -251,28 +244,31 @@ async function _deferredInit(user, db, driveApi, repo, ioPort) {
     // Priced-ref boot migration (F-28-14(d)): materialize each priced master bundle into its
     // governance ref once so the two stores stop diverging (F-28-12 D-2). Fire-and-forget:
     // bounded internally by safeAwait, idempotency keyed off the shared state.json — never blocks boot.
-    const { migratePricedRefs } = await import('../../implementations/freight_app/operators/cache/priced-ref-migrator.js');
-    migratePricedRefs(repo, window.__vdg_priced_repos)
+    wasmMod.cache_migrate_priced_refs({})
       .catch((err) => console.warn('[VDG] priced-ref migration error:', err.message)); // DEV
 
-    const { UserAuditLog } = await import('../../implementations/freight_app/operators/sync/user-audit-log.js');
-    const userAuditLog = new UserAuditLog(
-      () => window.__vdg_auth?.getCurrentUser?.(),
-    );
+    const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
 
     const { UserDriveRepo } = await import('../../implementations/storage/implementations/drive/user-drive-repo.js');
     const userRepo = new UserDriveRepo(userAuditLog);
     window.__vdg_user_repo = userRepo;
 
-    const { RoleAssignmentService } = await import('../../implementations/freight_app/operators/manager/role-assignment-service.js');
-    // #30: the last arg names the workspace, which goes into each user's grant file so a person
-    // working for two companies can tell their two grants apart. Injected, not imported — the
-    // service stays clear of the workspace-registry → drive-api → google-oauth chain.
-    window.__vdg_role_assignment_service = new RoleAssignmentService(
-      driveApi, userRepo, findWorkspaceRoot, window.__vdg_audit_log || null,
-      userAuditLog, null, activeWorkspaceName,
-    );
+    // #30: the role cascade is a Rust use-case (governance/role_assignment.rs) reached through
+    // the wasm exports; the global stays because the admin screens ask for it by name. Every
+    // collaborator it needs — the roster, the audit trails, the workspace tree — is on the
+    // platform object, so nothing is injected here.
+    window.__vdg_role_assignment_service = {
+      assignRole: (email, role, userPrefix = null, extraRoles = []) => _governance(
+        wasm().governance_assign_role({ email, role, user_prefix: userPrefix, extra_roles: extraRoles })),
+      changeRole: (user, newRole, newUserPrefix = null, newExtraRoles = null) => _governance(
+        wasm().governance_change_role({
+          user, new_role: newRole, new_user_prefix: newUserPrefix, new_extra_roles: newExtraRoles,
+        })),
+      revokeRole: (email, role, userPrefix = null) => _governance(
+        wasm().governance_revoke_role({ email, role, user_prefix: userPrefix })),
+      backfillGrants: () => _governance(wasm().governance_backfill_grants({})),
+    };
     // #25: this wiring lands in the DEFERRED step, long after the router may have rendered
     // #/admin/users on a deep link — that view read a null repo and sat at 0/0 forever. Announce it
     // so a screen that mounted too early can load itself once the services actually exist.
@@ -303,3 +299,14 @@ async function _deferredInit(user, db, driveApi, repo, ioPort) {
   }
 }
 
+/// The wasm module the boot loaded. Reached by name because the deferred chain runs long after
+/// the module reference went out of scope.
+function wasm() { return window.__vdg_wasm; }
+
+/// A governance reply carries its failure inside it; the admin screens expect a throw, so this is
+/// where the two meet.
+async function _governance(pending) {
+  const reply = await pending;
+  if (reply?.error) throw new Error(reply.error);
+  return reply;
+}

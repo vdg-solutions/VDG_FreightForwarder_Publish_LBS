@@ -2,8 +2,8 @@
 
 import '../../components/kanban-board.js';
 import { VALID_NEXT } from '../../components/kanban-board.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';

@@ -2,12 +2,12 @@
 // Route: /masters/units-of-measure
 // Sales-friendly: hiển thị label_vi + aliases; mã ISO 6346 chỉ ở cột phụ mờ.
 
-import { hasRole } from '../../../../../freight_app/core_abstractions/session-roles.js';
-import { currentUserRole } from '../../../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_MANAGER } from '../../../../../freight_app/core_abstractions/roles.js';
-import { MASTER_REGISTRY } from '../../../../../freight_app/core_abstractions/master-registry.js';
+import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
+import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
+import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { runSeedMigrations } from '../../../../../freight_app/core_abstractions/ports/seed-migrator.js';
+import { runSeedMigrations } from '../../../../core_abstractions/ports/cache/seed-migrator.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { genUnitId, validateUnit, checkCodeUnique } from '../../../../../kernel/core_abstractions/util/uom-validators.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
@@ -41,7 +41,7 @@ function categoryLabels() {
 // F-28-08: registry-driven writer gate — mirrors app.js/sidebar.js's effectiveRole pattern.
 function canWrite() {
   const role = hasRole(ROLE_MANAGER) ? ROLE_MANAGER : currentUserRole();
-  return MASTER_REGISTRY[KIND].writers.includes(role);
+  return canWriteMaster(KIND, role);
 }
 
 function buildModal(entity) {

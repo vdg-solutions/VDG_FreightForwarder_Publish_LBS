@@ -4,6 +4,8 @@
 // at "Đang tải…"/"Loading...". No page-specific logic lives here.
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from './safe-await.js';
+import { fetchText } from '../ports/http.js';
+import { nowMs } from '../ports/clock.js';
 
 const RETRY_BTN_ID = 'master-load-retry-btn';
 
@@ -25,18 +27,18 @@ export function boundedList(repo, kind, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
 export async function boundedSeedIfEmpty(repo, kind, seedUrl, items, genId, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
   if (items.length > 0) return items;
   const res = await safeMasterLoad(async () => {
-    const fetchRes = await fetch(seedUrl);
-    if (!fetchRes.ok) return items;
-    const lines = (await fetchRes.text()).trim().split('\n').filter(Boolean);
+    const text = await fetchText(seedUrl);
+    if (text == null) return items;
+    const lines = text.trim().split('\n').filter(Boolean);
     const seeded = [];
     // AC-04: loop-level deadline so a stalled repo.put can't keep the inner loop churning
     // detached after the outer safeMasterLoad race has already returned at _ms.
-    const _deadline = Date.now() + _ms;
+    const _deadline = nowMs() + _ms;
     for (const line of lines) {
-      if (Date.now() >= _deadline) break;
+      if (nowMs() >= _deadline) break;
       const entry = JSON.parse(line);
       if (!entry.id) entry.id = genId(entry);
-      const putRes = await safeAwait(repo.put(kind, entry.id, entry), Math.max(0, _deadline - Date.now()), null, `${tag}:put`);
+      const putRes = await safeAwait(repo.put(kind, entry.id, entry), Math.max(0, _deadline - nowMs()), null, `${tag}:put`);
       if (!putRes.ok) continue; // stalled write — skip row, retry next load
       seeded.push(entry);
     }

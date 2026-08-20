@@ -1947,5 +1947,13 @@
   "sales_new.direction_option.import": "Import",
   "sales_new.validation.no_direction": "Trade direction not selected",
   "settings.default_currency.locked_in_period": "This period already carries {n} job(s) — the default currency is frozen until the next one",
-  "settings.default_currency.locked_closed": "The period is closed — it takes no policy changes"
+  "settings.default_currency.locked_closed": "The period is closed — it takes no policy changes",
+  "master_merge.title": "Merge {kind}",
+  "master_merge.target": "Target (keep)",
+  "master_merge.source": "Source (delete)",
+  "master_merge.confirm": "Merge",
+  "master_merge.cancel": "Cancel",
+  "master_merge.must_differ": "Target and source must differ.",
+  "master_merge.no_diff": "No field differences.",
+  "master_merge.diff_header": "Field differences (target wins):"
 }

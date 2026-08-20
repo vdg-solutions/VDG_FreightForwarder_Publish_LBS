@@ -1,17 +1,17 @@
 // F-12-09 — Sales personal workspace (daily driver)
 // Identity: Google OAuth verified — no self-pick modal
 
-import { currentSalesRepId, hasRole } from '../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../freight_app/core_abstractions/roles.js';
+import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
 import { dueSoonHtml } from './sales-me-due-soon.js';
 import { t, currentLocale } from '../../../kernel/core_abstractions/i18n/index.js';
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shipment-state-resolver.js';
 import { UNKNOWN_STATE } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
-import { ensureShipmentStateAliases } from '../../../freight_app/core_abstractions/ports/shipment-state-aliases.js';
+import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { statusBadgeLabel } from '../../../kernel/core_abstractions/util/status-i18n.js';
-import { listShipments } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 
 const LOAD_TIMEOUT_MS = 12000;
 const CLOSED_LIKE_STATES = ['Closed', 'Delivered'];

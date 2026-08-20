@@ -1,7 +1,7 @@
 // Lit component — <vdg-approval-card>
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { getActiveSalesReps } from '../../../freight_app/operators/sales-registry.js';
+import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { statusBadgeLabel } from '../../../kernel/core_abstractions/util/status-i18n.js';
 

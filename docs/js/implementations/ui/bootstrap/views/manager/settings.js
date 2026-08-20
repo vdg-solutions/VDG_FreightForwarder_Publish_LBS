@@ -3,12 +3,12 @@
 // F-29-11: runtime FX auto-fetch retired. fx_source stays as the default
 // attribution label for a manually entered rate, not a fetch trigger.
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
-import { loadWorkspaceSettings, saveWorkspaceSettings, SECOND_EYES_FIELD } from '../../../../freight_app/operators/manager/workspace-settings.js';
+import { loadWorkspaceSettings, saveWorkspaceSettings, SECOND_EYES_FIELD } from '../../../core_abstractions/ports/governance/workspace-settings.js';
 import { safeMasterLoad } from '../../../../kernel/core_abstractions/util/master-load.js';
 
 const DEFAULT_FX_SOURCE = 'Manual';

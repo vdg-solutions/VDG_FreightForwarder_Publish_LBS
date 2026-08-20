@@ -2,13 +2,13 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { guardMessage } from '../../../kernel/core_abstractions/util/guard-messages.js';
 import './timeline-entry.js';
 import { renderCommissionTab } from '../views/commission-tab.js';
-import { hasRole } from '../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { CANCELLED_STATE, chooseShipmentAffordance, runShipmentAffordance } from '../../../freight_app/operators/shipment-void-delete.js';
+import { CANCELLED_STATE, chooseShipmentAffordance, runShipmentAffordance } from '../../core_abstractions/ports/flows/shipment-void-delete.js';
 import { NEXT_EVENT, TRANSITION_LABEL } from './shipment-lifecycle-map.js';
-import { persistAdvancedState } from '../../../freight_app/core_abstractions/ports/fsm-ingest.js';
+import { persistAdvancedState } from '../../core_abstractions/ports/flows/fsm-ingest.js';
 
 const PANEL_WIDTH_PX     = 480;
 const SLIDE_DURATION_MS  = 250;

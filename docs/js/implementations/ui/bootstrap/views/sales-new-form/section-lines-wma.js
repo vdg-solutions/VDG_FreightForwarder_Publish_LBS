@@ -1,8 +1,8 @@
 // section-lines-wma.js — WMA kind-prediction UI helpers for section B rows.
 // Split out of section-lines.js (F-29-01 pushed it over the 350-line cap) — pure extraction,
 // no behavior change.
-import { predict, dismissPrediction } from '../../../../freight_app/core_abstractions/wma-engine.js';
-import { loadKindWmaState, saveKindWmaState } from '../../../../freight_app/operators/sync/wma-store.js';
+import { predict, dismissPrediction } from '../../../core_abstractions/ports/sync/wma-engine.js';
+import { loadKindWmaState, saveKindWmaState } from '../../../core_abstractions/ports/sync/wma-store.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 export function ensureWmaStyle() {

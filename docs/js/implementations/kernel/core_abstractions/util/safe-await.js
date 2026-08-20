@@ -1,6 +1,9 @@
 // F-19-01 — safe-await: timeout-wrapped promise helper. Eradicates silent-hang boot chains.
 // Usage: const { ok, value, error } = await safeAwait(promise, ms, fallback, tag)
 
+import { startTimer, stopTimer } from '../ports/timer.js';
+import { logWarn } from '../ports/log.js';
+
 export const SAFE_AWAIT_DEFAULT_MS = 8000; // matches REPO_INIT_TIMEOUT_MS (F-15-51)
 
 const NOOP_FALLBACK = () => {};
@@ -34,14 +37,14 @@ export async function safeAwait(
 ) {
   let timer;
   const timeoutPromise = new Promise((resolve) => {
-    timer = setTimeout(() => resolve(TIMEOUT_SENTINEL), timeoutMs);
+    timer = startTimer(() => resolve(TIMEOUT_SENTINEL), timeoutMs);
   });
 
   try {
     const result = await Promise.race([promise, timeoutPromise]);
 
     if (result === TIMEOUT_SENTINEL) {
-      console.warn(`[safe-await:${tag}] timeout ${timeoutMs}ms`); // DEV
+      logWarn(`[safe-await:${tag}] timeout ${timeoutMs}ms`); // DEV
       try { (fallback ?? NOOP_FALLBACK)(); } catch { /* fallback errors swallowed — caller controls */ }
       return { ok: false, error: new SafeAwaitTimeoutError(tag, timeoutMs) };
     }
@@ -50,6 +53,6 @@ export async function safeAwait(
   } catch (err) {
     return { ok: false, error: err };
   } finally {
-    clearTimeout(timer);
+    stopTimer(timer);
   }
 }

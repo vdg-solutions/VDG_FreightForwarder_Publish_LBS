@@ -8,7 +8,7 @@
 // module only formats what it was handed.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { verifyAuditChain } from '../../../../freight_app/operators/sync/audit-log.js';
+import { verifyAuditChain } from '../../../core_abstractions/ports/sync/audit-log.js';
 
 const INLINE_LIMIT = 3;      // fields named in the cell; the rest are in the tooltip
 const VALUE_MAX    = 40;     // a pasted address should not stretch the column

@@ -5,7 +5,7 @@ import { t, fmtNumber, currentLocale } from '../../../../kernel/core_abstraction
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import {
   trialBalance, pnl, pnlMonthlyBreakdown, balanceSheet,
-} from '../../../../freight_app/operators/manager/ledger-aggregator.js';
+} from '../../../core_abstractions/ports/manager/ledger-aggregator.js';
 
 const TAB_TB  = 'TB';
 const TAB_PNL = 'PNL';

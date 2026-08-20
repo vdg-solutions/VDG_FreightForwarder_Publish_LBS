@@ -1,17 +1,17 @@
 // FX Rates admin grid — F-15-36 / F-29-11 (explicit valid_from/valid_to ranges)
 // Route: /manager/fx-rates
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }                                from '../../router.js';
 import { t }                                       from '../../../../kernel/core_abstractions/i18n/index.js';
-import { FxRateDriveRepo }                         from '../../../../storage/implementations/drive/fx-rate-drive-repo.js';
+import { fxRateRepo }                              from '../../../core_abstractions/ports/storage/fx-rate-repo.js';
 import { validateRate, addRateEntry, FX_PAIR_DEFAULT } from '../../../../kernel/core_abstractions/util/validate-rate.js';
 import { clearRateCache }                          from '../../../../kernel/core_abstractions/util/fx-lookup.js';
-import { currentUserRole }                         from '../../../../freight_app/operators/manager/route-guard.js';
+import { currentUserRole }                         from '../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../kernel/core_abstractions/util/master-load.js';
 import { isViewSuperseded }                        from '../../util/view-root.js';
-import { readSettings }                            from '../../../../freight_app/operators/manager/workspace-settings.js';
+import { readSettings }                            from '../../../core_abstractions/ports/governance/workspace-settings.js';
 
 const SOURCE_OPTIONS  = ['Vietcombank', 'SBV', 'Manual'];
 const TOAST_MS        = 4_000;
@@ -20,13 +20,6 @@ const SOURCE_TAG      = 'fx-rates:source';
 // F-19-75: below RENDER_MOUNT_TIMEOUT_MS (8000ms) so a stalled load's inline retry paints
 // before mount-view.js's outer mount-timeout fallback can fire.
 const VIEW_DATA_LOAD_BUDGET_MS = 6_000;
-
-let _repo = null;
-
-function getFxRepo() {
-  if (!_repo) _repo = new FxRateDriveRepo();
-  return _repo;
-}
 
 function toast(type, msg) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message: msg, duration: TOAST_MS } }));
@@ -127,7 +120,6 @@ function addFormHtml(defaultSource, prefill = {}) {
 export async function render(root) {
   if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
-  const repo  = getFxRepo();
   let entries = [], defSrc = 'Manual';
 
   // Paint shell first — before any Drive await — so a stalled load degrades to an inline
@@ -149,7 +141,7 @@ export async function render(root) {
   async function reload(prefill = {}) {
     if (isViewSuperseded(root)) return;
     const [listRes, srcRes] = await Promise.all([
-      safeMasterLoad(() => repo.listAll(), LOAD_TAG, VIEW_DATA_LOAD_BUDGET_MS),
+      safeMasterLoad(() => fxRateRepo.listAll(), LOAD_TAG, VIEW_DATA_LOAD_BUDGET_MS),
       safeMasterLoad(loadDefaultSource, SOURCE_TAG, VIEW_DATA_LOAD_BUDGET_MS),
     ]);
     if (isViewSuperseded(root)) return;
@@ -176,7 +168,7 @@ export async function render(root) {
 
   async function onDelete(entry) {
     try {
-      await repo.deleteEntry(entry.valid_from, entry.valid_to, entry.pair || FX_PAIR_DEFAULT);
+      await fxRateRepo.deleteEntry(entry.valid_from, entry.valid_to, entry.pair || FX_PAIR_DEFAULT);
       clearRateCache(); // drop stale lookups so an open PNL form sees the delete
       toast('success', `${t('fx.admin.delete')}: ${entry.valid_from}`);
     } catch (err) {
@@ -201,7 +193,7 @@ export async function render(root) {
       if (validErr) { errEl.textContent = t(validErr); return; }
       try {
         const entryErr = await addRateEntry(
-          repo, validFrom, validTo, FX_PAIR_DEFAULT, rate, source, currentUserRole(), deleteFirst,
+          fxRateRepo, validFrom, validTo, FX_PAIR_DEFAULT, rate, source, currentUserRole(), deleteFirst,
         );
         if (entryErr) { errEl.textContent = t(entryErr); return; }
         clearRateCache(); // drop stale lookups so an open PNL form sees the new rate

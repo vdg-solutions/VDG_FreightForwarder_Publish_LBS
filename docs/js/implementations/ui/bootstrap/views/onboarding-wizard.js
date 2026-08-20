@@ -5,8 +5,8 @@
 // manager landed here — no paste, no join, no migrate.
 
 import { findWorkspaceRoot, storageApi } from '../../../storage/core_abstractions/storage-api.js';
-import { inviteSales } from '../../../freight_app/operators/user-provisioning.js';
-import { bootstrapAclTargetFolders } from '../../../freight_app/core_abstractions/ports/workspace-bootstrap.js';
+import { inviteSales } from '../../core_abstractions/ports/flows/user-provisioning.js';
+import { bootstrapAclTargetFolders } from '../../core_abstractions/ports/governance/workspace-bootstrap.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../storage/core_abstractions/workspace-registry.js';
 import { safeMasterLoad } from '../../../kernel/core_abstractions/util/master-load.js';

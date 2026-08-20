@@ -2,19 +2,19 @@
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { navigate } from '../router.js';
-import { currentSalesRepId, currentRoles } from '../../../freight_app/core_abstractions/session-roles.js';
-import { selfRepCandidate, customerRepFor } from '../../../freight_app/operators/sales-rep-derivation.js';
-import { getActiveSalesReps } from '../../../freight_app/operators/sales-registry.js';
+import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { selfRepCandidate, customerRepFor } from '../../core_abstractions/ports/flows/sales-rep-derivation.js';
+import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
 import { renderForm, collectFormState, validateShipmentForm, shipmentToDraft, jumpToFirstError } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
 import { createSubmitGuard } from './sales-new/submit-guard.js';
 import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-deviation-gate.js';
 import { safeMasterLoad } from '../../../kernel/core_abstractions/util/master-load.js';
-import { ensureRepCode } from '../../../freight_app/core_abstractions/ports/rep-code-registry.js';
-import { assignJobNo } from '../../../freight_app/operators/job-no-gen.js';
-import { readSettings, DEFAULT_CURRENCY_FIELD } from '../../../freight_app/operators/manager/workspace-settings.js';
-import { getShipment, REVENUE_SEEN } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { ensureRepCode } from '../../core_abstractions/ports/flows/rep-code-registry.js';
+import { assignJobNo } from '../../core_abstractions/ports/flows/job-no-gen.js';
+import { getShipment, REVENUE_SEEN } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { readSettings, DEFAULT_CURRENCY_FIELD } from '../../core_abstractions/ports/governance/workspace-settings.js';
 import { loadTimeline, renderTimeline, bindTimeline } from '../components/phase-timeline.js';
 
 const TIMELINE_MOUNT_ID = 'phase-timeline';
@@ -65,15 +65,12 @@ function showToast(msg, type = 'info') {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message: msg, type } }));
 }
 
-// F-29-01 AC-04: fx-rate pre-fill singleton, mirrors app.js's manager-only fx-auto-fetch wiring
-// but available to any sales rep — the form's per-line fx lookup isn't a manager-only feature.
-let _fxRepoSingleton = null;
+// F-29-01 AC-04: fx-rate pre-fill, mirrors app.js's manager-only fx-auto-fetch wiring but
+// available to any sales rep — the form's per-line fx lookup isn't a manager-only feature.
 async function _fxRepo() {
-  if (_fxRepoSingleton) return _fxRepoSingleton;
   try {
-    const { FxRateDriveRepo } = await import('../../../storage/implementations/drive/fx-rate-drive-repo.js');
-    _fxRepoSingleton = new FxRateDriveRepo();
-    return _fxRepoSingleton;
+    const { fxRateRepo } = await import('../../core_abstractions/ports/storage/fx-rate-repo.js');
+    return fxRateRepo;
   } catch { return null; /* fx pre-fill is optional — form still works without it */ }
 }
 

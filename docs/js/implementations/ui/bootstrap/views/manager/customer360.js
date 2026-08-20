@@ -1,12 +1,12 @@
 // Manager Customer 360 — F-14-07
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }                      from '../../router.js';
-import { compose, HEALTH_THRESHOLD_GOOD, HEALTH_THRESHOLD_WATCH, compose360 } from '../../../../freight_app/operators/manager/customer360-composer.js';
+import { compose, HEALTH_THRESHOLD_GOOD, HEALTH_THRESHOLD_WATCH, compose360 } from '../../../core_abstractions/ports/manager/customer360-composer.js';
 import { shipmentLane } from '../../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { listShipments } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
 
 const CUSTOMER360_RE   = /^\/manager\/customers\/([^/]+)$/;
 const KIND_CUSTOMER    = 'customers';

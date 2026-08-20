@@ -1,13 +1,13 @@
 // Air Rates master CRUD grid — F-16-05
 // Route: /masters/air-rates
 
-import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
+import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, boundedSeedIfEmpty, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
-import { currentUserRole } from '../../../../../freight_app/operators/manager/route-guard.js';
-import { MASTER_REGISTRY } from '../../../../../freight_app/core_abstractions/master-registry.js';
+import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
+import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
-import { readSettings, SECOND_EYES_FIELD } from '../../../../../freight_app/operators/manager/workspace-settings.js';
+import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
 import { isViewSuperseded } from '../../../util/view-root.js';
 
 const KIND       = 'air-rates';
@@ -136,7 +136,7 @@ export async function render(root) {
   // F-28-08/F-28-12: registry-driven writer gate keyed off the single injectable role
   // source (window.__vdg_current_user.role via currentUserRole()) — mirrors local-charges.js.
   const role   = currentUserRole();
-  const isM    = MASTER_REGISTRY[KIND].writers.includes(role);
+  const isM    = canWriteMaster(KIND, role);
   const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 
   // F-28-12 AC-05/06/07: owner second-eyes flag forces even the sole maintainer through

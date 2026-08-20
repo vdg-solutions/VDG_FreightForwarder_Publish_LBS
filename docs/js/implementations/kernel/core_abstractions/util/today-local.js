@@ -13,6 +13,8 @@
 //
 // `lint-js.mjs` bans the raw pattern so this cannot regress.
 
+import { nowDate, dateFrom } from '../ports/clock.js';
+
 // en-CA formats as YYYY-MM-DD, and Intl resolves in the host's local zone — the same zone
 // getFullYear()/getMonth()/getDate() read, so this agrees with shipment-ref-gen.js by
 // construction rather than by coincidence.
@@ -23,7 +25,7 @@ const ISO_DATE_LOCALE = 'en-CA';
  * @param {Date} [date] — defaults to now. Injectable for tests.
  * @returns {string}
  */
-export function todayLocal(date = new Date()) {
+export function todayLocal(date = nowDate()) {
   return date.toLocaleDateString(ISO_DATE_LOCALE);
 }
 
@@ -34,5 +36,5 @@ export function todayLocal(date = new Date()) {
  * @returns {string}
  */
 export function toLocalDateStr(value) {
-  return todayLocal(value instanceof Date ? value : new Date(value));
+  return todayLocal(value instanceof Date ? value : dateFrom(value));
 }

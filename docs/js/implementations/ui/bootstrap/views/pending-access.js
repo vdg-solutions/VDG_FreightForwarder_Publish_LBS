@@ -11,10 +11,10 @@
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { navigate } from '../router.js';
 import { activeWorkspaceName } from '../../../storage/core_abstractions/workspace-registry.js';
-import { runFirstRunProvision, isAlreadyProvisionedLocally } from '../../../freight_app/operators/manager/first-run-provision.js';
-import { clearRoleCache } from '../../../freight_app/operators/auth/auth-gate.js';
-import { currentUserRole, normalizeRole, homeRouteForRole } from '../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_READ_ONLY } from '../../../freight_app/core_abstractions/roles.js';
+import { clearRoleCache } from '../../../ui/core_abstractions/ports/auth/auth-gate.js';
+import { ROLE_READ_ONLY } from '../../../ui/core_abstractions/roles.js';
+import { runFirstRunProvision, isAlreadyProvisionedLocally } from '../../core_abstractions/ports/governance/first-run-provision.js';
+import { currentUserRole, normalizeRole, homeRouteForRole } from '../../core_abstractions/ports/governance/route-guard.js';
 
 // users.jsonl role resolution is async (repo-init-steps step: userRepo.get(email).then) — a
 // provisioned user can land here during the race, so poll and leave as soon as a role shows up.
@@ -47,11 +47,11 @@ export function render(root) {
     if (!root.isConnected || exitIfGranted()) clearInterval(timer);
   }, ROLE_POLL_MS);
 
-  root.querySelector('#pending-retry').addEventListener('click', () => {
+  root.querySelector('#pending-retry').addEventListener('click', async () => {
     // Retry means re-probe. Without this the reload just reads the cached verdict back — the same
     // "no roles" this screen is showing — and the button does nothing for up to ROLE_CACHE_TTL_MS.
     if (exitIfGranted()) return;
-    clearRoleCache();
+    await clearRoleCache();
     location.reload();
   });
   root.querySelector('#pending-signout').addEventListener('click', () => {
@@ -71,7 +71,7 @@ async function _offerCreateIfGreenfield(root) {
   // Local membership evidence outranks the probe below: an employee holds no permission on the
   // root, so findWorkspaceRoot answers null for them exactly as it does for a real first run.
   // Offering "create workspace" there is how the duplicate LBS folder got made.
-  if (isAlreadyProvisionedLocally()) return;
+  if (await isAlreadyProvisionedLocally()) return;
   let existingRoot;
   try {
     existingRoot = await driveApi.findWorkspaceRoot(activeWorkspaceName());
@@ -96,7 +96,7 @@ async function _offerCreateIfGreenfield(root) {
       await runFirstRunProvision(driveApi, activeWorkspaceName());
       // The NOT_PROVISIONED role was cached before the root existed and would otherwise survive
       // ROLE_CACHE_TTL_MS, bouncing the new manager straight back to this screen.
-      clearRoleCache();
+      await clearRoleCache();
       location.reload();
     } catch (err) {
       btn.disabled = false;

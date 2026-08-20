@@ -6,9 +6,9 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
-import { postReversal } from '../../../../freight_app/core_abstractions/ports/ledger-poster.js';
-import { currentUserRole } from '../../../../freight_app/operators/manager/route-guard.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { postReversal } from '../../../core_abstractions/ports/flows/ledger-poster.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { currentUserRole } from '../../../core_abstractions/ports/governance/route-guard.js';
 
 const SOURCE_REVERSAL = 'reversal';
 

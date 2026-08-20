@@ -1,8 +1,8 @@
 // Ocean Carriers master CRUD grid — E-26 F-26-04, mirrors airline-carriers.js
 // Route: /masters/ocean-carriers
 
-import { hasRole } from '../../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { validateScac, checkScacUnique } from '../../../../../kernel/core_abstractions/util/scac-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';

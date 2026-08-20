@@ -12,6 +12,8 @@
 // outlast the index lag, short enough that a folder deleted later in the session is not
 // resurrected from here.
 
+import { nowMs } from '../../kernel/core_abstractions/ports/clock.js';
+
 const CREATED_FOLDER_TTL_MS = 300_000;
 
 const _folders = new Map(); // `${parentId}/${name}` -> { id, at }
@@ -20,7 +22,7 @@ const _key = (parentId, name) => `${parentId}/${name}`;
 
 /// Record a folder id learned from Drive (create response, or a query that did see it).
 export function rememberFolder(parentId, name, id) {
-  if (id) _folders.set(_key(parentId, name), { id, at: Date.now() });
+  if (id) _folders.set(_key(parentId, name), { id, at: nowMs() });
 }
 
 /// The remembered id, or null when nothing was recorded or the record has aged out.
@@ -28,7 +30,7 @@ export function recallFolder(parentId, name) {
   const key = _key(parentId, name);
   const hit = _folders.get(key);
   if (!hit) return null;
-  if (Date.now() - hit.at > CREATED_FOLDER_TTL_MS) {
+  if (nowMs() - hit.at > CREATED_FOLDER_TTL_MS) {
     _folders.delete(key);
     return null;
   }

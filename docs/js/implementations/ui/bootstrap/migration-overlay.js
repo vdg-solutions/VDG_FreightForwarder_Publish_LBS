@@ -13,15 +13,28 @@
 import { t } from '../../kernel/core_abstractions/i18n/index.js';
 
 const SHOW_DELAY_MS = 300;
-import { MIGRATION_EVENT } from '../../freight_app/core_abstractions/migration-signal.js';
+// The core event the migrators emit (freight_app core_abstractions/migration_signal.rs).
+const MIGRATION_EVENT = 'vdg:migration';
+const MIGRATION_DELTA_BEGIN = 1;
+const MIGRATION_DELTA_END = -1;
 
 let _active = 0;
 let _el = null;
 let _showTimer = null;
 
-// The emitters live with the migrators (freight_app/operators/cache/migration-signal.js); this
-// file only listens. Re-exported for the callers that still take them from here.
-export { beginMigration, endMigration } from '../../freight_app/core_abstractions/migration-signal.js';
+// The migrators announce themselves through the wasm platform's event port; a ui caller that wants
+// to bracket its own slow work can use the same two calls. Window-guarded so a non-DOM caller is
+// unaffected.
+export function beginMigration() { _emit(MIGRATION_DELTA_BEGIN); }
+export function endMigration()   { _emit(MIGRATION_DELTA_END); }
+
+function _emit(delta) {
+  try {
+    if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function'
+        || typeof CustomEvent === 'undefined') return;
+    window.dispatchEvent(new CustomEvent(MIGRATION_EVENT, { detail: { delta } }));
+  } catch { /* non-DOM / partial-stub env — the chip is a browser affordance only */ }
+}
 
 function _ensureEl() {
   if (_el || typeof document === 'undefined' || !document.body) return _el;

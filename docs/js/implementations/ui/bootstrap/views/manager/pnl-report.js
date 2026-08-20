@@ -1,15 +1,15 @@
 // Manager P&L Report — F-14-04 / F-16-07
 
 import '../../components/pivot-table.js';
-import { compose, composeBuySellBreakdown, dimsMatch, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../../../freight_app/operators/manager/pnl-composer.js';
-import { composeAir, AIR_DEFAULT_DIMS }     from '../../../../freight_app/operators/manager/air-pnl-composer.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
-import { navigate }                         from '../../router.js';
-import { t }                                from '../../../../kernel/core_abstractions/i18n/index.js';
-import { kindI18nLabel }                     from '../../../../kernel/core_abstractions/util/kind-i18n.js';
-import { formatDrillDimDesc }                 from '../../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
-import { resolveSalesRepLabel }               from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { compose, composeBuySellBreakdown, filterByDims, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../../core_abstractions/ports/manager/pnl-composer.js';
+import { composeAir, AIR_DEFAULT_DIMS } from '../../../core_abstractions/ports/manager/air-pnl-composer.js';
+import { navigate } from '../../router.js';
+import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { kindI18nLabel } from '../../../../kernel/core_abstractions/util/kind-i18n.js';
+import { formatDrillDimDesc } from '../../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
+import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
@@ -101,7 +101,7 @@ async function renderDrillPanel(container, rowDims) {
 
   // filter the exact set the pivot grouped this cell from, via the same dim
   // resolver buildRows used to bucket it — reconciles drill count with cell count
-  const filtered = _groupedShipments.filter((s) => dimsMatch(s, rowDims));
+  const filtered = filterByDims(_groupedShipments, rowDims);
   const refs     = filtered.map(refFn);
   const dimDesc  = formatDrillDimDesc(rowDims);
 

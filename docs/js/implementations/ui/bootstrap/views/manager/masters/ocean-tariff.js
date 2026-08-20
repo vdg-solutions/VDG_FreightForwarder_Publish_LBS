@@ -5,8 +5,8 @@
 // Mirrors ocean-carriers.js's read-focused grid shape (no propose/merge panel here — that
 // contract is already exercised generically by priced-ref-repo.test.mjs).
 
-import { hasRole } from '../../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 

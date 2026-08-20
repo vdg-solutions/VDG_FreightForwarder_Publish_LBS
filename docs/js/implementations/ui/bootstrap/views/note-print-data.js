@@ -3,8 +3,8 @@
 // Split out of note-print.js so that file stays presentation-only (and under the 350-line cap).
 // Everything here is a pure read through window.__vdg_repo — no Drive call, no mutation.
 
-import { listWhere } from '../../../freight_app/core_abstractions/repo-query.js';
-import { getShipment } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
+import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
 
 export const NOTE_TYPE_DEBIT  = 'debit';
 export const NOTE_TYPE_CREDIT = 'credit';

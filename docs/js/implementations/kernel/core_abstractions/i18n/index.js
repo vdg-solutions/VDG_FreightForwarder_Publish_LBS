@@ -1,5 +1,9 @@
 // i18n — locale loader + t() helper
 
+import { fetchJson } from '../ports/http.js';
+import { dispatchAppEvent } from '../ports/app-events.js';
+import { dateFrom } from '../ports/clock.js';
+
 const SUPPORTED_LOCALES = ['vi', 'en'];
 const DEFAULT_LOCALE    = 'vi';
 
@@ -8,11 +12,11 @@ let _msgs   = {};
 
 export async function loadLocale(locale) {
   const target = SUPPORTED_LOCALES.includes(locale) ? locale : DEFAULT_LOCALE;
-  const resp   = await fetch(`js/implementations/kernel/core_abstractions/i18n/${target}.json`);
-  if (!resp.ok) throw new Error(`i18n: failed to load ${target}.json`);
-  _msgs   = await resp.json();
+  const msgs   = await fetchJson(`js/implementations/kernel/core_abstractions/i18n/${target}.json`);
+  if (!msgs) throw new Error(`i18n: failed to load ${target}.json`);
+  _msgs   = msgs;
   _locale = target;
-  window.dispatchEvent(new CustomEvent('vdg:locale-changed', { detail: { locale: _locale } }));
+  dispatchAppEvent('vdg:locale-changed', { locale: _locale });
 }
 
 // Key-as-fallback — self-documenting keys
@@ -29,7 +33,7 @@ export function t(key, args) {
 export function currentLocale() { return _locale; }
 
 export function fmtDate(isoOrDate) {
-  const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+  const d = isoOrDate instanceof Date ? isoOrDate : dateFrom(isoOrDate);
   return new Intl.DateTimeFormat(_locale, {
     day: '2-digit', month: '2-digit', year: 'numeric',
   }).format(d);

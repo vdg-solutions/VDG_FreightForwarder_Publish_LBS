@@ -10,8 +10,8 @@
 // says so instead of quietly showing whichever number it happened to read.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { listCloseRecords } from '../../../../freight_app/operators/manager/period-close-orchestrator.js';
-import { openingBalanceFor, periodOfDate, isPeriodStart, dayBefore } from '../../../../freight_app/core_abstractions/ports/period-opening-balance.js';
+import { listCloseRecords } from '../../../core_abstractions/ports/governance/period-close.js';
+import { openingBalanceFor, periodOfDate, isPeriodStart, dayBefore } from '../../../core_abstractions/ports/governance/period-opening-balance.js';
 
 /**
  * @returns {Promise<{live:number, stamped:object|null, mismatch:boolean}>}

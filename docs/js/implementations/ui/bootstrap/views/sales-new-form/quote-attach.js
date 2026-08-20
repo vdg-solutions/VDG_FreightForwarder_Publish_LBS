@@ -10,7 +10,7 @@
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { lineRowHtml, classifyKind } from './section-lines.js';
 import { applyFxDateDefaults, prefillRowFx } from './pnl-line-fx.js';
-import { checkAlreadyConverted } from '../../../../freight_app/operators/quote-orchestrator.js';
+import { checkAlreadyConverted } from '../../../core_abstractions/ports/flows/quote-orchestrator.js';
 
 const KIND_QUOTATIONS = 'quotations';
 const SELL_QTY_DEFAULT = 1; // a quote line prices the shipment once — qty is not quote data

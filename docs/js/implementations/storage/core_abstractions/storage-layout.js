@@ -6,7 +6,8 @@ export const FOLDER_MIME = 'application/vnd.google-apps.folder';
 // it describes, and revenue history describes a record CS was never granted — listing it as a
 // shared log would move `selling_amount: 1000 -> 1200` into the folder CS reads, undoing the split
 // without touching the split. It falls through to the per-user fork, which IS the wall.
-// A residue guard in tests/unit/f-37-02-shipment-audit.test.mjs fails the build if it appears here.
+// The store names are freight_app/core_abstractions/audit_stores.rs; adding the revenue one here
+// is the one edit that silently undoes the split, so it gets read carefully.
 export const LOG_KINDS  = ['error_log', 'audit_log'];
 export const USERS_PATH = 'users';
 

@@ -3,10 +3,10 @@
 // no upload/paste control, no textarea. Reload is the only action for every failure mode.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { errorKindMessage } from '../../../../freight_app/operators/license-messages.js';
 import {
+  errorKindMessage,
   LICENSE_STATE_MISSING, LICENSE_STATE_INVALID, LICENSE_STATE_NETWORK, LICENSE_STATE_BLOCKED,
-} from '../../../../freight_app/operators/license-boot-flow.js';
+} from '../../../core_abstractions/ports/flows/license.js';
 
 export const LICENSE_GATE_REASON_MISSING = 'missing'; // AC-02
 export const LICENSE_GATE_REASON_INVALID = 'invalid'; // AC-03/04/05 — body keyed by error_kind

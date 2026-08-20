@@ -1,7 +1,7 @@
 // Lit component — <vdg-pivot-table>
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { DIM_OPTIONS } from '../../../freight_app/operators/manager/pnl-composer.js';
+import { DIM_OPTIONS } from '../../core_abstractions/ports/manager/pnl-composer.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { dimLabel } from '../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
 

@@ -4,7 +4,7 @@
 // control, its own file, the viewer owns only the state.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { runAndRecord } from '../../../../freight_app/operators/manager/ledger-reconciler.js';
+import { runAndRecord } from '../../../core_abstractions/ports/manager/ledger-reconciler.js';
 import { renderUnbalancedList } from './ledger-viewer-unbalanced.js';
 
 function fmtRunDate(runAt) { return runAt ? new Date(runAt).toLocaleDateString('vi-VN') : ''; }

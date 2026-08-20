@@ -1,16 +1,14 @@
 // Manager Exception Command Center — F-14-09
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
-import { navigate }         from '../../router.js';
-import {
-  computeSortedExceptions, computeTrends, computeMttr, computePerSalesRate,
-  computeEscalated, KIND_EXCEPTION, SEVERITY_BADGE_CLS,
-} from '../../../../freight_app/operators/manager/exception-composer.js';
-import { bulkPut }            from '../../../../freight_app/operators/cache/bulk-orchestrator.js';
-import { getActiveSalesReps } from '../../../../freight_app/operators/sales-registry.js';
-import { showConfirm }        from '../../helpers/show-confirm.js';
-import { t }                  from '../../../../kernel/core_abstractions/i18n/index.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { navigate } from '../../router.js';
+import { bulkPut } from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
+import { getActiveSalesReps } from '../../../core_abstractions/ports/flows/sales-registry.js';
+import { computeSortedExceptions, computeTrends, computeMttr, computePerSalesRate, computeEscalated, KIND_EXCEPTION, SEVERITY_BADGE_CLS }
+  from '../../../core_abstractions/ports/manager/exception-composer.js';
+import { showConfirm } from '../../helpers/show-confirm.js';
+import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 const ANIMATE_OUT_MS      = 300;
 const CHART_COLOR_SET     = ['#3b82f6','#f59e0b','#ef4444','#10b981','#8b5cf6','#64748b'];

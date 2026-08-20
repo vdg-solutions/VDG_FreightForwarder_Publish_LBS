@@ -1,11 +1,11 @@
 // F-15-07 — Error log viewer (/manager/errors)
 
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
-import { listErrorRecords, purgeErrorMonth } from '../../../../freight_app/operators/manager/error-log-store.js';
+import { listErrorRecords, purgeErrorMonth } from '../../../core_abstractions/ports/governance/error-log-store.js';
 
 // raw technical tokens shown verbatim (mono diagnostic dump), same carve-out as row.kind below
 const KIND_OPTS = ['js_error', 'unhandled_rejection', 'sync_error'];

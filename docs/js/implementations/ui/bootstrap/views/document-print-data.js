@@ -11,7 +11,7 @@
 // i18n coverage still applies.
 
 import { loadNoteData, NOTE_TYPE_DEBIT } from './note-print-data.js';
-import { getShipment } from '../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
 
 const KIND_SHIPMENT = 'shipment';
 

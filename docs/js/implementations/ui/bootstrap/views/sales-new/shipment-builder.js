@@ -3,7 +3,7 @@
 
 import { resolveShipmentState } from '../../../../kernel/core_abstractions/util/shipment-state-resolver.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
-import { pnlLineId } from '../../../../freight_app/core_abstractions/pnl-line-id.js';
+import { pnlLineId } from '../../../core_abstractions/ports/data/pnl-line-id.js';
 
 const SOURCE_ORIGIN  = 'form-entry';
 const PARSER_ID      = 'form-v1';

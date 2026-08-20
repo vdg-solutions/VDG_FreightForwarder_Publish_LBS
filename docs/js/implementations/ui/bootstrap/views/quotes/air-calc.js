@@ -2,7 +2,7 @@
 // Route: /quotes/air-calc
 
 import { t }          from '../../../../kernel/core_abstractions/i18n/index.js';
-import { calcResult } from '../../../../freight_app/operators/air-rate-calculator.js';
+import { calcResult } from '../../../core_abstractions/ports/flows/air-rate-calculator.js';
 
 const KIND     = 'air-rates';
 const SEED_URL = 'seed/masters/air-rates.jsonl';

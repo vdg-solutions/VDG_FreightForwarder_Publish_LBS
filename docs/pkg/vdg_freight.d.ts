@@ -107,16 +107,40 @@ export function access_redirect_for(route: string, roles: string): string;
 export function access_roles_from_record(record_json: string): string;
 
 /**
- * Full air-rate result for the UI: chargeable weight, matched break tier, freight total.
- * `breaks_json` = `[{"min_kg":45,"rate_per_kg":3.5}, ...]`. Returns null when no tier applies.
- */
-export function air_calc_result(actual: number, l: number, w: number, h: number, breaks_json: string): any;
-
-/**
  * Applies a lifecycle event to the entity's stored state via the real
  * ShipmentFsm, persists the new state, and appends a transition record.
  */
 export function apply_fsm_event(entity_id: string, event: string): any;
+
+export function auth_adopt_session(req: any): Promise<any>;
+
+export function auth_clear_role_cache(req: any): Promise<any>;
+
+export function auth_detect_role(req: any): Promise<any>;
+
+export function auth_has_role(req: any): any;
+
+export function auth_require_auth(req: any): Promise<any>;
+
+export function auth_session_roles(req: any): any;
+
+export function auth_set_resolved_roles(req: any): any;
+
+export function cache_bulk_put(req: any): Promise<any>;
+
+export function cache_can_write_master(req: any): any;
+
+export function cache_find_match(req: any): any;
+
+export function cache_migrate_master_scope(req: any): Promise<any>;
+
+export function cache_migrate_per_record_kinds(req: any): Promise<any>;
+
+export function cache_migrate_priced_refs(req: any): Promise<any>;
+
+export function cache_route_prefetch(req: any): Promise<any>;
+
+export function cache_run_seed_migrations(req: any): Promise<any>;
 
 export function check_air_rate_transition(from: string, event: string): boolean;
 
@@ -132,19 +156,6 @@ export function check_awb_doc_transition(from: string, event: string): boolean;
 export function check_quotation_transition(from_state: string, event: string): boolean;
 
 /**
- * Compute SalesShare + CompanyRetained commission entries.
- * `deductions_json` = `{"corp_tax_vnd": 1000000, "customer_kickback_vnd": 500000, "line_commission_vnd": 200000}`
- * Returns `{ sales_share: CommissionEntry, company_retained: CommissionEntry }`.
- */
-export function commission_compute(shipment_json: string, rule_id: string, deductions_json: string): any;
-
-/**
- * Resolve which CommissionRule applies to a sales rep for a given shipment.
- * Returns the matched CommissionRule as JsValue (for JS to cache and pass back).
- */
-export function commission_resolve_rule(sales_id: string, shipment_json: string): any;
-
-/**
  * Single-source profit waterfall for the UI: margin → TNDN(20%) → net → sales/LBS split.
  * `sales_pct_0_100` is the manager-set share (0–100). Returns whole-VND figures.
  * `clamp_negatives`: true for payout (loss → zero), false for the sales-form
@@ -152,11 +163,40 @@ export function commission_resolve_rule(sales_id: string, shipment_json: string)
  */
 export function commission_waterfall(margin_vnd: number, com_deductions_vnd: number, sales_pct_0_100: number, clamp_negatives: boolean): any;
 
-export function compute_chargeable_kg(actual: number, l: number, w: number, h: number): number;
-
 export function compute_due_soon(billing_json: string, today_str: string, warn_days: number): any;
 
-export function compute_freight(actual: number, l: number, w: number, h: number, breaks_json: string): number | undefined;
+/**
+ * Drops the remembered cross-fork scans, for the delta path.
+ */
+export function data_clear_fork_scan(req: any): Promise<any>;
+
+export function data_current_revision(req: any): Promise<any>;
+
+export function data_delete_pnl_lines(req: any): Promise<any>;
+
+export function data_delete_shipment(req: any): Promise<any>;
+
+export function data_get_envelope(req: any): Promise<any>;
+
+export function data_get_shipment(req: any): Promise<any>;
+
+export function data_join_loaded(req: any): Promise<any>;
+
+export function data_list_envelopes(req: any): Promise<any>;
+
+export function data_list_where(req: any): Promise<any>;
+
+export function data_pnl_line_id(req: any): any;
+
+export function data_publish_billing(req: any): Promise<any>;
+
+export function data_published_for(req: any): Promise<any>;
+
+export function data_put_envelope(req: any): Promise<any>;
+
+export function data_put_shipment(req: any): Promise<any>;
+
+export function data_write_gate(req: any): Promise<any>;
 
 export function drain_events(): any;
 
@@ -165,7 +205,104 @@ export function drain_events(): any;
  */
 export function exec(sql: string): void;
 
-export function folder_relocations(): any;
+export function flows_accept_quote(req: any): Promise<any>;
+
+export function flows_active_sales_reps(req: any): Promise<any>;
+
+export function flows_air_calc(req: any): any;
+
+export function flows_assert_rep_code(req: any): Promise<any>;
+
+export function flows_assign_job_no(req: any): Promise<any>;
+
+export function flows_assign_rep_code(req: any): Promise<any>;
+
+export function flows_auto_advance(req: any): Promise<any>;
+
+export function flows_build_entries_from_commission(req: any): any;
+
+export function flows_build_entries_from_shipment(req: any): any;
+
+export function flows_build_reversal_entry(req: any): any;
+
+export function flows_chargeable_kg(req: any): any;
+
+export function flows_clear_sales_registry(req: any): any;
+
+export function flows_commit_pnl_report(req: any): Promise<any>;
+
+export function flows_customer_rep(req: any): any;
+
+export function flows_derive_sales_rep(req: any): any;
+
+export function flows_disable_user(req: any): Promise<any>;
+
+export function flows_edit_profile(req: any): Promise<any>;
+
+export function flows_ensure_rep_code(req: any): Promise<any>;
+
+export function flows_ensure_state_aliases(req: any): Promise<any>;
+
+export function flows_export_workspace(req: any): Promise<any>;
+
+export function flows_format_job_no(req: any): any;
+
+export function flows_generate_quote_id(req: any): Promise<any>;
+
+export function flows_invite_sales(req: any): Promise<any>;
+
+export function flows_license_error_key(req: any): any;
+
+export function flows_license_resolve(req: any): Promise<any>;
+
+export function flows_migrate_shipment_states(req: any): Promise<any>;
+
+export function flows_next_local_seq(req: any): Promise<any>;
+
+export function flows_persist_advanced_state(req: any): Promise<any>;
+
+export function flows_post_commission(req: any): Promise<any>;
+
+export function flows_post_reversal(req: any): Promise<any>;
+
+export function flows_post_shipment(req: any): Promise<any>;
+
+export function flows_promote_to_manager(req: any): Promise<any>;
+
+export function flows_quote_converted(req: any): Promise<any>;
+
+export function flows_register_entity(req: any): Promise<any>;
+
+export function flows_rehydrate_fsm(req: any): Promise<any>;
+
+export function flows_rep_code_valid(req: any): any;
+
+export function flows_repo_max_seq(req: any): Promise<any>;
+
+export function flows_sales_analytics(req: any): any;
+
+export function flows_sales_commission(req: any): Promise<any>;
+
+export function flows_sales_rep_by_prefix(req: any): any;
+
+export function flows_save_quote_draft(req: any): Promise<any>;
+
+export function flows_self_rep_candidate(req: any): any;
+
+export function flows_send_quote(req: any): Promise<any>;
+
+export function flows_shipment_affordance(req: any): any;
+
+export function flows_slugify(req: any): any;
+
+export function flows_void_apply(req: any): Promise<any>;
+
+export function flows_void_plan(req: any): any;
+
+/**
+ * Installed once by js/bootstrap (after the wasm module is ready and the repo exists).
+ */
+export function freight_app_init(platform: any): void;
 
 /**
  * Look up cached FX rate. JS must ingest relevant months first.
@@ -191,23 +328,77 @@ export function get_transition_log(entity_id: string): any;
 
 export function get_validation_errors(): any;
 
-export function grant_file_build(email: string, workspace: string, user_prefix: string, roles: string): string;
+export function governance_assign_role(req: any): Promise<any>;
 
-/**
- * E-43: the manifest form. `areas_json` is `[{path, folder_id}]` — the ids the caller resolved
- * while applying the permissions, so the employee never has to find them. An unparseable list is
- * an error, not an empty manifest: silently writing a grant with no ids would leave the user with
- * a file that reads fine and resolves nothing.
- */
-export function grant_file_build_with_areas(email: string, workspace: string, user_prefix: string, roles: string, areas_json: string): string;
+export function governance_audit_root_sharing(req: any): Promise<any>;
 
-/**
- * Post-boot verification seam. auth-gate reads the grant file BEFORE wasm loads and carries its
- * own minimal mirror (`grant-file.js`); this export is what the mirror is tested against.
- */
-export function grant_file_roles(json: string, email: string, workspace: string): string;
+export function governance_backfill_grants(req: any): Promise<any>;
 
-export function grant_file_target_name(workspace: string, user_prefix: string): string;
+export function governance_bootstrap_acl_folders(req: any): Promise<any>;
+
+export function governance_can_edit_default_currency(req: any): any;
+
+export function governance_change_role(req: any): Promise<any>;
+
+export function governance_classify_root_permissions(req: any): any;
+
+export function governance_close_period(req: any): Promise<any>;
+
+export function governance_close_records(req: any): Promise<any>;
+
+export function governance_ensure_workspace_root(req: any): Promise<any>;
+
+export function governance_error_records(req: any): Promise<any>;
+
+export function governance_filter_sidebar(req: any): any;
+
+export function governance_find_lock(req: any): Promise<any>;
+
+export function governance_first_run_provision(req: any): Promise<any>;
+
+export function governance_home_route(req: any): any;
+
+export function governance_is_already_provisioned(req: any): Promise<any>;
+
+export function governance_load_settings(req: any): Promise<any>;
+
+export function governance_lock_period(req: any): Promise<any>;
+
+export function governance_locked_periods(req: any): Promise<any>;
+
+export function governance_merge_diff(req: any): any;
+
+export function governance_merge_records(req: any): any;
+
+export function governance_normalize_role(req: any): any;
+
+export function governance_opening_balance(req: any): any;
+
+export function governance_period_math(req: any): any;
+
+export function governance_period_of(req: any): any;
+
+export function governance_pre_close_checks(req: any): Promise<any>;
+
+export function governance_prune_error_log(req: any): Promise<any>;
+
+export function governance_purge_error_month(req: any): Promise<any>;
+
+export function governance_regrant_everyone(req: any): Promise<any>;
+
+export function governance_reopen_period(req: any): Promise<any>;
+
+export function governance_repoint_refs(req: any): Promise<any>;
+
+export function governance_revoke_role(req: any): Promise<any>;
+
+export function governance_route_guard(req: any): any;
+
+export function governance_save_settings(req: any): Promise<any>;
+
+export function governance_unlock_period(req: any): Promise<any>;
+
+export function governance_user_roles(req: any): any;
 
 /**
  * Booking Excel import — returns ImportReport<CreateShipmentCommand> as JsValue.
@@ -226,22 +417,93 @@ export function import_document_excel_wasm(bytes: Uint8Array): any;
 export function import_pnl_excel_wasm(bytes: Uint8Array): any;
 
 /**
- * Returns true when `entity_etd_ms` falls within a locked period.
- * `locked_periods_json` = meta-pref `preferences.locked_periods` verbatim —
- * `[{"period_key":"YYYY-MM"|"YYYY-Qn",...}]`. Law lives in operators/period_lock.rs.
- */
-export function is_period_closed(entity_kind: string, entity_etd_ms: bigint, locked_periods_json: string): boolean;
-
-export function legacy_containers(): any;
-
-/**
  * F-20-11: classify AND arm the wasm write gate in one move. The boot gate calls THIS —
  * the verdict that reaches the repo's put/delete never round-trips through a JS value a
  * devtools user could edit. Every call re-arms; the latest classification wins.
  */
 export function license_arm(license_str: string, current_unix_ts: bigint): any;
 
-export function per_record_kinds(): any;
+export function manager_air_pnl(req: any): any;
+
+export function manager_ap_payables(req: any): any;
+
+export function manager_ar_aging(req: any): any;
+
+export function manager_ar_timeline(req: any): any;
+
+export function manager_audit_log_csv(req: any): any;
+
+export function manager_audit_log_range(req: any): any;
+
+export function manager_audit_log_sort(req: any): any;
+
+export function manager_commission_rules(req: any): Promise<any>;
+
+export function manager_commission_sparkline(req: any): any;
+
+export function manager_commissions(req: any): any;
+
+export function manager_customer360(req: any): any;
+
+export function manager_customer_mode_mix(req: any): any;
+
+export function manager_dashboard(req: any): Promise<any>;
+
+export function manager_email_valid(req: any): any;
+
+export function manager_exception_escalate(req: any): any;
+
+export function manager_exception_mttr(req: any): any;
+
+export function manager_exception_per_sales(req: any): any;
+
+export function manager_exception_trends(req: any): any;
+
+export function manager_exceptions_sorted(req: any): any;
+
+export function manager_ledger_apply_repost(req: any): Promise<any>;
+
+export function manager_ledger_auto_reconcile(req: any): Promise<any>;
+
+export function manager_ledger_balance_sheet(req: any): any;
+
+export function manager_ledger_chart_groups(req: any): any;
+
+export function manager_ledger_csv(req: any): any;
+
+export function manager_ledger_filter_legs(req: any): any;
+
+export function manager_ledger_plan_repost(req: any): Promise<any>;
+
+export function manager_ledger_pnl(req: any): any;
+
+export function manager_ledger_pnl_monthly(req: any): any;
+
+export function manager_ledger_purge_orphans(req: any): Promise<any>;
+
+export function manager_ledger_reconcile(req: any): Promise<any>;
+
+export function manager_ledger_running_balances(req: any): any;
+
+export function manager_ledger_trial_balance(req: any): any;
+
+export function manager_notification_from_event(req: any): any;
+
+export function manager_notifications_time_based(req: any): any;
+
+export function manager_period_key(req: any): any;
+
+export function manager_pnl_buy_sell(req: any): any;
+
+export function manager_pnl_drill(req: any): any;
+
+export function manager_pnl_pivot(req: any): any;
+
+export function manager_user_prefix(req: any): any;
+
+export function manager_users_filter(req: any): any;
+
+export function manager_users_sort(req: any): any;
 
 export function permission_can_merge(role: string, ref_name: string): boolean;
 
@@ -318,41 +580,6 @@ export function select(sql: string, params_json: string): string;
 export function shipment_auto_advance(entity_id: string, shipment_json: string): any;
 
 /**
- * The record Accounting is handed at publish, derived from the JOINED shipment.
- *
- * `published_json` is the snapshots already published for this shipment (from the same fork), used
- * only to work out the next revision — an amendment supersedes rather than overwrites, so a second
- * publish cannot erase the figures an invoice was already raised from.
- *
- * Errors when the shipment carries no sell side: that is what a shipment looks like when it was
- * read by somebody with no access to the revenue fork, and publishing it would invoice zero.
- */
-export function shipment_billing_snapshot(shipment_json: string, published_json: string, published_at: string, published_by: string): string;
-
-/**
- * `{ "envelope": [{field,from,to}], "revenue": [...] }` — what changed, already sorted into the
- * two halves that have different readers, so the caller only chooses a store and never a side.
- *
- * An empty `before_json` is a create and yields history from null. Passing two ENVELOPE records
- * (the state-change path) is correct and returns an empty revenue list.
- */
-export function shipment_change_set(before_json: string, after_json: string): string;
-
-/**
- * True when a revenue half carries anything at all. JS must not answer this itself: what counts as
- * revenue is the same contract as the split, and a CS-created job's EMPTY half is the difference
- * between writing nothing and writing a revenue record into the wrong person's fork.
- */
-export function shipment_has_revenue(revenue_json: string): boolean;
-
-/**
- * Rejoin for a reader holding both halves. An empty `revenue_json` is the CS case — the folder
- * was never granted — and yields the envelope unchanged rather than an error. The caller must
- * already have decided that the absence is an ANSWER and not a failed read.
- */
-export function shipment_join(envelope_json: string, revenue_json: string): string;
-
-/**
  * `{ current, off_path, phases: [{ state, position, requirements }] }`.
  *
  * The state comes from the FSM state map when the entity is registered, and from the record's own
@@ -360,12 +587,6 @@ export function shipment_join(envelope_json: string, revenue_json: string): stri
  * showing it at Created would be a lie the user cannot correct.
  */
 export function shipment_phases(entity_id: string, shipment_json: string): string;
-
-/**
- * `{ "envelope": {...}, "revenue": {...} }` — the two records to write.
- * Errors when a P&L line has no `line_id`; see `boundary::shipment_split::split`.
- */
-export function shipment_split(shipment_json: string): string;
 
 /**
  * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
@@ -398,6 +619,42 @@ export function store_put_notification(notif: any): void;
 
 export function store_put_wma(key: string, body: any): void;
 
+export function sync_audit_append(req: any): Promise<any>;
+
+export function sync_audit_read(req: any): Promise<any>;
+
+export function sync_audit_verify_chain(req: any): Promise<any>;
+
+export function sync_delta_tick_plan(req: any): any;
+
+export function sync_drain_plan(req: any): any;
+
+export function sync_due_soon_check(req: any): Promise<any>;
+
+export function sync_due_soon_mark(req: any): Promise<any>;
+
+export function sync_due_soon_rows(req: any): Promise<any>;
+
+export function sync_error_capture(req: any): Promise<any>;
+
+export function sync_job_event(req: any): any;
+
+export function sync_quota_check(req: any): Promise<any>;
+
+export function sync_user_audit_read(req: any): Promise<any>;
+
+export function sync_user_audit_write(req: any): Promise<any>;
+
+export function sync_wma_dismiss(req: any): any;
+
+export function sync_wma_load(req: any): Promise<any>;
+
+export function sync_wma_on_event(req: any): any;
+
+export function sync_wma_predict(req: any): any;
+
+export function sync_wma_save(req: any): Promise<any>;
+
 /**
  * `taken_json` is the JSON array of prefixes already in use; `seed` is a caller-supplied random
  * 0..9999 so two managers adding at once don't both pick the same suffix.
@@ -411,14 +668,6 @@ export function validate_iata_dgr_class(class_str: string): boolean;
 export function vdg_version(): string;
 
 export function verify_license(license_str: string, current_unix_ts: bigint): any;
-
-export function wasm_build_entries_from_commission(commission_json: string, chart_json: string, rules_json: string): any;
-
-export function wasm_build_entries_from_shipment(shipment_json: string, chart_json: string, rules_json: string): any;
-
-export function wasm_build_reversal_entry(legs_json: string, chart_json: string, actor_id: string): any;
-
-export function wasm_compute_sales_analytics(shipments_json: string, lines_json: string): any;
 
 /**
  * Empty strings for "absent" -- JS passes `draft.currency || ''` and the config value or ''.
@@ -442,42 +691,184 @@ export interface InitOutput {
     readonly access_home_route: (a: number, b: number, c: number) => void;
     readonly access_redirect_for: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly access_roles_from_record: (a: number, b: number, c: number) => void;
-    readonly air_calc_result: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly apply_fsm_event: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly auth_adopt_session: (a: number) => number;
+    readonly auth_clear_role_cache: (a: number) => number;
+    readonly auth_detect_role: (a: number) => number;
+    readonly auth_has_role: (a: number, b: number) => void;
+    readonly auth_require_auth: (a: number) => number;
+    readonly auth_session_roles: (a: number, b: number) => void;
+    readonly auth_set_resolved_roles: (a: number, b: number) => void;
+    readonly cache_bulk_put: (a: number) => number;
+    readonly cache_can_write_master: (a: number, b: number) => void;
+    readonly cache_find_match: (a: number, b: number) => void;
+    readonly cache_migrate_master_scope: (a: number) => number;
+    readonly cache_migrate_per_record_kinds: (a: number) => number;
+    readonly cache_migrate_priced_refs: (a: number) => number;
+    readonly cache_route_prefetch: (a: number) => number;
+    readonly cache_run_seed_migrations: (a: number) => number;
     readonly check_air_rate_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_air_shipment_transition: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly check_allocation_within_mgw: (a: number, b: number, c: number) => number;
     readonly check_awb_doc_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
-    readonly commission_compute: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly commission_resolve_rule: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly compute_chargeable_kg: (a: number, b: number, c: number, d: number) => number;
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-    readonly compute_freight: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly data_clear_fork_scan: (a: number) => number;
+    readonly data_current_revision: (a: number) => number;
+    readonly data_delete_pnl_lines: (a: number) => number;
+    readonly data_delete_shipment: (a: number) => number;
+    readonly data_get_envelope: (a: number) => number;
+    readonly data_get_shipment: (a: number) => number;
+    readonly data_join_loaded: (a: number) => number;
+    readonly data_list_envelopes: (a: number) => number;
+    readonly data_list_where: (a: number) => number;
+    readonly data_pnl_line_id: (a: number, b: number) => void;
+    readonly data_publish_billing: (a: number) => number;
+    readonly data_published_for: (a: number) => number;
+    readonly data_put_envelope: (a: number) => number;
+    readonly data_put_shipment: (a: number) => number;
+    readonly data_write_gate: (a: number) => number;
     readonly drain_events: (a: number) => void;
     readonly exec: (a: number, b: number, c: number) => void;
-    readonly folder_relocations: () => number;
+    readonly flows_accept_quote: (a: number) => number;
+    readonly flows_active_sales_reps: (a: number) => number;
+    readonly flows_air_calc: (a: number, b: number) => void;
+    readonly flows_assert_rep_code: (a: number) => number;
+    readonly flows_assign_job_no: (a: number) => number;
+    readonly flows_assign_rep_code: (a: number) => number;
+    readonly flows_auto_advance: (a: number) => number;
+    readonly flows_build_entries_from_commission: (a: number, b: number) => void;
+    readonly flows_build_entries_from_shipment: (a: number, b: number) => void;
+    readonly flows_build_reversal_entry: (a: number, b: number) => void;
+    readonly flows_chargeable_kg: (a: number, b: number) => void;
+    readonly flows_clear_sales_registry: (a: number, b: number) => void;
+    readonly flows_commit_pnl_report: (a: number) => number;
+    readonly flows_customer_rep: (a: number, b: number) => void;
+    readonly flows_derive_sales_rep: (a: number, b: number) => void;
+    readonly flows_disable_user: (a: number) => number;
+    readonly flows_edit_profile: (a: number) => number;
+    readonly flows_ensure_rep_code: (a: number) => number;
+    readonly flows_ensure_state_aliases: (a: number) => number;
+    readonly flows_export_workspace: (a: number) => number;
+    readonly flows_format_job_no: (a: number, b: number) => void;
+    readonly flows_generate_quote_id: (a: number) => number;
+    readonly flows_invite_sales: (a: number) => number;
+    readonly flows_license_error_key: (a: number, b: number) => void;
+    readonly flows_license_resolve: (a: number) => number;
+    readonly flows_migrate_shipment_states: (a: number) => number;
+    readonly flows_next_local_seq: (a: number) => number;
+    readonly flows_persist_advanced_state: (a: number) => number;
+    readonly flows_post_commission: (a: number) => number;
+    readonly flows_post_reversal: (a: number) => number;
+    readonly flows_post_shipment: (a: number) => number;
+    readonly flows_promote_to_manager: (a: number) => number;
+    readonly flows_quote_converted: (a: number) => number;
+    readonly flows_register_entity: (a: number) => number;
+    readonly flows_rehydrate_fsm: (a: number) => number;
+    readonly flows_rep_code_valid: (a: number, b: number) => void;
+    readonly flows_repo_max_seq: (a: number) => number;
+    readonly flows_sales_analytics: (a: number, b: number) => void;
+    readonly flows_sales_commission: (a: number) => number;
+    readonly flows_sales_rep_by_prefix: (a: number, b: number) => void;
+    readonly flows_save_quote_draft: (a: number) => number;
+    readonly flows_self_rep_candidate: (a: number, b: number) => void;
+    readonly flows_send_quote: (a: number) => number;
+    readonly flows_shipment_affordance: (a: number, b: number) => void;
+    readonly flows_slugify: (a: number, b: number) => void;
+    readonly flows_void_apply: (a: number) => number;
+    readonly flows_void_plan: (a: number, b: number) => void;
+    readonly freight_app_init: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
-    readonly grant_file_build: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
-    readonly grant_file_build_with_areas: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
-    readonly grant_file_roles: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly grant_file_target_name: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly governance_assign_role: (a: number) => number;
+    readonly governance_audit_root_sharing: (a: number) => number;
+    readonly governance_backfill_grants: (a: number) => number;
+    readonly governance_bootstrap_acl_folders: (a: number) => number;
+    readonly governance_can_edit_default_currency: (a: number, b: number) => void;
+    readonly governance_change_role: (a: number) => number;
+    readonly governance_classify_root_permissions: (a: number, b: number) => void;
+    readonly governance_close_period: (a: number) => number;
+    readonly governance_close_records: (a: number) => number;
+    readonly governance_ensure_workspace_root: (a: number) => number;
+    readonly governance_error_records: (a: number) => number;
+    readonly governance_filter_sidebar: (a: number, b: number) => void;
+    readonly governance_find_lock: (a: number) => number;
+    readonly governance_first_run_provision: (a: number) => number;
+    readonly governance_home_route: (a: number, b: number) => void;
+    readonly governance_is_already_provisioned: (a: number) => number;
+    readonly governance_load_settings: (a: number) => number;
+    readonly governance_lock_period: (a: number) => number;
+    readonly governance_locked_periods: (a: number) => number;
+    readonly governance_merge_diff: (a: number, b: number) => void;
+    readonly governance_merge_records: (a: number, b: number) => void;
+    readonly governance_normalize_role: (a: number, b: number) => void;
+    readonly governance_opening_balance: (a: number, b: number) => void;
+    readonly governance_period_math: (a: number, b: number) => void;
+    readonly governance_period_of: (a: number, b: number) => void;
+    readonly governance_pre_close_checks: (a: number) => number;
+    readonly governance_prune_error_log: (a: number) => number;
+    readonly governance_purge_error_month: (a: number) => number;
+    readonly governance_regrant_everyone: (a: number) => number;
+    readonly governance_reopen_period: (a: number) => number;
+    readonly governance_repoint_refs: (a: number) => number;
+    readonly governance_revoke_role: (a: number) => number;
+    readonly governance_route_guard: (a: number, b: number) => void;
+    readonly governance_save_settings: (a: number) => number;
+    readonly governance_unlock_period: (a: number) => number;
+    readonly governance_user_roles: (a: number, b: number) => void;
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
-    readonly is_period_closed: (a: number, b: number, c: bigint, d: number, e: number) => number;
-    readonly legacy_containers: () => number;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
-    readonly per_record_kinds: () => number;
+    readonly manager_air_pnl: (a: number, b: number) => void;
+    readonly manager_ap_payables: (a: number, b: number) => void;
+    readonly manager_ar_aging: (a: number, b: number) => void;
+    readonly manager_ar_timeline: (a: number, b: number) => void;
+    readonly manager_audit_log_csv: (a: number, b: number) => void;
+    readonly manager_audit_log_range: (a: number, b: number) => void;
+    readonly manager_audit_log_sort: (a: number, b: number) => void;
+    readonly manager_commission_rules: (a: number) => number;
+    readonly manager_commission_sparkline: (a: number, b: number) => void;
+    readonly manager_commissions: (a: number, b: number) => void;
+    readonly manager_customer360: (a: number, b: number) => void;
+    readonly manager_customer_mode_mix: (a: number, b: number) => void;
+    readonly manager_dashboard: (a: number) => number;
+    readonly manager_email_valid: (a: number, b: number) => void;
+    readonly manager_exception_escalate: (a: number, b: number) => void;
+    readonly manager_exception_mttr: (a: number, b: number) => void;
+    readonly manager_exception_per_sales: (a: number, b: number) => void;
+    readonly manager_exception_trends: (a: number, b: number) => void;
+    readonly manager_exceptions_sorted: (a: number, b: number) => void;
+    readonly manager_ledger_apply_repost: (a: number) => number;
+    readonly manager_ledger_auto_reconcile: (a: number) => number;
+    readonly manager_ledger_balance_sheet: (a: number, b: number) => void;
+    readonly manager_ledger_chart_groups: (a: number, b: number) => void;
+    readonly manager_ledger_csv: (a: number, b: number) => void;
+    readonly manager_ledger_filter_legs: (a: number, b: number) => void;
+    readonly manager_ledger_plan_repost: (a: number) => number;
+    readonly manager_ledger_pnl: (a: number, b: number) => void;
+    readonly manager_ledger_pnl_monthly: (a: number, b: number) => void;
+    readonly manager_ledger_purge_orphans: (a: number) => number;
+    readonly manager_ledger_reconcile: (a: number) => number;
+    readonly manager_ledger_running_balances: (a: number, b: number) => void;
+    readonly manager_ledger_trial_balance: (a: number, b: number) => void;
+    readonly manager_notification_from_event: (a: number, b: number) => void;
+    readonly manager_notifications_time_based: (a: number, b: number) => void;
+    readonly manager_period_key: (a: number, b: number) => void;
+    readonly manager_pnl_buy_sell: (a: number, b: number) => void;
+    readonly manager_pnl_drill: (a: number, b: number) => void;
+    readonly manager_pnl_pivot: (a: number, b: number) => void;
+    readonly manager_user_prefix: (a: number, b: number) => void;
+    readonly manager_users_filter: (a: number, b: number) => void;
+    readonly manager_users_sort: (a: number, b: number) => void;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -493,12 +884,7 @@ export interface InitOutput {
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly shipment_billing_snapshot: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
-    readonly shipment_change_set: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly shipment_has_revenue: (a: number, b: number, c: number) => void;
-    readonly shipment_join: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly shipment_split: (a: number, b: number, c: number) => void;
     readonly sqlite_init: (a: number, b: number) => number;
     readonly store_count_entities: (a: number) => void;
     readonly store_delete: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -512,15 +898,29 @@ export interface InitOutput {
     readonly store_put_meta: (a: number, b: number, c: number, d: number) => void;
     readonly store_put_notification: (a: number, b: number) => void;
     readonly store_put_wma: (a: number, b: number, c: number, d: number) => void;
+    readonly sync_audit_append: (a: number) => number;
+    readonly sync_audit_read: (a: number) => number;
+    readonly sync_audit_verify_chain: (a: number) => number;
+    readonly sync_delta_tick_plan: (a: number, b: number) => void;
+    readonly sync_drain_plan: (a: number, b: number) => void;
+    readonly sync_due_soon_check: (a: number) => number;
+    readonly sync_due_soon_mark: (a: number) => number;
+    readonly sync_due_soon_rows: (a: number) => number;
+    readonly sync_error_capture: (a: number) => number;
+    readonly sync_job_event: (a: number, b: number) => void;
+    readonly sync_quota_check: (a: number) => number;
+    readonly sync_user_audit_read: (a: number) => number;
+    readonly sync_user_audit_write: (a: number) => number;
+    readonly sync_wma_dismiss: (a: number, b: number) => void;
+    readonly sync_wma_load: (a: number) => number;
+    readonly sync_wma_on_event: (a: number, b: number) => void;
+    readonly sync_wma_predict: (a: number, b: number) => void;
+    readonly sync_wma_save: (a: number) => number;
     readonly user_prefix_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly validate_awb_no: (a: number, b: number) => number;
     readonly validate_iata_dgr_class: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;
     readonly verify_license: (a: number, b: number, c: bigint) => number;
-    readonly wasm_build_entries_from_commission: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly wasm_build_entries_from_shipment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly wasm_build_reversal_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly wasm_compute_sales_analytics: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
@@ -581,9 +981,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_10690: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10701: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_7862: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15656: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15667: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12828: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

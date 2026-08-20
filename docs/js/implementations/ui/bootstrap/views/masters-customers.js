@@ -1,11 +1,12 @@
 // F-12-11 — Master CRUD: Customers
 
-import { hasRole } from '../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../freight_app/core_abstractions/roles.js';
-import { openMergeModal, mergeRecords, repointRefs } from '../../../freight_app/operators/manager/merge-orchestrator.js';
+import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
+import { mergeRecords, repointRefs } from '../../core_abstractions/ports/governance/master-merge.js';
+import { openMergeModal } from './merge-modal.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { boundedList, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
-import { getActiveSalesReps } from '../../../freight_app/operators/sales-registry.js';
+import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND       = 'customers';

@@ -1,7 +1,7 @@
 // Lit component — <vdg-kanban-board>
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { getActiveSalesReps } from '../../../freight_app/operators/sales-registry.js';
+import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { SHIPMENT_MAIN_PATH, NEXT_ON_PATH } from '../../../kernel/core_abstractions/util/shipment-phases.js';

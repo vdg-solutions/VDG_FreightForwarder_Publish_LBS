@@ -1,20 +1,20 @@
 // Manager Commission Settlement — F-14-08
 
 import '../../components/commission-slip.js';
-import { hasRole } from '../../../../freight_app/core_abstractions/session-roles.js';
-import { ROLE_MANAGER } from '../../../../freight_app/core_abstractions/roles.js';
+import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { renderSuggestionsBanner } from './commission/suggestions-banner.js';
 import { t }                  from '../../../../kernel/core_abstractions/i18n/index.js';
 import { navigate }           from '../../router.js';
 import { showConfirm }        from '../../helpers/show-confirm.js';
-import { computeCommissions, buildPeriodKey, KIND_PNL_LINE } from '../../../../freight_app/operators/manager/commission-calculator.js';
-import { KIND_SHIPMENT } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
-import { compose as composeRules } from '../../../../freight_app/operators/manager/commission-composer.js';
-import { bulkPut }            from '../../../../freight_app/operators/cache/bulk-orchestrator.js';
-import { lockPeriod, readLockedPeriods } from '../../../../freight_app/core_abstractions/ports/period-lock-registry.js';
-import { PREF_LOCKED_PERIODS_KEY } from '../../../../freight_app/core_abstractions/ports/write-gate.js';
+import { KIND_SHIPMENT } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { bulkPut }            from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
+import { PREF_LOCKED_PERIODS_KEY } from '../../../core_abstractions/ports/data/write-gate.js';
+import { lockPeriod, readLockedPeriods } from '../../../core_abstractions/ports/governance/period-lock-registry.js';
+import { computeCommissions, buildPeriodKey, KIND_PNL_LINE } from '../../../core_abstractions/ports/manager/commission-calculator.js';
+import { compose as composeRules } from '../../../core_abstractions/ports/manager/commission-composer.js';
 import { safeMasterLoad }     from '../../../../kernel/core_abstractions/util/master-load.js';
-import { listShipments } from '../../../../freight_app/core_abstractions/ports/shipment-repo.js';
+import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
 
 const PAYOUT_KIND          = 'commission_payout';
 const KIND_COMMISSION_RULES = 'commission_rules';
