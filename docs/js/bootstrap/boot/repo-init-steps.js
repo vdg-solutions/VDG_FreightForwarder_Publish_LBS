@@ -207,7 +207,7 @@ async function _deferredInit(user, db, driveApi, repo) {
     // Master-scope migration (F-28-02): local-charges/units-of-measure flipped to team
     // audience — sweep each user's stranded per-user records into shared once, guarded by
     // an IDB meta flag. Fire-and-forget: bounded internally by safeAwait, never blocks boot.
-    wasmMod.cache_migrate_master_scope({})
+    wasm().cache_migrate_master_scope({})
       .catch((err) => console.warn('[VDG] master-scope migration error:', err.message)); // DEV
 
     // Error log — browser hooks here, both bounds (no writes while auth is dead, the per-session
@@ -244,7 +244,7 @@ async function _deferredInit(user, db, driveApi, repo) {
     // Priced-ref boot migration (F-28-14(d)): materialize each priced master bundle into its
     // governance ref once so the two stores stop diverging (F-28-12 D-2). Fire-and-forget:
     // bounded internally by safeAwait, idempotency keyed off the shared state.json — never blocks boot.
-    wasmMod.cache_migrate_priced_refs({})
+    wasm().cache_migrate_priced_refs({})
       .catch((err) => console.warn('[VDG] priced-ref migration error:', err.message)); // DEV
 
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
