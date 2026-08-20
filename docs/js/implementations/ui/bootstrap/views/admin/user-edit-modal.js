@@ -4,6 +4,7 @@
 // F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
+import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { allocateUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
@@ -47,7 +48,7 @@ export function openEditUserModal(user, { onSaved } = {}) {
       </div>
     </div>`;
 
-  document.body.appendChild(overlay);
+  mountOverlay(overlay);
 
   overlay.querySelector('#edit-cancel').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#edit-submit').addEventListener('click', () => _onSubmit(overlay, user, onSaved));

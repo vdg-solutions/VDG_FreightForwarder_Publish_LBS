@@ -2,6 +2,7 @@
 // Split out to respect the 350-line/file cap; pure DOM builders, no repo/Drive calls of their
 // own beyond what's passed in via deps.
 
+import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 export function openEditModal(user, root, deps) {
@@ -32,7 +33,7 @@ export function openEditModal(user, root, deps) {
       </div>
     </div>`;
 
-  document.body.appendChild(overlay);
+  mountOverlay(overlay);
   overlay.querySelector('#ep-cancel').onclick = () => overlay.remove();
   overlay.querySelector('#ep-save').onclick   = async () => {
     const repo   = getRepo();
@@ -79,7 +80,7 @@ export function openInviteModal(root, deps) {
       </div>
     </div>`;
 
-  document.body.appendChild(overlay);
+  mountOverlay(overlay);
   overlay.querySelector('#inv-cancel').onclick = () => overlay.remove();
   overlay.querySelector('#inv-send').onclick   = async () => {
     const email = overlay.querySelector('#inv-email').value.trim();

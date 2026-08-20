@@ -6,6 +6,7 @@
 // F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
 // widening to every role is Open Q #1 in the F-27-01 design, not decided here.
 
+import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { deriveUserPrefix, allocateUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
@@ -52,7 +53,7 @@ export function openAddUserModal({ onAdded } = {}) {
       </div>
     </div>`;
 
-  document.body.appendChild(overlay);
+  mountOverlay(overlay);
 
   // #30: the prefix is machinery (Drive fork name + grant file name), not a manager decision —
   // the preview just shows what will be created. The definitive value is allocated at submit,
