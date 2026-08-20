@@ -90,7 +90,7 @@
   "pending_access.title": "Tài khoản đang chờ cấp quyền",
   "pending_access.body": "Bạn đã đăng nhập nhưng chưa được gán vai trò trong workspace này. Vui lòng liên hệ quản lý để được cấp quyền, sau đó bấm Thử lại.",
   "root_sharing.warn_title": "Thư mục workspace đang bị chia sẻ trực tiếp",
-  "root_sharing.warn_body": "Quyền trên Drive kế thừa xuống mọi thư mục con, nên các tài khoản dưới đây đang thấy cả admin/users.jsonl — tệp phân quyền. App chỉ cấp quyền trên thư mục riêng của từng người và các thư mục dùng chung, không bao giờ cấp trên thư mục gốc, nên quyền này đến từ việc chia sẻ tay trên Drive; ai có quyền Editor đều tự sửa được vai trò của mình. Hãy gỡ chia sẻ ở thư mục gốc, rồi cấp vai trò cho họ ngay trong màn hình này.",
+  "root_sharing.warn_body": "Quyền trên Drive kế thừa xuống mọi thư mục con, nên các tài khoản dưới đây đang thấy cả grants/ — nơi giữ tệp phân quyền của từng người. App chỉ cấp quyền trên thư mục riêng của từng người và các thư mục dùng chung, không bao giờ cấp trên thư mục gốc, nên quyền này đến từ việc chia sẻ tay trên Drive; ai có quyền Editor đều tự sửa được vai trò của mình. Hãy gỡ chia sẻ ở thư mục gốc, rồi cấp vai trò cho họ ngay trong màn hình này.",
   "pending_access.no_workspace_title": "Chưa có workspace nào",
   "pending_access.no_workspace_body": "Không tìm thấy workspace của công ty trên Drive của bạn, và cũng chưa ai chia sẻ workspace cho bạn. Nếu bạn là quản lý và đây là lần chạy đầu tiên, hãy tạo workspace mới. Nếu không, hãy đợi quản lý chia sẻ rồi bấm Thử lại.",
   "pending_access.create_workspace": "Tôi là quản lý — tạo workspace mới",

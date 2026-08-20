@@ -286,7 +286,7 @@ export async function render(root) {
     const { kind, id } = e.detail || {};
     prependActivity(t('dashboard.activity.entity_updated', { kind, id }));
     if (kind === 'user') {
-      // Reload filter buttons when user roster changes
+      // Reload filter buttons when the staff table changes
       _buildSalesBtns().then((html) => {
         const el = root.querySelector('.flex.gap-1:last-child');
         if (el) el.outerHTML = `<div class="flex gap-1">${html}</div>`;

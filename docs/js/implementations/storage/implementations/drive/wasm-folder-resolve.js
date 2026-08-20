@@ -124,7 +124,7 @@ async function resolveDirFromManifest(port, dirPath, allowRefresh = true) {
 
   // The manifest is a CACHE of folder ids, and a table's home can MOVE. When it does, an employee
   // holding no permission on the root has a map that no longer names the place — measured live:
-  // the roster moved to `roster/`, the manifest still said `admin`, and every screen that needed a
+  // the staff table moved folders, the manifest still said the old one, and every screen that needed a
   // colleague's name died with "Workspace root not found".
   //
   // Moving a table is two moves: the DATA and the PERMISSION. The manager's re-grant republishes

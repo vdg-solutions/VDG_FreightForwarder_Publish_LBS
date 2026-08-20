@@ -198,12 +198,12 @@ class VdgSidebar extends LitElement {
     window.removeEventListener(ROLES_RESOLVED_EVENT,     this._onRolesResolved);
   }
 
-  // #28: the role SET from admin/users.jsonl. A user holding several roles sees the union of
+  // #28: the role SET from the staff table (grants/). A user holding several roles sees the union of
   // their items — a manager who also does sales gets both menus.
   _effectiveRoles() {
     const roles = currentUserRoles();
     if (roles.length) return roles;
-    // #15 boot window: the rep prefix is stamped as role until users.jsonl resolves, and it
+    // #15 boot window: the rep prefix is stamped as role until the staff table resolves, and it
     // matches no allowRoles list — normalize it so a real rep is not shown an empty menu.
     return [normalizeRole(currentUserRole())];
   }
@@ -279,7 +279,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 8ee8a2b-dirty">v0.3.88</span>
+        <span class="font-mono whitespace-nowrap" title="build ed436e3-dirty">v0.3.89</span>
       </div>
     `;
   }

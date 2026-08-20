@@ -90,7 +90,7 @@
   "pending_access.title": "Account pending access",
   "pending_access.body": "You are signed in but no role has been granted in this workspace yet. Ask your manager for access, then press Retry.",
   "root_sharing.warn_title": "The workspace folder is shared directly",
-  "root_sharing.warn_body": "Drive permissions are inherited by every subfolder, so the accounts below can also see admin/users.jsonl — the permission file itself. The app only ever grants each person their own folder plus the shared folders, never the root, so this access came from a manual Drive share; anyone with Editor access can change their own role. Remove the share on the root folder, then assign them a role from this screen.",
+  "root_sharing.warn_body": "Drive permissions are inherited by every subfolder, so the accounts below can also see grants/ — every person's permission file. The app only ever grants each person their own folder plus the shared folders, never the root, so this access came from a manual Drive share; anyone with Editor access can change their own role. Remove the share on the root folder, then assign them a role from this screen.",
   "pending_access.no_workspace_title": "No workspace yet",
   "pending_access.no_workspace_body": "No company workspace was found in your Drive, and none has been shared with you. If you are the manager and this is the first run, create the workspace. Otherwise wait for your manager to share it, then press Retry.",
   "pending_access.create_workspace": "I'm the manager — create the workspace",

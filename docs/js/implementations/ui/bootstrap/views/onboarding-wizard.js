@@ -77,7 +77,7 @@ async function _inviteSales(email, wsRootId, driveApi, container) {
   const prefix = forkId(email);
 
   // Delegate to user-provisioning (single source of truth). If repo not ready during
-  // initial setup, inviteSales skips users.jsonl write gracefully.
+  // initial setup, inviteSales skips the staff-table write gracefully.
   const repo = window.__vdg_repo || null;
   await inviteSales(email, prefix, driveApi, repo, wsRootId);
 

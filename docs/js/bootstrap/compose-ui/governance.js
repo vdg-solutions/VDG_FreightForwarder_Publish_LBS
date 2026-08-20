@@ -41,7 +41,7 @@ export function composeGovernance(wasm) {
       wasm.governance_filter_sidebar({ items: items || [], roles: roleList(roles) }).items,
     resolveUserRoles: (record) => wasm.governance_user_roles({ record: record ?? null }).roles,
     normalizeRole: (role) => wasm.governance_normalize_role({ role: role ?? null }).role,
-    // The boot-populated snapshot. Sign-in resolves the roles from the roster before repo-init
+    // The boot-populated snapshot. Sign-in resolves the roles from the staff table before repo-init
     // exists — same source, earlier — so both mirrors are read.
     currentUserRoles: () => {
       const fromBoot = window.__vdg_current_user?.roles;

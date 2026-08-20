@@ -218,7 +218,7 @@ function _applyAndMount(root) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
-// #20: access on the workspace ROOT is access on admin/users.jsonl — the ACL itself — because
+// #20: access on the workspace ROOT is access on the staff table — the ACL itself — because
 // Drive inherits permissions downward, so the holder can promote themselves. The app's own grants
 // (resolve_grants in the Rust protection table) only ever reach users/{prefix} and _shared/*, so
 // anything sitting on the root came from a manual folder share. #23 reverted the #22 attempt to

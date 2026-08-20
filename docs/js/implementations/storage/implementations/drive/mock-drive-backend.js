@@ -17,7 +17,7 @@ const FORCE_SCOPE_403 = 'vdg.mock-drive.force-scope-403'; // F-24-19 test seam, 
 
 // Hardcoded test identity (PM decision: PM email = manager, azureljas = sales)
 const MOCK_MANAGER_EMAIL = 'clashclanbcbc@gmail.com';
-const MOCK_SALES_PREFIX  = 'azureljas';
+const MOCK_SALES_PREFIX  = 'azureljas@mock.test'; // fork = full lowercased email
 const MOCK_ROOT_NAME     = 'LBS';
 const FOLDER_MIME        = 'application/vnd.google-apps.folder';
 
@@ -56,12 +56,12 @@ function _ensureMockRoot() {
   fsSet(id, { name: MOCK_ROOT_NAME, parentId: 'root', content: null, etag: null, mimeType: FOLDER_MIME, createdAt: Date.now() });
   indexAdd('root', id);
 
-  // Seed admin/ folder
-  const adminId = nextId();
-  fsSet(adminId, { name: 'admin', parentId: id, content: null, etag: null, mimeType: FOLDER_MIME, createdAt: Date.now() });
-  indexAdd(id, adminId);
+  // Seed grants/ — the staff store, same layout the real workspace bootstrap creates
+  const grantsId = nextId();
+  fsSet(grantsId, { name: 'grants', parentId: id, content: null, etag: null, mimeType: FOLDER_MIME, createdAt: Date.now() });
+  indexAdd(id, grantsId);
 
-  // Seed users/<sales-prefix>/ folder
+  // Seed users/<fork>/ folder
   const usersId = nextId();
   fsSet(usersId, { name: 'users', parentId: id, content: null, etag: null, mimeType: FOLDER_MIME, createdAt: Date.now() });
   indexAdd(id, usersId);

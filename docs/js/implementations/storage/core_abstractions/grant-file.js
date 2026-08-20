@@ -1,7 +1,7 @@
 // grant-file.js — #30: pre-WASM read of the per-user grant file `grants/grant.{workspace}.{fork}`.
 //
 // The problem it fixes: resolve_grants never grants anything on `admin/`, so an employee could not
-// read admin/users.jsonl and auth-gate inferred their role from the mere existence of their fork —
+// read the staff table and auth-gate inferred their role from the mere existence of their fork —
 // every Accountant, Auditor and Pricing holder resolved as SalesRep on their own machine.
 //
 // The grant file is that user's row and nothing else: `grants/` is granted to nobody (so it cannot

@@ -55,7 +55,7 @@ export function openAddUserModal({ onAdded } = {}) {
 
   // #30: the prefix is machinery (Drive fork name + grant file name), not a manager decision —
   // the preview just shows what will be created. The definitive value is allocated at submit,
-  // against the roster as it stands then, so a collision cannot slip through a stale preview.
+  // against the staff table as it stands then, so a collision cannot slip through a stale preview.
   const emailInput    = overlay.querySelector('#add-email');
   const prefixPreview = overlay.querySelector('#add-prefix-preview');
   emailInput.addEventListener('input', () => {
@@ -82,7 +82,7 @@ async function _onSubmit(overlay, onAdded) {
   if (!roleService || !userRepo) return showError(overlay, 'Workspace not ready');
 
   // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
-  // #30: allocated here, against the current roster, so two users sharing an email local-part
+  // #30: allocated here, against the current staff table, so two users sharing an email local-part
   // cannot end up sharing a fork.
   const fork = allocateFork(email, await userRepo.list(), null);
 

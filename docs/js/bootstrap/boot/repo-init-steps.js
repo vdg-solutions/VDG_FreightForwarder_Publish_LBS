@@ -91,7 +91,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   window.dispatchEvent(new Event('vdg:wasm-ready'));
 
   // 4. NOT_PROVISIONED no longer auto-provisions (#17). Boot used to create a workspace root in
-  // the signed-in user's OWN Drive here, whose empty admin/users.jsonl then seeded that user as
+  // the signed-in user's OWN Drive here, whose empty staff table then seeded that user as
   // Manager — so every employee who had not been invited yet forked a private workspace with its
   // own user and customer lists (QC 2026-08-09: "2 bên không đồng bộ, khác nhau"). Creating the
   // company workspace is a deliberate manager action now; boot just continues degraded and the
@@ -256,7 +256,7 @@ async function _deferredInit(user, db, driveApi, repo) {
 
     // #30: the role cascade is a Rust use-case (governance/role_assignment.rs) reached through
     // the wasm exports; the global stays because the admin screens ask for it by name. Every
-    // collaborator it needs — the roster, the audit trails, the workspace tree — is on the
+    // collaborator it needs — the staff table, the audit trails, the workspace tree — is on the
     // platform object, so nothing is injected here.
     window.__vdg_role_assignment_service = {
       assignRole: (email, role, fork = null, extraRoles = []) => _governance(

@@ -9,7 +9,7 @@ export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
 export const ROLE_ACCOUNTANT       = 'Accountant';
 export const ROLE_AUDITOR          = 'Auditor';
 export const ROLE_PRICING          = 'Pricing';
-export const ROLE_READ_ONLY        = 'ReadOnly'; // AC-06: default for a user absent from the roster
+export const ROLE_READ_ONLY        = 'ReadOnly'; // AC-06: default for a user absent from the staff table
 
 // F-42-05: role-gated chrome mounts BEFORE sign-in resolves, so it must be told to look again.
 // Fired by the platform whenever the resolved role set genuinely changes.

@@ -71,8 +71,8 @@ function _viewRoot() {
 async function renderView(route) {
   // F-24-05: role gate before any view dispatch — admin/accounting/sales prefixes
   // redirect roles that don't belong there (toast + navigate, real ACL is Drive-side).
-  // #15: normalize — boot stamps the rep prefix as role until users.jsonl resolves.
-  // #28: the guard takes the whole SET. Boot window (users.jsonl not resolved yet) falls back to
+  // #15: normalize — boot stamps the rep prefix as role until the staff table resolves.
+  // #28: the guard takes the whole SET. Boot window (staff table not resolved yet) falls back to
   // the normalized single role so a real rep is not bounced on every cold start.
   const roles = currentUserRoles();
   const effectiveRole = roles.length ? roles : [normalizeRole(currentUserRole())];

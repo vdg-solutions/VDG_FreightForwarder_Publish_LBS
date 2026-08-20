@@ -22,7 +22,7 @@ export function runBootMaintenance(driveApi) {
       // MOVING A TABLE IS TWO MOVES: the data, and the permission. The migration does the first.
       // Without the second, every employee keeps a grant manifest pointing at the old folder —
       // and an employee holds no permission on the root, so that manifest is the only map they
-      // have. Measured live: the roster moved to `roster/`, the manifests still said `admin`, and
+      // have. Measured live: the staff table moved folders, the manifests still said the old one, and
       // every screen needing a colleague's name died with "Không mở được màn hình".
       //
       // So the manager who just moved the data re-issues the maps, in the same breath.

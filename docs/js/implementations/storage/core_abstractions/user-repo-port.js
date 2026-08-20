@@ -1,4 +1,4 @@
-// Port: user store (`admin/users.jsonl`) — mirrors abstractions/ports/user_repo.rs (F-24-01).
+// Port: user store (`grants/`, one file per person) — mirrors abstractions/ports/user_repo.rs (F-24-01).
 // Phase-1 impl: UserDriveRepo (F-24-02).
 export class UserRepoPort {
   /** @returns {Promise<object[]>} active users, latest _ledger_version per email */

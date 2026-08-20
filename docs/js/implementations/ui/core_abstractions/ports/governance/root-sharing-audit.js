@@ -1,5 +1,5 @@
 // root-sharing-audit — port: non-owner permissions on the workspace ROOT, writers first. Anyone
-// granted there inherits it onto the roster, so this is the one sharing mistake the ACL model
+// granted there inherits it onto the staff table, so this is the one sharing mistake the ACL model
 // cannot survive. A failed read THROWS — it must never render as "sharing is clean".
 
 let _impl = null;

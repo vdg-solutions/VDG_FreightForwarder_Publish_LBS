@@ -1,6 +1,6 @@
 // platform/governance.js — extra platform methods the Rust governance use-cases import
 // (js_governance.rs extern type). Raw passthrough, no decisions: the workspace tree with its ERROR
-// detail intact, the staff roster, the two audit trails, the ledger's balances, and the local
+// detail intact, the staff table, the two audit trails, the ledger's balances, and the local
 // membership evidence a first-run decision rests on.
 import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';

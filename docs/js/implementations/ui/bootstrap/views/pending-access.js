@@ -16,7 +16,7 @@ import { ROLE_READ_ONLY } from '../../../ui/core_abstractions/roles.js';
 import { runFirstRunProvision, isAlreadyProvisionedLocally } from '../../core_abstractions/ports/governance/first-run-provision.js';
 import { currentUserRole, normalizeRole, homeRouteForRole } from '../../core_abstractions/ports/governance/route-guard.js';
 
-// users.jsonl role resolution is async (repo-init-steps step: userRepo.get(email).then) — a
+// staff-table role resolution is async (repo-init-steps step: userRepo.get(email).then) — a
 // provisioned user can land here during the race, so poll and leave as soon as a role shows up.
 const ROLE_POLL_MS = 3000;
 

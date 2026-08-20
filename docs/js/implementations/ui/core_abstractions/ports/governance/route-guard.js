@@ -5,7 +5,7 @@
 // Every fallback here is DENY. Boot blocks on wasm (boot-fsm), so reaching a delegate before the
 // binding means something is very wrong — guessing generously would hand out access.
 
-/// AC-06: what a user absent from the roster holds. Not a role — the absence of one.
+/// AC-06: what a user absent from the staff table holds. Not a role — the absence of one.
 export const ROLE_READ_ONLY = 'ReadOnly';
 /// Never the dashboard: that route is guarded, and a denied role bounced back to it loops forever.
 export const PENDING_ROUTE = '/pending-access';

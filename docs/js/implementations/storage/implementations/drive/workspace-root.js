@@ -159,7 +159,7 @@ async function _resolveWorkspaceRoot(name) {
 }
 
 // Several same-name candidates and no pin: the real workspace is the one that has been
-// PROVISIONED — its `grants/` holds at least one grant file. (It used to probe admin/users.jsonl;
+// PROVISIONED — its `grants/` holds at least one grant file. (It used to probe the retired staff file;
 // admin/ is gone and grants/ is the staff store, so that probe classified every candidate as
 // unseeded and the test never fired.) A shell that merely shares the name (empty skeleton, backup,
 // accident) must never win on id order. Ties break to the oldest folder; nothing is deleted here —
