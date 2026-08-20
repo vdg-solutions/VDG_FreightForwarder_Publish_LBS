@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vf2dbe13-dirty';
+const STATIC_CACHE     = 'vdg-static-vf451800-dirty';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-vf2dbe13-dirty';
+const DRIVE_META_CACHE = 'vdg-drive-meta-vf451800-dirty';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -264,12 +264,15 @@ const DRIVE_CONTENT_RE = /\/drive\/v3\/files\/[^?]+\?alt=media/;
 // not path-anchored: a bare /token or /oauth2 substring also matches our own app files
 // (js/implementations/storage/implementations/drive/token-refresh.js), which is the r3 boot-hang regression (F-19-44 D-r3-1).
 const AUTH_HOSTS = ['accounts.google.com', 'oauth2.googleapis.com'];
+// The vdg-server API lives on its own origin (VDG_API_BASE); every route under this prefix is
+// dynamic workspace state and must never be answered from a cache.
+const API_PATH_PREFIX = '/api/';
 
 const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps f2dbe13-dirty → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps f451800-dirty → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a
@@ -402,14 +405,19 @@ self.addEventListener('fetch', (ev) => {
     return;
   }
 
-  // Cross-origin CDN libs are version-pinned in the URL → immutable → cache-first (offline-capable)
+  // Cross-origin: the vdg-server API is dynamic data — caching it serves a stale workspace
+  // (reads miss fresh writes, etag CAS 412s forever). Pass it through untouched. Only the
+  // version-pinned CDN libs stay cache-first (immutable by URL → offline-capable).
   if (!isSameOrigin(url)) {
+    if (new URL(url).pathname.startsWith(API_PATH_PREFIX)) return;
     ev.respondWith(_cacheFirst(request));
     return;
   }
 
   // Content-hash-named asset → cache-first (a rebuild changes the name, so never stale)
   const { pathname } = new URL(url);
+  // Same-origin API (vdg-server serving its own bundle) — same rule as cross-origin: never cached.
+  if (pathname.startsWith(API_PATH_PREFIX)) return;
   if (isHashedImmutable(pathname)) {
     ev.respondWith(_cacheFirst(request));
     return;
