@@ -48,7 +48,7 @@ export function composeGovernance(wasm) {
       return fromBoot?.length ? fromBoot : (window.__vdg_session_roles || []);
     },
     currentUserRole: () => window.__vdg_current_user?.role || ROLE_READ_ONLY,
-    currentUserId:   () => window.__vdg_current_user?.user_prefix || UNKNOWN_USER_ID,
+    currentUserId:   () => window.__vdg_current_user?.fork || UNKNOWN_USER_ID,
   });
 
   bindWorkspaceSettings({

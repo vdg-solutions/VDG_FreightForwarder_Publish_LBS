@@ -1,13 +1,14 @@
 // user-add-modal.js — Add User modal for the admin Users view (F-24-04).
 // F-24-08 D-03: assignRole failure after the user record was upserted rolls back via
 // UserRepo.remove(email) — no orphaned row with zero Drive grants.
-// F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
-// widening to every role is Open Q #1 in the F-27-01 design, not decided here.
-// The users/{prefix} fork folder is get-or-created by the Rust grant cascade, not here.
+// F-27-01: {sales_prefix} -> {user_prefix} rename (owner 2026-08-20: {user_prefix} -> {fork}).
+// Prefix field stays SalesRep-only for now — widening to every role is Open Q #1 in the
+// F-27-01 design, not decided here.
+// The users/{fork} folder is get-or-created by the Rust grant cascade, not here.
 
 import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { deriveUserPrefix, allocateUserPrefix, isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
+import { deriveFork, allocateFork, isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 
 
@@ -38,7 +39,7 @@ export function openAddUserModal({ onAdded } = {}) {
           <div class="text-[11px] text-slate-400">${t('admin.users.roles.hint')}</div>
           ${roleCheckboxesHtml([], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
-        <div class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
+        <div class="block text-xs text-slate-600">${t('admin.users.column.fork')}
           <div id="add-prefix-preview" class="mt-1 w-full border rounded px-3 py-1.5 text-xs bg-slate-50 text-slate-500 font-mono">—</div>
           <div class="mt-1 text-[11px] text-slate-400">${t('admin.users.prefix.auto_hint')}</div>
         </div>
@@ -58,7 +59,7 @@ export function openAddUserModal({ onAdded } = {}) {
   const emailInput    = overlay.querySelector('#add-email');
   const prefixPreview = overlay.querySelector('#add-prefix-preview');
   emailInput.addEventListener('input', () => {
-    prefixPreview.textContent = deriveUserPrefix(emailInput.value) || '—';
+    prefixPreview.textContent = deriveFork(emailInput.value) || '—';
   });
 
   overlay.querySelector('#add-cancel').addEventListener('click', () => overlay.remove());
@@ -83,7 +84,7 @@ async function _onSubmit(overlay, onAdded) {
   // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
   // #30: allocated here, against the current roster, so two users sharing an email local-part
   // cannot end up sharing a fork.
-  const userPrefix = allocateUserPrefix(email, await userRepo.list(), null);
+  const fork = allocateFork(email, await userRepo.list(), null);
 
   const submitBtn = overlay.querySelector('#add-submit');
   submitBtn.disabled = true;
@@ -92,16 +93,16 @@ async function _onSubmit(overlay, onAdded) {
     // Record display_name up front so assignRole's own upsert (which defaults display_name to
     // the existing record) reproduces it verbatim instead of overwriting with the email.
     await userRepo.upsert({
-      email, display_name: name, role, roles, user_prefix: userPrefix,
+      email, display_name: name, role, roles, fork,
       active: true, created_at: new Date().toISOString(),
     });
 
     try {
-      // The grant cascade get-or-creates users/{user_prefix} itself now — the JS pre-create
+      // The grant cascade get-or-creates users/{fork} itself now — the JS pre-create
       // lived here while role EDIT (same cascade, no pre-create) failed on missing forks.
       // Returns { user, skipped } — skipped = ACL folders drive.file couldn't grant because
       // they hold non-app-created files (appNotAuthorizedToChild). Non-fatal; surfaced below.
-      const assignResult = await roleService.assignRole(email, role, userPrefix, roles.slice(1));
+      const assignResult = await roleService.assignRole(email, role, fork, roles.slice(1));
       assignSkipped = assignResult?.skipped || [];
     } catch (err) {
       // F-24-08 D-03: assignRole failed after the user record was upserted above — soft-delete

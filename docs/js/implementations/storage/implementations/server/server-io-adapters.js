@@ -12,7 +12,7 @@ import { KIND_PATH_OVERRIDES, USERS_PATH } from '../../core_abstractions/storage
 import { apiFetch } from '../../core_abstractions/backend.js';
 import { ApiError } from '../../core_abstractions/api-error.js';
 import { DriveApiError } from '../../core_abstractions/drive-errors.js';
-import { emailPrefix } from '../../../kernel/core_abstractions/util/email-prefix.js';
+import { forkId } from '../../../kernel/core_abstractions/util/fork-id.js';
 
 const HTTP_NOT_FOUND         = 404;
 const HTTP_PRECONDITION      = 412;
@@ -31,12 +31,12 @@ function asDriveError(err) {
 }
 
 export class ServerIoPort extends SharedIoPort {
-  constructor(driveApi, userEmail, userPrefix = null) {
+  constructor(driveApi, userEmail, fork = null) {
     super(userEmail);
     this.driveApi = driveApi;
     this.folderIds = new Map();
     this._folderKind = new Map();      // folderId -> kind: reverse map for the wasm delta engine
-    this._userPrefix = userPrefix || emailPrefix(userEmail);
+    this._fork = fork || forkId(userEmail);
     this._dirIds = new Map();     // path -> folderId, resolved once per session
     this._folderPath = new Map(); // folderId -> path (the reverse, for id-addressed listings)
   }
@@ -44,7 +44,7 @@ export class ServerIoPort extends SharedIoPort {
   // ── where things live ─────────────────────────────────────────────────────
 
   _kindPath(kind) {
-    return KIND_PATH_OVERRIDES[kind] ?? `${USERS_PATH}/${this._userPrefix}/${kind}`;
+    return KIND_PATH_OVERRIDES[kind] ?? `${USERS_PATH}/${this._fork}/${kind}`;
   }
 
   /// A path's folder id. Reads never create: a listing of a folder that does not exist is an

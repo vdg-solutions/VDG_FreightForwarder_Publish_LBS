@@ -12,7 +12,7 @@
 //
 // Split out of auth-gate.js (F-37-06) so the data layer can use it without importing the sign-in
 // chain — auth-gate touches `window` at module scope, and dragging that into a repo module is what
-// pushed the last shared helper (emailPrefix) out into its own file too.
+// pushed the last shared helper (forkId) out into its own file too.
 
 const AUTH_FAILED_STATUS  = 401;
 const RATE_LIMITED_STATUS = 429;

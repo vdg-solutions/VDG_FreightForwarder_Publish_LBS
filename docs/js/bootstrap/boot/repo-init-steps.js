@@ -6,7 +6,7 @@
 // NOT_PROVISIONED branch before F-17-03 reordered it.
 
 import { currentSalesRepId, currentRoles, hasRole } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
-import { emailPrefix } from '../../implementations/kernel/core_abstractions/util/email-prefix.js';
+import { forkId } from '../../implementations/kernel/core_abstractions/util/fork-id.js';
 import { ROLE_MANAGER } from '../../implementations/ui/core_abstractions/roles.js';
 import { safeAwait } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
@@ -17,7 +17,7 @@ import { bindLedgerRepo } from '../../implementations/storage/core_abstractions/
 
 const SENTINEL_TOKEN = /^__.*__$/; // '__MANAGER__' is a role token, not a fork name
 
-/// The fork the server resolved for this session (its user_prefix, uppercased into the role
+/// The fork the server resolved for this session (its fork id, uppercased into the role
 /// token). A collision suffix makes it differ from the email's local part, which is why it is
 /// read from the session and not recomputed. The owner sentinel yields null → email prefix.
 function _forkPrefixFromSession() {
@@ -129,14 +129,14 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 6. Initial user identity (no network, instant)
   // #28: identity carries the ROLE SET. `role` stays as roles[0] purely so older readers and
   // existing ledger records keep parsing — nothing gates on it any more.
-  // Every user owns a fork: user_prefix is no longer null-for-managers, so a manager doing sales
-  // work has somewhere to store it. The record's own prefix overrides this below once it loads.
+  // Every user owns a fork: fork is no longer null-for-managers, so a manager doing sales
+  // work has somewhere to store it. The record's own fork overrides this below once it loads.
   const roles = currentRoles();
   window.__vdg_current_user = {
-    email:       user.email,
-    role:        roles[0] || 'ReadOnly',
+    email: user.email,
+    role:  roles[0] || 'ReadOnly',
     roles,
-    user_prefix: emailPrefix(user.email),
+    fork:  forkId(user.email),
   };
 
   // 6b. The Rust freight_app use-cases get their platform (records over the repo, session, prefs,
@@ -259,14 +259,14 @@ async function _deferredInit(user, db, driveApi, repo) {
     // collaborator it needs — the roster, the audit trails, the workspace tree — is on the
     // platform object, so nothing is injected here.
     window.__vdg_role_assignment_service = {
-      assignRole: (email, role, userPrefix = null, extraRoles = []) => _governance(
-        wasm().governance_assign_role({ email, role, user_prefix: userPrefix, extra_roles: extraRoles })),
-      changeRole: (user, newRole, newUserPrefix = null, newExtraRoles = null) => _governance(
+      assignRole: (email, role, fork = null, extraRoles = []) => _governance(
+        wasm().governance_assign_role({ email, role, fork, extra_roles: extraRoles })),
+      changeRole: (user, newRole, newFork = null, newExtraRoles = null) => _governance(
         wasm().governance_change_role({
-          user, new_role: newRole, new_user_prefix: newUserPrefix, new_extra_roles: newExtraRoles,
+          user, new_role: newRole, new_fork: newFork, new_extra_roles: newExtraRoles,
         })),
-      revokeRole: (email, role, userPrefix = null) => _governance(
-        wasm().governance_revoke_role({ email, role, user_prefix: userPrefix })),
+      revokeRole: (email, role, fork = null) => _governance(
+        wasm().governance_revoke_role({ email, role, fork })),
       backfillGrants: () => _governance(wasm().governance_backfill_grants({})),
     };
     // #25: this wiring lands in the DEFERRED step, long after the router may have rendered
@@ -281,7 +281,7 @@ async function _deferredInit(user, db, driveApi, repo) {
       window.__vdg_current_user.roles       = resolved;
       window.__vdg_current_user.role        = resolved[0] || resolveUserRole(record);
       // #28: fall back to the email prefix, never null — every user owns a fork.
-      window.__vdg_current_user.user_prefix = record?.user_prefix || emailPrefix(user.email);
+      window.__vdg_current_user.fork = record?.fork || forkId(user.email);
     }).catch(() => {});
 
     // Manager-specific background tasks

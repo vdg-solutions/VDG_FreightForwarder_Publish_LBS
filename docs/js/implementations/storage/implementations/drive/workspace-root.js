@@ -193,9 +193,9 @@ async function findSharedSubfolder(name) {
 }
 
 // #30: shared FILES whose name starts with `base`. Exact-name lookup is not usable here — a
-// colliding prefix gets 4 random digits appended (user_prefix.rs::allocate_prefix), so the user
+// colliding prefix gets 4 random digits appended (fork.rs::allocate_fork), so the user
 // cannot know their own fork name at sign-in. They search on what they DO know, the local-part of
-// their email, and the grant file itself reports the real user_prefix back.
+// their email, and the grant file itself reports the real fork back.
 //
 // The mimeType clause is what separates the grant file from the fork folder: both are shared to
 // this user and both carry the same name. Drive's `contains` is word-prefix-ish rather than a

@@ -7,7 +7,7 @@
 import { apiFetch } from '../../core_abstractions/backend.js';
 import { ApiError } from '../../core_abstractions/api-error.js';
 import { DriveApiError } from '../../core_abstractions/drive-errors.js';
-import { emailPrefix } from '../../../kernel/core_abstractions/util/email-prefix.js';
+import { forkId } from '../../../kernel/core_abstractions/util/fork-id.js';
 import { VERDICT_GRANT, VERDICT_MANAGER, VERDICT_NOT_PROVISIONED } from '../../core_abstractions/workspace-authority.js';
 
 export async function probeRole(user, _wsName) {
@@ -22,7 +22,7 @@ export async function probeRole(user, _wsName) {
   const areas = Array.isArray(me?.areas) ? me.areas.map((a) => ({ path: a.path, folder_id: a.folder_id })) : [];
   if (me?.is_owner) return { kind: VERDICT_MANAGER };
   if (roles.length > 0) {
-    return { kind: VERDICT_GRANT, token: String(me.user_prefix || emailPrefix(user.email)).toUpperCase(), roles, areas };
+    return { kind: VERDICT_GRANT, token: String(me.fork || forkId(user.email)).toUpperCase(), roles, areas };
   }
   return { kind: VERDICT_NOT_PROVISIONED };
 }

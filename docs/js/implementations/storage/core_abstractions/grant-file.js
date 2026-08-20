@@ -1,4 +1,4 @@
-// grant-file.js — #30: pre-WASM read of the per-user grant file `grants/grant.{workspace}.{prefix}`.
+// grant-file.js — #30: pre-WASM read of the per-user grant file `grants/grant.{workspace}.{fork}`.
 //
 // The problem it fixes: resolve_grants never grants anything on `admin/`, so an employee could not
 // read admin/users.jsonl and auth-gate inferred their role from the mere existence of their fork —
@@ -23,8 +23,8 @@ const NAME_SEPARATOR        = '.';
 const ROLE_NAMES = ['Manager', 'SalesManager', 'SalesRep', 'CustomerService',
                     'Accountant', 'Auditor', 'Pricing'];
 
-export function grantFileName(workspace, userPrefix) {
-  return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${userPrefix}`;
+export function grantFileName(workspace, fork) {
+  return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${fork}`;
 }
 
 /// Search key: tag + workspace + the local-part of the user's own email. Their real prefix may
@@ -35,7 +35,7 @@ export function grantSearchKey(workspace, emailBase) {
 
 /// Fork name recovered from a grant file's name, for THIS workspace. A grant belonging to another
 /// company returns null — sharedWithMe spans the user's whole Drive.
-export function userPrefixFromGrantName(name, workspace) {
+export function forkFromGrantName(name, workspace) {
   const head = grantFileName(workspace, '');
   if (typeof name !== 'string' || !name.startsWith(head)) return null;
   return name.slice(head.length) || null;
@@ -48,10 +48,10 @@ export function userPrefixFromGrantName(name, workspace) {
 export function parseGrant(json, email, workspace) {
   let grant;
   try { grant = JSON.parse(json); } catch { return []; } // not our file — absence, not a failure
-  // user_prefix is required, as it is on the Rust side: GrantFile has no default for it, so a file
+  // fork is required, as it is on the Rust side: GrantFile has no default for it, so a file
   // missing it is not a grant. Accepting one here handed out roles from a half-written file.
-  if (!grant || typeof grant.email !== 'string' || typeof grant.user_prefix !== 'string'
-      || !grant.user_prefix || !Array.isArray(grant.roles)) return [];
+  if (!grant || typeof grant.email !== 'string' || typeof grant.fork !== 'string'
+      || !grant.fork || !Array.isArray(grant.roles)) return [];
   if (grant.email.toLowerCase() !== String(email || '').toLowerCase()) return [];
   if (String(grant.workspace || '').toLowerCase() !== String(workspace || '').toLowerCase()) return [];
   if (grant.roles.length === 0) return [];

@@ -74,7 +74,7 @@ async function _dedupeSameNameFolders(all, fallback) {
   return sorted[0];
 }
 
-// F-24-07 partial: some ACL paths (e.g. users/{user_prefix}) don't exist yet the first time a
+// F-24-07 partial: some ACL paths (e.g. users/{fork}) don't exist yet the first time a
 // user is added — create every missing segment under parentId so assignRole's folder lookup
 // (resolvePathToFolderId) doesn't throw "ACL path not found".
 async function getOrCreateFolderPath(parentId, path) {

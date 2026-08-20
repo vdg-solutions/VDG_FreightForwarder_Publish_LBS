@@ -9,7 +9,7 @@ import { readGrant } from '../../core_abstractions/grant-reader.js';
 import { isBoundBuild } from '../../core_abstractions/workspace-config.js';
 import { DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT } from '../../core_abstractions/drive-error-classifier.js';
 import { isUndecidable } from '../../core_abstractions/undecidable.js';
-import { emailPrefix } from '../../../kernel/core_abstractions/util/email-prefix.js';
+import { forkId } from '../../../kernel/core_abstractions/util/fork-id.js';
 import { RoleUndeterminedError, VERDICT_FORK, VERDICT_GRANT, VERDICT_MANAGER, VERDICT_NOT_PROVISIONED }
   from '../../core_abstractions/workspace-authority.js';
 
@@ -44,7 +44,7 @@ async function resolveForkToken(rootId, prefix) {
 
 export async function probeRole(user, wsName) {
   assertDriveScope();
-  const prefix = emailPrefix(user.email);
+  const prefix = forkId(user.email);
 
   // Owner path — ONE question, and it is not "can you see the root". Sharing the root makes it
   // visible to every invitee, and reading MANAGER off that visibility is the QC-2026-08-09 bug
@@ -62,10 +62,10 @@ export async function probeRole(user, wsName) {
 
   // Employee path (#30): the grant file is the only authority an employee can actually read —
   // it is found via sharedWithMe with no root dependency, so it resolves even when rootId is null,
-  // and it reports the real user_prefix (a collision appended random digits).
+  // and it reports the real fork id (a collision appended random digits).
   const grant = await readGrant(wsName, prefix, user.email);
   if (grant.roles.length > 0) {
-    return { kind: VERDICT_GRANT, token: grant.userPrefix.toUpperCase(), roles: grant.roles, areas: grant.areas };
+    return { kind: VERDICT_GRANT, token: grant.fork.toUpperCase(), roles: grant.roles, areas: grant.areas };
   }
 
   // A fork with no grant still identifies WHERE this user's data lives — but it is NOT a role.

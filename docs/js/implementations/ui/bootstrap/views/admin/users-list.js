@@ -74,7 +74,7 @@ export function renderUsersTable(container, users) {
       <td class="px-3 py-2">${u.email}</td>
       <td class="px-3 py-2">${u.display_name || ''}</td>
       <td class="px-3 py-2">${roleCell(u)}</td>
-      <td class="px-3 py-2">${u.user_prefix || '—'}</td>
+      <td class="px-3 py-2">${u.fork || '—'}</td>
       <td class="px-3 py-2">${activeBadge(u.active)}</td>
       <td class="px-3 py-2">${fmtDate(u.last_active)}</td>
       <td class="px-3 py-2">
@@ -92,7 +92,7 @@ export function renderUsersTable(container, users) {
           <th class="px-3 py-2 text-left">${t('admin.users.column.email')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.display_name')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.role')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.user_prefix')}</th>
+          <th class="px-3 py-2 text-left">${t('admin.users.column.fork')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.active')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.last_active')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.actions')}</th>

@@ -72,7 +72,7 @@ function buildColDefs(root) {
   return [
     { field: 'email',        headerName: t('email'),       flex: 1 },
     { field: 'name',         headerName: t('name'),        width: 140 },
-    { field: 'sales_code',   headerName: t('admin.users.column.user_prefix'), width: 80  },
+    { field: 'sales_code',   headerName: t('admin.users.column.fork'), width: 80  },
     { field: 'role',         headerName: t('admin.users.column.role'), width: 110,
       cellRenderer: (p) => { const d = document.createElement('div'); d.innerHTML = roleBadge(p.value); return d; } },
     { field: 'status',       headerName: t('state'),       width: 100,

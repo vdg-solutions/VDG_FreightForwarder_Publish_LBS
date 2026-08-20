@@ -300,6 +300,12 @@ export function flows_void_apply(req: any): Promise<any>;
 export function flows_void_plan(req: any): any;
 
 /**
+ * `taken_json` is the JSON array of forks already in use; `seed` is a caller-supplied random
+ * 0..9999 so two managers adding at once don't both pick the same suffix.
+ */
+export function fork_allocate(email: string, taken_json: string, seed: number): string;
+
+/**
  * Installed once by js/bootstrap (after the wasm module is ready and the repo exists).
  */
 export function freight_app_init(platform: any): void;
@@ -461,6 +467,8 @@ export function manager_exception_trends(req: any): any;
 
 export function manager_exceptions_sorted(req: any): any;
 
+export function manager_fork(req: any): any;
+
 export function manager_ledger_apply_repost(req: any): Promise<any>;
 
 export function manager_ledger_auto_reconcile(req: any): Promise<any>;
@@ -499,8 +507,6 @@ export function manager_pnl_drill(req: any): any;
 
 export function manager_pnl_pivot(req: any): any;
 
-export function manager_user_prefix(req: any): any;
-
 export function manager_users_filter(req: any): any;
 
 export function manager_users_sort(req: any): any;
@@ -517,7 +523,7 @@ export function permission_can_push_own_fork(role: string): boolean;
  * Returns Vec<PermissionEntry> as JSON (`[{path, access}]`) — role-assignment-service.js's
  * resolveAcl() consumes this directly, replacing the role-drive-acl.json fetch.
  */
-export function permission_resolve_grants(role: string, user_prefix?: string | null): any;
+export function permission_resolve_grants(role: string, fork?: string | null): any;
 
 /**
  * Called by `PricedRefRepo` before BOTH writes that can land a record in a ref —
@@ -655,12 +661,6 @@ export function sync_wma_predict(req: any): any;
 
 export function sync_wma_save(req: any): Promise<any>;
 
-/**
- * `taken_json` is the JSON array of prefixes already in use; `seed` is a caller-supplied random
- * 0..9999 so two managers adding at once don't both pick the same suffix.
- */
-export function user_prefix_allocate(email: string, taken_json: string, seed: number): string;
-
 export function validate_awb_no(s: string): boolean;
 
 export function validate_iata_dgr_class(class_str: string): boolean;
@@ -781,6 +781,7 @@ export interface InitOutput {
     readonly flows_slugify: (a: number, b: number) => void;
     readonly flows_void_apply: (a: number) => number;
     readonly flows_void_plan: (a: number, b: number) => void;
+    readonly fork_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly freight_app_init: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -847,6 +848,7 @@ export interface InitOutput {
     readonly manager_exception_per_sales: (a: number, b: number) => void;
     readonly manager_exception_trends: (a: number, b: number) => void;
     readonly manager_exceptions_sorted: (a: number, b: number) => void;
+    readonly manager_fork: (a: number, b: number) => void;
     readonly manager_ledger_apply_repost: (a: number) => number;
     readonly manager_ledger_auto_reconcile: (a: number) => number;
     readonly manager_ledger_balance_sheet: (a: number, b: number) => void;
@@ -866,7 +868,6 @@ export interface InitOutput {
     readonly manager_pnl_buy_sell: (a: number, b: number) => void;
     readonly manager_pnl_drill: (a: number, b: number) => void;
     readonly manager_pnl_pivot: (a: number, b: number) => void;
-    readonly manager_user_prefix: (a: number, b: number) => void;
     readonly manager_users_filter: (a: number, b: number) => void;
     readonly manager_users_sort: (a: number, b: number) => void;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -916,7 +917,6 @@ export interface InitOutput {
     readonly sync_wma_on_event: (a: number, b: number) => void;
     readonly sync_wma_predict: (a: number, b: number) => void;
     readonly sync_wma_save: (a: number) => number;
-    readonly user_prefix_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly validate_awb_no: (a: number, b: number) => number;
     readonly validate_iata_dgr_class: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;

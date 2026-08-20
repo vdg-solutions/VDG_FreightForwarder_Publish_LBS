@@ -1,12 +1,13 @@
 // user-edit-modal.js — Edit User modal for the admin Users view (F-24-04).
 // Role change cascades Drive ACL via RoleAssignmentService.changeRole; a display_name-only
 // edit is a plain repo upsert (backlog: "Change display_name (upsert only)").
-// F-27-01: {sales_prefix} -> {user_prefix} rename. Prefix field stays SalesRep-only for now —
-// widening to every role is Open Q #1 in the F-27-01 design, not decided here.
+// F-27-01: {sales_prefix} -> {user_prefix} rename (owner 2026-08-20: {user_prefix} -> {fork}).
+// Prefix field stays SalesRep-only for now — widening to every role is Open Q #1 in the
+// F-27-01 design, not decided here.
 
 import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { allocateUserPrefix, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
+import { allocateFork, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 
 
@@ -36,9 +37,9 @@ export function openEditUserModal(user, { onSaved } = {}) {
           <div class="text-[11px] text-slate-400">${t('admin.users.roles.hint')}</div>
           ${roleCheckboxesHtml(user.roles || [user.role], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
-        <div class="block text-xs text-slate-600">${t('admin.users.column.user_prefix')}
-          <div id="edit-prefix-preview" class="mt-1 w-full border rounded px-3 py-1.5 text-xs bg-slate-50 text-slate-500 font-mono">${user.user_prefix || '—'}</div>
-          <div class="mt-1 text-[11px] text-slate-400">${t('admin.users.prefix.fixed_hint')}</div>
+        <div class="block text-xs text-slate-600">${t('admin.users.column.fork')}
+          <div id="edit-prefix-preview" class="mt-1 w-full border rounded px-3 py-1.5 text-xs bg-slate-50 text-slate-500 font-mono">${user.fork || '—'}</div>
+          <div class="mt-1 text-[11px] text-slate-400">${t('admin.users.fork.fixed_hint')}</div>
         </div>
       </div>
       <div id="edit-err" class="text-xs text-red-600 hidden"></div>
@@ -71,10 +72,10 @@ async function _onSubmit(overlay, user, onSaved) {
   // user's data, so changing it would orphan everything in it. A legacy record with none (the
   // workspace creator was seeded without one) gets one allocated here.
   // #28: every user owns a fork, whatever their roles — never null.
-  const newPrefix = user.user_prefix || allocateUserPrefix(user.email, await userRepo.list(), null);
+  const newFork = user.fork || allocateFork(user.email, await userRepo.list(), null);
 
   const oldRoles    = (user.roles || [user.role, ...(user.extra_roles || [])]).filter(Boolean).join(',');
-  const roleChanged = newRoles.join(',') !== oldRoles || newPrefix !== (user.user_prefix || null);
+  const roleChanged = newRoles.join(',') !== oldRoles || newFork !== (user.fork || null);
   const nameChanged = newName !== (user.display_name || '');
 
   const submitBtn = overlay.querySelector('#edit-submit');
@@ -84,12 +85,12 @@ async function _onSubmit(overlay, user, onSaved) {
     if (roleChanged) {
       // changeRole returns { skipped } — ACL folders drive.file couldn't grant (they hold
       // non-app-created files). Non-fatal; surfaced below.
-      const changeResult = await roleService.changeRole(user, newRole, newPrefix, newHats);
+      const changeResult = await roleService.changeRole(user, newRole, newFork, newHats);
       assignSkipped = changeResult?.skipped || [];
     }
     if (nameChanged) {
       await userRepo.upsert({
-        email: user.email, display_name: newName, role: newRole, user_prefix: newPrefix,
+        email: user.email, display_name: newName, role: newRole, fork: newFork,
         roles: newRoles, extra_roles: newHats, active: true, created_at: user.created_at,
       });
     }

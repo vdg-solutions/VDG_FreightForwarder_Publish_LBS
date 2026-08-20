@@ -24,7 +24,7 @@ const MANAGER_ROLE_LABEL_KEY = 'admin.users.role.manager';
 const MANAGER_ROLE_FALLBACK  = 'Manager';
 const MONTHS_PER_YEAR        = 12;
 const MONTH_SAMPLE_YEAR      = 2000;
-const PREFIX_SEED_RANGE      = 10000; // matches user_prefix.rs SUFFIX_MODULO
+const PREFIX_SEED_RANGE      = 10000; // matches fork.rs SUFFIX_MODULO
 const WEEK_DATE_LOCALE       = 'vi-VN';
 const MARGIN_PCT_DIGITS      = 1;
 
@@ -228,12 +228,12 @@ export function composeManager(wasm) {
   });
 
   bindUsersViewComposer({
-    deriveUserPrefix: (email) => wasm.manager_user_prefix({ email: email || '' }).prefix,
-    // Allocation itself is Rust (boundary/user_prefix.rs); this only feeds it the prefixes already
-    // in use and a random starting suffix, because randomness is the browser's.
-    allocateUserPrefix: (email, users) => wasm.user_prefix_allocate(
+    deriveFork: (email) => wasm.manager_fork({ email: email || '' }).fork,
+    // Allocation itself is Rust (freight/core_abstractions/fork.rs); this only feeds it the forks
+    // already in use and a random starting suffix, because randomness is the browser's.
+    allocateFork: (email, users) => wasm.fork_allocate(
       email,
-      JSON.stringify((users || []).map((u) => u.user_prefix).filter(Boolean)),
+      JSON.stringify((users || []).map((u) => u.fork).filter(Boolean)),
       Math.floor(Math.random() * PREFIX_SEED_RANGE),
     ),
     isValidEmail: (email) => wasm.manager_email_valid({ email: email || '' }).valid,

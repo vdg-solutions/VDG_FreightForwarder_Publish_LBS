@@ -10,7 +10,7 @@ import { bootstrapAclTargetFolders } from '../../core_abstractions/ports/governa
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../storage/core_abstractions/workspace-registry.js';
 import { safeMasterLoad } from '../../../kernel/core_abstractions/util/master-load.js';
-import { emailPrefix } from '../../../kernel/core_abstractions/util/email-prefix.js';
+import { forkId } from '../../../kernel/core_abstractions/util/fork-id.js';
 
 export async function renderOnboardingWizard(container, onDone) {
   container.innerHTML = `
@@ -74,7 +74,7 @@ export async function renderOnboardingWizard(container, onDone) {
 }
 
 async function _inviteSales(email, wsRootId, driveApi, container) {
-  const prefix = emailPrefix(email);
+  const prefix = forkId(email);
 
   // Delegate to user-provisioning (single source of truth). If repo not ready during
   // initial setup, inviteSales skips users.jsonl write gracefully.

@@ -40,7 +40,7 @@ export class UserDriveRepo extends UserRepoPort {
   async upsert(user) {
     const result = await this._repo().users_upsert(JSON.stringify(user));
     if (result?.added) {
-      this._userAuditLog?.write(USER_AUDIT_ADD_USER, user.email, null, { role: user.role, user_prefix: user.user_prefix }, []);
+      this._userAuditLog?.write(USER_AUDIT_ADD_USER, user.email, null, { role: user.role, fork: user.fork }, []);
     }
     return result;
   }
@@ -52,7 +52,7 @@ export class UserDriveRepo extends UserRepoPort {
       this._userAuditLog?.write(
         USER_AUDIT_DEACTIVATE_USER,
         email,
-        { role: result.prev?.role, user_prefix: result.prev?.user_prefix },
+        { role: result.prev?.role, fork: result.prev?.fork },
         { active: false },
         [],
       );

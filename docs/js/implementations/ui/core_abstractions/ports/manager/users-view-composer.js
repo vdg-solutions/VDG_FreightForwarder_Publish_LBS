@@ -52,7 +52,7 @@ export function roleCheckboxesHtml(current = [], labelFor = (r) => r) {
 
 let _impl = null;
 
-/// Root bootstrap binds { deriveUserPrefix, allocateUserPrefix, isValidEmail, filterUsers,
+/// Root bootstrap binds { deriveFork, allocateFork, isValidEmail, filterUsers,
 /// sortUsersByEmail } once.
 export function bindUsersViewComposer(impl) { _impl = impl; }
 
@@ -62,9 +62,9 @@ function _i() {
 }
 
 /// (email) -> the fork name the address implies
-export const deriveUserPrefix = (...a) => _i().deriveUserPrefix(...a);
-/// (email, users) -> an unused prefix; #30: the prefix is ALLOCATED, never typed by a manager
-export const allocateUserPrefix = (...a) => _i().allocateUserPrefix(...a);
+export const deriveFork = (...a) => _i().deriveFork(...a);
+/// (email, users) -> an unused fork; #30: the fork is ALLOCATED, never typed by a manager
+export const allocateFork = (...a) => _i().allocateFork(...a);
 /// (email) -> well-formed enough to submit (Google OAuth is the real identity check)
 export const isValidEmail = (...a) => _i().isValidEmail(...a);
 /// (users, { search, role, activeFilter }) -> the matching users
