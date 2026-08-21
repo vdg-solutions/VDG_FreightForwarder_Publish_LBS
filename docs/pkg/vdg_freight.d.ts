@@ -338,8 +338,6 @@ export function get_validation_errors(): any;
 
 export function governance_assign_role(req: any): Promise<any>;
 
-export function governance_audit_root_sharing(req: any): Promise<any>;
-
 export function governance_backfill_grants(req: any): Promise<any>;
 
 export function governance_bootstrap_acl_folders(req: any): Promise<any>;
@@ -347,8 +345,6 @@ export function governance_bootstrap_acl_folders(req: any): Promise<any>;
 export function governance_can_edit_default_currency(req: any): any;
 
 export function governance_change_role(req: any): Promise<any>;
-
-export function governance_classify_root_permissions(req: any): any;
 
 export function governance_close_period(req: any): Promise<any>;
 
@@ -793,12 +789,10 @@ export interface InitOutput {
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
     readonly governance_assign_role: (a: number) => number;
-    readonly governance_audit_root_sharing: (a: number) => number;
     readonly governance_backfill_grants: (a: number) => number;
     readonly governance_bootstrap_acl_folders: (a: number) => number;
     readonly governance_can_edit_default_currency: (a: number, b: number) => void;
     readonly governance_change_role: (a: number) => number;
-    readonly governance_classify_root_permissions: (a: number, b: number) => void;
     readonly governance_close_period: (a: number) => number;
     readonly governance_close_records: (a: number) => number;
     readonly governance_ensure_workspace_root: (a: number) => number;
@@ -984,9 +978,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15736: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15749: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12899: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15592: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15605: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12755: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

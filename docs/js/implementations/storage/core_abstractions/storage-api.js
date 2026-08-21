@@ -9,8 +9,7 @@ let _api = null;
 /// The bootstrap registers { driveFetch, driveFetchRaw, findFolder, createFolder, getOrCreateFolder,
 /// getOrCreateFolderPath, listChildren, getFile, uploadFile, findWorkspaceRoot, ownsWorkspaceRoot,
 /// resetWorkspaceRootCache, findSharedSubfolder, findSharedFilesByNamePrefix, listChildFolder,
-/// renameFolder, moveToParent, globalOwnerQuery, getOrCreateFile, putPermission, listPermissions,
-/// deletePermission } once.
+/// renameFolder, moveToParent, globalOwnerQuery, getOrCreateFile } once.
 export function bindStorageApi(api) { _api = api; }
 
 /// The bound adapter, for callers that pass the whole api object around (`driveApi`).
@@ -38,9 +37,6 @@ export const globalOwnerQuery = (...a) => storageApi().globalOwnerQuery(...a);
 export const getOrCreateFile = (...a) => storageApi().getOrCreateFile(...a);
 export const ownsWorkspaceRoot = (...a) => storageApi().ownsWorkspaceRoot(...a);
 export const resetWorkspaceRootCache = (...a) => storageApi().resetWorkspaceRootCache(...a);
-export const putPermission = (...a) => storageApi().putPermission(...a);
-export const listPermissions = (...a) => storageApi().listPermissions(...a);
-export const deletePermission = (...a) => storageApi().deletePermission(...a);
 
 /// Test seam.
 export function _resetStorageApi() { _api = null; }

@@ -151,6 +151,14 @@ export class ServerIoPort extends SharedIoPort {
     catch (err) { throw asDriveError(err); }
   }
 
+  /// F-46-01: the wasm delta engine's reverse lookup — never implemented for this backend, so
+  /// every Changes-feed event fell into apply_change's "unknown parent" branch, kind-addressed
+  /// folders included. `_folderKind` is filled by `_resolveFolder` the same way it always was;
+  /// this was the missing read side.
+  async drive_folder_kind(folderId) {
+    return this._folderKind.get(folderId) ?? null;
+  }
+
   // ── path-addressed workspace files ────────────────────────────────────────
 
   async ws_list_dir(dirPath) {

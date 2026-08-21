@@ -12,7 +12,6 @@ import { bindPeriodLockRegistry } from '../../implementations/ui/core_abstractio
 import { bindPeriodOpeningBalance } from '../../implementations/ui/core_abstractions/ports/governance/period-opening-balance.js';
 import { bindDefaultCurrencyLock } from '../../implementations/ui/core_abstractions/ports/governance/default-currency-lock.js';
 import { bindErrorLogStore } from '../../implementations/ui/core_abstractions/ports/governance/error-log-store.js';
-import { bindRootSharingAudit } from '../../implementations/ui/core_abstractions/ports/governance/root-sharing-audit.js';
 import { bindMasterMerge } from '../../implementations/ui/core_abstractions/ports/governance/master-merge.js';
 import { bindWorkspaceBootstrap } from '../../implementations/ui/core_abstractions/ports/governance/workspace-bootstrap.js';
 import {
@@ -122,13 +121,6 @@ export function composeGovernance(wasm) {
   bindErrorLogStore({
     listErrorRecords: async () => (await wasm.governance_error_records({})).records,
     purgeErrorMonth:  async (_driveApi, month) => raise(await wasm.governance_purge_error_month({ month })),
-  });
-
-  bindRootSharingAudit({
-    auditRootSharing: async (_driveApi, rootId) =>
-      raise(await wasm.governance_audit_root_sharing({ root_id: rootId ?? null })).shared,
-    classifyRootPermissions: (permissions) =>
-      wasm.governance_classify_root_permissions({ permissions: permissions || [] }).shared,
   });
 
   bindMasterMerge({

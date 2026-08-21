@@ -49,7 +49,6 @@ import { WasmIoPort } from '../implementations/drive/wasm-io-adapters.js';
 import { driveTransport } from '../implementations/drive/drive-transport.js';
 import { driveTree } from '../implementations/drive/drive-api.js';
 import { workspaceRoot } from '../implementations/drive/workspace-root.js';
-import { permissions } from '../implementations/drive/drive-permissions.js';
 import { mockDrive } from '../implementations/drive/mock-drive-backend.js';
 
 export const BACKEND_SERVER = 'server';
@@ -106,9 +105,6 @@ function storageApiFor(transport) {
     moveToParent: folderDedup.moveToParent,
     globalOwnerQuery: folderDedup.globalOwnerQuery,
     getOrCreateFile: fileDedup.getOrCreateFile,
-    putPermission: permissions.putPermission,
-    listPermissions: permissions.listPermissions,
-    deletePermission: permissions.deletePermission,
   };
 }
 

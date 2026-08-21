@@ -13,9 +13,8 @@ const UNKNOWN_OP_MESSAGE = 'unknown workspace op';
 function userRepo()   { return window.__vdg_user_repo || null; }
 function ledgerRepo() { return window.__vdg_ledger_repo || null; }
 
-/// The Drive cascade cannot tell a tolerable 403 (drive.file scope, sharing burst) from a real
-/// denial once the error has been flattened to a string — so the status and the rate-limit flag
-/// travel with it instead of being thrown away.
+/// The status and the rate-limit flag travel with the error instead of being flattened to a
+/// string, so a caller can tell a retryable Drive 429 apart from a real failure.
 async function workspaceTry(op, args) {
   const api = storageApi();
   if (typeof api[op] !== 'function') {
@@ -67,7 +66,4 @@ export const governancePlatform = {
     const cached = readCachedIdentityNow();
     return { grant_area_count: recallGrantAreas().length, cached_role: cached?.role ?? null };
   },
-
-  // Drive's file index is eventually consistent; a path lookup waits before it believes a miss.
-  governance_sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };

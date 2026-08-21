@@ -9,7 +9,6 @@ import { clearDriveScopeGrant } from '../../core_abstractions/oauth.js';
 export { parseJsonlBundle, serializeJsonlBundle };
 
 const NS_FS          = 'vdg.mock-drive.fs.';
-const NS_PERMS       = 'vdg.mock-drive.perms.';
 const NS_INDEX       = 'vdg.mock-drive.index.';
 const SEQ_KEY        = 'vdg.mock-drive.id-seq';
 const FORCE429       = 'vdg.mock-drive.force-429';
@@ -119,10 +118,6 @@ async function driveFetch(method, path, body = undefined) {
   if (method === 'POST' && path === '/files') {
     return _handleCreateFolder(body);
   }
-  if (method === 'POST' && /\/files\/[^/]+\/permissions/.test(path)) {
-    const fileId = path.match(/\/files\/([^/]+)\/permissions/)[1];
-    return _handleCreatePermission(fileId, body);
-  }
   return { files: [] };
 }
 
@@ -155,14 +150,6 @@ async function listChildren(parentId) {
     const e = fsGet(id);
     return e ? { id, name: e.name, mimeType: e.mimeType } : null;
   }).filter(Boolean);
-}
-
-async function putPermission(fileId, email, role) {
-  const raw  = localStorage.getItem(NS_PERMS + fileId);
-  const list = raw ? JSON.parse(raw) : [];
-  list.push({ email, role });
-  localStorage.setItem(NS_PERMS + fileId, JSON.stringify(list));
-  return { id: nextId(), email, role };
 }
 
 async function getFile(fileId) {
@@ -225,9 +212,5 @@ function _handleCreateFolder(body) {
   return { id, name: body.name, mimeType: FOLDER_MIME };
 }
 
-function _handleCreatePermission(fileId, body) {
-  return putPermission(fileId, body.emailAddress, body.role);
-}
-
 /// The whole mock surface the storage bootstrap binds behind the storage-api port under ?mock=1.
-export const mockDrive = { getAccessToken, driveFetch, findFolder, createFolder, getOrCreateFolder, listChildren, putPermission, getFile, uploadFile, findWorkspaceRoot, listChildFolder, parseJsonlBundle, serializeJsonlBundle, DriveApiError, ConcurrencyError };
+export const mockDrive = { getAccessToken, driveFetch, findFolder, createFolder, getOrCreateFolder, listChildren, getFile, uploadFile, findWorkspaceRoot, listChildFolder, parseJsonlBundle, serializeJsonlBundle, DriveApiError, ConcurrencyError };

@@ -5,6 +5,7 @@
 
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { recallGrantAreas } from '../../implementations/storage/core_abstractions/grant-file.js';
+import { isServerBackend } from '../../implementations/storage/core_abstractions/backend.js';
 
 const ONBOARDING_ROUTE = '/onboarding';
 
@@ -35,8 +36,13 @@ export async function deferredManagerInit(user, driveApi, ledgerRepo, userRepo, 
     return;
   }
 
-  // Orphan workspace detection
-  if (driveApi.globalOwnerQuery) {
+  // Orphan workspace detection — a Drive-only concern: it exists to catch the browser racing
+  // itself into creating two "LBS" folders in the SIGNED-IN USER's own Drive. F-46-02: only the
+  // server's account ever touches Drive now, and this build's root is the one workspace it is
+  // licensed for (BUILD_ROOT_ID) — there is no second folder for globalOwnerQuery to find, so
+  // under the server backend this check is a permanent false positive (verified live 2026-08-21:
+  // exactly one LBS folder on Drive, owned by the server). Skip it there.
+  if (!isServerBackend() && driveApi.globalOwnerQuery) {
     const { computeOrphanCount } = await import('../../implementations/ui/bootstrap/components/orphan-folder-banner.js');
     driveApi.globalOwnerQuery(driveApi.driveFetch, wsName)
       .then((allByName) => {

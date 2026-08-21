@@ -9,7 +9,6 @@ import {
 import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { openEditModal, openInviteModal } from './users-modals.js';
-import { auditRootSharing } from '../../../core_abstractions/ports/governance/root-sharing-audit.js';
 
 const KIND_USER         = 'user';
 const ROLE_ADMIN        = 'admin';
@@ -218,34 +217,6 @@ function _applyAndMount(root) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
-// #20: access on the workspace ROOT is access on the staff table — the ACL itself — because
-// Drive inherits permissions downward, so the holder can promote themselves. The app's own grants
-// (resolve_grants in the Rust protection table) only ever reach users/{prefix} and _shared/*, so
-// anything sitting on the root came from a manual folder share. #23 reverted the #22 attempt to
-// exempt Manager/Auditor: that read a dead role-drive-acl.json row and hid exactly the account a
-// self-promoting Editor would be holding.
-async function _renderRootSharingWarning(root) {
-  const driveApi = getDriveApi();
-  const slot     = root.querySelector('#usr-root-sharing');
-  if (!driveApi || !slot) return;
-  try {
-    const rootId = await driveApi.findWorkspaceRoot(activeWorkspaceName());
-    const shared = await auditRootSharing(driveApi, rootId);
-    if (shared.length === 0 || !slot.isConnected) return;
-    const rows = shared
-      .map((s) => `<li>${s.email} — <span class="font-medium">${s.role}</span></li>`)
-      .join('');
-    slot.innerHTML = `
-      <div class="border border-amber-300 bg-amber-50 rounded-lg p-3 text-xs text-amber-900">
-        <div class="font-semibold">⚠️ ${t('root_sharing.warn_title')}</div>
-        <div class="mt-1">${t('root_sharing.warn_body')}</div>
-        <ul class="mt-2 list-disc list-inside">${rows}</ul>
-      </div>`;
-  } catch (err) {
-    console.warn('[users] root sharing audit skipped:', err.message); // DEV — never block the grid
-  }
-}
-
 export async function render(root) {
   if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
@@ -274,11 +245,8 @@ export async function render(root) {
         </select>
         <span id="usr-count" class="text-xs text-slate-400 self-center"></span>
       </div>
-      <div id="usr-root-sharing"></div>
       <div id="usr-grid"></div>
     </div>`;
-
-  _renderRootSharingWarning(root);
 
   root.querySelector('#btn-invite').addEventListener('click', () => openInviteModal(root, _modalDeps()));
 
