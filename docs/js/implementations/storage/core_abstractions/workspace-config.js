@@ -29,6 +29,6 @@ export function isBoundBuild() { return BUILD_ROOT_ID !== ''; }
 // probe finds nothing and the Drive adapter is selected. A GitHub Pages deploy that talks to a
 // tunneled vdg-server sets it at publish time.
 export const API_BASE = (() => {
-  const raw = 'https://lbs.rentaicoder.com';
+  const raw = 'https://vdg-lbs-edge.lbs-vdg.workers.dev';
   return raw.startsWith('VDG_API_BASE_') ? '' : raw.replace(/\/+$/, '');
 })();
