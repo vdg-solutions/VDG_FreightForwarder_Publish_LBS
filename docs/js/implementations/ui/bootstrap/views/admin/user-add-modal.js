@@ -1,19 +1,14 @@
 // user-add-modal.js — Add User modal for the admin Users view (F-24-04).
-// F-24-08 D-03: assignRole failure after the user record was upserted rolls back via
-// UserRepo.remove(email) — no orphaned row with zero Drive grants.
-// F-27-01: {sales_prefix} -> {user_prefix} rename (owner 2026-08-20: {user_prefix} -> {fork}).
-// Prefix field stays SalesRep-only for now — widening to every role is Open Q #1 in the
-// F-27-01 design, not decided here.
-// The users/{fork} folder is get-or-created by the Rust grant cascade, not here.
+// F-46-03: one POST /api/users call replaces the old read-grant / CAS-write-grant / create-fork-
+// folder cascade (userRepo.upsert + roleService.assignRole, ~60s) — the server does the grant
+// write and the fork-folder create in one request now, and it is idempotent, so there is no
+// partial-failure rollback dance left to write here.
 
 import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { deriveFork, allocateFork, isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
+import { isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
-
-
-function getUserRepo()   { return window.__vdg_user_repo; }
-function getRoleService() { return window.__vdg_role_assignment_service; }
+import { createUser } from '../../../../storage/core_abstractions/user-directory.js';
 
 function showError(overlay, message) {
   const err = overlay.querySelector('#add-err');
@@ -21,7 +16,7 @@ function showError(overlay, message) {
   err.classList.remove('hidden');
 }
 
-/// AC-03: submit -> assignRole (cascade creates the fork folder) -> refresh.
+/// AC-03: submit -> POST /api/users -> refresh.
 export function openAddUserModal({ onAdded } = {}) {
   const overlay = document.createElement('div');
   overlay.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center';
@@ -39,10 +34,6 @@ export function openAddUserModal({ onAdded } = {}) {
           <div class="text-[11px] text-slate-400">${t('admin.users.roles.hint')}</div>
           ${roleCheckboxesHtml([], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
-        <div class="block text-xs text-slate-600">${t('admin.users.column.fork')}
-          <div id="add-prefix-preview" class="mt-1 w-full border rounded px-3 py-1.5 text-xs bg-slate-50 text-slate-500 font-mono">—</div>
-          <div class="mt-1 text-[11px] text-slate-400">${t('admin.users.prefix.auto_hint')}</div>
-        </div>
       </div>
       <div id="add-err" class="text-xs text-red-600 hidden"></div>
       <div class="flex gap-2 justify-end">
@@ -53,15 +44,6 @@ export function openAddUserModal({ onAdded } = {}) {
 
   mountOverlay(overlay);
 
-  // #30: the prefix is machinery (Drive fork name + grant file name), not a manager decision —
-  // the preview just shows what will be created. The definitive value is allocated at submit,
-  // against the staff table as it stands then, so a collision cannot slip through a stale preview.
-  const emailInput    = overlay.querySelector('#add-email');
-  const prefixPreview = overlay.querySelector('#add-prefix-preview');
-  emailInput.addEventListener('input', () => {
-    prefixPreview.textContent = deriveFork(emailInput.value) || '—';
-  });
-
   overlay.querySelector('#add-cancel').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#add-submit').addEventListener('click', () => _onSubmit(overlay, onAdded));
 }
@@ -70,55 +52,18 @@ async function _onSubmit(overlay, onAdded) {
   const email = overlay.querySelector('#add-email').value.trim();
   const name  = overlay.querySelector('#add-name').value.trim();
   const roles = rolesFromForm(overlay);
-  const role  = roles[0] || '';
 
   if (!email) return showError(overlay, t('admin.users.error.email_required'));
   if (!isValidEmail(email)) return showError(overlay, t('admin.users.error.email_invalid'));
   if (!name) return showError(overlay, t('admin.users.error.name_required'));
-
   if (!roles.length) return showError(overlay, t('admin.users.error.role_required'));
-  const roleService = getRoleService();
-  const userRepo     = getUserRepo();
-  if (!roleService || !userRepo) return showError(overlay, 'Workspace not ready');
-
-  // #28: every user owns a fork regardless of role — a manager doing sales needs one too.
-  // #30: allocated here, against the current staff table, so two users sharing an email local-part
-  // cannot end up sharing a fork.
-  const fork = allocateFork(email, await userRepo.list(), null);
 
   const submitBtn = overlay.querySelector('#add-submit');
   submitBtn.disabled = true;
-  let assignSkipped = [];
   try {
-    // Record display_name up front so assignRole's own upsert (which defaults display_name to
-    // the existing record) reproduces it verbatim instead of overwriting with the email.
-    await userRepo.upsert({
-      email, display_name: name, role, roles, fork,
-      active: true, created_at: new Date().toISOString(),
-    });
-
-    try {
-      // The grant cascade get-or-creates users/{fork} itself now — the JS pre-create
-      // lived here while role EDIT (same cascade, no pre-create) failed on missing forks.
-      // Returns { user, skipped } — skipped = ACL folders drive.file couldn't grant because
-      // they hold non-app-created files (appNotAuthorizedToChild). Non-fatal; surfaced below.
-      const assignResult = await roleService.assignRole(email, role, fork, roles.slice(1));
-      assignSkipped = assignResult?.skipped || [];
-    } catch (err) {
-      // F-24-08 D-03: assignRole failed after the user record was upserted above — soft-delete
-      // it so no orphaned row with zero Drive grants survives a failed add.
-      await userRepo.remove(email);
-      throw err;
-    }
-
+    await createUser({ email, display_name: name, roles });
     overlay.remove();
     window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t('admin.users.toast.added').replace('{email}', email) } }));
-    if (assignSkipped.length) {
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: {
-        type: 'warn', duration: 8000,
-        message: t('admin.users.toast.acl_partial').replace('{count}', String(assignSkipped.length)),
-      } }));
-    }
     await onAdded?.();
   } catch (err) {
     showError(overlay, err.message);

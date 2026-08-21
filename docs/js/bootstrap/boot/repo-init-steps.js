@@ -254,25 +254,12 @@ async function _deferredInit(user, db, driveApi, repo) {
     const userRepo = new UserDriveRepo(userAuditLog);
     window.__vdg_user_repo = userRepo;
 
-    // #30: the role cascade is a Rust use-case (governance/role_assignment.rs) reached through
-    // the wasm exports; the global stays because the admin screens ask for it by name. Every
-    // collaborator it needs — the staff table, the audit trails, the workspace tree — is on the
-    // platform object, so nothing is injected here.
+    // F-46-03: add/edit/deactivate moved to POST/PATCH /api/users (storage/core_abstractions/
+    // user-directory.js) — the Rust role cascade (governance/role_assignment.rs) survives only for
+    // the manager-boot grant backfill below, which still runs in-process against the staff table.
     window.__vdg_role_assignment_service = {
-      assignRole: (email, role, fork = null, extraRoles = []) => _governance(
-        wasm().governance_assign_role({ email, role, fork, extra_roles: extraRoles })),
-      changeRole: (user, newRole, newFork = null, newExtraRoles = null) => _governance(
-        wasm().governance_change_role({
-          user, new_role: newRole, new_fork: newFork, new_extra_roles: newExtraRoles,
-        })),
-      revokeRole: (email, role, fork = null) => _governance(
-        wasm().governance_revoke_role({ email, role, fork })),
       backfillGrants: () => _governance(wasm().governance_backfill_grants({})),
     };
-    // #25: this wiring lands in the DEFERRED step, long after the router may have rendered
-    // #/admin/users on a deep link — that view read a null repo and sat at 0/0 forever. Announce it
-    // so a screen that mounted too early can load itself once the services actually exist.
-    window.dispatchEvent(new CustomEvent('vdg:user-repo-ready'));
 
     // Resolve actual user role (async, updates window.__vdg_current_user)
     userRepo.get(user.email).then((record) => {

@@ -1,5 +1,6 @@
 // Admin Users view — F-24-04. Manager-only /admin/users: table + filter/search + Add/Edit/
-// Deactivate, wired to UserRepoPort (F-24-02) + RoleAssignmentService (F-24-03).
+// Deactivate. F-46-03: reads/writes go straight to GET/POST/PATCH /api/users — no wasm-bound repo
+// to wait on, so the F-24-25 "cold-boot deep link" retry this view used to need is gone with it.
 
 import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
@@ -10,23 +11,17 @@ import { filterBarHtml, renderUsersTable, renderUsersSkeleton, bindRowActions } 
 import { openAddUserModal }  from './user-add-modal.js';
 import { openEditUserModal } from './user-edit-modal.js';
 import { showConfirm }       from '../../helpers/show-confirm.js';
+import { listUsers, patchUser } from '../../../../storage/core_abstractions/user-directory.js';
 
 const TOAST_MS = 4_000;
+const DEFAULT_ACTIVE_FILTER = '';
 
-// Deactivated accounts are hidden by default; the status dropdown still exposes them.
-const DEFAULT_ACTIVE_FILTER = 'active';
-
-const USER_REPO_READY_EVENT = 'vdg:user-repo-ready';
-
-function getUserRepo()    { return window.__vdg_user_repo; }
-function getRoleService() { return window.__vdg_role_assignment_service; }
+let _allUsers = [];
+let _filter   = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
 
 function toast(type, message) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message, duration: TOAST_MS } }));
 }
-
-let _allUsers = [];
-let _filter   = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
 
 function shellHtml() {
   return `
@@ -60,24 +55,19 @@ function _applyAndRender(root) {
 }
 
 async function _reload(root) {
-  const repo = getUserRepo();
-  if (!repo) {
-    // #25: cold-boot deep link — repo-init wires window.__vdg_user_repo in its deferred step, which
-    // can finish after this view has already rendered. Without the retry the grid stayed empty
-    // until the route was re-entered by hand (QC 2026-08-09: "0 / 0" on a workspace with 6 users).
-    window.addEventListener(USER_REPO_READY_EVENT, () => { if (root.isConnected) _reload(root); }, { once: true });
+  renderUsersSkeleton(root.querySelector('#usr-table-wrap'));
+  try {
+    const { users } = await listUsers();
+    _allUsers = sortUsersByEmail(users || []);
+  } catch (err) {
+    toast('error', err.message);
     _allUsers = [];
-    renderUsersSkeleton(root.querySelector('#usr-table-wrap'));
-    const countEl = root.querySelector('#usr-count');
-    if (countEl) countEl.textContent = ''; // "0 / 0" while loading reads as an empty workspace
-    return;
   }
-  _allUsers = sortUsersByEmail(await repo.listAll());
   _applyAndRender(root);
 }
 
-/// AC-04/AC-05: custom branded dialog replaces window.confirm(); confirm -> revokeRole
-/// (cascades Drive perm revoke + soft-delete in one call).
+/// AC-04/AC-05: custom branded dialog replaces window.confirm(); confirm -> PATCH active:false —
+/// no reactivate flow in this feature's scope (matches the old cascade's own boundary).
 async function _onDeactivate(root, user) {
   const ok = await showConfirm({
     title:        t('admin.users.confirm.deactivate_title').replace('{email}', user.email),
@@ -88,11 +78,8 @@ async function _onDeactivate(root, user) {
   });
   if (!ok) return;
 
-  const roleService = getRoleService();
-  if (!roleService) { toast('error', 'Workspace not ready'); return; }
-
   try {
-    await roleService.revokeRole(user.email, user.role, user.fork);
+    await patchUser(user.email, { active: false });
     toast('success', t('admin.users.toast.deactivated').replace('{email}', user.email));
     await _reload(root);
   } catch (err) {
@@ -107,10 +94,6 @@ function bindFilterBar(root) {
   });
   root.querySelector('#usr-role')?.addEventListener('change', (e) => {
     _filter.role = e.target.value;
-    _applyAndRender(root);
-  });
-  root.querySelector('#usr-active')?.addEventListener('change', (e) => {
-    _filter.activeFilter = e.target.value;
     _applyAndRender(root);
   });
 }

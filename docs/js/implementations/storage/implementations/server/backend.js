@@ -16,6 +16,13 @@ const CREDENTIALS_MODE   = API_BASE ? 'include' : 'same-origin';
 const PROBE_TIMEOUT_MS   = 1500;
 const BACKEND_SERVER     = 'server';
 const BACKEND_DRIVE      = 'drive';
+const SESSION_TOKEN_HEADER = 'X-Vdg-Session';
+// The page (github.io) and the API (workers.dev) are different SITES, so the session cookie is a
+// third-party cookie: InPrivate, Safari and strict tracking protection drop it, and the user then
+// loops on 401 after a SUCCESSFUL sign-in. Keep the same server-minted token in sessionStorage as
+// a second delivery route — window-scoped, gone when the window closes, and unnecessary once the
+// app and the API share one site.
+const SESSION_TOKEN_KEY  = 'vdg.session-token';
 const BACKEND_KEY        = 'vdg.backend'; // sessionStorage: survives reload, not a new tab on another origin
 
 let _backend = null;
@@ -64,8 +71,22 @@ import { ApiError } from '../../core_abstractions/api-error.js';
 /// JSON in, JSON out, session cookie along. A non-2xx is an ApiError carrying the status the
 /// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) — the same numbers the Drive-era
 /// callers already branch on.
+function readSessionToken() {
+  try { return sessionStorage.getItem(SESSION_TOKEN_KEY) || ''; } catch { return ''; } /* storage-less context */
+}
+
+/// Called by the sign-in flow with whatever POST /session returned; '' on sign-out.
+function rememberSessionToken(token) {
+  try {
+    if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch { /* storage-less context — the cookie is still the primary carrier */ }
+}
+
 async function apiFetch(method, path, body = undefined) {
   const opts = { method, credentials: CREDENTIALS_MODE, headers: {} };
+  const token = readSessionToken();
+  if (token) opts.headers[SESSION_TOKEN_HEADER] = token;
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
@@ -87,4 +108,4 @@ async function apiFetch(method, path, body = undefined) {
 }
 
 /// What the storage bootstrap binds behind the backend port.
-export const backend = { detectBackend, isServerBackend, apiFetch, _resetBackend };
+export const backend = { detectBackend, isServerBackend, apiFetch, rememberSessionToken, _resetBackend };

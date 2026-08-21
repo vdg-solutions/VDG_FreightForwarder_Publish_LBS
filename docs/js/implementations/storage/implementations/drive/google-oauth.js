@@ -1,7 +1,7 @@
 // F-13-P2 — Google Identity Services wrapper
 // F-15-20 merged into F-15-19 R3: single OAuth2 popup grants identity + drive.file scope
 
-import { isServerBackend, apiFetch } from '../../core_abstractions/backend.js';
+import { isServerBackend, apiFetch, rememberSessionToken } from '../../core_abstractions/backend.js';
 import { SERVER_SESSION_TTL_MS, serverSessionIdentity } from '../../core_abstractions/server-session.js';
 import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
 import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_abstractions/profile-cache.js';
@@ -204,7 +204,10 @@ async function hydrateSessionFromToken(resp) {
   // The token is handed to the server, which verifies it with Google and mints the session.
   if (isServerBackend()) {
     localStorage.setItem(DRIVE_SCOPE_KEY, '1');
-    await apiFetch('POST', '/session', { access_token: resp.access_token });
+    const opened = await apiFetch('POST', '/session', { access_token: resp.access_token });
+    // Cookie first; the token is kept only so a browser that refuses the third-party cookie
+    // (InPrivate, Safari, strict tracking protection) can still carry the SAME session.
+    if (opened?.session_token) rememberSessionToken(opened.session_token);
   } else if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
   else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
   const info = await _fetchUserinfo(resp.access_token);

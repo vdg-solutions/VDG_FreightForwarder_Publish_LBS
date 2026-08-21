@@ -336,15 +336,11 @@ export function get_transition_log(entity_id: string): any;
 
 export function get_validation_errors(): any;
 
-export function governance_assign_role(req: any): Promise<any>;
-
 export function governance_backfill_grants(req: any): Promise<any>;
 
 export function governance_bootstrap_acl_folders(req: any): Promise<any>;
 
 export function governance_can_edit_default_currency(req: any): any;
-
-export function governance_change_role(req: any): Promise<any>;
 
 export function governance_close_period(req: any): Promise<any>;
 
@@ -393,8 +389,6 @@ export function governance_regrant_everyone(req: any): Promise<any>;
 export function governance_reopen_period(req: any): Promise<any>;
 
 export function governance_repoint_refs(req: any): Promise<any>;
-
-export function governance_revoke_role(req: any): Promise<any>;
 
 export function governance_route_guard(req: any): any;
 
@@ -788,11 +782,9 @@ export interface InitOutput {
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
-    readonly governance_assign_role: (a: number) => number;
     readonly governance_backfill_grants: (a: number) => number;
     readonly governance_bootstrap_acl_folders: (a: number) => number;
     readonly governance_can_edit_default_currency: (a: number, b: number) => void;
-    readonly governance_change_role: (a: number) => number;
     readonly governance_close_period: (a: number) => number;
     readonly governance_close_records: (a: number) => number;
     readonly governance_ensure_workspace_root: (a: number) => number;
@@ -817,7 +809,6 @@ export interface InitOutput {
     readonly governance_regrant_everyone: (a: number) => number;
     readonly governance_reopen_period: (a: number) => number;
     readonly governance_repoint_refs: (a: number) => number;
-    readonly governance_revoke_role: (a: number) => number;
     readonly governance_route_guard: (a: number, b: number) => void;
     readonly governance_save_settings: (a: number) => number;
     readonly governance_unlock_period: (a: number) => number;
@@ -978,9 +969,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15593: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15606: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12756: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15516: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15529: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12679: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

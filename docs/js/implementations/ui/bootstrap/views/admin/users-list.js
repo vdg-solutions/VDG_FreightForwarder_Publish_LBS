@@ -1,5 +1,7 @@
 // users-list.js — table + filter bar rendering for the admin Users view (F-24-04).
 // Pure DOM rendering, no repo/Drive calls — users-view.js owns state + wiring.
+// F-46-03: GET /api/users answers active users only ({email, display_name, roles} — no fork, no
+// active flag, no last_active), so the table has no active/inactive column left to render.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { ROLE_VALUES, ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
@@ -11,22 +13,11 @@ function roleLabel(role) { return t(ROLE_LABEL_KEYS[role] || role); }
 // #24: the full role SET rides in the cell — the store projects one `roles` array (there is no
 // extra_roles field), so the primary reads as text and every further role as a badge.
 function roleCell(user) {
-  const all = (Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role]).filter(Boolean);
-  const [primary, ...rest] = all;
+  const [primary, ...rest] = (Array.isArray(user.roles) ? user.roles : []).filter(Boolean);
+  if (!primary) return '—';
   return roleLabel(primary) + rest
     .map((r) => `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">${roleLabel(r)}</span>`)
     .join('');
-}
-
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return iso.slice(0, 10);
-}
-
-function activeBadge(active) {
-  const cls = active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
-  const key = active ? 'admin.users.status.active' : 'admin.users.status.inactive';
-  return `<span class="px-2 py-0.5 rounded text-[11px] font-medium ${cls}">${t(key)}</span>`;
 }
 
 export function filterBarHtml(filter) {
@@ -39,20 +30,12 @@ export function filterBarHtml(filter) {
         <option value="">${t('admin.users.filter.role_all')}</option>
         ${roleOptions}
       </select>
-      <select id="usr-active" class="border rounded-lg px-3 py-1.5 text-xs text-slate-700">
-        <option value="">${t('admin.users.filter.active_all')}</option>
-        <option value="active"   ${filter.activeFilter === 'active'   ? 'selected' : ''}>${t('admin.users.status.active')}</option>
-        <option value="inactive" ${filter.activeFilter === 'inactive' ? 'selected' : ''}>${t('admin.users.status.inactive')}</option>
-      </select>
       <span id="usr-count" class="text-xs text-slate-400 self-center"></span>
     </div>`;
 }
 
-/// AC-02: renders one row per user. AC-05: Deactivate hidden once already inactive (no
-/// reactivate flow in this feature's scope).
-/// #26: shown while repo-init's deferred step is still wiring the user repo. Without it the grid
-/// paints its empty state ("—", 0 / 0) for the whole boot, which reads as "the users are gone"
-/// rather than "not loaded yet". Mirrors the audit/dashboard skeleton convention.
+/// #26: shown while the GET /api/users round trip is in flight, so the grid never reads as an
+/// empty workspace mid-load.
 export function renderUsersSkeleton(container) {
   if (!container) return;
   container.innerHTML = `
@@ -74,13 +57,10 @@ export function renderUsersTable(container, users) {
       <td class="px-3 py-2">${u.email}</td>
       <td class="px-3 py-2">${u.display_name || ''}</td>
       <td class="px-3 py-2">${roleCell(u)}</td>
-      <td class="px-3 py-2">${u.fork || '—'}</td>
-      <td class="px-3 py-2">${activeBadge(u.active)}</td>
-      <td class="px-3 py-2">${fmtDate(u.last_active)}</td>
       <td class="px-3 py-2">
         <div class="flex gap-1">
           <button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t('admin.users.action.edit')}</button>
-          ${u.active ? `<button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t('admin.users.action.deactivate')}</button>` : ''}
+          <button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t('admin.users.action.deactivate')}</button>
         </div>
       </td>
     </tr>`).join('');
@@ -92,9 +72,6 @@ export function renderUsersTable(container, users) {
           <th class="px-3 py-2 text-left">${t('admin.users.column.email')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.display_name')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.role')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.fork')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.active')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.last_active')}</th>
           <th class="px-3 py-2 text-left">${t('admin.users.column.actions')}</th>
         </tr>
       </thead>

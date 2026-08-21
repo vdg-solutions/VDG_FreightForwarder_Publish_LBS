@@ -16,6 +16,9 @@ import { bindShipmentVoidDelete } from '../../implementations/ui/core_abstractio
 import { bindQuoteOrchestrator } from '../../implementations/ui/core_abstractions/ports/flows/quote-orchestrator.js';
 import { composeFlowsAdmin } from './flows-admin.js';
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
+import { listUsers } from '../../implementations/storage/core_abstractions/user-directory.js';
+
+const ROLE_SALES_REP = 'SalesRep';
 
 const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
 const KIND_USER            = 'user';
@@ -74,7 +77,13 @@ export function composeFlows(wasm) {
   });
 
   bindSalesRegistry({
-    getActiveSalesReps: async () => (await wasm.flows_active_sales_reps({ force: false })).reps,
+    // F-46-03: the picker's rows come from the server's safe projection, not the local "user"
+    // entity cache (nothing ever wrote that kind — the empty-picker bug). The wasm side still
+    // owns shaping, colour-hashing and the 5-minute cache.
+    getActiveSalesReps: async () => {
+      const { users } = await listUsers({ role: ROLE_SALES_REP });
+      return (await wasm.flows_active_sales_reps({ rows: users || [], force: false })).reps;
+    },
     getSalesRepByPrefix: (reps, prefix) => wasm.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
     clearRegistryCache: () => wasm.flows_clear_sales_registry(EMPTY),
   });

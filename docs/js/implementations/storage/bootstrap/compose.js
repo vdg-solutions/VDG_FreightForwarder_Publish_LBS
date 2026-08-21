@@ -27,9 +27,11 @@ import { bindGrantReader } from '../core_abstractions/grant-reader.js';
 import { bindEventBus } from '../core_abstractions/events.js';
 import { bindStorageApi } from '../core_abstractions/storage-api.js';
 import { bindWorkspaceAuthority } from '../core_abstractions/workspace-authority.js';
+import { bindUserDirectory } from '../core_abstractions/user-directory.js';
 
 import { backend } from '../implementations/server/backend.js';
 import { serverSession } from '../implementations/server/server-session.js';
+import { createUser, listUsers, patchUser } from '../implementations/server/server-users.js';
 import { serverTransport } from '../implementations/server/server-drive-shim.js';
 import { serverWorkspaceAuthority } from '../implementations/server/server-role.js';
 import { ServerIoPort } from '../implementations/server/server-io-adapters.js';
@@ -74,6 +76,8 @@ bindBundleHealer(bundleHealer);
 bindFolderResolver(folderResolver);
 bindGrantReader(grantReader);
 bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })) });
+// F-46-03: user management is server-only by design (owner 2026-08-21) — no Drive-mode branch.
+bindUserDirectory({ listUsers, createUser, patchUser });
 
 /// `?mock=1` or localStorage vdg.driveMode=mock: the localStorage-backed Drive double.
 export function isMockMode() {
