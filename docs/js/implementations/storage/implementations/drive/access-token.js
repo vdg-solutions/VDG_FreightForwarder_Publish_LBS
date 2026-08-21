@@ -17,7 +17,7 @@ import { SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstractions/util/sa
 import { createTokenAnchor, ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from '../../core_abstractions/token-anchor.js';
 import { ACCESS_TOKEN_ISSUED_KEY } from '../../core_abstractions/token.js';
 
-const CLIENT_ID                = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com'; // Makefile sed target
+const CLIENT_ID                = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com'; // Makefile sed target
 // Must equal google-oauth.js::DRIVE_SCOPE — see the measurement recorded there for why this is
 // the full Drive scope and not `drive.file`.
 const DRIVE_SCOPE              = 'https://www.googleapis.com/auth/drive';

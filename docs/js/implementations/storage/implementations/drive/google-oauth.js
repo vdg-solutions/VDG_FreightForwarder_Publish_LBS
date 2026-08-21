@@ -8,7 +8,7 @@ import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_a
 // The synthetic id-token codec (parse/build) is core — no GIS, no client id, no storage.
 import { TOKEN_KEY, buildUser, encodeSyntheticIdToken, parseIdToken } from '../../core_abstractions/id-token.js';
 
-const CLIENT_ID            = '566948941006-ju52hf1hvpiv8gv3qu6slt58c7utgicf.apps.googleusercontent.com';
+const CLIENT_ID            = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY = 'vdg.auth.access_token_exp';
 // E-43: VERSIONED on purpose. The flag records "this browser already consented", and it used to
