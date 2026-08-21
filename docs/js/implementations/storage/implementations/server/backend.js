@@ -1,12 +1,12 @@
 // backend.js — which storage authority this page is talking to.
 //
-// Two backends exist: Google Drive (the serverless build on GitHub Pages) and vdg-server (the
-// client-server build). The bundle is the same; the difference is discovered ONCE at boot by asking
-// the API origin whether /api/health is there. API_BASE (stamped at publish) names that origin —
-// empty means this page's own origin (vdg-server serving its bundle, or a bare static host where
-// the probe finds nothing and Drive is selected). GitHub Pages and a bare Caddy answer 404, so the
-// probe cannot mistake them for a server. A cross-origin API carries the session cookie with
-// credentials: 'include' (the server allows exactly the Pages origin, cookie SameSite=None).
+// vdg-server is THE backend: GitHub Pages now serves the client-server build, whose API_BASE names
+// the server origin (today a Cloudflare Worker). The Drive-direct flavour is frozen on branch
+// `serverless` and is not what Pages ships — a stamped bundle must never fall back to it.
+// API_BASE stamped at publish = server build, decided at publish time, not re-decided per boot.
+// An unstamped bundle (only the frozen serverless flavour) still probes /api/health and lands on
+// Drive. A cross-origin API carries the session cookie with credentials: 'include' (the server
+// allows exactly the Pages origin, cookie SameSite=None).
 
 import { API_BASE } from '../../core_abstractions/workspace-config.js';
 
@@ -20,9 +20,15 @@ const BACKEND_KEY        = 'vdg.backend'; // sessionStorage: survives reload, no
 
 let _backend = null;
 
-/// Ask once, remember for the session. Never throws — an unreachable /api is simply "drive".
+/// A build stamped with API_BASE IS a server build — that is a publish-time fact, not something
+/// to re-decide per boot. Treating an unreachable /api as "drive" let a single failed probe
+/// (a timeout, a 5xx) silently swap the storage authority mid-session: the browser then wrote
+/// straight to Drive with the user's own token, behind the server's back — duplicate grant
+/// files the server never saw, and no ACL check on the way in. An outage must read as an
+/// outage. Only an unstamped build (the serverless flavour) may probe and land on Drive.
 async function detectBackend() {
   if (_backend) return _backend;
+  if (API_BASE) { _backend = BACKEND_SERVER; return _backend; } // stamped = server, unconditionally
   const remembered = _readRemembered();
   if (remembered) { _backend = remembered; return _backend; }
   const ctrl  = new AbortController();
@@ -42,6 +48,7 @@ async function detectBackend() {
 
 /// Sync read after detectBackend() has run (requireAuth awaits it before anything else).
 function isServerBackend() {
+  if (API_BASE) return true; // same publish-time fact, readable before detectBackend() has run
   return (_backend ?? _readRemembered()) === BACKEND_SERVER;
 }
 
