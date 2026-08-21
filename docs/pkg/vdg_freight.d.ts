@@ -163,7 +163,7 @@ export function check_quotation_transition(from_state: string, event: string): b
  */
 export function commission_waterfall(margin_vnd: number, com_deductions_vnd: number, sales_pct_0_100: number, clamp_negatives: boolean): any;
 
-export function compute_dashboard_exceptions(shipments_json: string, now_ms: number, tz_offset_min: bigint): any;
+export function compute_dashboard_exceptions(shipments_json: string, now_ms: number, tz_offset_min: number): any;
 
 export function compute_due_soon(billing_json: string, today_str: string, warn_days: number): any;
 
@@ -715,7 +715,7 @@ export interface InitOutput {
     readonly check_awb_doc_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
     readonly commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly compute_dashboard_exceptions: (a: number, b: number, c: number, d: number, e: bigint) => void;
+    readonly compute_dashboard_exceptions: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
