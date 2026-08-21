@@ -22,6 +22,7 @@ class VdgKpiCard extends LitElement {
     delta: { type: String },
     tone: { type: String },
     icon: { type: String },
+    tooltip: { type: String },
   };
 
   createRenderRoot() { return this; }
@@ -38,7 +39,10 @@ class VdgKpiCard extends LitElement {
     return html`
       <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-sm transition">
         <div class="flex items-start justify-between">
-          <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">${this.label}</div>
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span>${this.label}</span>
+            ${this.tooltip ? html`<info-tip text="${this.tooltip}"></info-tip>` : ''}
+          </div>
           <div class="w-9 h-9 rounded-lg ring-4 ${tone.ring} ${tone.dot} bg-opacity-10 flex items-center justify-center">
             <svg class="w-4 h-4 ${tone.text}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               ${iconContent}

@@ -2,6 +2,7 @@ import '../implementations/ui/bootstrap/components/sidebar.js';
 import '../implementations/ui/bootstrap/components/topbar.js';
 import '../implementations/ui/bootstrap/components/wizard-stepper.js';
 import '../implementations/ui/bootstrap/components/status-badge.js';
+import '../implementations/ui/bootstrap/components/info-tip.js';
 import '../implementations/ui/bootstrap/components/kpi-card.js';
 import '../implementations/ui/bootstrap/components/upload-zone.js';
 import '../implementations/ui/bootstrap/components/cutoff-timer.js';

@@ -163,6 +163,8 @@ export function check_quotation_transition(from_state: string, event: string): b
  */
 export function commission_waterfall(margin_vnd: number, com_deductions_vnd: number, sales_pct_0_100: number, clamp_negatives: boolean): any;
 
+export function compute_dashboard_exceptions(shipments_json: string, now_ms: number, tz_offset_min: bigint): any;
+
 export function compute_due_soon(billing_json: string, today_str: string, warn_days: number): any;
 
 /**
@@ -713,6 +715,7 @@ export interface InitOutput {
     readonly check_awb_doc_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
     readonly commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly compute_dashboard_exceptions: (a: number, b: number, c: number, d: number, e: bigint) => void;
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
@@ -981,9 +984,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15682: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15695: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12845: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15735: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15748: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12898: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -1,16 +1,20 @@
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { buildDistribution } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
 import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shipment-state-resolver.js';
+import { SHIPMENT_MAIN_PATH, phaseIndex } from '../../../kernel/core_abstractions/util/shipment-phases.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
 
 const CLOSED_LIKE_STATES  = ['Closed', 'Delivered']; // F-18-11: KPI "active" excludes these
+// F-45-11: a shipment already InTransit has necessarily cleared its SI/CY cutoffs — only the
+// pre-departure phases can still be under cutoff pressure.
+const PRE_DEPARTURE_STATES = SHIPMENT_MAIN_PATH.slice(0, phaseIndex('InTransit'));
 
 function kpiSection(kpis) {
   return `
     <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
       ${kpis.map(
-        (k) => `<kpi-card label="${k.label}" value="${k.value}" delta="${k.delta}" tone="${k.tone}" icon="${k.icon}"></kpi-card>`
+        (k) => `<kpi-card label="${k.label}" value="${k.value}" delta="${k.delta}" tone="${k.tone}" icon="${k.icon}"${k.tooltip ? ` tooltip="${k.tooltip}"` : ''}></kpi-card>`
       ).join('')}
     </section>
   `;
@@ -56,7 +60,10 @@ function exceptionSection(exceptions) {
     <section class="bg-white rounded-xl border border-slate-200 p-5">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <div class="text-sm font-semibold text-slate-900">${t('open_exceptions')}</div>
+          <div class="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            <span>${t('open_exceptions')}</span>
+            <info-tip text="${t('dashboard.exceptions.tooltip')}"></info-tip>
+          </div>
           <div class="text-xs text-slate-500">${t('dashboard.exceptions.subtitle')}</div>
         </div>
       </div>
@@ -71,7 +78,7 @@ function exceptionSection(exceptions) {
             </div>
             <status-badge state="${e.severity}" fsm="exception"></status-badge>
             <div class="text-xs font-mono ${e.mins < 60 ? 'text-red-600 font-semibold' : 'text-slate-500'} w-16 text-right">
-              ${e.mins < 60 ? t('dashboard.exceptions.mins_left', { n: e.mins }) : t('dashboard.exceptions.hours_left', { n: Math.floor(e.mins / 60) })}
+              ${e.mins <= 0 ? t('dashboard.exceptions.overdue') : e.mins < 60 ? t('dashboard.exceptions.mins_left', { n: e.mins }) : t('dashboard.exceptions.hours_left', { n: Math.floor(e.mins / 60) })}
             </div>
           </div>`
         ).join('')}
@@ -129,6 +136,33 @@ function demExposureCard() {
   `;
 }
 
+// F-45-11: "Ngoại lệ mở" — the arithmetic (severity ladder, sort, top-5 cap) lives in Rust
+// (compute_dashboard_exceptions); this only narrows to pre-departure shipments (JS already owns
+// the alias-resolved canonical state, see F-18-11) and translates the i18n keys Rust hands back.
+function computeOpenExceptions(shipments, aliasRows) {
+  const wasm = window.__vdg_wasm;
+  if (!wasm?.compute_dashboard_exceptions) return { exceptions: [], openCount: 0 };
+
+  const preDeparture = shipments
+    .filter((s) => PRE_DEPARTURE_STATES.includes(resolveShipmentState(s.state || s.status, aliasRows)))
+    .map((s) => ({
+      id: s.shipment_ref || s.id || '',
+      shipment_ref: s.shipment_ref || s.id || '',
+      customer: s.customer || '',
+      closing_si: s.closing_si || null,
+      closing_cy: s.closing_cy || null,
+    }));
+
+  const tzOffsetMin = -new Date().getTimezoneOffset();
+  const result = wasm.compute_dashboard_exceptions(JSON.stringify(preDeparture), Date.now(), tzOffsetMin);
+  return {
+    exceptions: (result.exceptions || []).map((e) => ({
+      id: e.id, shipment: e.shipment, type: t(e.typeKey), severity: e.severity, mins: e.mins,
+    })),
+    openCount: result.openCount || 0,
+  };
+}
+
 export function renderChart(distribution) {
   const ctx = document.getElementById('dist-chart');
   if (!ctx || !window.Chart) return;
@@ -166,10 +200,11 @@ export async function render(root) {
   // alias (e.g. 'Open') must land in its canonical bucket, not fall through raw.
   const activeShipments = allShipments.filter((s) =>
     !CLOSED_LIKE_STATES.includes(resolveShipmentState(s.state || s.status, aliasRows)));
+  const { exceptions, openCount } = computeOpenExceptions(allShipments, aliasRows);
   const kpis = [
     { label: t('dashboard.kpi.active_shipments'), value: activeShipments.length, delta: t('dashboard.kpi.total_active'), tone: 'blue', icon: 'ship' },
     { label: t('dashboard.kpi.pending_documents'), value: 0, delta: t('dashboard.kpi.real_data_na'), tone: 'amber', icon: 'doc' },
-    { label: t('open_exceptions'), value: 0, delta: t('dashboard.kpi.real_data_na'), tone: 'red', icon: 'alert' },
+    { label: t('open_exceptions'), value: openCount, delta: t('dashboard.exceptions.subtitle'), tone: 'red', icon: 'alert', tooltip: t('dashboard.exceptions.tooltip') },
     { label: t('revenue_mtd'), value: 'N/A', delta: t('dashboard.kpi.requires_pnl_compute'), tone: 'green', icon: 'dollar' },
   ];
 
@@ -177,8 +212,7 @@ export async function render(root) {
   // literal comparisons that can silently drift from ShipmentState (root cause of the undercount).
   const distribution = buildDistribution(allShipments, aliasRows);
 
-  const exceptions = []; // Real data source not implemented yet
-  const cutoffs = []; // Real data source not implemented yet
+  const cutoffs = []; // Real data source not implemented yet — F-45-11 scope is the exceptions card only
 
   root.innerHTML = `
     <div class="p-6 space-y-6 max-w-[1400px] mx-auto">
