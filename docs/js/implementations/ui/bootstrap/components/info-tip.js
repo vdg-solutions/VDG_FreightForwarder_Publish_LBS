@@ -53,13 +53,20 @@ class VdgInfoTip extends LitElement {
 
   render() {
     return html`
-      <span class="relative inline-flex align-middle">
+      <span class="relative inline-flex">
         <button type="button" @click=${this._toggle}
           aria-expanded=${this.open ? 'true' : 'false'} aria-describedby=${this._id}
-          class="w-4 h-4 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 text-[10px] font-semibold leading-none hover:text-slate-600 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          aria-label=${this.text}
+          class="info-tip-btn w-[15px] h-[15px] inline-flex items-center justify-center rounded-full
+                 border border-slate-300 bg-white text-slate-400 text-[10px] font-semibold leading-none
+                 transition-colors hover:text-slate-600 hover:border-slate-400
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
         >i</button>
         <span id=${this._id} role="tooltip"
-          class="absolute z-20 left-1/2 -translate-x-1/2 top-full mt-1.5 w-56 rounded-lg bg-slate-900 text-white text-[11px] leading-snug px-2.5 py-2 shadow-lg transition-opacity ${this.open ? 'opacity-100' : 'opacity-0 pointer-events-none'}"
+          class="absolute z-30 left-1/2 -translate-x-1/2 top-[22px] w-60 max-w-[80vw] rounded-lg
+                 bg-slate-800 text-slate-100 text-[11px] font-normal normal-case tracking-normal
+                 leading-relaxed text-left px-3 py-2 shadow-xl ring-1 ring-black/5
+                 transition-opacity duration-150 ${this.open ? 'opacity-100' : 'opacity-0 pointer-events-none'}"
         >${this.text}</span>
       </span>
     `;
