@@ -8,7 +8,9 @@ import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_a
 // The synthetic id-token codec (parse/build) is core — no GIS, no client id, no storage.
 import { TOKEN_KEY, buildUser, encodeSyntheticIdToken, parseIdToken } from '../../core_abstractions/id-token.js';
 import { fetchUserinfo } from './userinfo.js';
-import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
+import { renderSignInButton as renderGoogleSignInButton } from './signin-button.js';
+import { gisErrorMessage } from './gis-error.js';
+import { DRIVE_SCOPE } from '../../core_abstractions/drive-endpoints.js';
 
 const CLIENT_ID            = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
@@ -35,14 +37,6 @@ const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime wh
 // trips it; the hint is advisory only and never cancels the in-flight request.
 const SIGNIN_STALL_HINT_MS = 60_000;
 
-// F-35-01 AC-02 — mirrors access-token.js: GIS error_callback types meaning "popup blocked".
-const GIS_ERROR_POPUP_FAILED = 'popup_failed_to_open';
-const GIS_ERROR_POPUP_CLOSED = 'popup_closed';
-function _isPopupBlockedError(type) { return type === GIS_ERROR_POPUP_FAILED || type === GIS_ERROR_POPUP_CLOSED; }
-function _gisErrorMessage(err) {
-  const type = err?.type || 'unknown';
-  return _isPopupBlockedError(type) ? `popup-blocked:${type}` : `gis-error:${type}`;
-}
 
 // Canonical auth-owned localStorage keys — single source of truth (F-15-50 AC-07).
 // Add new auth keys here; every clear path picks them up automatically.
@@ -120,8 +114,23 @@ function restampIdTokenExp(accessExpMs) {
 }
 
 // Shared token/expiry write for both the sign-in callback and the re-consent flow below.
+//
+// A SERVER build keeps nothing: the Google token has exactly one job here — travel to
+// POST /session so the server can verify it — and after that no code path reads it back
+// (drive-transport, its only consumer, belongs to the Drive-direct flavour). Storing it anyway
+// left a Google credential in localStorage, readable by any script, for its full hour. Measured
+// on the live deploy: that token came back carrying `auth/drive` and `auth/drive.file` from a
+// grant this account made in the Drive era — Google returns previously granted scopes whether or
+// not you ask for them — so what was sitting there was Drive-capable, in a build that never
+// touches Drive.
 function _persistAccessToken(resp) {
   const expMs = Date.now() + (resp.expires_in || DEFAULT_TOKEN_TTL_SEC) * 1000;
+  if (isServerBackend()) {
+    // Also clear what an older build of this app left behind, rather than waiting out its hour.
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_EXP_KEY);
+    return expMs;
+  }
   localStorage.setItem(ACCESS_TOKEN_KEY,     resp.access_token);
   localStorage.setItem(ACCESS_TOKEN_EXP_KEY, String(expMs));
   restampIdTokenExp(expMs);   // keep synthetic session in step with the access token (no-op pre-sign-in)
@@ -233,7 +242,7 @@ function requestDriveScopeGrant(onGranted, onDenied) {
       }
     },
     // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
-    error_callback: (err) => onDenied(new Error(_gisErrorMessage(err))),
+    error_callback: (err) => onDenied(new Error(gisErrorMessage(err))),
   });
   // F-49-01 — restore a native window.open the ad-blocker may have nulled before GIS uses it.
   if (!ensureWindowOpen()) {
@@ -270,63 +279,11 @@ async function initGoogleSignIn(onSuccess, onError) {
 }
 
 // ── OAuth2 sign-in button ─────────────────────────────────────────────────────
+// Markup + click live in signin-button.js; this wrapper keeps the port's one-argument signature
+// and hands it the session hydration it must not import for itself.
 
 function renderSignInButton(container) {
-  if (!container) return;
-  container.innerHTML = `
-    <button id="vdg-signin-btn"
-            class="w-full flex items-center justify-center gap-3 px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50 transition">
-      <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" aria-hidden="true">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      <span class="text-sm font-medium text-slate-700">Sign in with Google</span>
-    </button>
-  `;
-  container.querySelector('#vdg-signin-btn').addEventListener('click', () => {
-    // #21 stall watchdog — armed just before the popup call, disarmed by whichever GIS callback
-    // answers. If neither ever does, the user gets an actionable hint instead of a dead screen.
-    let stallTimer = null;
-    const answered = () => { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } };
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      // Server backend: identity only. No Drive scope means no Drive consent screen and no
-      // second popup — the server never touches the user's Drive.
-      scope:     isServerBackend() ? IDENTITY_SCOPE : `${IDENTITY_SCOPE} ${DRIVE_SCOPE}`,
-      callback:  (resp) => {
-        answered();
-        if (resp.error) {
-          window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: resp.error }));
-          return;
-        }
-        // F-19-84: sign-in routes through the same hydrate as reconnect/silent-boot — no
-        // parallel path (RULE #5).
-        hydrateSessionFromToken(resp)
-          .then(() => location.reload())
-          .catch((err) => {
-            window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: err.message }));
-          });
-      },
-      // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
-      error_callback: (err) => {
-        answered();
-        window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: _gisErrorMessage(err) }));
-      },
-    });
-    // F-49-01 — restore a native window.open the ad-blocker may have nulled before GIS uses it.
-    if (!ensureWindowOpen()) {
-      window.dispatchEvent(new CustomEvent('vdg:auth-popup-blocked'));
-      window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: 'popup-blocked:window-open-unavailable' }));
-      return;
-    }
-    stallTimer = setTimeout(() => {
-      stallTimer = null;
-      window.dispatchEvent(new CustomEvent('vdg:signin-stalled'));
-    }, SIGNIN_STALL_HINT_MS);
-    client.requestAccessToken({ prompt: 'consent' });
-  });
+  return renderGoogleSignInButton(container, { hydrate: hydrateSessionFromToken, clientId: CLIENT_ID });
 }
 
 // ── global bridge ─────────────────────────────────────────────────────────────

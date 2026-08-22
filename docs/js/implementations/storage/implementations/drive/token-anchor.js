@@ -27,7 +27,7 @@ const DEFAULT_SILENT_TIMEOUT_MS   = 6_000;
 const DEFAULT_FAILURE_COOLDOWN_MS = 30_000;
 
 // GIS error_callback types that mean "popup blocked", per Google's error guide.
-const POPUP_BLOCKED_TYPES = ['popup_failed_to_open', 'popup_closed'];
+import { POPUP_BLOCKED_TYPES } from './gis-error.js';
 
 // Events surfaced through config.emit — the names are the port's (storage/core_abstractions/token-anchor.js).
 import { ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from '../../core_abstractions/token-anchor.js';
