@@ -2,17 +2,18 @@
 // (F-19-66). Single source of the manager sentinel + its display policy; reused at the
 // builder-render seam and the pivot/report seams so no `__X__`-wrapped token ever reaches the DOM.
 import { t } from '../i18n/index.js';
+import { ROLE_MANAGER } from '../roles.js';
 
 export const MANAGER_SENTINEL     = '__MANAGER__';
 const SENTINEL_SHAPE              = /^__.*__$/;
 const MANAGER_ROLE_LABEL_KEY      = 'admin.users.role.manager';
-const MANAGER_ROLE_LABEL_FALLBACK = 'Manager'; // t()-miss default (mirrors kind-i18n.js idiom)
+// t()-miss default (mirrors kind-i18n.js idiom)
 const SAFE_FALLBACK               = '—';
 
 function managerRoleLabel(tFn) {
   const label = tFn(MANAGER_ROLE_LABEL_KEY);
   // t() echoes the key back on a miss — never leak the raw i18n key
-  return label === MANAGER_ROLE_LABEL_KEY ? MANAGER_ROLE_LABEL_FALLBACK : label;
+  return label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label;
 }
 
 /**

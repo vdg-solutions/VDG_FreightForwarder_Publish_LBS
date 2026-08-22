@@ -1,6 +1,8 @@
 // boot/maintenance.js — fire-and-forget housekeeping kicked off after the repo stack is live.
 // Boot must never wait on any of this; every job degrades to "retry next boot" on failure.
 
+import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
+
 /// Storage-side upkeep: error-log retention (F-37-08) + legacy-bundle explode (F-38-04).
 export function runBootMaintenance(driveApi) {
   // Retention. The error log's write side is capped per session but never expires, so without
@@ -10,7 +12,7 @@ export function runBootMaintenance(driveApi) {
 
   // Per-record migration: explode leftover month bundles of registry kinds into record files.
   // Manager-only (single exploder), bounded per sweep, converges across boots.
-  const isManager = (window.__vdg_current_user?.roles || []).includes('Manager');
+  const isManager = (window.__vdg_current_user?.roles || []).includes(ROLE_MANAGER);
   Promise.resolve(window.__vdg_wasm.cache_migrate_per_record_kinds({ is_manager: isManager }))
     .then(async (report) => {
       let relocated = report.relocated.some((r) => r.moved > 0);

@@ -12,16 +12,12 @@
 // This is a deliberate, minimal mirror of parse_grant; f-30 asserts the two stay in step.
 
 import { kvGet, kvSet, kvRemove } from '../../kernel/core_abstractions/ports/key-value.js';
+import { ROLE_NAMES } from '../../kernel/core_abstractions/roles.js';
 
 // Mirrors boundary/grant_file.rs.
 export const GRANTS_DIR     = 'grants';
 export const GRANT_FILE_TAG = 'grant.';
 const NAME_SEPARATOR        = '.';
-
-// Mirrors boundary/role.rs::Role::ALL. An unknown name refuses the WHOLE file rather than being
-// dropped — a silently dropped hat reads to the user as an unexplained access denial.
-const ROLE_NAMES = ['Manager', 'SalesManager', 'SalesRep', 'CustomerService',
-                    'Accountant', 'Auditor', 'Pricing'];
 
 export function grantFileName(workspace, fork) {
   return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${fork}`;

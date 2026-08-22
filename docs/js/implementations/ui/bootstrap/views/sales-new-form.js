@@ -1,6 +1,7 @@
 // sales-new-form.js — 4-section shipment form orchestrator (F-15-27)
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { saveDraft } from './sales-new/draft-manager.js';
 import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.js';
 export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
@@ -39,7 +40,7 @@ export async function renderForm(root, opts = {}) {
   const docDate   = draft?.transaction_date || todayLocal();
   // #28: display toggle (which waterfall rows to show), reading the SET the auth gate resolved —
   // not a single-field string compare, and not an authority gate (route-guard owns those).
-  const isManager = (window.__vdg_current_user?.roles || []).includes('Manager');
+  const isManager = (window.__vdg_current_user?.roles || []).includes(ROLE_MANAGER);
   // F-37-06: `revenueVisible` comes from the CALLER, which is the thing that did the read - the
   // receipt is non-enumerable on purpose (it must never be persisted), so it does not survive
   // the spread into a draft. Passing it explicitly is also the honest shape: this module is

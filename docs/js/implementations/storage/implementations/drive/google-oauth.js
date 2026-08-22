@@ -7,6 +7,7 @@ import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
 import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_abstractions/profile-cache.js';
 // The synthetic id-token codec (parse/build) is core — no GIS, no client id, no storage.
 import { TOKEN_KEY, buildUser, encodeSyntheticIdToken, parseIdToken } from '../../core_abstractions/id-token.js';
+import { fetchUserinfo } from './userinfo.js';
 
 const CLIENT_ID            = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
@@ -28,9 +29,7 @@ const GIS_SCRIPT_TIMEOUT   = 10_000; // ms
 // therefore unreachable-by-construction and resolved as NOT_PROVISIONED. Sharing is enforced by
 // Drive; USING what was shared needs a scope that can see files this session did not create.
 const DRIVE_SCOPE          = 'https://www.googleapis.com/auth/drive';
-const USERINFO_URL         = 'https://www.googleapis.com/oauth2/v3/userinfo';
 const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime when expires_in absent
-const USERINFO_FETCH_TIMEOUT_MS = 8000; // F-57-01 AC-01: matches SAFE_AWAIT_DEFAULT_MS/REPO_INIT_TIMEOUT_MS convention
 // #21 — GIS can fire NEITHER callback when an extension hands it a fake popup handle: the sign-in
 // screen then sits forever with no message. Long enough that a human typing a password + 2FA never
 // trips it; the hint is advisory only and never cancels the in-flight request.
@@ -118,34 +117,6 @@ function _persistAccessToken(resp) {
   return expMs;
 }
 
-// F-57-01 AC-01: /userinfo has no browser-enforced ceiling on its own — the only unguarded
-// network await left in the boot chain (cold-boot silent-bootstrap, reconnect click, sign-in
-// button all route through this one function, RULE #5). AbortController-bound; named error so
-// a caller can branch on it, same convention as RoleProbeTimeoutError/RepoInitTimeoutError.
-export class UserinfoFetchTimeoutError extends Error {
-  constructor() {
-    super('userinfo fetch timeout');
-    this.name = 'UserinfoFetchTimeoutError';
-  }
-}
-
-async function _fetchUserinfo(accessToken) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), USERINFO_FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(USERINFO_URL, {
-      headers: { Authorization: 'Bearer ' + accessToken },
-      signal:  controller.signal,
-    });
-    if (!res.ok) throw new Error(`userinfo ${res.status}`); // 401 = token dead — never mint from an error body
-    return await res.json();
-  } catch (err) {
-    throw err?.name === 'AbortError' ? new UserinfoFetchTimeoutError() : err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 // Session revive WITHOUT GIS (owner model: token lives in ONE place, use it until 401). The
 // synthetic id_token expires/purges on its own clock while the ACCESS token may still be
 // perfectly valid — declaring "hết hạn" from the id-token clock alone painted a red chip over a
@@ -171,7 +142,7 @@ async function rebuildSessionFromStoredToken() {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   if (!token) return null;
   try {
-    const info = await _fetchUserinfo(token);
+    const info = await fetchUserinfo(token);
     if (!info?.sub) return null;
     const storedExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY) || '0', 10);
     const expMs = Math.max(storedExp, Date.now() + REVIVED_SESSION_MIN_TTL_MS);
@@ -210,7 +181,7 @@ async function hydrateSessionFromToken(resp) {
     if (opened?.session_token) rememberSessionToken(opened.session_token);
   } else if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
   else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
-  const info = await _fetchUserinfo(resp.access_token);
+  const info = await fetchUserinfo(resp.access_token);
   localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
     email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
   }));

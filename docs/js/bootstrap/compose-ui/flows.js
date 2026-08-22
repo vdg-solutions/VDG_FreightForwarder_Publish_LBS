@@ -17,8 +17,7 @@ import { bindQuoteOrchestrator } from '../../implementations/ui/core_abstraction
 import { composeFlowsAdmin } from './flows-admin.js';
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { listUsers } from '../../implementations/storage/core_abstractions/user-directory.js';
-
-const ROLE_SALES_REP = 'SalesRep';
+import { ROLE_SALES_REP } from '../../implementations/kernel/core_abstractions/roles.js';
 
 const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
 const KIND_USER            = 'user';

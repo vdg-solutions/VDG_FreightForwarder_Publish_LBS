@@ -2,14 +2,11 @@
 // checkbox markup are the ui's own — a view must not reach into another module to learn the names
 // of the roles it renders.
 
-// Mirrors boundary/role.rs::Role::PRIMARY, in the same order.
-export const ROLE_MANAGER          = 'Manager';
-export const ROLE_SALES_MANAGER    = 'SalesManager';
-export const ROLE_SALES_REP        = 'SalesRep';
-export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
-export const ROLE_ACCOUNTANT       = 'Accountant';
-export const ROLE_AUDITOR          = 'Auditor';
-export const ROLE_PRICING          = 'Pricing';
+import { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
+         ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_PRICING } from '../../roles.js';
+
+export { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
+         ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_PRICING };
 
 export const ROLE_VALUES = [ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP,
                             ROLE_CUSTOMER_SERVICE, ROLE_ACCOUNTANT, ROLE_AUDITOR];

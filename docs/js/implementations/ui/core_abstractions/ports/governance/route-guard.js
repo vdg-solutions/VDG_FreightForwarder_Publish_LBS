@@ -6,7 +6,9 @@
 // binding means something is very wrong — guessing generously would hand out access.
 
 /// AC-06: what a user absent from the staff table holds. Not a role — the absence of one.
-export const ROLE_READ_ONLY = 'ReadOnly';
+import { ROLE_READ_ONLY } from '../../roles.js';
+
+export { ROLE_READ_ONLY };
 /// Never the dashboard: that route is guarded, and a denied role bounced back to it loops forever.
 export const PENDING_ROUTE = '/pending-access';
 const REASON_DENIED = 'nav.access.denied';

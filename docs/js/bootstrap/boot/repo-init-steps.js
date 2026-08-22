@@ -7,7 +7,7 @@
 
 import { currentSalesRepId, currentRoles, hasRole } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
 import { forkId } from '../../implementations/kernel/core_abstractions/util/fork-id.js';
-import { ROLE_MANAGER } from '../../implementations/ui/core_abstractions/roles.js';
+import { ROLE_MANAGER, ROLE_READ_ONLY } from '../../implementations/ui/core_abstractions/roles.js';
 import { safeAwait } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
 import { createPlatform } from '../platform/index.js';
@@ -134,7 +134,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   const roles = currentRoles();
   window.__vdg_current_user = {
     email: user.email,
-    role:  roles[0] || 'ReadOnly',
+    role:  roles[0] || ROLE_READ_ONLY,
     roles,
     fork:  forkId(user.email),
   };

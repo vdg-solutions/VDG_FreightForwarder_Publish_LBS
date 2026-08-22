@@ -1,15 +1,11 @@
-// roles.js — the role names as the views spell them. The ui owns its own vocabulary: the same
-// strings the grant files, the session and vdg_freight's Role enum use, mirrored here so a view
-// never reaches across into another module for a constant.
+// roles.js — the role names as the views spell them. The vocabulary itself is the kernel's
+// (kernel/core_abstractions/roles.js, checked against Rust's Role enum); this re-export keeps the
+// import path a view already knows, without a second copy of the names to keep in step.
 
-export const ROLE_MANAGER          = 'Manager';
-export const ROLE_SALES_MANAGER    = 'SalesManager';
-export const ROLE_SALES_REP        = 'SalesRep';
-export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
-export const ROLE_ACCOUNTANT       = 'Accountant';
-export const ROLE_AUDITOR          = 'Auditor';
-export const ROLE_PRICING          = 'Pricing';
-export const ROLE_READ_ONLY        = 'ReadOnly'; // AC-06: default for a user absent from the staff table
+export {
+  ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
+  ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_PRICING, ROLE_READ_ONLY,
+} from '../../kernel/core_abstractions/roles.js';
 
 // F-42-05: role-gated chrome mounts BEFORE sign-in resolves, so it must be told to look again.
 // Fired by the platform whenever the resolved role set genuinely changes.

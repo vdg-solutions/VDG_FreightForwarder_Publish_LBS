@@ -16,6 +16,7 @@ import { ROLE_CACHE_KEY } from '../../core_abstractions/identity.js';
 import { SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { createTokenAnchor, ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from '../../core_abstractions/token-anchor.js';
 import { ACCESS_TOKEN_ISSUED_KEY } from '../../core_abstractions/token.js';
+import { fetchUserinfo } from './userinfo.js';
 
 const CLIENT_ID                = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com'; // Makefile sed target
 // Must equal google-oauth.js::DRIVE_SCOPE — see the measurement recorded there for why this is
@@ -53,23 +54,10 @@ function _sessionEmail() {
 
 // Account guarantee (owner: "cần phải đảm bảo account"): login_hint pins the chooser, but a hint
 // is ADVISORY — verify the minted token's real identity against the session BEFORE persisting.
-const USERINFO_VERIFY_TIMEOUT_MS = 8000;
-const USERINFO_VERIFY_URL        = 'https://www.googleapis.com/oauth2/v3/userinfo';
 async function _verifySameAccount(resp, expectedEmail) {
   if (!expectedEmail) return true; // no session yet — sign-in flow establishes identity from the token itself
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), USERINFO_VERIFY_TIMEOUT_MS);
-  try {
-    const res = await fetch(USERINFO_VERIFY_URL, {
-      headers: { Authorization: 'Bearer ' + resp.access_token },
-      signal:  controller.signal,
-    });
-    if (!res.ok) throw new Error(`userinfo ${res.status}`);
-    const info = await res.json();
-    return (info.email || '').toLowerCase() === expectedEmail.toLowerCase();
-  } finally {
-    clearTimeout(timer);
-  }
+  const info = await fetchUserinfo(resp.access_token);
+  return (info.email || '').toLowerCase() === expectedEmail.toLowerCase();
 }
 
 let _anchorInstance = null;

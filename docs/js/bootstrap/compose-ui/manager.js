@@ -4,6 +4,7 @@
 // the locale's month names, the label a `__MANAGER__` rep token displays as, and the translation
 // of the i18n keys the reports hand back. Rust decides the numbers; this file dresses them.
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
+import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
 import { bindAirPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js';
 import { bindArComposer } from '../../implementations/ui/core_abstractions/ports/manager/ar-composer.js';
 import { bindCommissionCalculator } from '../../implementations/ui/core_abstractions/ports/manager/commission-calculator.js';
@@ -21,7 +22,6 @@ import { bindUserAuditLogComposer } from '../../implementations/ui/core_abstract
 import { bindUsersViewComposer } from '../../implementations/ui/core_abstractions/ports/manager/users-view-composer.js';
 
 const MANAGER_ROLE_LABEL_KEY = 'admin.users.role.manager';
-const MANAGER_ROLE_FALLBACK  = 'Manager';
 const MONTHS_PER_YEAR        = 12;
 const MONTH_SAMPLE_YEAR      = 2000;
 const PREFIX_SEED_RANGE      = 10000; // matches fork.rs SUFFIX_MODULO
@@ -35,7 +35,7 @@ const tz = () => -new Date().getTimezoneOffset();
 function managerLabel() {
   const user = typeof window !== 'undefined' ? window.__vdg_current_user : null;
   const label = t(MANAGER_ROLE_LABEL_KEY);
-  return user?.name || user?.email || (label === MANAGER_ROLE_LABEL_KEY ? MANAGER_ROLE_FALLBACK : label);
+  return user?.name || user?.email || (label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label);
 }
 
 // The `period` pivot dimension prints these; hard-coding English would rename every row bucket
