@@ -4,6 +4,7 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { ROLE_MANAGER, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
 import { readCachedProfile } from '../../../storage/core_abstractions/profile-cache.js';
+import { isServerBackend } from '../../../storage/core_abstractions/backend.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
@@ -186,7 +187,8 @@ class VdgTopbar extends LitElement {
   // F-29-13 AC-06: chip click routed through the pure decision fn (unit-testable branch)
   _onChipClick(state) {
     const user = window.__vdg_auth?.getCurrentUser?.();
-    const action = decideChipAction({ state, user, online: this._online, lastError: this._lastError, authReconnect: this._authReconnect });
+    const action = decideChipAction({ state, user, online: this._online, lastError: this._lastError,
+                                      authReconnect: this._authReconnect, serverBackend: isServerBackend() });
     if (action === CHIP_ACTION.NOOP) return;
     if (action === CHIP_ACTION.SIGNIN) { window.dispatchEvent(new CustomEvent('vdg:auth-signin-request')); return; }
     if (action === CHIP_ACTION.WAITING_NETWORK) { window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'warn', message: t('topbar.sync.action.waiting_network') } })); return; }
@@ -257,7 +259,8 @@ class VdgTopbar extends LitElement {
     // B-38-03-01: in reconnect state the label IS the affordance — "Đồng bộ" next to a red
     // triangle reads as ordinary sync noise, and the owner signed out/in by hand instead of
     // clicking. The tooltip already said it; the label has to.
-    const labelText = (state === 'red' && this._authReconnect) ? t('topbar.sync.label.reconnect')
+    const labelText = (state === 'red' && this._authReconnect)
+      ? t(isServerBackend() ? 'topbar.sync.label.signin' : 'topbar.sync.label.reconnect')
       : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
       : t('topbar.sync.label');
 

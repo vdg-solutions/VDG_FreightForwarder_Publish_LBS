@@ -19,7 +19,8 @@ import { ROLE_MANAGER } from '../implementations/ui/core_abstractions/roles.js';
 import { renderLoginPage } from '../implementations/ui/bootstrap/views/login.js';
 import { createPlatform } from './platform/index.js';
 import { composeAuth } from './compose-ui/auth.js';
-import { configureAuthPlatform } from './platform/auth.js';
+import { configureAuthPlatform, mountLoginScreen } from './platform/auth.js';
+import { isServerBackend } from '../implementations/storage/core_abstractions/backend.js';
 import { composeStorage } from '../implementations/storage/bootstrap/compose.js';
 import '../implementations/kernel/bootstrap/compose.js'; // binds kernel platform ports
 import { currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from '../implementations/ui/core_abstractions/ports/governance/route-guard.js';
@@ -330,6 +331,8 @@ async function main() {
     if (renderDriveGate(_resolveBootFallbackMount(), err, {
       onRequestScope: requestDriveScopeGrant,
       onReconnected:  () => location.reload(),   // credential is good now — re-run boot
+      serverBackend:  isServerBackend(),
+      onSignIn:       () => mountLoginScreen(() => location.reload()),
     })) {
       console.error('[VDG] boot stopped on Drive', err.status, err.driveErrorKind || '', err.message); // DEV
       return;

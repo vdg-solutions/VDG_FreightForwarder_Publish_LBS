@@ -8,6 +8,7 @@ import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_a
 // The synthetic id-token codec (parse/build) is core — no GIS, no client id, no storage.
 import { TOKEN_KEY, buildUser, encodeSyntheticIdToken, parseIdToken } from '../../core_abstractions/id-token.js';
 import { fetchUserinfo } from './userinfo.js';
+import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
 
 const CLIENT_ID            = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com';
 const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
@@ -28,7 +29,6 @@ const GIS_SCRIPT_TIMEOUT   = 10_000; // ms
 // own session got `sharedWithMe` = [] and 404 on files.get BY ID for both. Every employee was
 // therefore unreachable-by-construction and resolved as NOT_PROVISIONED. Sharing is enforced by
 // Drive; USING what was shared needs a scope that can see files this session did not create.
-const DRIVE_SCOPE          = 'https://www.googleapis.com/auth/drive';
 const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime when expires_in absent
 // #21 — GIS can fire NEITHER callback when an extension hands it a fake popup handle: the sign-in
 // screen then sits forever with no message. Long enough that a human typing a password + 2FA never
@@ -209,6 +209,10 @@ async function hydrateSessionFromToken(resp) {
 //   onDenied(err) — resp.error / still missing / GIS not loaded; caller MUST re-render
 //                   visible feedback (AC-09) — not a silent no-op.
 function requestDriveScopeGrant(onGranted, onDenied) {
+  // A server build has no business asking the USER for Drive access — the server holds the Drive
+  // credentials, and DRIVE_SCOPE is restricted, so this would put Google's unverified-app warning
+  // in front of someone for a permission the app never uses. Refuse loudly rather than ask.
+  if (isServerBackend()) { onDenied(new Error('drive scope is never requested on a server build')); return; }
   if (!window.google?.accounts?.oauth2) { onDenied(new Error('GIS oauth2 not loaded')); return; }
   // Same-account re-consent: pin the chooser to the signed-in user (multi-account browsers must
   // not re-consent a different account).
@@ -290,7 +294,7 @@ function renderSignInButton(container) {
       client_id: CLIENT_ID,
       // Server backend: identity only. No Drive scope means no Drive consent screen and no
       // second popup — the server never touches the user's Drive.
-      scope:     isServerBackend() ? 'openid email profile' : `openid email profile ${DRIVE_SCOPE}`,
+      scope:     isServerBackend() ? IDENTITY_SCOPE : `${IDENTITY_SCOPE} ${DRIVE_SCOPE}`,
       callback:  (resp) => {
         answered();
         if (resp.error) {

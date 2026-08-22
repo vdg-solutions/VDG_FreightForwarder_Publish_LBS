@@ -1927,6 +1927,7 @@
   "sales_new.bill_type.surrender": "Surrender",
   "sales_new.bill_type.original": "Original",
   "topbar.sync.label.reconnect": "Kết nối lại",
+  "topbar.sync.label.signin": "Đăng nhập lại",
   "sales_new.auto_advanced": "Đủ điều kiện — lô chuyển sang {state}",
   "sales_new.validation.no_sales_rep": "Chưa chọn sales phụ trách",
   "masters_customers.field.sales_rep": "Sales phụ trách",

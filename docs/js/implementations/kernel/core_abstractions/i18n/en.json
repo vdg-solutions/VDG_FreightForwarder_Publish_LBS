@@ -1927,6 +1927,7 @@
   "sales_new.bill_type.surrender": "Surrender",
   "sales_new.bill_type.original": "Original",
   "topbar.sync.label.reconnect": "Reconnect",
+  "topbar.sync.label.signin": "Sign in again",
   "sales_new.auto_advanced": "Requirements met — job moved to {state}",
   "sales_new.validation.no_sales_rep": "Sales rep is required",
   "masters_customers.field.sales_rep": "Assigned sales rep",

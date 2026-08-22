@@ -63,9 +63,19 @@ function requestReconnect(onSettled, win = window) {
 // onRequestScope / onReconnected are injected so this module stays testable without GIS.
 // Returns false when the error is not a Drive one — the caller must rethrow rather than paint a
 // screen that names the wrong cause.
-export function renderDriveGate(mount, err, { onRequestScope, onReconnected, win = window } = {}) {
+export function renderDriveGate(mount, err, { onRequestScope, onReconnected, onSignIn,
+                                              serverBackend = false, win = window } = {}) {
   const reason = driveGateReason(err);
   if (!reason) return false;
+
+  // Server deployment: the browser holds a SERVER session and never touches Drive (the server
+  // owns it). A 401 here is that session expiring, so the remedy is an ordinary sign-in. The
+  // Drive re-consent this screen used to offer asks Google for a Drive scope the build does not
+  // use, which is what put an "unverified app" warning in front of a routine timeout.
+  if (serverBackend && reason === DRIVE_ACCESS_REASON_SESSION) {
+    onSignIn?.();
+    return true;
+  }
 
   if (reason === DRIVE_ACCESS_REASON_SCOPE) {
     const render = (actionFailed) => renderDriveAccessGateScreen(mount, {

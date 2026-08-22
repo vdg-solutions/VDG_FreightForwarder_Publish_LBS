@@ -17,11 +17,10 @@ import { SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstractions/util/sa
 import { createTokenAnchor, ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from '../../core_abstractions/token-anchor.js';
 import { ACCESS_TOKEN_ISSUED_KEY } from '../../core_abstractions/token.js';
 import { fetchUserinfo } from './userinfo.js';
+import { isServerBackend } from '../../core_abstractions/backend.js';
+import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
 
 const CLIENT_ID                = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com'; // Makefile sed target
-// Must equal google-oauth.js::DRIVE_SCOPE — see the measurement recorded there for why this is
-// the full Drive scope and not `drive.file`.
-const DRIVE_SCOPE              = 'https://www.googleapis.com/auth/drive';
 const ID_TOKEN_KEY             = 'vdg.auth.id_token';
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
@@ -67,7 +66,11 @@ function _anchor() {
   if (_anchorInstance) return _anchorInstance;
   _anchorInstance = createTokenAnchor({
   clientId: CLIENT_ID,
-  scope:    DRIVE_SCOPE,
+  // Server deployment: the browser talks to the server, never to Drive, so the only thing a token
+  // has to carry is identity — that is all the server needs to mint a session. Asking for the full
+  // Drive scope here got Google's "hasn't verified this app" warning in front of every reconnect,
+  // for a permission the build never exercises. The Drive-direct flavour still needs the real one.
+  scope:    isServerBackend() ? IDENTITY_SCOPE : DRIVE_SCOPE,
   keys:     { token: ACCESS_TOKEN_KEY, exp: ACCESS_TOKEN_EXP_KEY, issued: ACCESS_TOKEN_ISSUED_KEY },
   loginHint:       _sessionEmail,
   verifyAccount:   _verifySameAccount,
