@@ -11,9 +11,14 @@
 import { API_BASE } from '../../core_abstractions/workspace-config.js';
 
 const HEALTH_PATH        = '/api/health';
+const ME_PATH            = '/me';
 const API_PREFIX         = '/api';
 const CREDENTIALS_MODE   = API_BASE ? 'include' : 'same-origin';
 const PROBE_TIMEOUT_MS   = 1500;
+// Longer than the health probe on purpose: a timeout here does no harm (the fallback token simply
+// stays), while a cold Durable Object answering /me in two seconds would otherwise be read as
+// "this browser blocks the cookie" on every sign-in.
+const COOKIE_PROBE_TIMEOUT_MS = 4000;
 const BACKEND_SERVER     = 'server';
 const BACKEND_DRIVE      = 'drive';
 const SESSION_TOKEN_HEADER = 'X-Vdg-Session';
@@ -22,6 +27,11 @@ const SESSION_TOKEN_HEADER = 'X-Vdg-Session';
 // loops on 401 after a SUCCESSFUL sign-in. Keep the same server-minted token in sessionStorage as
 // a second delivery route — window-scoped, gone when the window closes, and unnecessary once the
 // app and the API share one site.
+//
+// It is a FALLBACK, so it must exist only where it is actually needed. A token sitting in
+// sessionStorage is readable by any script on the page, which is precisely what the HttpOnly
+// cookie is not — so keeping a copy for a browser whose cookie works fine gives up that
+// protection for nothing. adoptSessionToken() below settles that per browser, once, by asking.
 const SESSION_TOKEN_KEY  = 'vdg.session-token';
 const BACKEND_KEY        = 'vdg.backend'; // sessionStorage: survives reload, not a new tab on another origin
 
@@ -75,6 +85,30 @@ function readSessionToken() {
   try { return sessionStorage.getItem(SESSION_TOKEN_KEY) || ''; } catch { return ''; } /* storage-less context */
 }
 
+/// Called by the sign-in flow with whatever POST /session returned. Keeps the token only if this
+/// browser turns out to need it.
+///
+/// The probe is one cookie-only request: if `/me` answers with no `X-Vdg-Session` attached, the
+/// cookie was accepted and stored, so the copy in sessionStorage is pure exposure and goes. If it
+/// 401s, this browser dropped the third-party cookie and the header is the only way the session
+/// survives — keep it. A network failure keeps it too: being unable to prove the cookie works is
+/// not proof that it does, and a wrong guess here logs the user out.
+async function adoptSessionToken(token) {
+  rememberSessionToken(token);
+  if (!token) return;
+  // Bounded: this runs INSIDE sign-in, so a probe that never settles is a sign-in that never
+  // finishes — the stuck-forever failure the app is not allowed to have. An abort lands in the
+  // catch below and keeps the fallback, which is the safe side of being unsure.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), COOKIE_PROBE_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE}${API_PREFIX}${ME_PATH}`,
+      { credentials: CREDENTIALS_MODE, signal: ctrl.signal });
+    if (res.ok) rememberSessionToken('');
+  } catch { /* unproven is not disproven — the fallback stays */ }
+  finally { clearTimeout(timer); }
+}
+
 /// Called by the sign-in flow with whatever POST /session returned; '' on sign-out.
 function rememberSessionToken(token) {
   try {
@@ -108,4 +142,4 @@ async function apiFetch(method, path, body = undefined) {
 }
 
 /// What the storage bootstrap binds behind the backend port.
-export const backend = { detectBackend, isServerBackend, apiFetch, rememberSessionToken, _resetBackend };
+export const backend = { detectBackend, isServerBackend, apiFetch, rememberSessionToken, adoptSessionToken, _resetBackend };

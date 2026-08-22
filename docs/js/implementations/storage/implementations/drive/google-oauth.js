@@ -1,7 +1,7 @@
 // F-13-P2 — Google Identity Services wrapper
 // F-15-20 merged into F-15-19 R3: single OAuth2 popup grants identity + drive.file scope
 
-import { isServerBackend, apiFetch, rememberSessionToken } from '../../core_abstractions/backend.js';
+import { isServerBackend, apiFetch, adoptSessionToken, rememberSessionToken } from '../../core_abstractions/backend.js';
 import { SERVER_SESSION_TTL_MS, serverSessionIdentity } from '../../core_abstractions/server-session.js';
 import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
 import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_abstractions/profile-cache.js';
@@ -67,9 +67,20 @@ function getCurrentUser() {
   return _currentUser;
 }
 
+/// Local state first, then the server. Clearing localStorage only ever made the BROWSER forget:
+/// the server's session row stayed valid for its full 30 days and the cookie kept riding along on
+/// every request, so "signed out" was a claim about this page, not about the session. On a shared
+/// machine that is the whole difference. Returns a promise so a caller can wait for the server
+/// half, but the local half has already happened by the time it does.
 function signOut() {
   for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k); // F-15-50 AC-01
   _currentUser = null;
+  if (!isServerBackend()) return Promise.resolve();
+  // The DELETE must carry the session (apiFetch attaches cookie + header), so the token is only
+  // dropped afterwards — win or lose.
+  return apiFetch('DELETE', '/session')
+    .catch((e) => { console.warn('sign-out: server session not ended:', e?.message || e); })
+    .finally(() => rememberSessionToken(''));
 }
 
 // ── Drive scope grant flag ───────────────────────────────────────────────────
@@ -176,9 +187,10 @@ async function hydrateSessionFromToken(resp) {
   if (isServerBackend()) {
     localStorage.setItem(DRIVE_SCOPE_KEY, '1');
     const opened = await apiFetch('POST', '/session', { access_token: resp.access_token });
-    // Cookie first; the token is kept only so a browser that refuses the third-party cookie
-    // (InPrivate, Safari, strict tracking protection) can still carry the SAME session.
-    if (opened?.session_token) rememberSessionToken(opened.session_token);
+    // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
+    // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
+    // wherever the cookie already works.
+    if (opened?.session_token) await adoptSessionToken(opened.session_token);
   } else if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
   else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
   const info = await fetchUserinfo(resp.access_token);

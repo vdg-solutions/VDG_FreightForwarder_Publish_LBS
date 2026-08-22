@@ -5,7 +5,7 @@
 let _impl = null;
 
 /// The adapter registers { detectBackend, isServerBackend, apiFetch, rememberSessionToken,
-/// _resetBackend } once, from the storage bootstrap.
+/// adoptSessionToken, _resetBackend } once, from the storage bootstrap.
 export function bindBackend(impl) { _impl = impl; }
 
 function _i() {
@@ -17,6 +17,7 @@ export const detectBackend = (...a) => _i().detectBackend(...a);
 export const isServerBackend = (...a) => _i().isServerBackend(...a);
 export const apiFetch = (...a) => _i().apiFetch(...a);
 export const rememberSessionToken = (...a) => _i().rememberSessionToken(...a);
+export const adoptSessionToken = (...a) => _i().adoptSessionToken(...a);
 export const _resetBackend = (...a) => _i()._resetBackend(...a);
 
 /// Test seam.
