@@ -268,8 +268,8 @@ export function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL('pkg/vdg_freight.js?v=5e5c835', document.baseURI).href);
-    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=5e5c835', document.baseURI).href;
+    const mod = await import(new URL('pkg/vdg_freight.js?v=8cfc08c', document.baseURI).href);
+    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=8cfc08c', document.baseURI).href;
     await mod.default(wasmUrl);
     window.__vdg_wasm = mod;
     return mod;
