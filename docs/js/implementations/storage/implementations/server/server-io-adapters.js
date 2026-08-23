@@ -1,10 +1,3 @@
-// server-io-adapters.js — the IO port with CharterDB as the storage authority.
-//
-// Same contract as WasmIoPort/StoreIoPort (the wasm stores cannot tell), backed by CharterDB:
-// - Collection is the folder / kind path (e.g. users/NV01/shipments, _shared/error-log)
-// - Record id is the file / period name (e.g. 2026-08.jsonl, settings.json)
-// - Content is stored with CharterDB's etag CAS and resumable sequence change feed.
-
 import { SharedIoPort } from '../../core_abstractions/io-port-shared.js';
 import { KIND_PATH_OVERRIDES, USERS_PATH } from '../../core_abstractions/storage-layout.js';
 import { apiFetch } from '../../core_abstractions/backend.js';
@@ -17,7 +10,7 @@ const HTTP_PRECONDITION      = 412;
 const USER_AUDIT_LOG_KIND    = 'user_audit_log';
 const USER_AUDIT_LOG_FILE    = 'user-audit-log.jsonl';
 const BUNDLE_EXT             = '.jsonl';
-const CAS_FAILED_MSG         = '412 Precondition Failed'; // string the wasm stores' retry loops match
+const CAS_FAILED_MSG         = '412 Precondition Failed';
 
 function asDriveError(err) {
   if (err instanceof ApiError) {
@@ -30,11 +23,92 @@ export class ServerIoPort extends SharedIoPort {
   constructor(driveApi, userEmail, fork = null) {
     super(userEmail);
     this.driveApi = driveApi;
-    this.folderIds = new Map();
-    this._folderKind = new Map();
     this._fork = fork || forkId(userEmail);
-    this._dirIds = new Map();
-    this._folderPath = new Map();
+  }
+
+  // ── Native CharterDB API ──────────────────────────────────────────────────
+
+  async record_read(collection, id) {
+    try {
+      const res = await apiFetch('GET', `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
+      if (!res?.id) return { found: false, content: '', etag: null, version: null };
+      return { found: true, content: res.content ?? '', etag: res.etag ?? null, version: res.version };
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
+        return { found: false, content: '', etag: null, version: null };
+      }
+      throw err;
+    }
+  }
+
+  async record_write(collection, id, content, etag = null) {
+    const owner = this.userEmail;
+    try {
+      if (etag) {
+        const res = await apiFetch(
+          'PUT',
+          `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+          { content },
+          { 'If-Match': etag }
+        );
+        return { id: res.id, etag: res.etag, version: res.version };
+      }
+      try {
+        const res = await apiFetch(
+          'POST',
+          `/records/${encodeURIComponent(collection)}`,
+          { id, content, owner }
+        );
+        return { id: res.id, etag: res.etag, version: res.version };
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          const res = await apiFetch(
+            'PUT',
+            `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+            { content }
+          );
+          return { id: res.id, etag: res.etag, version: res.version };
+        }
+        throw err;
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_PRECONDITION) throw new Error(CAS_FAILED_MSG);
+      throw err;
+    }
+  }
+
+  async record_delete(collection, id) {
+    try {
+      await apiFetch('DELETE', `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
+      return true;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) return false;
+      throw err;
+    }
+  }
+
+  async record_list(collection, limit = 1000, cursor = null) {
+    try {
+      let url = `/records/${encodeURIComponent(collection)}?limit=${limit}`;
+      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
+      const res = await apiFetch('GET', url);
+      return { records: res?.records ?? [], next_cursor: res?.next_cursor };
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
+        return { records: [], next_cursor: null };
+      }
+      throw err;
+    }
+  }
+
+  async changes(since = '0') {
+    const res = await apiFetch('GET', `/changes?since=${encodeURIComponent(since)}`);
+    return res;
+  }
+
+  async start_cursor() {
+    const res = await apiFetch('GET', '/changes/start');
+    return res?.next_cursor || '0';
   }
 
   // ── where things live ─────────────────────────────────────────────────────
@@ -44,29 +118,7 @@ export class ServerIoPort extends SharedIoPort {
   }
 
   _normPath(path) {
-    return String(path || '').replace(/^\/+|\/+$/g, '') || 'root';
-  }
-
-  async _resolveDir(dirPath) {
-    const path = this._normPath(dirPath);
-    this._dirIds.set(path, path);
-    this._folderPath.set(path, path);
-    return path;
-  }
-
-  async _resolveFolder(kind) {
-    if (this.folderIds.has(kind)) return this.folderIds.get(kind);
-    const id = this._normPath(this._kindPath(kind));
-    this.folderIds.set(kind, id);
-    this._folderKind.set(id, kind);
-    return id;
-  }
-
-  async _resolveFromManifest(kind) { return this._resolveFolder(kind); }
-  async _resolveDirFromManifest(dirPath) { return this._resolveDir(dirPath); }
-  async _ensureNestedFolder(rootId, path) {
-    const base = this._folderPath.get(rootId);
-    return this._resolveDir(base ? `${base}/${path}` : path);
+    return String(path || '').replace(/^\/+|\/+$/g, '');
   }
 
   // ── bundles (period files) ────────────────────────────────────────────────
@@ -77,67 +129,58 @@ export class ServerIoPort extends SharedIoPort {
 
   async drive_read_bundle(kind, period) {
     const fileName = this._bundleName(kind, period);
-    const folderId = await this._resolveFolder(kind);
+    const collection = this._kindPath(kind);
     try {
-      const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(fileName)}`);
-      const r = res;
-      if (!r?.id) return { etag: null, content: '', fileId: null, folderId, fileName };
-      return { etag: r.etag, content: r.content, fileId: `${folderId}/${r.id}`, folderId, fileName };
+      const r = await this.record_read(collection, fileName);
+      if (!r.found) return { etag: null, content: '', fileId: null, folderId: collection, fileName };
+      return { etag: r.etag, content: r.content, fileId: `${collection}/${fileName}`, folderId: collection, fileName };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { etag: null, content: '', fileId: null, folderId, fileName };
-      }
       throw asDriveError(err);
     }
   }
 
   async drive_write_bundle(kind, period, newContent, etag) {
     const fileName = this._bundleName(kind, period);
-    const folderId = await this._resolveFolder(kind);
-    const result = await this._write(folderId, fileName, newContent, null, etag);
-    return { etag: result.etag };
-  }
-
-  async drive_list_bundles(kind) {
-    const folderId = await this._resolveFolder(kind);
+    const collection = this._kindPath(kind);
     try {
-      const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}`);
-      const records = res?.records ?? [];
-      const files = records.map((r) => ({ id: `${folderId}/${r.id}`, name: r.id, version: String(r.version), modifiedTime: '' }));
-      return { folderId, files };
+      const r = await this.record_write(collection, fileName, newContent, etag);
+      return { etag: r.etag };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { folderId, files: [] };
-      }
       throw asDriveError(err);
     }
   }
 
-  async drive_read_file(fileId) {
-    const norm = String(fileId || '').replace(/\/+/g, '/');
-    let col = 'root', id = norm;
-    if (norm.includes('/')) {
-      const idx = norm.lastIndexOf('/');
-      col = norm.slice(0, idx);
-      id = norm.slice(idx + 1);
-    }
+  async drive_list_bundles(kind) {
+    const collection = this._kindPath(kind);
     try {
-      const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
-      const r = res;
-      if (!r?.id) return { found: false, content: '', etag: null };
-      return { found: true, content: r.content, etag: r.etag };
+      const res = await this.record_list(collection);
+      const files = res.records.map((r) => ({ id: `${collection}/${r.id}`, name: r.id, version: String(r.version), modifiedTime: '' }));
+      return { folderId: collection, files };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { found: false, content: '', etag: null };
-      }
+      throw asDriveError(err);
+    }
+  }
+
+  _parseFileId(fileId) {
+    const norm = String(fileId || '').replace(/\/+/g, '/');
+    if (!norm.includes('/')) return { col: '', id: norm };
+    const idx = norm.lastIndexOf('/');
+    return { col: norm.slice(0, idx), id: norm.slice(idx + 1) };
+  }
+
+  async drive_read_file(fileId) {
+    const { col, id } = this._parseFileId(fileId);
+    try {
+      const r = await this.record_read(col, id);
+      return { found: r.found, content: r.content, etag: r.etag };
+    } catch (err) {
       throw asDriveError(err);
     }
   }
 
   async drive_changes(pageToken) {
     try {
-      const since = pageToken || '0';
-      const res = await apiFetch('GET', `/changes?since=${encodeURIComponent(since)}`);
+      const res = await this.changes(pageToken || '0');
       const changes = (res?.results ?? []).map((c) => ({
         file: {
           id: `${c.collection}/${c.id}`,
@@ -150,7 +193,7 @@ export class ServerIoPort extends SharedIoPort {
         changeType: 'file',
         time: '',
       }));
-      return { newStartPageToken: res?.next_cursor || since, changes };
+      return { newStartPageToken: res?.next_cursor || pageToken || '0', changes };
     } catch (err) {
       throw asDriveError(err);
     }
@@ -158,114 +201,72 @@ export class ServerIoPort extends SharedIoPort {
 
   async drive_start_page_token() {
     try {
-      const res = await apiFetch('GET', '/changes/start');
-      return { startPageToken: res?.next_cursor || '0' };
+      const token = await this.start_cursor();
+      return { startPageToken: token };
     } catch (err) {
       throw asDriveError(err);
     }
   }
 
   async drive_folder_kind(folderId) {
-    return this._folderKind.get(folderId) ?? null;
+    // If the folderId matches a known path override, return that
+    for (const [k, p] of Object.entries(KIND_PATH_OVERRIDES)) {
+      if (p === folderId) return k;
+    }
+    // Otherwise it's users/fork/kind
+    const prefix = `${USERS_PATH}/${this._fork}/`;
+    if (folderId.startsWith(prefix)) return folderId.slice(prefix.length);
+    return null;
+  }
+
+  async drive_bundle_target(kind, period) {
+    return { folderId: this._kindPath(kind), fileName: this._bundleName(kind, period) };
   }
 
   // ── path-addressed workspace files ────────────────────────────────────────
 
   async ws_list_dir(dirPath) {
-    const folderId = await this._resolveDir(dirPath);
+    const collection = this._normPath(dirPath);
     try {
-      const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}`);
-      const records = res?.records ?? [];
+      const res = await this.record_list(collection);
       return {
-        folderId,
-        files: records.map((r) => ({
-          id: `${folderId}/${r.id}`, name: r.id, version: String(r.version), mimeType: '',
+        folderId: collection,
+        files: res.records.map((r) => ({
+          id: `${collection}/${r.id}`, name: r.id, version: String(r.version), mimeType: '',
         })),
       };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { folderId, files: [] };
-      }
       throw asDriveError(err);
     }
   }
 
   async ws_read_file(dirPath, fileName) {
-    const folderId = await this._resolveDir(dirPath);
+    const collection = this._normPath(dirPath);
     try {
-      const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(fileName)}`);
-      const r = res;
-      if (!r?.id) return { found: false, id: null, etag: null, content: '' };
-      return { found: true, id: `${folderId}/${r.id}`, etag: r.etag ?? null, content: r.content ?? '' };
+      const r = await this.record_read(collection, fileName);
+      if (!r.found) return { found: false, id: null, etag: null, content: '' };
+      return { found: true, id: `${collection}/${fileName}`, etag: r.etag, content: r.content };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { found: false, id: null, etag: null, content: '' };
-      }
       throw asDriveError(err);
     }
   }
 
   async ws_write_file(dirPath, fileName, content, fileId, etag) {
-    const folderId = await this._resolveDir(dirPath);
-    const result = await this._write(folderId, fileName, content, fileId || null, etag || '');
-    return { id: fileName, etag: result.etag ?? null };
+    const collection = this._normPath(dirPath);
+    try {
+      const r = await this.record_write(collection, fileName, content, etag);
+      return { id: fileName, etag: r.etag };
+    } catch (err) {
+      throw asDriveError(err);
+    }
   }
 
   async ws_delete_file(fileId) {
-    const norm = String(fileId || '').replace(/\/+/g, '/');
-    let col = 'root', id = norm;
-    if (norm.includes('/')) {
-      const idx = norm.lastIndexOf('/');
-      col = norm.slice(0, idx);
-      id = norm.slice(idx + 1);
-    }
+    const { col, id } = this._parseFileId(fileId);
     try {
-      await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+      await this.record_delete(col, id);
+      return null;
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) return null;
-      throw asDriveError(err);
-    }
-    return null;
-  }
-
-  // ── wire ──────────────────────────────────────────────────────────────────
-
-  async _read(fileId) {
-    return this.drive_read_file(fileId);
-  }
-
-  async _write(folderId, name, content, fileId, etag) {
-    const owner = this.userEmail;
-    try {
-      if (etag) {
-        const res = await apiFetch(
-          'PUT',
-          `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(name)}`,
-          { content },
-          { 'If-Match': etag }
-        );
-        return { id: name, etag: res?.etag };
-      }
-      try {
-        const res = await apiFetch(
-          'POST',
-          `/records/${encodeURIComponent(folderId)}`,
-          { id: name, content, owner }
-        );
-        return { id: name, etag: res?.etag };
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
-          const res = await apiFetch(
-            'PUT',
-            `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(name)}`,
-            { content }
-          );
-          return { id: name, etag: res?.etag };
-        }
-        throw err;
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_PRECONDITION) throw new Error(CAS_FAILED_MSG);
       throw asDriveError(err);
     }
   }
