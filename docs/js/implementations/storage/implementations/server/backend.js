@@ -82,39 +82,29 @@ import { ApiError } from '../../core_abstractions/api-error.js';
 /// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) — the same numbers the Drive-era
 /// callers already branch on.
 function readSessionToken() {
-  try { return sessionStorage.getItem(SESSION_TOKEN_KEY) || ''; } catch { return ''; } /* storage-less context */
+  try {
+    return localStorage.getItem(SESSION_TOKEN_KEY) || sessionStorage.getItem(SESSION_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
 }
 
-/// Called by the sign-in flow with whatever POST /session returned. Keeps the token only if this
-/// browser turns out to need it.
-///
-/// The probe is one cookie-only request: if `/me` answers with no `X-Vdg-Session` attached, the
-/// cookie was accepted and stored, so the copy in sessionStorage is pure exposure and goes. If it
-/// 401s, this browser dropped the third-party cookie and the header is the only way the session
-/// survives — keep it. A network failure keeps it too: being unable to prove the cookie works is
-/// not proof that it does, and a wrong guess here logs the user out.
+/// Called by the sign-in flow with whatever POST /session returned.
 async function adoptSessionToken(token) {
   rememberSessionToken(token);
-  if (!token) return;
-  // Bounded: this runs INSIDE sign-in, so a probe that never settles is a sign-in that never
-  // finishes — the stuck-forever failure the app is not allowed to have. An abort lands in the
-  // catch below and keeps the fallback, which is the safe side of being unsure.
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), COOKIE_PROBE_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${API_BASE}${API_PREFIX}${ME_PATH}`,
-      { credentials: CREDENTIALS_MODE, signal: ctrl.signal });
-    if (res.ok) rememberSessionToken('');
-  } catch { /* unproven is not disproven — the fallback stays */ }
-  finally { clearTimeout(timer); }
 }
 
 /// Called by the sign-in flow with whatever POST /session returned; '' on sign-out.
 function rememberSessionToken(token) {
   try {
-    if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
-    else sessionStorage.removeItem(SESSION_TOKEN_KEY);
-  } catch { /* storage-less context — the cookie is still the primary carrier */ }
+    if (token) {
+      localStorage.setItem(SESSION_TOKEN_KEY, token);
+      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+  } catch {}
 }
 
 async function apiFetch(method, path, body = undefined, extraHeaders = {}) {

@@ -36,6 +36,9 @@ export function renderSignInButton(container, { hydrate, clientId }) {
     // answers. If neither ever does, the user gets an actionable hint instead of a dead screen.
     let stallTimer = null;
     const answered = () => { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } };
+    const btnSpan = container.querySelector('#vdg-signin-btn span');
+    const origText = btnSpan ? btnSpan.textContent : '';
+    if (btnSpan) btnSpan.textContent = 'Đang mở đăng nhập…';
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       // Server backend: identity only. No Drive scope means no Drive consent screen and no
@@ -44,20 +47,24 @@ export function renderSignInButton(container, { hydrate, clientId }) {
       callback:  (resp) => {
         answered();
         if (resp.error) {
+          if (btnSpan) btnSpan.textContent = origText;
           window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: resp.error }));
           return;
         }
+        if (btnSpan) btnSpan.textContent = 'Đang xác thực…';
         // F-19-84: sign-in routes through the same hydrate as reconnect/silent-boot — no
         // parallel path (RULE #5).
         hydrate(resp)
           .then(() => location.reload())
           .catch((err) => {
+            if (btnSpan) btnSpan.textContent = origText;
             window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: err.message }));
           });
       },
       // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
       error_callback: (err) => {
         answered();
+        if (btnSpan) btnSpan.textContent = origText;
         window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: gisErrorMessage(err) }));
       },
     });

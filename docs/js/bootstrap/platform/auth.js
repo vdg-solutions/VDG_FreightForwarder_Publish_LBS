@@ -12,7 +12,7 @@ import { workspaceAuthority } from '../../implementations/storage/core_abstracti
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 
-const AUTH_PROBE_TIMEOUT_MS = 5000;           // F-15-19 AC-4: surface a banner if the probe hangs
+const AUTH_PROBE_TIMEOUT_MS = 20000;           // F-15-19 AC-4: surface a banner if the probe hangs
 const ROLES_RESOLVED_EVENT   = 'vdg:roles-resolved';
 const LOGIN_ROOT_ID          = 'login-root';
 const LOGIN_OVERLAY_STYLE    = 'position:fixed;inset:0;z-index:50;background:#f8fafc;';

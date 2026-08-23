@@ -42,7 +42,7 @@ const SIGNIN_STALL_HINT_MS = 60_000;
 // Add new auth keys here; every clear path picks them up automatically.
 export const AUTH_STORAGE_KEYS = Object.freeze([
   TOKEN_KEY, ACCESS_TOKEN_KEY, ACCESS_TOKEN_EXP_KEY, DRIVE_SCOPE_KEY, ROLE_CACHE_KEY,
-  PROFILE_KEY, // display profile — expiry must not blank the avatar; see profile-cache.js
+  PROFILE_KEY, 'vdg.session-token', // display profile & server session token
 ]);
 
 let _currentUser = null; // in-memory cache after parse
