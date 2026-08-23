@@ -16,7 +16,15 @@ export function renderLoadingBanner(mount) {
       </button>
     </div>`;
   // Reload — user re-clicks Sign in button for fresh tokens
-  mount.querySelector('#auth-fallback-reauth')?.addEventListener('click', () => location.reload());
+  mount.querySelector('#auth-fallback-reauth')?.addEventListener('click', () => {
+    try {
+      localStorage.removeItem('vdg.role-cache');
+      sessionStorage.removeItem('vdg.session-token');
+      localStorage.removeItem('vdg.auth.user');
+    } catch {}
+    window.__vdg_auth?.signOut?.();
+    location.reload();
+  });
 }
 
 export function renderNotProvisioned(mount, user) {
