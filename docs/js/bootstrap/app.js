@@ -26,7 +26,7 @@ import '../implementations/kernel/bootstrap/compose.js'; // binds kernel platfor
 import { currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from '../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { enforceRouteGuard } from '../implementations/ui/bootstrap/route-enforcer.js';
 import { initGoogleSignIn, requestDriveScopeGrant } from '../implementations/storage/core_abstractions/oauth.js';
-import { renderDriveGate } from './boot/drive-gate.js';
+import { renderDriveGate } from './boot/server-gate.js';
 import { loadLocale, t } from '../implementations/kernel/core_abstractions/i18n/index.js';
 import { tryParamRoute }       from './app-router-ext.js';
 import { loadView }            from '../implementations/ui/bootstrap/util/view-loader.js';
@@ -34,7 +34,7 @@ import { mountView }           from '../implementations/ui/bootstrap/util/mount-
 import { freshViewRoot }       from '../implementations/ui/bootstrap/util/view-root.js';
 import { initKeyboardShortcuts } from '../implementations/ui/bootstrap/keyboard-shortcuts.js';
 import { checkVersionBanner, initBreakpointListener, initWmaListener, initConflictModal, initMergeToast, initStoreLockedScreen } from '../implementations/ui/bootstrap/app-events.js';
-import { initAccessTokenRefresh } from '../implementations/storage/implementations/drive/token-refresh.js';
+import { initAccessTokenRefresh } from '../implementations/storage/implementations/auth/token-refresh.js';
 import { VIEWS } from './app-views.js';
 import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
 import { renderRepoInitTimeoutBanner } from './boot/repo-init-fallback.js';

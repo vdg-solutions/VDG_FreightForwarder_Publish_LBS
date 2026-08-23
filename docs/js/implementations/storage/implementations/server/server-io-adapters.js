@@ -121,13 +121,13 @@ export class ServerIoPort extends SharedIoPort {
     return String(path || '').replace(/^\/+|\/+$/g, '');
   }
 
-  // ── bundles (period files) ────────────────────────────────────────────────
-
+  // ── documents (period files) ────────────────────────────────────────────────
+  
   _bundleName(kind, period) {
     return kind === USER_AUDIT_LOG_KIND ? USER_AUDIT_LOG_FILE : `${period}${BUNDLE_EXT}`;
   }
 
-  async drive_read_bundle(kind, period) {
+  async document_read(kind, period) {
     const fileName = this._bundleName(kind, period);
     const collection = this._kindPath(kind);
     try {
@@ -139,7 +139,7 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
-  async drive_write_bundle(kind, period, newContent, etag) {
+  async document_write(kind, period, newContent, etag) {
     const fileName = this._bundleName(kind, period);
     const collection = this._kindPath(kind);
     try {
@@ -150,7 +150,7 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
-  async drive_list_bundles(kind) {
+  async document_list(kind) {
     const collection = this._kindPath(kind);
     try {
       const res = await this.record_list(collection);
@@ -168,7 +168,7 @@ export class ServerIoPort extends SharedIoPort {
     return { col: norm.slice(0, idx), id: norm.slice(idx + 1) };
   }
 
-  async drive_read_file(fileId) {
+  async document_read_file(fileId) {
     const { col, id } = this._parseFileId(fileId);
     try {
       const r = await this.record_read(col, id);
@@ -178,7 +178,7 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
-  async drive_changes(pageToken) {
+  async changes_feed(pageToken) {
     try {
       const res = await this.changes(pageToken || '0');
       const changes = (res?.results ?? []).map((c) => ({
@@ -199,7 +199,7 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
-  async drive_start_page_token() {
+  async changes_cursor() {
     try {
       const token = await this.start_cursor();
       return { startPageToken: token };
@@ -208,7 +208,7 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
-  async drive_folder_kind(folderId) {
+  async document_collection_kind(folderId) {
     // If the folderId matches a known path override, return that
     for (const [k, p] of Object.entries(KIND_PATH_OVERRIDES)) {
       if (p === folderId) return k;
@@ -219,7 +219,7 @@ export class ServerIoPort extends SharedIoPort {
     return null;
   }
 
-  async drive_bundle_target(kind, period) {
+  async document_target(kind, period) {
     return { folderId: this._kindPath(kind), fileName: this._bundleName(kind, period) };
   }
 

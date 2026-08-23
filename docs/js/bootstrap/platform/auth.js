@@ -12,21 +12,20 @@ import { workspaceAuthority } from '../../implementations/storage/core_abstracti
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 
-const DRIVE_PROBE_TIMEOUT_MS = 5000;           // F-15-19 AC-4: surface a banner if the probe hangs
+const AUTH_PROBE_TIMEOUT_MS = 5000;           // F-15-19 AC-4: surface a banner if the probe hangs
 const ROLES_RESOLVED_EVENT   = 'vdg:roles-resolved';
 const LOGIN_ROOT_ID          = 'login-root';
 const LOGIN_OVERLAY_STYLE    = 'position:fixed;inset:0;z-index:50;background:#f8fafc;';
 
 export class RoleProbeTimeoutError extends Error {
   constructor() {
-    super('Drive probe timeout');
+    super('Auth probe timeout');
     this.name = 'RoleProbeTimeoutError';
   }
 }
 
 // The error object the probe actually threw. It crosses into Rust as a message only, so it is kept
-// here and re-thrown by the port delegate: app.js's boot fallbacks read `name`, `status` and
-// `driveErrorKind` off the real Drive error.
+// here and re-thrown by the port delegate: app.js's boot fallbacks read the real error properties.
 let _lastError = null;
 export function takeAuthError() {
   const err = _lastError;
@@ -69,7 +68,7 @@ export const authPlatform = {
     try {
       return await Promise.race([
         workspaceAuthority().probeRole(user, workspace),
-        new Promise((_, reject) => setTimeout(() => reject(new RoleProbeTimeoutError()), DRIVE_PROBE_TIMEOUT_MS)),
+        new Promise((_, reject) => setTimeout(() => reject(new RoleProbeTimeoutError()), AUTH_PROBE_TIMEOUT_MS)),
       ]);
     } catch (err) {
       _lastError = err;

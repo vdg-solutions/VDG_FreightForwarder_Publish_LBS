@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v0625d59';
+const STATIC_CACHE     = 'vdg-static-veb74041';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-v0625d59';
+const DRIVE_META_CACHE = 'vdg-drive-meta-veb74041';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -46,13 +46,13 @@ const BOOT_GRAPH = [
   'js/bootstrap/app.js',
   'js/bootstrap/boot/boot-fsm-view.js',
   'js/bootstrap/boot/boot-fsm.js',
-  'js/bootstrap/boot/drive-gate.js',
   'js/bootstrap/boot/license-boot-gate.js',
   'js/bootstrap/boot/repo-bootstrap.js',
   'js/bootstrap/boot/repo-diag.js',
   'js/bootstrap/boot/repo-init-fallback.js',
   'js/bootstrap/boot/repo-init-manager.js',
   'js/bootstrap/boot/repo-init-steps.js',
+  'js/bootstrap/boot/server-gate.js',
   'js/bootstrap/boot/wasm-loader.js',
   'js/bootstrap/compose-ui/auth.js',
   'js/bootstrap/compose-ui/cache.js',
@@ -87,7 +87,6 @@ const BOOT_GRAPH = [
   'js/implementations/kernel/core_abstractions/roles.js',
   'js/implementations/kernel/core_abstractions/util/fork-id.js',
   'js/implementations/kernel/core_abstractions/util/guard-messages.js',
-  'js/implementations/kernel/core_abstractions/util/jsonl-bundle.js',
   'js/implementations/kernel/core_abstractions/util/safe-await.js',
   'js/implementations/kernel/core_abstractions/util/status-i18n.js',
   'js/implementations/kernel/core_abstractions/util/today-local.js',
@@ -97,15 +96,7 @@ const BOOT_GRAPH = [
   'js/implementations/storage/bootstrap/compose.js',
   'js/implementations/storage/core_abstractions/api-error.js',
   'js/implementations/storage/core_abstractions/backend.js',
-  'js/implementations/storage/core_abstractions/bundle-heal.js',
-  'js/implementations/storage/core_abstractions/drive-endpoints.js',
-  'js/implementations/storage/core_abstractions/drive-error-classifier.js',
-  'js/implementations/storage/core_abstractions/drive-errors.js',
   'js/implementations/storage/core_abstractions/events.js',
-  'js/implementations/storage/core_abstractions/file-dedup.js',
-  'js/implementations/storage/core_abstractions/folder-dedup.js',
-  'js/implementations/storage/core_abstractions/folder-memo.js',
-  'js/implementations/storage/core_abstractions/folder-resolve.js',
   'js/implementations/storage/core_abstractions/grant-file.js',
   'js/implementations/storage/core_abstractions/grant-reader.js',
   'js/implementations/storage/core_abstractions/id-token.js',
@@ -122,34 +113,20 @@ const BOOT_GRAPH = [
   'js/implementations/storage/core_abstractions/storage-layout.js',
   'js/implementations/storage/core_abstractions/token-anchor.js',
   'js/implementations/storage/core_abstractions/token.js',
-  'js/implementations/storage/core_abstractions/undecidable.js',
   'js/implementations/storage/core_abstractions/user-directory.js',
   'js/implementations/storage/core_abstractions/workspace-authority.js',
   'js/implementations/storage/core_abstractions/workspace-config.js',
   'js/implementations/storage/core_abstractions/workspace-registry.js',
-  'js/implementations/storage/implementations/drive/access-token.js',
-  'js/implementations/storage/implementations/drive/awb-drive-repo.js',
-  'js/implementations/storage/implementations/drive/bundle-file-heal.js',
-  'js/implementations/storage/implementations/drive/drive-api.js',
-  'js/implementations/storage/implementations/drive/drive-file-dedup.js',
-  'js/implementations/storage/implementations/drive/drive-file-retire.js',
-  'js/implementations/storage/implementations/drive/drive-folder-dedup.js',
-  'js/implementations/storage/implementations/drive/drive-transport.js',
-  'js/implementations/storage/implementations/drive/drive-workspace-authority.js',
-  'js/implementations/storage/implementations/drive/fx-rate-drive-repo.js',
-  'js/implementations/storage/implementations/drive/gis-error.js',
-  'js/implementations/storage/implementations/drive/google-oauth.js',
-  'js/implementations/storage/implementations/drive/grant-reader.js',
-  'js/implementations/storage/implementations/drive/mock-drive-backend.js',
-  'js/implementations/storage/implementations/drive/profile-cache.js',
-  'js/implementations/storage/implementations/drive/signin-button.js',
-  'js/implementations/storage/implementations/drive/token-anchor.js',
-  'js/implementations/storage/implementations/drive/token-refresh.js',
-  'js/implementations/storage/implementations/drive/userinfo.js',
-  'js/implementations/storage/implementations/drive/wasm-folder-resolve.js',
-  'js/implementations/storage/implementations/drive/wasm-io-adapters.js',
-  'js/implementations/storage/implementations/drive/window-open-guard.js',
-  'js/implementations/storage/implementations/drive/workspace-root.js',
+  'js/implementations/storage/implementations/auth/access-token.js',
+  'js/implementations/storage/implementations/auth/gis-error.js',
+  'js/implementations/storage/implementations/auth/google-oauth.js',
+  'js/implementations/storage/implementations/auth/grant-reader.js',
+  'js/implementations/storage/implementations/auth/profile-cache.js',
+  'js/implementations/storage/implementations/auth/signin-button.js',
+  'js/implementations/storage/implementations/auth/token-anchor.js',
+  'js/implementations/storage/implementations/auth/token-refresh.js',
+  'js/implementations/storage/implementations/auth/userinfo.js',
+  'js/implementations/storage/implementations/auth/window-open-guard.js',
   'js/implementations/storage/implementations/local/store-client.js',
   'js/implementations/storage/implementations/server/backend.js',
   'js/implementations/storage/implementations/server/server-drive-shim.js',
@@ -277,7 +254,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps 0625d59 → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps eb74041 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a
