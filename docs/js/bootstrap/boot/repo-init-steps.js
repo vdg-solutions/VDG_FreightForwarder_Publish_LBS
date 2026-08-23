@@ -230,7 +230,7 @@ async function _deferredInit(user, db, driveApi, repo) {
     const { startDueSoonChecker } = await import('../platform/sync-due-soon.js');
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
 
-    const { LedgerDriveRepo } = await import('../../implementations/storage/implementations/drive/ledger-drive-repo.js');
+    const { LedgerStoreRepo: LedgerDriveRepo } = await import('../../implementations/storage/implementations/repos/ledger-repo.js');
     const ledgerRepo = new LedgerDriveRepo();
     window.__vdg_ledger_repo = ledgerRepo;
     bindLedgerRepo(ledgerRepo); // the io ports' ledger_* calls
@@ -238,7 +238,7 @@ async function _deferredInit(user, db, driveApi, repo) {
     // Priced-ref governance repos (F-28-12) — one PricedRefRepo per priced-tier master,
     // mirroring the LedgerDriveRepo closure above. Views call propose/listPending/merge/
     // reject only — never re-implement the FSM or write state.json directly.
-    const { PricedRefRepo } = await import('../../implementations/storage/implementations/drive/priced-ref-repo.js');
+    const { PricedRefRepo } = await import('../../implementations/storage/implementations/repos/priced-ref-repo.js');
     window.__vdg_priced_repos = {};
     for (const refName of PRICED_REFS) {
       window.__vdg_priced_repos[refName] = new PricedRefRepo(refName);
@@ -253,7 +253,7 @@ async function _deferredInit(user, db, driveApi, repo) {
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
 
-    const { UserDriveRepo } = await import('../../implementations/storage/implementations/drive/user-drive-repo.js');
+    const { UserStoreRepo: UserDriveRepo } = await import('../../implementations/storage/implementations/repos/user-repo.js');
     const userRepo = new UserDriveRepo(userAuditLog);
     window.__vdg_user_repo = userRepo;
 

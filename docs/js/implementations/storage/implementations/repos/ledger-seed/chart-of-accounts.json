@@ -1,0 +1,18 @@
+[
+  { "code": "111",  "name_vi": "Tiền mặt",                          "name_en": "Cash on hand",                    "account_type": "Asset",     "balance_side": "Debit" },
+  { "code": "112",  "name_vi": "Tiền gửi ngân hàng",                 "name_en": "Cash at bank",                    "account_type": "Asset",     "balance_side": "Debit" },
+  { "code": "131",  "name_vi": "Phải thu khách hàng",                "name_en": "Accounts receivable",             "account_type": "Asset",     "balance_side": "Debit" },
+  { "code": "331",  "name_vi": "Phải trả nhà cung cấp",              "name_en": "Accounts payable",                "account_type": "Liability", "balance_side": "Credit" },
+  { "code": "3331", "name_vi": "Thuế GTGT đầu ra",                   "name_en": "Output VAT payable",              "account_type": "Liability", "balance_side": "Credit" },
+  { "code": "3334", "name_vi": "Thuế TNDN phải nộp",                 "name_en": "Corporate income tax payable",    "account_type": "Liability", "balance_side": "Credit" },
+  { "code": "3335", "name_vi": "Thuế TNCN khấu trừ",                 "name_en": "Personal income tax withheld",    "account_type": "Liability", "balance_side": "Credit" },
+  { "code": "3388", "name_vi": "Phải trả hoa hồng",                  "name_en": "Commission payable",              "account_type": "Liability", "balance_side": "Credit" },
+  { "code": "3389", "name_vi": "Phải trả khác",                      "name_en": "Other payables",                  "account_type": "Liability", "balance_side": "Credit" },
+  { "code": "5113", "name_vi": "Doanh thu dịch vụ vận chuyển",       "name_en": "Freight forwarding revenue",      "account_type": "Revenue",   "balance_side": "Credit" },
+  { "code": "5118", "name_vi": "Doanh thu khác",                     "name_en": "Other operating revenue",         "account_type": "Revenue",   "balance_side": "Credit" },
+  { "code": "632",  "name_vi": "Giá vốn dịch vụ",                    "name_en": "Cost of services",                "account_type": "Expense",   "balance_side": "Debit" },
+  { "code": "641",  "name_vi": "Chi phí bán hàng",                   "name_en": "Selling expenses",                "account_type": "Expense",   "balance_side": "Debit" },
+  { "code": "642",  "name_vi": "Chi phí quản lý doanh nghiệp",       "name_en": "General & admin expenses",        "account_type": "Expense",   "balance_side": "Debit" },
+  { "code": "6414", "name_vi": "Chi phí bán hàng - hoa hồng",        "name_en": "Selling expense - commission",    "account_type": "Expense",   "balance_side": "Debit" },
+  { "code": "6428", "name_vi": "Chi phí bằng tiền khác - ngân hàng", "name_en": "Bank charges",                    "account_type": "Expense",   "balance_side": "Debit" }
+]

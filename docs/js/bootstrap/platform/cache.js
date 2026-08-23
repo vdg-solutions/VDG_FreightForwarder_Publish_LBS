@@ -10,7 +10,7 @@ import { toLocalDateStr } from '../../implementations/kernel/core_abstractions/u
 import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { toPricedEnvelope } from '../../implementations/storage/core_abstractions/priced-envelope.js';
-import { retireFile } from '../../implementations/storage/implementations/drive/drive-file-retire.js';
+import { retireFile } from '../../implementations/storage/implementations/repos/file-retire.js';
 import { putShipment } from '../../implementations/ui/core_abstractions/ports/data/shipment-repo.js';
 import { pnlLineId } from '../../implementations/ui/core_abstractions/ports/data/pnl-line-id.js';
 

@@ -4,8 +4,8 @@
 
 import { bindFxRateRepo } from '../../implementations/ui/core_abstractions/ports/storage/fx-rate-repo.js';
 import { bindAwbRepo } from '../../implementations/ui/core_abstractions/ports/storage/awb-repo.js';
-import { FxRateDriveRepo } from '../../implementations/storage/implementations/drive/fx-rate-drive-repo.js';
-import { AwbDriveRepo } from '../../implementations/storage/implementations/drive/awb-drive-repo.js';
+import { FxRateStoreRepo as FxRateDriveRepo } from '../../implementations/storage/implementations/repos/fx-rate-repo.js';
+import { AwbStoreRepo as AwbDriveRepo } from '../../implementations/storage/implementations/repos/awb-repo.js';
 
 export function composeStorageUi() {
   bindFxRateRepo(new FxRateDriveRepo());
