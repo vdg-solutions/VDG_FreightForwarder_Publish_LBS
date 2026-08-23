@@ -180,6 +180,7 @@ async function rebuildSessionFromStoredToken() {
 // Persists token+exp, sets/clears the drive-scope flag from the REAL grant, re-mints the
 // synthetic id_token from userinfo. Returns the rebuilt user (or null if the mint failed).
 async function hydrateSessionFromToken(resp) {
+  console.log('[Auth] Hydrating session from token...', { hasAccessToken: !!resp?.access_token });
   const expMs  = _persistAccessToken(resp);
   // Server backend: the identity lives as long as the server session (30-day cookie), not the
   // one-hour Google token the server verified once at sign-in.
@@ -194,21 +195,41 @@ async function hydrateSessionFromToken(resp) {
   // The flag stays '1' so the Drive-era gate (hasDriveScopeGrant) never blocks a server session.
   // The token is handed to the server, which verifies it with Google and mints the session.
   if (isServerBackend()) {
+    console.log('[Auth] Server backend mode detected, setting DRIVE_SCOPE_KEY and POSTing to /session');
     localStorage.setItem(DRIVE_SCOPE_KEY, '1');
-    const opened = await apiFetch('POST', '/session', { token: resp.access_token });
-    // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
-    // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
-    // wherever the cookie already works.
-    if (opened?.token) await adoptSessionToken(opened.token);
-  } else if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
-  else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
+    try {
+      const opened = await apiFetch('POST', '/session', { token: resp.access_token });
+      console.log('[Auth] /session POST result:', opened);
+      // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
+      // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
+      // wherever the cookie already works.
+      if (opened?.token) {
+        console.log('[Auth] Adopting session token...');
+        await adoptSessionToken(opened.token);
+      }
+    } catch (e) {
+      console.error('[Auth] Failed to create session via POST /session:', e);
+    }
+  } else {
+    if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
+    else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
+  }
+  
+  console.log('[Auth] Fetching userinfo from Google...');
   const info = await fetchUserinfo(resp.access_token);
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
+  console.log('[Auth] Userinfo fetched:', info);
+  
+  const tokenPayload = {
     email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
-  }));
+  };
+  console.log('[Auth] Writing TOKEN_KEY with payload:', tokenPayload);
+  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(tokenPayload));
   writeCachedProfile(info);
   _currentUser = null; // force rebuild from the freshly-minted token
-  return getCurrentUser();
+  
+  const builtUser = getCurrentUser();
+  console.log('[Auth] Built user from token:', builtUser);
+  return builtUser;
 }
 
 // AC-08 re-consent trigger for the drive-access gate button. Requests DRIVE_SCOPE alone

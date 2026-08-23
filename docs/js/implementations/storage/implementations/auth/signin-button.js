@@ -52,11 +52,18 @@ export function renderSignInButton(container, { hydrate, clientId }) {
           return;
         }
         if (btnSpan) btnSpan.textContent = 'Đang xác thực…';
+        console.log('[Auth] Google OAuth callback received. Response error:', resp.error);
         // F-19-84: sign-in routes through the same hydrate as reconnect/silent-boot — no
         // parallel path (RULE #5).
+        console.log('[Auth] Calling hydrate(resp)...');
         hydrate(resp)
-          .then(() => location.reload())
+          .then((builtUser) => {
+            console.log('[Auth] hydrate successful. Resulting user:', builtUser);
+            console.log('[Auth] Reloading page to apply new session...');
+            location.reload();
+          })
           .catch((err) => {
+            console.error('[Auth] hydrate failed:', err);
             if (btnSpan) btnSpan.textContent = origText;
             window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: err.message }));
           });

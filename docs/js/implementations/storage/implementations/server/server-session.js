@@ -4,12 +4,16 @@
 
 import { apiFetch } from '../../core_abstractions/backend.js';
 
-/// { email, name } of the live server session, or null (no cookie / expired / unreachable).
 async function serverSessionIdentity() {
   try {
+    console.log('[Auth] Fetching /me to check server session...');
     const me = await apiFetch('GET', '/me');
+    console.log('[Auth] /me response:', me);
     return me?.email ? { email: me.email, name: me.name || '' } : null;
-  } catch { return null; } /* a 401 or an unreachable server — the caller falls back to cache or login */
+  } catch (e) {
+    console.error('[Auth] serverSessionIdentity failed (401 or unreachable):', e);
+    return null;
+  } /* a 401 or an unreachable server — the caller falls back to cache or login */
 }
 
 /// What the storage bootstrap binds behind the server-session port.
