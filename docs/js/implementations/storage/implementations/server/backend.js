@@ -107,6 +107,8 @@ function rememberSessionToken(token) {
   } catch {}
 }
 
+const API_FETCH_TIMEOUT_MS = 10000;
+
 async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
   const token = readSessionToken();
@@ -115,11 +117,16 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), API_FETCH_TIMEOUT_MS);
+  opts.signal = ctrl.signal;
   let res;
   try {
     res = await fetch(`${API_BASE}${API_PREFIX}${path}`, opts);
   } catch (err) {
     throw new ApiError(0, `server unreachable: ${err.message}`);
+  } finally {
+    clearTimeout(timer);
   }
   if (res.status === 204) return null;
   const text = await res.text();
