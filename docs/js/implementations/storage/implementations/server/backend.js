@@ -117,8 +117,8 @@ function rememberSessionToken(token) {
   } catch { /* storage-less context — the cookie is still the primary carrier */ }
 }
 
-async function apiFetch(method, path, body = undefined) {
-  const opts = { method, credentials: CREDENTIALS_MODE, headers: {} };
+async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
+  const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
   const token = readSessionToken();
   if (token) opts.headers[SESSION_TOKEN_HEADER] = token;
   if (body !== undefined) {
@@ -136,7 +136,7 @@ async function apiFetch(method, path, body = undefined) {
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch { json = null; }
   if (!res.ok) {
-    throw new ApiError(res.status, json?.error?.message || `${res.status} ${res.statusText}`);
+    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`);
   }
   return json;
 }

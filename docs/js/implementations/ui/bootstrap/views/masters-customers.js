@@ -37,7 +37,7 @@ function repOptions(reps, selected) {
   const legacy = selected && !known ? `<option value="${escHtml(selected)}" selected>${escHtml(selected)}</option>` : '';
   return `<option value="">${t('masters_customers.field.sales_rep_none')}</option>${legacy}` +
     (reps || []).map((r) =>
-      `<option value="${escHtml(r.prefix)}"${r.prefix === selected ? ' selected' : ''}>${escHtml(r.name)}${r.sales_code ? ` (${escHtml(r.sales_code)})` : ''}</option>`).join('');
+      `<option value="${escHtml(r.prefix)}"${r.prefix === selected ? ' selected' : ''}>${escHtml(r.name)}${r.handle ? ` (${escHtml(r.handle)})` : ''}</option>`).join('');
 }
 
 function buildModal(entity, reps) {

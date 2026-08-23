@@ -2,6 +2,7 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { isAccountId } from '../../../../kernel/core_abstractions/util/account-id.js';
 import { getCurrentUser } from '../../../../storage/core_abstractions/identity.js';
 import { deriveDirection } from '../sales-new/shipment-builder.js';
 // the header fallback literal lives in ONE place; three copies is what the cross-side guards police
@@ -113,13 +114,19 @@ function custSel(customers, selected, isAutofilled) {
 // a typed label can address. A prior value that is not in the active list (rep left, legacy
 // record) stays offered so an edit never silently loses it; a sentinel ('__MANAGER__') is a role
 // token, not a rep, and is NOT re-offered — resaving such a record forces a real pick.
+//
+// F-47-05: a value that is not an ACCOUNT is not re-offered either, for exactly the same reason.
+// It looks like a rep on the screen (it is somebody's name, or the local part the picker used to
+// mint) and names nobody, so leaving it selected let a re-save carry it straight back down.
+// Dropping it empties the select, and validate-shipment-form.js already refuses an empty pick —
+// the record keeps saying what it says until somebody chooses a real rep.
 function repOptionLabel(r) {
-  return r.sales_code ? `${r.name} (${r.sales_code})` : r.name;
+  return r.handle ? `${r.name} (${r.handle})` : r.name;
 }
 
 function repSel(reps, selected, currentUser) {
   const known  = (reps || []).some((r) => r.prefix === selected);
-  const legacy = selected && !known && !/^__.*__$/.test(selected)
+  const legacy = selected && !known && isAccountId(selected)
     ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : '';
   const opts = (reps || []).map((r) =>
     `<option value="${r.prefix}"${r.prefix === selected ? ' selected' : ''}>${repOptionLabel(r)}</option>`).join('');

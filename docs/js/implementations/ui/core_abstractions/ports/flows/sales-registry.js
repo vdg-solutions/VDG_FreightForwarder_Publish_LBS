@@ -12,7 +12,9 @@ function _i() {
   return _impl;
 }
 
-/// () -> [{ name, prefix, email, color, sales_code }]
+/// () -> [{ name, prefix, email, color, handle }]
+/// `prefix` IS the account (lowercased email) — it is what a job stores as its sales_rep_id.
+/// `handle` is the short form shown in a dropdown, display only.
 export const getActiveSalesReps = (...a) => _i().getActiveSalesReps(...a);
 /// (reps, prefix) -> the rep, or null
 export const getSalesRepByPrefix = (...a) => _i().getSalesRepByPrefix(...a);

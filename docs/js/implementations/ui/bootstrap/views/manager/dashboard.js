@@ -176,22 +176,29 @@ async function recompose(root) {
   }
 }
 
+// F-47-05: the button's VALUE and its LABEL used to be one string, because a rep's `prefix` was
+// the email's local part — short enough to read and, back then, an identity. The prefix is the
+// account now, so the two are carried separately: the account filters, the name is what a manager
+// reads. `name` is server-supplied, hence the escape.
+function _esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
 async function _buildSalesBtns() {
   const repo = window.__vdg_repo;
-  const labels = ['All'];
+  const entries = [['', t('manager.mode.all')]];
   if (repo) {
     try {
       const reps = await getActiveSalesReps(repo);
-      reps.forEach((r) => labels.push(r.prefix));
+      reps.forEach((r) => entries.push([r.prefix, r.name || r.prefix]));
     } catch { /* fallback: All-only */ }
   }
-  return labels.map((s) => {
-    const val    = s === 'All' ? '' : s;
-    const active = (s === 'All' && !_salesFilter) || val === _salesFilter;
-    const label  = s === 'All' ? t('manager.mode.all') : s;
-    return `<button data-sales="${val}"
+  return entries.map(([val, label]) => {
+    const active = val === (_salesFilter || '');
+    return `<button data-sales="${_esc(val)}"
       class="px-3 py-1.5 rounded-lg text-xs font-medium ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
-    >${label}</button>`;
+    >${_esc(label)}</button>`;
   }).join('');
 }
 

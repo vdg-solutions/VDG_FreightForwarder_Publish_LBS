@@ -18,6 +18,17 @@ import { readSettings, DEFAULT_CURRENCY_FIELD } from '../../core_abstractions/po
 import { loadTimeline, renderTimeline, bindTimeline } from '../components/phase-timeline.js';
 
 const TIMELINE_MOUNT_ID = 'phase-timeline';
+
+// wasm has no locale, so a use-case that needs the reader's words hands back {key, ...params} as
+// JSON in `error` instead of a baked sentence (F-47-04) — same convention detail-panel.js uses
+// for FSM guard replies. A plain-text error (or anything that isn't that envelope) falls through.
+function saveErrorText(err) {
+  try {
+    const envelope = JSON.parse(err.message);
+    if (envelope && envelope.key) return t(envelope.key, envelope);
+  } catch { /* not a JSON envelope — fall through to the raw message */ }
+  return `Error: ${err.message}`;
+}
 // A NEW job has no shipment_ref yet, but the timeline still needs a non-empty entity id to render
 // the Created checklist (F-37-04). It used to borrow the Job No for this — a 10-digit legal doc
 // number sitting in a ref-typed slot. The sentinel says what it is; it never persists (submitForm
@@ -224,9 +235,14 @@ export async function render(root, opts = {}) {
 
   // F-41-01: a prefilled customer (quote convert, restored draft) brings its master-assigned rep
   // along when nothing picked one yet — the same chain the select's autofill walks.
+  // F-47-05: and only a rep the list actually offers, which is the check the two sibling autofills
+  // (section-header-wiring.js, quote-attach.js) already made and this one did not. Not the source
+  // of the live bad records (customer rows carry no sales_rep_id at all — measured 2026-08-22), so
+  // this closes a door rather than a leak: whatever a customer row holds, only an offered rep
+  // reaches the field.
   if (draft && !draft.sales_rep) {
     const fromCust = customerRepFor(draft.customer, customers);
-    if (fromCust) draft.sales_rep = fromCust;
+    if (fromCust && reps.some((r) => r.prefix === fromCust)) draft.sales_rep = fromCust;
   }
 
   const formMount = root.querySelector('#form-mount') || root;
@@ -314,7 +330,7 @@ export async function render(root, opts = {}) {
           navigate('/sales/edit/' + ref);
         }
       } catch (err) {
-        showToast(`Error: ${err.message}`, 'error');
+        showToast(saveErrorText(err), 'error');
       }
     });
   });

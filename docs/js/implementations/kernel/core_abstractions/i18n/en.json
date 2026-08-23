@@ -1958,5 +1958,7 @@
   "master_merge.cancel": "Cancel",
   "master_merge.must_differ": "Target and source must differ.",
   "master_merge.no_diff": "No field differences.",
-  "master_merge.diff_header": "Field differences (target wins):"
+  "master_merge.diff_header": "Field differences (target wins):",
+  "shipment.revenue.rep_not_account_error": "Shipment {shipment} names “{rep}” as its sales rep, which is a name and not an account, so the revenue cannot be saved. Pick the rep from the list again and save.",
+  "shipment.revenue.foreign_rep_error": "Revenue for {shipment} belongs to {rep} — this build cannot save another rep's revenue yet. Nothing was lost; {rep} needs to enter it."
 }

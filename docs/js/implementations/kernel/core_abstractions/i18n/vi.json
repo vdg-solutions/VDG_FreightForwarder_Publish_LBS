@@ -1958,5 +1958,7 @@
   "master_merge.cancel": "Huỷ",
   "master_merge.must_differ": "Bản giữ lại và bản bị xoá phải khác nhau.",
   "master_merge.no_diff": "Không có trường nào khác nhau.",
-  "master_merge.diff_header": "Các trường khác nhau (lấy theo bản giữ lại):"
+  "master_merge.diff_header": "Các trường khác nhau (lấy theo bản giữ lại):",
+  "shipment.revenue.rep_not_account_error": "Lô {shipment} đang ghi nhân viên sales là “{rep}” — đây là tên chứ không phải tài khoản, nên chưa lưu được doanh thu. Chọn lại nhân viên từ danh sách rồi lưu lại.",
+  "shipment.revenue.foreign_rep_error": "Doanh thu của lô {shipment} thuộc về sales phụ trách {rep} — bản hiện tại chưa lưu được doanh thu hộ nhân viên khác. Dữ liệu chưa mất, {rep} cần tự nhập doanh thu này."
 }

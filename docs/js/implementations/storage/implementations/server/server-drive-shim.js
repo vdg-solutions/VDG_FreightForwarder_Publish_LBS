@@ -79,11 +79,16 @@ async function filesList(url) {
   const q = parseQ(url.searchParams.get('q') || '');
   let files = [];
   if (q.parent) {
-    const res = await apiFetch('GET', `/ws/nodes/${encodeURIComponent(q.parent)}/children`);
-    files = (res.files ?? []).map(toFile);
+    try {
+      const res = await apiFetch('GET', `/records/${encodeURIComponent(q.parent)}`);
+      files = (res?.records ?? []).map((r) => toFile({
+        id: `${q.parent}/${r.id}`,
+        name: r.id,
+        version: r.version,
+        etag: r.etag,
+      }));
+    } catch { files = []; }
   } else if (q.ownedByMe || q.sharedWithMe) {
-    // Owner-wide / shared-with-me name searches exist to FIND the workspace root. There is one
-    // root and it is 'root'; whether it answers depends on the account, not on Drive's index.
     const me = await _meCached();
     const isWorkspace = !q.name || q.name === me.workspace;
     const reachable = q.ownedByMe ? me.is_owner : (!me.is_owner && ((me.roles ?? []).length > 0));
@@ -99,11 +104,25 @@ async function filesList(url) {
   return { files };
 }
 
-async function fileGet(id, url) {
-  const node = await apiFetch('GET', `/ws/nodes/${encodeURIComponent(id)}`);
-  const me   = id === ROOT_ALIAS ? await _meCached() : null;
-  const f = toFile(node);
-  if (me) f.ownedByMe = me.is_owner === true;
+function parseFileId(fileId) {
+  let col = 'root', id = fileId;
+  if (fileId.includes('/')) {
+    const idx = fileId.lastIndexOf('/');
+    col = fileId.slice(0, idx);
+    id = fileId.slice(idx + 1);
+  }
+  return { col, id };
+}
+
+async function fileGet(rawId, url) {
+  if (rawId === ROOT_ALIAS) {
+    const me = await _meCached();
+    return { id: ROOT_ALIAS, name: me.workspace, mimeType: FOLDER_MIME, parents: [], version: '1', trashed: false, ownedByMe: me.is_owner === true, createdTime: '', modifiedTime: '' };
+  }
+  const { col, id } = parseFileId(rawId);
+  const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+  const node = res?.record;
+  const f = toFile({ id: rawId, name: node.id, version: node.version, etag: node.etag });
   if (url.searchParams.get('alt') === 'media') return { media: node.content ?? '', etag: node.etag };
   return f;
 }
@@ -131,8 +150,20 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
     }
     // /changes
     if (seg[0] === 'changes') {
-      if (seg[1] === 'startPageToken') return ok(await apiFetch('GET', '/ws/changes/start'));
-      return ok(await apiFetch('GET', `/ws/changes?pageToken=${encodeURIComponent(url.searchParams.get('pageToken') || '0')}`));
+      if (seg[1] === 'startPageToken') {
+        const res = await apiFetch('GET', '/changes/start');
+        return ok({ startPageToken: res?.next_cursor || '0' });
+      }
+      const since = url.searchParams.get('pageToken') || '0';
+      const res = await apiFetch('GET', `/changes?since=${encodeURIComponent(since)}`);
+      const changes = (res?.results ?? []).map((c) => ({
+        file: { id: `${c.collection}/${c.id}`, name: c.id, version: String(c.version), parents: [c.collection] },
+        removed: c.event === 'removed',
+        fileId: `${c.collection}/${c.id}`,
+        changeType: 'file',
+        time: '',
+      }));
+      return ok({ newStartPageToken: res?.next_cursor || since, changes });
     }
     if (seg[0] !== 'files') return fail(HTTP_BAD_REQUEST, `unsupported: ${method} ${p}`);
 
@@ -140,20 +171,21 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
     if (seg.length === 1) {
       if (method === 'GET') return ok(await filesList(url));
       if (method === 'POST') {
+        const me = await _meCached();
         if (body instanceof FormData) {
           const { metadata, content } = await multipartParts(body);
           const parent = aliasId(metadata.parents?.[0] ?? ROOT_ALIAS);
-          const node = await apiFetch('POST', '/ws/nodes', { parentId: parent, name: metadata.name, content });
-          return ok(toFile(node), { etag: node.etag });
+          const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: metadata.name, content, owner: me.email });
+          return ok(toFile({ id: `${parent}/${res.record.id}`, name: res.record.id, version: res.record.version }), { etag: res.record.etag });
         }
         const parent = aliasId(body?.parents?.[0] ?? ROOT_ALIAS);
-        const node = await apiFetch('POST', '/ws/nodes',
-          { parentId: parent, name: body?.name, folder: body?.mimeType === FOLDER_MIME, content: '' });
-        return ok(toFile(node), { etag: node.etag });
+        const name = body?.name || 'file';
+        const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: name, content: '', owner: me.email });
+        return ok(toFile({ id: `${parent}/${res.record.id}`, name: res.record.id, version: res.record.version }), { etag: res.record.etag });
       }
     }
 
-    const id = aliasId(seg[1]);
+    const rawId = aliasId(seg[1]);
     // /files/:id/permissions[/:pid] — acknowledged; the server's ACL is the grant file.
     if (seg[2] === 'permissions') {
       if (method === 'GET')    return ok({ permissions: [] });
@@ -162,30 +194,29 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
     }
     // /files/:id
     if (method === 'GET') {
-      const r = await fileGet(id, url);
+      const r = await fileGet(rawId, url);
       if ('media' in r) return { status: HTTP_OK, body: r.media, headers: { etag: r.etag } };
       return ok(r);
     }
-    if (method === 'DELETE') { await apiFetch('DELETE', `/ws/nodes/${encodeURIComponent(id)}`); return noContent(); }
-    if (method === 'PATCH') {
+    if (method === 'DELETE') {
+      const { col, id } = parseFileId(rawId);
+      await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+      return noContent();
+    }
+    if (method === 'PATCH' || method === 'PUT') {
+      const me = await _meCached();
+      const { col, id } = parseFileId(rawId);
       if (body instanceof FormData) {
         const { content } = await multipartParts(body);
-        const node = await apiFetch('PUT', `/ws/nodes/${encodeURIComponent(id)}/content`,
-          { content, etag: extraHeaders['If-Match'] ?? '' });
-        return ok(toFile(node), { etag: node.etag });
+        const res = await apiFetch('PUT', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`,
+          { content, owner: me.email }, { 'If-Match': extraHeaders['If-Match'] ?? '' });
+        return ok(toFile({ id: rawId, name: res.record.id, version: res.record.version }), { etag: res.record.etag });
       }
-      const patch = {};
-      const addParent = url.searchParams.get('addParents');
-      if (addParent) patch.parentId = aliasId(addParent);
-      if (body?.name !== undefined) patch.name = body.name;
-      if (body?.trashed === true) patch.trashed = true;
-      if (Object.keys(patch).length === 0) {
-        // removeParents alone = detach; the server has single parents, so detach = trash.
-        if (url.searchParams.get('removeParents')) patch.trashed = true;
-        else return ok(await fileGet(id, url));
+      if (body?.trashed === true) {
+        await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+        return noContent();
       }
-      const node = await apiFetch('PATCH', `/ws/nodes/${encodeURIComponent(id)}`, patch);
-      return node ? ok(toFile(node), { etag: node.etag }) : noContent();
+      return ok(await fileGet(rawId, url));
     }
     return fail(HTTP_BAD_REQUEST, `unsupported: ${method} ${p}`);
   } catch (err) {
