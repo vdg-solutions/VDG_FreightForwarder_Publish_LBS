@@ -82,7 +82,7 @@ export class ServerIoPort extends SharedIoPort {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(fileName)}`);
       const r = res;
       if (!r?.id) return { etag: null, content: '', fileId: null, folderId, fileName };
-      return { etag: r.etag, content: r.content, fileId: r.id, folderId, fileName };
+      return { etag: r.etag, content: r.content, fileId: `${folderId}/${r.id}`, folderId, fileName };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
         return { etag: null, content: '', fileId: null, folderId, fileName };
@@ -103,7 +103,7 @@ export class ServerIoPort extends SharedIoPort {
     try {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}`);
       const records = res?.records ?? [];
-      const files = records.map((r) => ({ id: r.id, name: r.id, version: String(r.version), modifiedTime: '' }));
+      const files = records.map((r) => ({ id: `${folderId}/${r.id}`, name: r.id, version: String(r.version), modifiedTime: '' }));
       return { folderId, files };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
@@ -179,7 +179,7 @@ export class ServerIoPort extends SharedIoPort {
       return {
         folderId,
         files: records.map((r) => ({
-          id: r.id, name: r.id, version: String(r.version), mimeType: '',
+          id: `${folderId}/${r.id}`, name: r.id, version: String(r.version), mimeType: '',
         })),
       };
     } catch (err) {
@@ -196,7 +196,7 @@ export class ServerIoPort extends SharedIoPort {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(fileName)}`);
       const r = res;
       if (!r?.id) return { found: false, id: null, etag: null, content: '' };
-      return { found: true, id: r.id, etag: r.etag ?? null, content: r.content ?? '' };
+      return { found: true, id: `${folderId}/${r.id}`, etag: r.etag ?? null, content: r.content ?? '' };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
         return { found: false, id: null, etag: null, content: '' };
