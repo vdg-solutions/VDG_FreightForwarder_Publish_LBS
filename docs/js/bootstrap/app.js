@@ -265,14 +265,33 @@ export function bootApp(user, db) {
   // feature still works — it just no longer competes with boot for bandwidth.
 }
 
-/// The wasm module, loaded once. boot/repo-init-steps.js imports the same URL (the module cache
-/// dedupes it) and does the export globalization + vdg:wasm-ready dispatch.
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
-  const mod = await import(new URL('pkg/vdg_freight.js', document.baseURI).href);
-  await mod.default();
-  window.__vdg_wasm = mod;
-  return mod;
+  try {
+    const mod = await import(new URL('pkg/vdg_freight.js?v=4663905', document.baseURI).href);
+    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=4663905', document.baseURI).href;
+    await mod.default(wasmUrl);
+    window.__vdg_wasm = mod;
+    return mod;
+  } catch (err) {
+    if (err instanceof LinkError || err?.name === 'LinkError' || String(err).includes('LinkError')) {
+      console.warn('[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...');
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (!sessionStorage.getItem('__wasm_link_reloaded')) {
+        sessionStorage.setItem('__wasm_link_reloaded', '1');
+        location.reload();
+        return new Promise(() => {});
+      }
+    }
+    throw err;
+  }
 }
 
 async function main() {
