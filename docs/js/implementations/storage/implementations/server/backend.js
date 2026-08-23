@@ -107,7 +107,7 @@ function rememberSessionToken(token) {
   } catch {}
 }
 
-const API_FETCH_TIMEOUT_MS = 10000;
+const API_FETCH_TIMEOUT_MS = 30000;
 
 async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
@@ -118,7 +118,7 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
     opts.body = JSON.stringify(body);
   }
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), API_FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(new Error('fetch timeout (30s)')), API_FETCH_TIMEOUT_MS);
   opts.signal = ctrl.signal;
   let res;
   try {
