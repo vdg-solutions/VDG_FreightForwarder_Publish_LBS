@@ -21,9 +21,17 @@ let _ready = null;
 function ready(scope) {
   if (_ready) return _ready;
   if (!scope) return Promise.reject(new Error('sqlite: missing store scope — the database is per-account'));
-  _ready = (async () => { await init(); await sqlite_init(scope); })().catch((e) => { _ready = null; throw e; });
+  const useOpfs = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+  _ready = (async () => { await init(); await sqlite_init(scope, useOpfs); })().catch((e) => { _ready = null; throw e; });
   return _ready;
 }
+
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('[store-worker unhandledrejection]', event.reason);
+});
+self.addEventListener('error', (event) => {
+  console.error('[store-worker error]', event.message);
+});
 
 function runOp(m) {
   switch (m.op) {

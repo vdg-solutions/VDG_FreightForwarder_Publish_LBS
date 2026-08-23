@@ -114,11 +114,12 @@ export class ServerIoPort extends SharedIoPort {
   }
 
   async drive_read_file(fileId) {
-    let col = 'root', id = fileId;
-    if (fileId.includes('/')) {
-      const idx = fileId.lastIndexOf('/');
-      col = fileId.slice(0, idx);
-      id = fileId.slice(idx + 1);
+    const norm = String(fileId || '').replace(/\/+/g, '/');
+    let col = 'root', id = norm;
+    if (norm.includes('/')) {
+      const idx = norm.lastIndexOf('/');
+      col = norm.slice(0, idx);
+      id = norm.slice(idx + 1);
     }
     try {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
@@ -139,13 +140,13 @@ export class ServerIoPort extends SharedIoPort {
       const res = await apiFetch('GET', `/changes?since=${encodeURIComponent(since)}`);
       const changes = (res?.results ?? []).map((c) => ({
         file: {
-          id: c.id,
+          id: `${c.collection}/${c.id}`,
           name: c.id,
           version: String(c.version),
           parents: [c.collection],
         },
         removed: c.event === 'removed',
-        fileId: c.id,
+        fileId: `${c.collection}/${c.id}`,
         changeType: 'file',
         time: '',
       }));
@@ -211,11 +212,12 @@ export class ServerIoPort extends SharedIoPort {
   }
 
   async ws_delete_file(fileId) {
-    let col = 'root', id = fileId;
-    if (fileId.includes('/')) {
-      const idx = fileId.lastIndexOf('/');
-      col = fileId.slice(0, idx);
-      id = fileId.slice(idx + 1);
+    const norm = String(fileId || '').replace(/\/+/g, '/');
+    let col = 'root', id = norm;
+    if (norm.includes('/')) {
+      const idx = norm.lastIndexOf('/');
+      col = norm.slice(0, idx);
+      id = norm.slice(idx + 1);
     }
     try {
       await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);

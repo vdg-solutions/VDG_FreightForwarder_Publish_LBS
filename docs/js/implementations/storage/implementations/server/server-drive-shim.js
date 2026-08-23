@@ -105,11 +105,12 @@ async function filesList(url) {
 }
 
 function parseFileId(fileId) {
-  let col = 'root', id = fileId;
-  if (fileId.includes('/')) {
-    const idx = fileId.lastIndexOf('/');
-    col = fileId.slice(0, idx);
-    id = fileId.slice(idx + 1);
+  const norm = String(fileId || '').replace(/\/+/g, '/');
+  let col = 'root', id = norm;
+  if (norm.includes('/')) {
+    const idx = norm.lastIndexOf('/');
+    col = norm.slice(0, idx);
+    id = norm.slice(idx + 1);
   }
   return { col, id };
 }
@@ -120,11 +121,23 @@ async function fileGet(rawId, url) {
     return { id: ROOT_ALIAS, name: me.workspace, mimeType: FOLDER_MIME, parents: [], version: '1', trashed: false, ownedByMe: me.is_owner === true, createdTime: '', modifiedTime: '' };
   }
   const { col, id } = parseFileId(rawId);
-  const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
-  const node = res;
-  const f = toFile({ id: rawId, name: node.id, version: node.version, etag: node.etag });
-  if (url.searchParams.get('alt') === 'media') return { media: node.content ?? '', etag: node.etag };
-  return f;
+  try {
+    const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+    const node = res;
+    const f = toFile({ id: rawId, name: node.id, version: node.version, etag: node.etag });
+    if (url.searchParams.get('alt') === 'media') return { media: node.content ?? '', etag: node.etag };
+    return f;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
+      if (id === 'state.json' || id === 'all.jsonl') {
+        const content = id === 'state.json' ? '{}' : '';
+        const f = toFile({ id: rawId, name: id, version: '1', etag: '' });
+        if (url.searchParams.get('alt') === 'media') return { media: content, etag: '' };
+        return f;
+      }
+    }
+    throw err;
+  }
 }
 
 async function multipartParts(form) {
@@ -174,14 +187,29 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
         const me = await _meCached();
         if (body instanceof FormData) {
           const { metadata, content } = await multipartParts(body);
-          const parent = aliasId(metadata.parents?.[0] ?? ROOT_ALIAS);
+          const parent = decodeURIComponent(aliasId(metadata.parents?.[0] ?? ROOT_ALIAS));
+          if (metadata.mimeType === FOLDER_MIME || ((parent === 'root' || parent === 'root/shared' || parent === 'root/_shared' || parent === 'root/admin') && !content)) {
+            return ok(toFile({ id: `${parent}/${metadata.name}`, name: metadata.name, mimeType: FOLDER_MIME, version: '1', parentId: parent }));
+          }
           const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: metadata.name, content, owner: me.email });
           return ok(toFile({ id: `${parent}/${res.id}`, name: res.id, version: res.version }), { etag: res.etag });
         }
-        const parent = aliasId(body?.parents?.[0] ?? ROOT_ALIAS);
+        const parent = decodeURIComponent(aliasId(body?.parents?.[0] ?? ROOT_ALIAS));
         const name = body?.name || 'file';
-        const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: name, content: '', owner: me.email });
-        return ok(toFile({ id: `${parent}/${res.id}`, name: res.id, version: res.version }), { etag: res.etag });
+        
+        if (body?.mimeType === FOLDER_MIME || (parent === 'root' && (name === 'shared' || name === '_shared' || name === 'admin')) || parent === 'root/_shared') {
+          return ok(toFile({ id: `${parent}/${name}`, name, mimeType: FOLDER_MIME, version: '1', parentId: parent }));
+        }
+
+        try {
+          const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: name, content: '', owner: me.email });
+          return ok(toFile({ id: `${parent}/${res.id}`, name: res.id, version: res.version }), { etag: res.etag });
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409) {
+            return ok(toFile({ id: `${parent}/${name}`, name, version: '1', parentId: parent }));
+          }
+          throw err;
+        }
       }
     }
 
@@ -200,7 +228,17 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
     }
     if (method === 'DELETE') {
       const { col, id } = parseFileId(rawId);
-      await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+      if (col === 'root' || id === 'shared' || id === '_shared' || id === 'admin' || !id) {
+        return noContent();
+      }
+      try {
+        await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
+          return noContent();
+        }
+        throw err;
+      }
       return noContent();
     }
     if (method === 'PATCH' || method === 'PUT') {
@@ -212,7 +250,18 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
         return ok(toFile({ id: rawId, name: res.id, version: res.version }), { etag: res.etag });
       }
       if (body?.trashed === true) {
-        await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+        if (col === 'root' && (id === 'shared' || id === '_shared' || id === 'admin')) {
+          return noContent();
+        }
+        try {
+          await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
+        } catch (err) {
+          if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
+            // Ignore 404s for deletion since folders are pseudo-records
+          } else {
+            throw err;
+          }
+        }
         return noContent();
       }
       return ok(await fileGet(rawId, url));
