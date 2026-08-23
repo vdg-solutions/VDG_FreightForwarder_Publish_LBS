@@ -195,11 +195,12 @@ async function hydrateSessionFromToken(resp) {
   // The token is handed to the server, which verifies it with Google and mints the session.
   if (isServerBackend()) {
     localStorage.setItem(DRIVE_SCOPE_KEY, '1');
-    const opened = await apiFetch('POST', '/session', { access_token: resp.access_token });
+    const opened = await apiFetch('POST', '/session', { token: resp.access_token, access_token: resp.access_token });
     // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
     // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
     // wherever the cookie already works.
-    if (opened?.session_token) await adoptSessionToken(opened.session_token);
+    const sessionToken = opened?.token || opened?.session_token;
+    if (sessionToken) await adoptSessionToken(sessionToken);
   } else if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, '1');
   else if (typeof resp?.scope === 'string' && resp.scope.length > 0) clearDriveScopeGrant();
   const info = await fetchUserinfo(resp.access_token);
