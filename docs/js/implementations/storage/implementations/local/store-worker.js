@@ -52,6 +52,7 @@ self.onmessage = async (ev) => {
     const result = runOp(m);
     self.postMessage({ rid: m.rid, ok: true, result });
   } catch (e) {
+    console.error('[store-worker error]', e);
     self.postMessage({ rid: m.rid, ok: false, err: (e && e.message) ? e.message : String(e) });
   }
 };

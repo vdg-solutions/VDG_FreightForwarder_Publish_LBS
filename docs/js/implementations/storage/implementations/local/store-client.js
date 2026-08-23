@@ -120,6 +120,7 @@ function _spawnEngine() {
   // respawns (leadership is kept — the lock is still held). Remote tabs' in-flight ops settle
   // via their own client-side timers.
   _engine.onerror = (e) => {
+    console.error('[store-client worker onerror]', e);
     const dead = new SqliteUnavailableError('sqlite worker crashed: ' + (e?.message || 'unknown'));
     for (const [, p] of _pending) { clearTimeout(p.timer); p.reject(dead); }
     _pending.clear();
