@@ -20,7 +20,7 @@ import { fetchUserinfo } from './userinfo.js';
 import { isServerBackend } from '../../core_abstractions/backend.js';
 import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
 
-const CLIENT_ID                = '1058284560759-9p1u3f25h6j87j3dsk20t8420c24v9k9.apps.googleusercontent.com'; // Makefile sed target
+const CLIENT_ID                = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com'; // Makefile sed target
 const ID_TOKEN_KEY             = 'vdg.auth.id_token';
 const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
 const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
