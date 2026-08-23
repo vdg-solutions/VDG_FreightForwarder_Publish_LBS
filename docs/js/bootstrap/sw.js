@@ -2,11 +2,11 @@
 // SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-ve62ef3b';
+const STATIC_CACHE     = 'vdg-static-v61df2d7';
 // Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-ve62ef3b';
+const DRIVE_META_CACHE = 'vdg-drive-meta-v61df2d7';
 const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
@@ -257,7 +257,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps e62ef3b → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps 61df2d7 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a
@@ -424,25 +424,19 @@ async function _cacheFirst(request) {
   const cache  = await caches.open(STATIC_CACHE);
   const cached = await cache.match(request);
   if (cached) return cached;
-  // F-19-63: on a cache MISS this is a plain network fetch, and a stalled cross-origin GET (a
-  // googleapis avatar, a CDN asset) has no deadline of its own — the page waits on the worker
-  // forever. Same abort budget _networkFirst already uses; a miss that times out answers 503
-  // rather than hanging, and the caller's own fallback takes over.
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
-  const network = await fetch(request, { signal: controller.signal }).catch(() => null);
-  clearTimeout(timer);
-  if (network?.ok) cache.put(request, network.clone());
-  return network || new Response('Offline', { status: 503 });
+  try {
+    const network = await fetch(request);
+    if (network?.ok) cache.put(request, network.clone());
+    return network;
+  } catch {
+    return new Response('Offline', { status: 503 });
+  }
 }
 
 async function _networkFirst(request) {
   const cache = await caches.open(STATIC_CACHE);
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), NETWORK_FIRST_TIMEOUT_MS);
-    const network = await fetch(request, { signal: controller.signal });
-    clearTimeout(timer);
+    const network = await fetch(request);
     if (network?.ok) cache.put(request, network.clone());
     return network;
   } catch {
