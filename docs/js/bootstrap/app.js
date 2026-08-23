@@ -9,7 +9,6 @@ import '../implementations/ui/bootstrap/components/cutoff-timer.js';
 import '../implementations/ui/bootstrap/components/detail-panel.js';
 import '../implementations/ui/bootstrap/components/print-button.js';
 import '../implementations/ui/bootstrap/components/offline-banner.js';
-import '../implementations/ui/bootstrap/components/orphan-folder-banner-element.js';
 import '../implementations/ui/bootstrap/components/cmd-palette.js';
 import { initRouter, navigate } from '../implementations/ui/bootstrap/router.js';
 // WASM is loaded in boot/repo-init-steps.js critical path (before bootApp)
@@ -20,13 +19,13 @@ import { renderLoginPage } from '../implementations/ui/bootstrap/views/login.js'
 import { createPlatform } from './platform/index.js';
 import { composeAuth } from './compose-ui/auth.js';
 import { configureAuthPlatform, mountLoginScreen } from './platform/auth.js';
-import { isServerBackend } from '../implementations/storage/core_abstractions/backend.js';
+
 import { composeStorage } from '../implementations/storage/bootstrap/compose.js';
 import '../implementations/kernel/bootstrap/compose.js'; // binds kernel platform ports
 import { currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from '../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { enforceRouteGuard } from '../implementations/ui/bootstrap/route-enforcer.js';
-import { initGoogleSignIn, requestDriveScopeGrant } from '../implementations/storage/core_abstractions/oauth.js';
-import { renderDriveGate } from './boot/server-gate.js';
+import { initGoogleSignIn } from '../implementations/storage/core_abstractions/oauth.js';
+import { renderServerGate } from './boot/server-gate.js';
 import { loadLocale, t } from '../implementations/kernel/core_abstractions/i18n/index.js';
 import { tryParamRoute }       from './app-router-ext.js';
 import { loadView }            from '../implementations/ui/bootstrap/util/view-loader.js';
@@ -249,8 +248,8 @@ export function bootApp(user, db) {
     btn.textContent = 'Refresh Role';
     btn.className   = 'fixed bottom-4 right-4 z-50 px-3 py-1 bg-slate-700 text-white text-xs rounded';
     btn.onclick     = async () => {
-      const { detectRoleViaDrive } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
-      await detectRoleViaDrive(user, { force: true });
+      const { detectRoleViaServer } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
+      await detectRoleViaServer(user, { force: true });
       location.reload();
     };
     document.body.appendChild(btn);
@@ -287,8 +286,8 @@ async function main() {
   initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
   initAccessTokenRefresh({                           // reconnect-chip listener only (no proactive refresh)
     onReconnected: async (user) => {                 // the app's role re-resolve, injected — the adapter never imports the gate
-      const { detectRoleViaDrive } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
-      await detectRoleViaDrive(user, { force: true });
+      const { detectRoleViaServer } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
+      await detectRoleViaServer(user, { force: true });
     },
   });
 
@@ -324,17 +323,12 @@ async function main() {
       });
       return;
     }
-    // Every Drive failure routes through one gate: scope re-consent (AC-03/08/09), file/folder
-    // permission (AC-06), a dead session (401 — reconnect, NOT reload), or Drive genuinely
-    // unreachable (F-24-19). The status is logged because the screen deliberately doesn't show
-    // one, and a support question about it otherwise has nothing to go on.
-    if (renderDriveGate(_resolveBootFallbackMount(), err, {
-      onRequestScope: requestDriveScopeGrant,
-      onReconnected:  () => location.reload(),   // credential is good now — re-run boot
-      serverBackend:  isServerBackend(),
+    if (renderServerGate(_resolveBootFallbackMount(), err, {
+      onReconnected:  () => location.reload(),
+      serverBackend:  true,
       onSignIn:       () => mountLoginScreen(() => location.reload()),
     })) {
-      console.error('[VDG] boot stopped on Drive', err.status, err.driveErrorKind || '', err.message); // DEV
+      console.error('[VDG] boot stopped on Server', err.status, err.message); // DEV
       return;
     }
     throw err;
