@@ -408,14 +408,7 @@ self.addEventListener('fetch', (ev) => {
     return;
   }
 
-  // wasm bundle → cache-first (precached + version-bumped). Never network-first: the 3.5s abort
-  // can 503 the multi-MB wasm and break the SQLite worker's compile. See PKG_BUNDLE_RE note above.
-  if (PKG_BUNDLE_RE.test(pathname)) {
-    ev.respondWith(_cacheFirst(request));
-    return;
-  }
-
-  // Everything else same-origin (app modules, entrypoint, shell, non-hashed pkg) is
+  // Everything else same-origin (app modules, entrypoint, shell, wasm pkg) is
   // network-first: a redeploy is served immediately; cache is only the offline fallback.
   ev.respondWith(_networkFirst(request));
 });
