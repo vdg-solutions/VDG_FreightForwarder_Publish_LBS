@@ -80,8 +80,8 @@ export class ServerIoPort extends SharedIoPort {
     const folderId = await this._resolveFolder(kind);
     try {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(fileName)}`);
-      const r = res?.record;
-      if (!r) return { etag: null, content: '', fileId: null, folderId, fileName };
+      const r = res;
+      if (!r?.id) return { etag: null, content: '', fileId: null, folderId, fileName };
       return { etag: r.etag, content: r.content, fileId: r.id, folderId, fileName };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
@@ -122,8 +122,8 @@ export class ServerIoPort extends SharedIoPort {
     }
     try {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
-      const r = res?.record;
-      if (!r) return { found: false, content: '', etag: null };
+      const r = res;
+      if (!r?.id) return { found: false, content: '', etag: null };
       return { found: true, content: r.content, etag: r.etag };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
@@ -239,10 +239,10 @@ export class ServerIoPort extends SharedIoPort {
         const res = await apiFetch(
           'PUT',
           `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(name)}`,
-          { content, owner },
+          { content },
           { 'If-Match': etag }
         );
-        return { id: name, etag: res?.record?.etag };
+        return { id: name, etag: res?.etag };
       }
       try {
         const res = await apiFetch(
@@ -250,15 +250,15 @@ export class ServerIoPort extends SharedIoPort {
           `/records/${encodeURIComponent(folderId)}`,
           { id: name, content, owner }
         );
-        return { id: name, etag: res?.record?.etag };
+        return { id: name, etag: res?.etag };
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
           const res = await apiFetch(
             'PUT',
             `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(name)}`,
-            { content, owner }
+            { content }
           );
-          return { id: name, etag: res?.record?.etag };
+          return { id: name, etag: res?.etag };
         }
         throw err;
       }

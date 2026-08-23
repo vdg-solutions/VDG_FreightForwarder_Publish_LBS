@@ -17,7 +17,7 @@ export const WORKSPACE_NAME = (() => {
 // it. Observed live: sol.vdg01 opening the customer's published build landed in sol.vdg01's own
 // retired LBS folder. A name is a search term; identity is an id.
 export const BUILD_ROOT_ID = (() => {
-  const raw = '17hMgfvZLnPTfuB8A-HTSyk1t-ytxcVoU';
+  const raw = 'LBS';
   return raw.startsWith('WORKSPACE_ROOT_ID_') ? '' : raw; // unsubstituted = dev build, resolve by name
 })();
 

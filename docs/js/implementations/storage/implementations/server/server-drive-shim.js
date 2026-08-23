@@ -121,7 +121,7 @@ async function fileGet(rawId, url) {
   }
   const { col, id } = parseFileId(rawId);
   const res = await apiFetch('GET', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
-  const node = res?.record;
+  const node = res;
   const f = toFile({ id: rawId, name: node.id, version: node.version, etag: node.etag });
   if (url.searchParams.get('alt') === 'media') return { media: node.content ?? '', etag: node.etag };
   return f;
@@ -176,12 +176,12 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
           const { metadata, content } = await multipartParts(body);
           const parent = aliasId(metadata.parents?.[0] ?? ROOT_ALIAS);
           const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: metadata.name, content, owner: me.email });
-          return ok(toFile({ id: `${parent}/${res.record.id}`, name: res.record.id, version: res.record.version }), { etag: res.record.etag });
+          return ok(toFile({ id: `${parent}/${res.id}`, name: res.id, version: res.version }), { etag: res.etag });
         }
         const parent = aliasId(body?.parents?.[0] ?? ROOT_ALIAS);
         const name = body?.name || 'file';
         const res = await apiFetch('POST', `/records/${encodeURIComponent(parent)}`, { id: name, content: '', owner: me.email });
-        return ok(toFile({ id: `${parent}/${res.record.id}`, name: res.record.id, version: res.record.version }), { etag: res.record.etag });
+        return ok(toFile({ id: `${parent}/${res.id}`, name: res.id, version: res.version }), { etag: res.etag });
       }
     }
 
@@ -204,13 +204,12 @@ export async function handle(method, path, body = undefined, extraHeaders = {}) 
       return noContent();
     }
     if (method === 'PATCH' || method === 'PUT') {
-      const me = await _meCached();
       const { col, id } = parseFileId(rawId);
       if (body instanceof FormData) {
         const { content } = await multipartParts(body);
         const res = await apiFetch('PUT', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`,
-          { content, owner: me.email }, { 'If-Match': extraHeaders['If-Match'] ?? '' });
-        return ok(toFile({ id: rawId, name: res.record.id, version: res.record.version }), { etag: res.record.etag });
+          { content }, { 'If-Match': extraHeaders['If-Match'] ?? '' });
+        return ok(toFile({ id: rawId, name: res.id, version: res.version }), { etag: res.etag });
       }
       if (body?.trashed === true) {
         await apiFetch('DELETE', `/records/${encodeURIComponent(col)}/${encodeURIComponent(id)}`);
