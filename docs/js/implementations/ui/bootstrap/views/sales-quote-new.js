@@ -8,7 +8,37 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 const DEFAULT_VALIDITY_DAYS  = 7;
 const OVERRIDE_THRESHOLD_PCT = 0.15;
 
-const CONTAINER_TYPES = ['20GP', '40HC', '40GP', 'LCL', 'AIR'];
+export async function getContainerTypes(repo) {
+  try {
+    const list = await repo?.list?.('units-of-measure');
+    if (Array.isArray(list) && list.length > 0) {
+      const conts = list.filter((u) => u.category === 'container');
+      if (conts.length > 0) {
+        return conts.map((u) => {
+          const code = u.aliases?.[0] || u.code;
+          const label = u.label_vi ? `${code} (${u.label_vi})` : code;
+          return { code, label };
+        });
+      }
+    }
+  } catch {
+    // fallback to standard codes
+  }
+  return [
+    { code: '20DC', label: "20DC (Container 20' khô)" },
+    { code: '40DC', label: "40DC (Container 40' khô)" },
+    { code: '40HC', label: "40HC (Container 40' cao)" },
+    { code: '45HC', label: "45HC (Container 45' cao)" },
+    { code: '20RF', label: "20RF (Container 20' lạnh)" },
+    { code: '40RF', label: "40RF (Container 40' lạnh)" },
+    { code: '20OT', label: "20OT (Container 20' hở nóc)" },
+    { code: '40OT', label: "40OT (Container 40' hở nóc)" },
+    { code: '20FR', label: "20FR (Container 20' sàn phẳng)" },
+    { code: '40FR', label: "40FR (Container 40' sàn phẳng)" },
+    { code: '20TK', label: "20TK (Container 20' bồn)" },
+  ];
+}
+
 const VALID_CURRENCIES = ['VND', 'USD', 'EUR', 'SGD', 'JPY'];
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -106,8 +136,8 @@ function renderLinesTable(root) {
 
 // ── form scaffold ─────────────────────────────────────────────────────────────
 
-function formHtml(presetSales) {
-  const ctOptions = CONTAINER_TYPES.map((ct) => `<option value="${ct}">${ct}</option>`).join('');
+function formHtml(presetSales, containerTypes = []) {
+  const ctOptions = containerTypes.map((ct) => `<option value="${escHtml(ct.code)}">${escHtml(ct.label)}</option>`).join('');
   return `
     <div class="p-6 max-w-3xl mx-auto">
       <div class="flex items-center justify-between mb-6">
@@ -212,11 +242,13 @@ export async function render(root) {
     return;
   }
 
-  root.innerHTML = formHtml(salesId);
+  const repo = window.__vdg_repo;
+  const containerTypes = await getContainerTypes(repo);
+
+  root.innerHTML = formHtml(salesId, containerTypes);
   renderLinesTable(root);
 
   // Load masters for autocomplete
-  const repo = window.__vdg_repo;
   let customers = [], carriers = [];
   if (repo) {
     [customers, carriers] = await Promise.all([
