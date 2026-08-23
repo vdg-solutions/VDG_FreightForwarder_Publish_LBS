@@ -110,6 +110,7 @@ function rememberSessionToken(token) {
 const API_FETCH_TIMEOUT_MS = 30000;
 
 async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
+  const url = `${API_BASE}${API_PREFIX}${path}`;
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
   const token = readSessionToken();
   if (token) opts.headers[SESSION_TOKEN_HEADER] = token;
@@ -122,8 +123,11 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   opts.signal = ctrl.signal;
   let res;
   try {
-    res = await fetch(`${API_BASE}${API_PREFIX}${path}`, opts);
+    console.log(`[API] Fetching ${method} ${url}...`);
+    res = await fetch(url, opts);
+    console.log(`[API] Response from ${method} ${url}:`, res.status);
   } catch (err) {
+    console.error(`[API] Fetch failed for ${method} ${url}:`, err);
     throw new ApiError(0, `server unreachable: ${err.message}`);
   } finally {
     clearTimeout(timer);
