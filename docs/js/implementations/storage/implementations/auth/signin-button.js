@@ -71,7 +71,7 @@ export function renderSignInButton(container, { hydrate, clientId }) {
       stallTimer = null;
       window.dispatchEvent(new CustomEvent('vdg:signin-stalled'));
     }, SIGNIN_STALL_HINT_MS);
-    client.requestAccessToken({ prompt: 'consent' });
+    client.requestAccessToken({ prompt: '' });
   });
 }
 
