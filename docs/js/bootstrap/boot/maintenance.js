@@ -2,9 +2,13 @@
 // Boot must never wait on any of this; every job degrades to "retry next boot" on failure.
 
 import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
+import { isServerBackend } from '../../implementations/storage/core_abstractions/backend.js';
 
 /// Storage-side upkeep: error-log retention (F-37-08) + legacy-bundle explode (F-38-04).
 export function runBootMaintenance(driveApi) {
+  if (isServerBackend()) {
+    return;
+  }
   // Retention. The error log's write side is capped per session but never expires, so without
   // a prune it is append-only for the life of the workspace.
   window.__vdg_wasm.governance_prune_error_log({ now_ms: Date.now() })
@@ -37,6 +41,7 @@ export function runBootMaintenance(driveApi) {
 /// Idempotent: `_grantEntry` reads listPermissions first, so a user already holding their ACL
 /// costs reads and no sharing operation — which matters, because Drive rate-limits sharing.
 async function _regrantEveryone() {
+  if (isServerBackend()) return;
   try {
     // A rate limit inside is expected and self-healing: grants are idempotent, so the next boot
     // picks up where this one stopped — the reply reports per user rather than throwing.

@@ -15,6 +15,7 @@ import { clearRoleCache } from '../../../ui/core_abstractions/ports/auth/auth-ga
 import { ROLE_READ_ONLY } from '../../../ui/core_abstractions/roles.js';
 import { runFirstRunProvision, isAlreadyProvisionedLocally } from '../../core_abstractions/ports/governance/first-run-provision.js';
 import { currentUserRole, normalizeRole, homeRouteForRole } from '../../core_abstractions/ports/governance/route-guard.js';
+import { isServerBackend } from '../../../storage/core_abstractions/backend.js';
 
 // staff-table role resolution is async (repo-init-steps step: userRepo.get(email).then) — a
 // provisioned user can land here during the race, so poll and leave as soon as a role shows up.
@@ -66,6 +67,7 @@ export function render(root) {
 // waiting on an invite — never offer to create a second one, that is the #17 fork. A Drive error
 // is NOT "absent": leave the waiting copy up rather than inviting a duplicate workspace.
 async function _offerCreateIfGreenfield(root) {
+  if (isServerBackend()) return;
   const driveApi = window.__vdg_drive_api;
   if (!driveApi) return;
   // Local membership evidence outranks the probe below: an employee holds no permission on the

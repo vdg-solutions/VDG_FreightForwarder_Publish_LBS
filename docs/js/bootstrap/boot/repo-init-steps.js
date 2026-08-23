@@ -34,6 +34,7 @@ import { rehydrateFsmStates } from '../../implementations/ui/core_abstractions/p
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
 import { deferredManagerInit } from './repo-init-manager.js';
+import { isServerBackend } from '../../implementations/storage/core_abstractions/backend.js';
 
 const IDB_OP_TIMEOUT_MS  = 8000;
 const PREFS_META_KEY     = 'preferences';
@@ -217,9 +218,11 @@ async function _deferredInit(user, db, driveApi, repo) {
     // Storage upkeep (error-log retention, per-record bundle explode, re-grant after a move) —
     // all fire-and-forget. The per-record sweep reaches the workspace tree through the freight_app
     // platform now, so nothing but the Drive api has to be threaded down here.
-    import('./maintenance.js')
-      .then((m) => m.runBootMaintenance(driveApi))
-      .catch((err) => console.warn('[VDG] boot maintenance skipped:', err.message)); // DEV
+    if (!isServerBackend()) {
+      import('./maintenance.js')
+        .then((m) => m.runBootMaintenance(driveApi))
+        .catch((err) => console.warn('[VDG] boot maintenance skipped:', err.message)); // DEV
+    }
 
     // Payment due-soon checker (F-48-01) — tier 3/4 main-thread badge/notify, one shared
     // compute_due_soon call, 100% local (no Drive/token). Tiers 1/2 registration lives in
@@ -276,9 +279,11 @@ async function _deferredInit(user, db, driveApi, repo) {
       // #30: users provisioned before grant files existed have none, and authority no longer comes
       // from the fork — without this they all land on /pending-access. Only the manager can write
       // grants/, so it runs here; failures are reported per user, never fatal to boot.
-      window.__vdg_role_assignment_service.backfillGrants()
-        .then((r) => { if (r.published.length) console.info('[VDG] grant backfill:', r); }) // DEV
-        .catch((err) => console.warn('[VDG] grant backfill failed:', err.message));         // DEV
+      if (!isServerBackend()) {
+        window.__vdg_role_assignment_service.backfillGrants()
+          .then((r) => { if (r.published.length) console.info('[VDG] grant backfill:', r); }) // DEV
+          .catch((err) => console.warn('[VDG] grant backfill failed:', err.message));         // DEV
+      }
       await deferredManagerInit(user, driveApi, ledgerRepo, userRepo, repo);
     }
   } catch (err) {

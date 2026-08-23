@@ -56,7 +56,9 @@ export async function deferredManagerInit(user, driveApi, ledgerRepo, userRepo, 
   }
 
   // ACL target folders
-  await window.__vdg_wasm.governance_bootstrap_acl_folders({ root_id: wsRootId }).catch(() => {});
+  if (!isServerBackend()) {
+    await window.__vdg_wasm.governance_bootstrap_acl_folders({ root_id: wsRootId }).catch(() => {});
+  }
 
   // Ledger + user seed
   ledgerRepo.ensureSeedFiles().catch(() => {});

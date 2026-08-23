@@ -17,6 +17,7 @@ import { bindWorkspaceBootstrap } from '../../implementations/ui/core_abstractio
 import {
   bindFirstRunProvision, SecondWorkspaceForbiddenError,
 } from '../../implementations/ui/core_abstractions/ports/governance/first-run-provision.js';
+import { isServerBackend } from '../../implementations/storage/core_abstractions/backend.js';
 
 /// A reply carries its failure inside it; the ui contract is a thrown error, so this is where the
 /// two meet. Only the calls whose callers already have a catch are raised.
@@ -133,18 +134,25 @@ export function composeGovernance(wasm) {
   });
 
   bindWorkspaceBootstrap({
-    bootstrapAclTargetFolders: (_driveApi, wsRootId) =>
-      wasm.governance_bootstrap_acl_folders({ root_id: wsRootId ?? '' }),
+    bootstrapAclTargetFolders: (_driveApi, wsRootId) => {
+      if (isServerBackend()) return Promise.resolve({ succeeded: 0, failed: 0, errors: [] });
+      return wasm.governance_bootstrap_acl_folders({ root_id: wsRootId ?? '' });
+    },
   });
 
   bindFirstRunProvision({
-    isAlreadyProvisionedLocally: async () => (await wasm.governance_is_already_provisioned({})).provisioned,
+    isAlreadyProvisionedLocally: async () => {
+      if (isServerBackend()) return true;
+      return (await wasm.governance_is_already_provisioned({})).provisioned;
+    },
     ensureWorkspaceRoot: async (_driveApi, workspace) => {
+      if (isServerBackend()) return { rootId: 'root', created: false };
       const reply = await wasm.governance_ensure_workspace_root({ workspace: workspace ?? '' });
       if (reply.second_workspace_forbidden) throw new SecondWorkspaceForbiddenError(reply.evidence);
       return { rootId: raise(reply).root_id, created: reply.created };
     },
     runFirstRunProvision: async (_driveApi, workspace) => {
+      if (isServerBackend()) return { rootId: 'root' };
       const reply = await wasm.governance_first_run_provision({ workspace: workspace ?? '' });
       if (reply.second_workspace_forbidden) throw new SecondWorkspaceForbiddenError(reply.evidence);
       return { rootId: raise(reply).root_id };
