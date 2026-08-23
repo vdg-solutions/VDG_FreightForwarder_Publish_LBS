@@ -193,8 +193,8 @@ export class ServerIoPort extends SharedIoPort {
     const folderId = await this._resolveDir(dirPath);
     try {
       const res = await apiFetch('GET', `/records/${encodeURIComponent(folderId)}/${encodeURIComponent(fileName)}`);
-      const r = res?.record;
-      if (!r) return { found: false, id: null, etag: null, content: '' };
+      const r = res;
+      if (!r?.id) return { found: false, id: null, etag: null, content: '' };
       return { found: true, id: r.id, etag: r.etag ?? null, content: r.content ?? '' };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
