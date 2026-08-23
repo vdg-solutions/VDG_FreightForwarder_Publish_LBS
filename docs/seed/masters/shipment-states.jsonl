@@ -1,7 +1,0 @@
-{"code":"Created","aliases":[],"label_vi":"Đã tạo","label_en":"Created"}
-{"code":"BookingConfirmed","aliases":["Open"],"label_vi":"Đã đặt chỗ","label_en":"Booking confirmed"}
-{"code":"InTransit","aliases":[],"label_vi":"Đang vận chuyển","label_en":"In transit"}
-{"code":"Arrived","aliases":[],"label_vi":"Đã đến nơi","label_en":"Arrived"}
-{"code":"Delivered","aliases":[],"label_vi":"Đã giao hàng","label_en":"Delivered"}
-{"code":"Closed","aliases":[],"label_vi":"Đã đóng","label_en":"Closed"}
-{"code":"Cancelled","aliases":[],"label_vi":"Đã hủy","label_en":"Cancelled"}
