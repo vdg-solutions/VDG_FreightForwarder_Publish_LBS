@@ -14,7 +14,7 @@ export const RENDER_MOUNT_TIMEOUT_MS = 8000;
 
 // Hard ceiling: the genuine anti-stuck backstop (no-loading-view guarantee). Only past this does
 // a still-pending render get abandoned (superseded + dead-end fallback painted).
-export const RENDER_MOUNT_HARD_TIMEOUT_MS = 20000;
+export const RENDER_MOUNT_HARD_TIMEOUT_MS = 30000;
 
 // Non-blocking loading affordance painted at the soft ceiling — never a dead-end, no retry button.
 function paintSoftLoadingAffordance(root) {

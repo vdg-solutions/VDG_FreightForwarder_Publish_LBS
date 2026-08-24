@@ -2,7 +2,7 @@
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { navigate } from '../router.js';
-import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentSalesRepId, currentRoles } from '../../core_abstractions/ports/auth/session-roles.js';
 import { selfRepCandidate, customerRepFor } from '../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';

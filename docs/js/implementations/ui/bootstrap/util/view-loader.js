@@ -4,8 +4,8 @@
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { renderViewFallback } from './view-fallback.js';
 
-// Named constant — no magic number at call sites
-export const VIEW_LOAD_TIMEOUT_MS = 5000;
+// Named constant — no magic number at call sites. Raised to 25s for slow cold-start unbundled ESM fetches
+export const VIEW_LOAD_TIMEOUT_MS = 25000;
 
 /**
  * Load a lazy view module with a hard timeout.
