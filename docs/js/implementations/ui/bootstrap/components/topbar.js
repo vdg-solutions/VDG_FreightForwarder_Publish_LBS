@@ -52,6 +52,9 @@ class VdgTopbar extends LitElement {
     _managerMode:              { type: String, state: true },
     _authReconnect:            { type: Boolean, state: true },
     _popupBlocked:             { type: Boolean, state: true },  _authPending: { type: Boolean, state: true }, // F-49-01 ad-blocker hint + F-50-01 calm pending
+    _serverBacklog:            { type: Number,  state: true },
+    _serverOldestPendingAgeMs: { type: Number,  state: true },
+    _serverProvider:           { type: String,  state: true },
   };
 
   createRenderRoot() { return this; }
@@ -67,6 +70,7 @@ class VdgTopbar extends LitElement {
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
     this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
+    this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = 'Google Drive';
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     this._onSyncComplete  = (e) => {
@@ -81,6 +85,12 @@ class VdgTopbar extends LitElement {
       this._lastError = e.detail?.reason === 'max_retries'
         ? t('topbar.sync.tooltip.max_retries_reason')
         : (e.detail?.error ?? null);
+    };
+    this._onServerHealth  = (e) => {
+      if (e.detail?.backlog_depth !== undefined) this._serverBacklog = Number(e.detail.backlog_depth) || 0;
+      if (e.detail?.oldest_pending_age_ms !== undefined) this._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
+      if (e.detail?.provider) this._serverProvider = e.detail.provider;
+      this.requestUpdate();
     };
     this._onException     = (e) => { this._exceptionCount = e.detail.count; };
     this._onApproval      = (e) => { this._approvalCount  = e.detail?.count ?? 0; };
@@ -122,6 +132,7 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:sync-complete',       this._onSyncComplete);
     window.addEventListener('vdg:delta-synced',        this._onDeltaSynced);
     window.addEventListener('vdg:sync-error',          this._onSyncError);
+    window.addEventListener('vdg:server-health',       this._onServerHealth);
     window.addEventListener('online', this._onOnline); window.addEventListener('offline', this._onOffline);
     window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.addEventListener('vdg:auth-refresh-pending', this._onAuthPending);
     document.addEventListener('click', this._onDocClick);
@@ -145,6 +156,7 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('vdg:sync-complete',       this._onSyncComplete);
     window.removeEventListener('vdg:delta-synced',        this._onDeltaSynced);
     window.removeEventListener('vdg:sync-error',          this._onSyncError);
+    window.removeEventListener('vdg:server-health',       this._onServerHealth);
     window.removeEventListener('online', this._onOnline); window.removeEventListener('offline', this._onOffline);
     window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
     window.removeEventListener('vdg:auth-reconnected',     this._onReconnected); window.removeEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.removeEventListener('vdg:auth-refresh-pending', this._onAuthPending);
@@ -254,14 +266,18 @@ class VdgTopbar extends LitElement {
       pending: this._outboxCount, retrying: this._retrying, retryStreak: this._retryStreak,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
+      serverBacklog: this._serverBacklog,
+      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
+      serverProvider: this._serverProvider,
     });
-    const ariaLabel = buildAriaLabel(state, this._outboxCount, t);
+    const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
     // B-38-03-01: in reconnect state the label IS the affordance — "Đồng bộ" next to a red
     // triangle reads as ordinary sync noise, and the owner signed out/in by hand instead of
     // clicking. The tooltip already said it; the label has to.
     const labelText = (state === 'red' && this._authReconnect)
       ? t(isServerBackend() ? 'topbar.sync.label.signin' : 'topbar.sync.label.reconnect')
       : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
+      : (state === 'backing_up') ? t('topbar.sync.state.backing_up')
       : t('topbar.sync.label');
 
     return html`
@@ -288,6 +304,9 @@ class VdgTopbar extends LitElement {
             lastSyncMs: displayLastSyncMs(this._lastSyncMs, this._lastPullMs), now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
+            serverBacklog: this._serverBacklog,
+            serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
+            serverProvider: this._serverProvider,
             onSyncNow: () => this._onChipClick(state),
           })}
           ${hasRole(ROLE_MANAGER) && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}

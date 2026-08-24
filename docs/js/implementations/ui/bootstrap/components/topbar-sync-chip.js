@@ -9,42 +9,55 @@ export const SYNC_RETRY_PROMOTE_THRESHOLD   = 2;
 
 // Color → Tailwind class map (used by AC-01/03 introspection)
 export const DOT_CLASS = {
-  green:   'bg-emerald-500',
-  yellow:  'bg-amber-400',
-  orange:  'bg-orange-500',
-  red:     'bg-red-500',
-  pending: 'bg-slate-400', // F-50-01 — calm, distinct from red: expected structural wait, not a failure
+  green:      'bg-emerald-500',
+  yellow:     'bg-amber-400',
+  backing_up: 'bg-amber-400',
+  orange:     'bg-orange-500',
+  red:        'bg-red-500',
+  pending:    'bg-slate-400', // F-50-01 — calm, distinct from red: expected structural wait, not a failure
 };
 
 // State color → i18n semantic label key (AC-07)
 export const STATE_TO_LABEL_KEY = {
-  green:   'healthy',
-  yellow:  'flushing',
-  orange:  'retrying',
-  red:     'offline',
-  pending: 'auth_pending', // F-50-01 AC-10 — distinct key, never reuses offline/healthy
+  green:      'healthy',
+  yellow:     'flushing',
+  backing_up: 'backing_up',
+  orange:     'retrying',
+  red:        'offline',
+  pending:    'auth_pending', // F-50-01 AC-10 — distinct key, never reuses offline/healthy
 };
 
 // AC-07 — aria-label builder; pure, testable without DOM
-export function buildAriaLabel(state, outboxCount, t) {
+export function buildAriaLabel(state, outboxCount, t, serverBacklog = 0) {
   const key    = STATE_TO_LABEL_KEY[state] ?? 'healthy';
-  const suffix = outboxCount > 0
-    ? ` (${t('topbar.sync.tooltip.pending').replace('{n}', outboxCount)})`
-    : '';
+  let suffix = '';
+  if (outboxCount > 0) {
+    suffix = ` (${t('topbar.sync.tooltip.pending').replace('{n}', outboxCount)})`;
+  } else if (state === 'backing_up' && serverBacklog > 0) {
+    suffix = ` (${serverBacklog})`;
+  }
   return `${t('topbar.sync.label')} — ${t(`topbar.sync.state.${key}`)}${suffix}`;
 }
 
 // AC-03 — 4-state color machine; clock injected via `now`. F-50-01 adds a 5th, calm 'pending'
 // state (AC-06/07/08): checked after the hard-red branches (a genuine problem always outranks
 // it) and before backoff429/retrying (the auth-health signal isn't buried under sync noise).
-export function computeChipState({ pending, retrying, retryStreak, backoff429, offline, signedOut, lastSyncMs, now, authReconnect, authPending }) {
+export function computeChipState({
+  pending, retrying, retryStreak, backoff429, offline, signedOut, lastSyncMs, now, authReconnect, authPending,
+  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
+}) {
   if (authReconnect) return 'red';          // F-29-13 AC-05 — genuine reconnect need
   if (offline || signedOut) return 'red';
   if (pending > 0 && lastSyncMs > 0 && (now - lastSyncMs) > SYNC_STUCK_NOTIFY_MS) return 'red';
   if (authPending) return 'pending';        // F-50-01 AC-06 — expected structural popup-blocked wait
+  if (serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== undefined && serverOldestPendingAgeMs > 300_000) {
+    return 'orange';
+  }
   if (backoff429) return 'orange';
   if (retrying) return retryStreak >= SYNC_RETRY_PROMOTE_THRESHOLD ? 'orange' : 'yellow';
   if (pending > 0 && lastSyncMs === 0) return 'yellow'; // F-19-80 D-B — never-synced baseline with pending backlog must not be green
+  if (pending > 0) return 'yellow';
+  if (serverBacklog > 0) return 'backing_up';
   return 'green';
 }
 
@@ -79,15 +92,30 @@ export function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNoti
 
 // AC-01 — native tooltip text; pure, no DOM
 // user/online added for red-signedOut and red-offline branch (F-19-19)
-export function buildChipTitle({ state, ago, lastError, t, user, online, authReconnect, popupBlocked }) {
+export function buildChipTitle({
+  state, ago, lastError, t, user, online, authReconnect, popupBlocked,
+  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
+}) {
   if (state === 'red' && popupBlocked)    return t('auth.popup_blocked');              // F-49-01 — ad-blocker nulled window.open
   if (state === 'red' && authReconnect)   return t('topbar.sync.tooltip.reconnect');   // F-29-13 AC-05
   if (state === 'red' && !user)   return t('topbar.sync.tooltip.click_to_signin');
   if (state === 'red' && !online) return t('topbar.sync.tooltip.waiting_network');
   if (state === 'pending')        return t('topbar.sync.tooltip.auth_pending'); // F-50-01 AC-10 — calm, no "hết hạn"/expired wording
+  if (state === 'backing_up') {
+    return t('topbar.sync.tooltip.backing_up')
+      .replace('{provider}', serverProvider || 'Google Drive')
+      .replace('{n}', String(serverBacklog));
+  }
+  if (state === 'orange' && serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== undefined && serverOldestPendingAgeMs > 300_000) {
+    return t('topbar.sync.tooltip.backup_retry')
+      .replace('{provider}', serverProvider || 'Google Drive');
+  }
   const stateKey  = STATE_TO_LABEL_KEY[state] ?? 'healthy';
   const stateText = t(`topbar.sync.state.${stateKey}`);
   if (state === 'green') {
+    if (serverProvider) {
+      return t('topbar.sync.tooltip.healthy_secondary').replace('{provider}', serverProvider);
+    }
     return ago
       ? t('topbar.sync.tooltip.lastSync').replace('{ago}', ago)
       : t('topbar.sync.tooltip.lastSync.never');
@@ -104,13 +132,17 @@ export function buildChipTitle({ state, ago, lastError, t, user, online, authRec
 export function renderSyncChip({
   html, state, pending, lastSyncMs, now, online,
   ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect, popupBlocked,
+  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
 }) {
   const dotClass   = DOT_CLASS[state] ?? DOT_CLASS.green;
   const isFlushing = state === 'yellow';
   const hasPending = pending > 0;
   const pulseClass = hasPending ? 'animate-pulse' : '';
   const ago        = formatLastSyncAgo(lastSyncMs, now);
-  const titleText  = buildChipTitle({ state, ago, lastError, t, user, online, authReconnect, popupBlocked });
+  const titleText  = buildChipTitle({
+    state, ago, lastError, t, user, online, authReconnect, popupBlocked,
+    serverBacklog, serverOldestPendingAgeMs, serverProvider,
+  });
 
   return html`
     <button type="button"
@@ -146,6 +178,7 @@ export const CHIP_ACTION = { NOOP:'noop', SIGNIN:'signin', WAITING_NETWORK:'wait
 /// raises the "Google hasn't verified this app" warning on a perfectly ordinary session timeout.
 export function decideChipAction({ state, user, online, lastError, authReconnect, serverBackend = false }) {
   if (state === 'yellow')                     return CHIP_ACTION.NOOP;
+  if (state === 'backing_up')                 return CHIP_ACTION.NOOP;
   if (state === 'pending')                    return CHIP_ACTION.NOOP; // F-50-01 AC-12 — click isn't swallowed: the window-level gesture listener still fires independently
   if (state === 'red' && authReconnect)       return serverBackend ? CHIP_ACTION.SIGNIN : CHIP_ACTION.RECONNECT;
   if (state === 'red' && !user)               return CHIP_ACTION.SIGNIN;

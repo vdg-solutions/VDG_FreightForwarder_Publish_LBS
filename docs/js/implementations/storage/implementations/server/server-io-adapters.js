@@ -111,6 +111,26 @@ export class ServerIoPort extends SharedIoPort {
     return res?.next_cursor || '0';
   }
 
+  async poll_health() {
+    try {
+      const res = await apiFetch('GET', '/health');
+      if (res && typeof window !== 'undefined') {
+        const backlog_depth = res.mirror?.backlog_depth ?? res.replication_backlog ?? 0;
+        const oldest_pending_age_ms = res.mirror?.oldest_pending_age_ms ?? null;
+        window.dispatchEvent(new CustomEvent('vdg:server-health', {
+          detail: {
+            backlog_depth,
+            oldest_pending_age_ms,
+            provider: 'Google Drive',
+          },
+        }));
+      }
+      return res;
+    } catch {
+      return null;
+    }
+  }
+
   // ── where things live ─────────────────────────────────────────────────────
 
   _kindPath(kind) {
@@ -180,6 +200,7 @@ export class ServerIoPort extends SharedIoPort {
 
   async changes_feed(pageToken) {
     try {
+      this.poll_health().catch(() => {});
       const res = await this.changes(pageToken || '0');
       const changes = (res?.results ?? []).map((c) => ({
         file: {

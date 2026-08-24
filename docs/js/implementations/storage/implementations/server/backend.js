@@ -133,9 +133,25 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
     clearTimeout(timer);
   }
   if (res.status === 204) return null;
+  const backlogHeader = res.headers?.get('x-replication-backlog');
+  if (backlogHeader !== null && backlogHeader !== undefined) {
+    const backlog_depth = parseInt(backlogHeader, 10);
+    if (!Number.isNaN(backlog_depth) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vdg:server-health', {
+        detail: { backlog_depth, provider: 'Google Drive' },
+      }));
+    }
+  }
   const text = await res.text();
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch { json = null; }
+  if (path === '/health' && json && typeof window !== 'undefined') {
+    const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
+    const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
+    window.dispatchEvent(new CustomEvent('vdg:server-health', {
+      detail: { backlog_depth, oldest_pending_age_ms, provider: 'Google Drive' },
+    }));
+  }
   if (!res.ok) {
     throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`);
   }
