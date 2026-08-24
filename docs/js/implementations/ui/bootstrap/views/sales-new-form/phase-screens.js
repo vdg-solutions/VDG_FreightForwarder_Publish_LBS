@@ -164,6 +164,10 @@ export function applyScreen(root, screen) {
       screenShow(cell, screen === SCREEN_DOCS);
       continue;
     }
+    if (cell.hasAttribute('data-containers-card')) {
+      screenShow(cell, screen === SCREEN_DOCS || screen === SCREEN_BILL);
+      continue;
+    }
     const input = cell.querySelector('[name]');
     if (!input) continue;
     screenShow(cell, screensOfField(input.getAttribute('name')).includes(screen));

@@ -7,6 +7,9 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { fld, txt, num, dateInp, selFld } from './section-header.js';
+import { containersCardHtml } from './section-containers-table.js';
+
+export { containersCardHtml, wireContainersTable, collectContainers } from './section-containers-table.js';
 
 // contract values — value= stays raw, only the label translates (same rule as PRODUCT_OPTIONS)
 export const FREIGHT_TERMS_OPTIONS = ['PREPAID', 'COLLECT'];
@@ -167,6 +170,7 @@ export function docsExtHtml(d = {}) {
     ${fld(t('sales_new.field.do_released_at'),     dateInp('do_released_at', d.do_released_at))}
     ${fld(t('sales_new.field.cargo_released_at'),  dateInp('cargo_released_at', d.cargo_released_at))}
     ${fld(t('sales_new.field.billing_paid_at'),    dateInp('billing_paid_at', d.billing_paid_at))}
+    ${containersCardHtml(d.containers)}
     ${cargoItemsCardHtml(d.cargo_items)}`;
 }
 

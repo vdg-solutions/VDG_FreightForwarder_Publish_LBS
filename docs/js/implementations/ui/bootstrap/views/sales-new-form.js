@@ -13,7 +13,8 @@ import { sectionCHtml, wireCommissionSection, collectCommission }
   from './sales-new-form/section-commission.js';
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }
   from './sales-new-form/section-waterfall.js';
-import { docsExtHtml, DOCS_EXT_FIELDS, wireCargoItemsTable, collectCargoItems } from './sales-new-form/section-docs-ext.js';
+import { docsExtHtml, DOCS_EXT_FIELDS, wireCargoItemsTable, collectCargoItems,
+         wireContainersTable, collectContainers } from './sales-new-form/section-docs-ext.js';
 import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
@@ -109,6 +110,7 @@ export async function renderForm(root, opts = {}) {
 
   wireHeaderSection(root, onChanged);
   wireCargoItemsTable(root, onChanged);
+  wireContainersTable(root, onChanged);
   wireLinesSection(root, onChanged, salesRepId, fxRepo, docDate);
   // F-41-02: the job-side quote door — options, one-job-per-quote guard, auto-rating.
   wireQuoteAttach(root, { repo: typeof window !== 'undefined' ? window.__vdg_repo : null,
@@ -195,6 +197,7 @@ export function collectFormState(root) {
     commission_lines: collectCommission(root),
     sales_share_pct_override: collectWaterfallOverrides(root).sales_share_pct_override,
     cargo_items:      collectCargoItems(root),
+    containers:       collectContainers(root),
     // E-39: booking/docs ext fields — one list (section-docs-ext.js), so collector cannot drift
     ...Object.fromEntries(DOCS_EXT_FIELDS.map((n) => [n, g(n)])),
   };

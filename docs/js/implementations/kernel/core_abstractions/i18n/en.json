@@ -1979,5 +1979,15 @@
   "sales_new.cargo.col_cbm": "CBM (m³)",
   "sales_new.cargo.col_marks": "Marks & Numbers",
   "sales_new.cargo.total": "Total:",
-  "sales_new.cargo.desc_ph": "Commodity name / description"
+  "sales_new.cargo.desc_ph": "Commodity name / description",
+  "sales_new.containers.title": "Containers & Seals",
+  "sales_new.containers.add": "Add Container",
+  "sales_new.containers.col_no": "Container No",
+  "sales_new.containers.col_spec": "Type",
+  "sales_new.containers.col_seal": "Seal No",
+  "sales_new.containers.col_gw": "GW (kg)",
+  "sales_new.containers.col_cbm": "CBM (m³)",
+  "sales_new.containers.total": "Total:",
+  "sales_new.containers.ph_no": "e.g. MSKU1234567",
+  "sales_new.containers.ph_seal": "Seal number"
 }

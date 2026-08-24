@@ -141,6 +141,7 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
       : (state.pnl_lines || []).map((ln, i) => ({ line_id: ln.line_id || pnlLineId(ref, i + 1), ...ln })),
     sales_share_pct_override: state.sales_share_pct_override ?? null,
     cargo_items:              state.cargo_items || [],
+    containers:               state.containers  || [],
     // AC-08: commission rows stored in shipment payload (F-15-59)
     commission_lines: (state.commission_lines || []).map((l) => ({
       kind:          l.kind          || 'Line',

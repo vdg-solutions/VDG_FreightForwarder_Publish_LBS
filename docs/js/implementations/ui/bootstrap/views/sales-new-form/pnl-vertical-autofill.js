@@ -98,6 +98,7 @@ export function shipmentToDraft(shipment, ce) {
     commission_lines: _resolveCommissionLines(s, ce),
     sales_share_pct_override: s.sales_share_pct_override ?? null,
     cargo_items: s.cargo_items || [],
+    containers: s.containers || [],
     publish_state: s.publish_state || 'draft',
   };
 }

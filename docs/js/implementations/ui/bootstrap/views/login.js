@@ -42,7 +42,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t('login.footer')}
-          <div class="mt-1 font-mono text-slate-400">v0.4.13 (53c5717)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.13 (7f9d5ab)</div>
         </div>
       </div>
     </div>`;

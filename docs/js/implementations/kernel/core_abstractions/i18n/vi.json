@@ -1979,5 +1979,15 @@
   "sales_new.cargo.col_cbm": "CBM (m³)",
   "sales_new.cargo.col_marks": "Ký mã hiệu",
   "sales_new.cargo.total": "Tổng cộng:",
-  "sales_new.cargo.desc_ph": "Tên / mô tả mặt hàng"
+  "sales_new.cargo.desc_ph": "Tên / mô tả mặt hàng",
+  "sales_new.containers.title": "Danh sách Container & Chì (Containers & Seals)",
+  "sales_new.containers.add": "Thêm container",
+  "sales_new.containers.col_no": "Số Container",
+  "sales_new.containers.col_spec": "Loại Cont",
+  "sales_new.containers.col_seal": "Số Chì (Seal No)",
+  "sales_new.containers.col_gw": "GW (kg)",
+  "sales_new.containers.col_cbm": "CBM (m³)",
+  "sales_new.containers.total": "Tổng cộng:",
+  "sales_new.containers.ph_no": "VD: MSKU1234567",
+  "sales_new.containers.ph_seal": "Số niêm chì"
 }
