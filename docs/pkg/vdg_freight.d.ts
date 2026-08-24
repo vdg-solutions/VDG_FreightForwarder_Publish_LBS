@@ -969,9 +969,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15541: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15554: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12704: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15542: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15555: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12705: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
