@@ -146,7 +146,6 @@ export function docsExtHtml(d = {}) {
   return `
     ${fld(t('sales_new.field.booking_no'),        txt('booking_no', d.booking_no))}
     ${fld(t('sales_new.field.commodity'),         txt(NAME_COMMODITY, d.commodity))}
-    ${fld(t('sales_new.field.container_qty'),     num('container_qty', d.container_qty))}
     ${fld(t('sales_new.field.reefer_temp'),       txt('reefer_temp', d.reefer_temp))}
     ${fld(t('sales_new.field.reefer_vent'),       txt('reefer_vent', d.reefer_vent))}
     ${fld(t('sales_new.field.closing_si'),        dtInp('closing_si', d.closing_si))}
