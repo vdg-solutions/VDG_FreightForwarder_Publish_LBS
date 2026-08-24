@@ -132,13 +132,13 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 204) return null;
   const backlogHeader = res.headers?.get('x-replication-backlog');
+  const providerHeader = res.headers?.get('x-secondary-provider') || res.headers?.get('x-replication-provider');
   if (backlogHeader !== null && backlogHeader !== undefined) {
     const backlog_depth = parseInt(backlogHeader, 10);
     if (!Number.isNaN(backlog_depth) && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('vdg:server-health', {
-        detail: { backlog_depth, provider: 'Google Drive' },
+        detail: { backlog_depth, provider: providerHeader || undefined },
       }));
     }
   }
@@ -148,8 +148,9 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   if (path === '/health' && json && typeof window !== 'undefined') {
     const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
     const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
+    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? 'Google Drive';
     window.dispatchEvent(new CustomEvent('vdg:server-health', {
-      detail: { backlog_depth, oldest_pending_age_ms, provider: 'Google Drive' },
+      detail: { backlog_depth, oldest_pending_age_ms, provider },
     }));
   }
   if (!res.ok) {

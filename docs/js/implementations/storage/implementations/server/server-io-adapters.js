@@ -117,11 +117,12 @@ export class ServerIoPort extends SharedIoPort {
       if (res && typeof window !== 'undefined') {
         const backlog_depth = res.mirror?.backlog_depth ?? res.replication_backlog ?? 0;
         const oldest_pending_age_ms = res.mirror?.oldest_pending_age_ms ?? null;
+        const provider = res.mirror?.provider ?? res.secondary_provider ?? 'Google Drive';
         window.dispatchEvent(new CustomEvent('vdg:server-health', {
           detail: {
             backlog_depth,
             oldest_pending_age_ms,
-            provider: 'Google Drive',
+            provider,
           },
         }));
       }
