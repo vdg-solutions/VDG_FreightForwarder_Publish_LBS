@@ -50,16 +50,9 @@ function mountPhaseTimeline(root, record) {
   const timeline = loadTimeline(record);
   if (!timeline) return;
 
-  const host = document.createElement('div');
-  host.id = TIMELINE_MOUNT_ID;
-  host.className = 'mx-6 mt-4';
+  const host = root.querySelector('#phase-timeline');
+  if (!host) return;
 
-  const formMount = root.querySelector('#form-mount');
-  if (formMount) root.insertBefore(host, formMount);
-  else root.prepend(host);
-
-  // Re-render replaces the buttons, so the handler has to re-bind itself — otherwise the second
-  // click on a phase does nothing and reads as a dead control.
   const paint = (focus) => {
     host.innerHTML = renderTimeline(timeline, { focus });
     bindTimeline(host, paint);
@@ -224,15 +217,6 @@ export async function render(root, opts = {}) {
     }
   }
 
-  // F-37-04: the phases, above the form. In edit mode it reads the shipment; on a new job there is
-  // nothing stored yet, so it reads the draft at Created — which is the point: it tells whoever
-  // opened the job what the FIRST phase needs before they have typed anything.
-  mountPhaseTimeline(root, {
-    ...(draft || {}),
-    shipment_ref: editRef || draft?.shipment_ref || DRAFT_TIMELINE_REF,
-    state: draft?.state || 'Created',
-  });
-
   // F-41-01: a prefilled customer (quote convert, restored draft) brings its master-assigned rep
   // along when nothing picked one yet — the same chain the select's autofill walks.
   // F-47-05: and only a rep the list actually offers, which is the check the two sibling autofills
@@ -249,6 +233,15 @@ export async function render(root, opts = {}) {
   const fxRepo    = await _fxRepo();
   await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
                                 defaultCurrency, revenueVisible, reps, editRef });
+
+  // F-37-04: the phases, inside the form card. In edit mode it reads the shipment; on a new job there is
+  // nothing stored yet, so it reads the draft at Created — which is the point: it tells whoever
+  // opened the job what the FIRST phase needs before they have typed anything.
+  mountPhaseTimeline(formMount, {
+    ...(draft || {}),
+    shipment_ref: editRef || draft?.shipment_ref || DRAFT_TIMELINE_REF,
+    state: draft?.state || 'Created',
+  });
 
   // F-41-01: the Job No preview follows the CHOSEN rep — a CS session has no namespace of its
   // own to preview from, so the number appears when the rep does. Preview only: submit resolves

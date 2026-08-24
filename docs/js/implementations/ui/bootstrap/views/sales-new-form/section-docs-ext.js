@@ -34,7 +34,111 @@ const NAME_COMMODITY = 'commodity';
 const NAME_ATD       = 'atd';
 const NAME_ATA       = 'ata';
 
-/** The extra grid cells, in DOM order: booking extras first, then bill/docs, then ATD. */
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const PKG_TYPES = ['CTNS', 'PLTS', 'BAGS', 'BOXES', 'CRATES', 'PKGS', 'DRUMS', 'ROLLS', 'SETS', 'UNITS'];
+
+export function cargoItemRowHtml(idx, item = {}) {
+  const pkgOpts = PKG_TYPES.map((p) =>
+    `<option value="${p}"${(item.package_type || 'CTNS') === p ? ' selected' : ''}>${p}</option>`
+  ).join('');
+  return `
+    <tr data-cargo-row="${idx}" class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+      <td class="py-1 px-1.5 text-center text-slate-400 font-mono text-[10px]">${idx + 1}</td>
+      <td class="py-1 px-1.5">
+        <input type="text" name="cargo_desc_${idx}" data-cargo-field="description" value="${escHtml(item.description || '')}"
+          placeholder="${t('sales_new.cargo.desc_ph') || 'Tên / mô tả mặt hàng'}"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5">
+        <input type="text" name="cargo_hs_${idx}" data-cargo-field="hs_code" value="${escHtml(item.hs_code || '')}" placeholder="HS Code"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs font-mono focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5">
+        <input type="number" name="cargo_qty_${idx}" data-cargo-field="package_qty" value="${item.package_qty ?? ''}" min="0" step="1" placeholder="0"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs font-mono text-right focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5">
+        <select name="cargo_pkg_${idx}" data-cargo-field="package_type" class="w-full border border-slate-200 rounded px-1 py-0.5 text-xs bg-white">
+          ${pkgOpts}
+        </select>
+      </td>
+      <td class="py-1 px-1.5">
+        <input type="number" name="cargo_gw_${idx}" data-cargo-field="gross_weight_kg" value="${item.gross_weight_kg ?? ''}" min="0" step="any" placeholder="0.00"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs font-mono text-right focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5">
+        <input type="number" name="cargo_nw_${idx}" data-cargo-field="net_weight_kg" value="${item.net_weight_kg ?? ''}" min="0" step="any" placeholder="0.00"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs font-mono text-right focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5">
+        <input type="number" name="cargo_cbm_${idx}" data-cargo-field="volume_cbm" value="${item.volume_cbm ?? ''}" min="0" step="any" placeholder="0.00"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs font-mono text-right focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5">
+        <input type="text" name="cargo_marks_${idx}" data-cargo-field="marks_and_numbers" value="${escHtml(item.marks_and_numbers || '')}" placeholder="N/M"
+          class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-blue-400 outline-none" />
+      </td>
+      <td class="py-1 px-1.5 text-center">
+        <button type="button" data-rm-cargo="${idx}" class="text-slate-400 hover:text-rose-600 text-xs font-bold transition px-1">✕</button>
+      </td>
+    </tr>`;
+}
+
+export function cargoItemsCardHtml(cargoItems = []) {
+  const items = Array.isArray(cargoItems) && cargoItems.length > 0 ? cargoItems : [{}];
+  const trs = items.map((item, i) => cargoItemRowHtml(i, item)).join('');
+  return `
+    <div class="col-span-3 mt-3 border border-slate-200 rounded-lg p-3 bg-slate-50/50" data-cargo-items-card>
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+          <span class="text-blue-600">📦</span>
+          <span>${t('sales_new.cargo.title') || 'Danh mục Hàng hóa (Cargo Items)'}</span>
+        </div>
+        <button type="button" id="btn-add-cargo-item"
+          class="px-2.5 py-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium rounded border border-blue-200 transition flex items-center gap-1">
+          <span>+</span>
+          <span>${t('sales_new.cargo.add_item') || 'Thêm hàng hóa'}</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto rounded border border-slate-200 bg-white">
+        <table class="w-full text-left text-xs border-collapse" id="cargo-items-table">
+          <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider">
+            <tr class="border-b border-slate-200">
+              <th class="py-1.5 px-1.5 w-8 text-center">#</th>
+              <th class="py-1.5 px-1.5 min-w-[140px]">${t('sales_new.cargo.col_desc') || 'Mô tả hàng hóa'}</th>
+              <th class="py-1.5 px-1.5 w-24">${t('sales_new.cargo.col_hscode') || 'HS Code'}</th>
+              <th class="py-1.5 px-1.5 w-20 text-right">${t('sales_new.cargo.col_qty') || 'Số kiện'}</th>
+              <th class="py-1.5 px-1.5 w-24">${t('sales_new.cargo.col_pkg_type') || 'Loại kiện'}</th>
+              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_gw') || 'GW (kg)'}</th>
+              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_nw') || 'NW (kg)'}</th>
+              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_cbm') || 'CBM (m³)'}</th>
+              <th class="py-1.5 px-1.5 min-w-[100px]">${t('sales_new.cargo.col_marks') || 'Ký mã hiệu'}</th>
+              <th class="py-1.5 px-1.5 w-8"></th>
+            </tr>
+          </thead>
+          <tbody id="cargo-items-tbody">
+            ${trs}
+          </tbody>
+          <tfoot class="bg-slate-50 font-semibold text-slate-700 border-t border-slate-200">
+            <tr>
+              <td colspan="3" class="py-1.5 px-2 text-right text-[11px]">${t('sales_new.cargo.total') || 'Tổng cộng:'}</td>
+              <td class="py-1.5 px-1.5 font-mono text-right" id="cargo-sum-qty">0</td>
+              <td class="py-1.5 px-1.5"></td>
+              <td class="py-1.5 px-1.5 font-mono text-right" id="cargo-sum-gw">0</td>
+              <td class="py-1.5 px-1.5 font-mono text-right" id="cargo-sum-nw">0</td>
+              <td class="py-1.5 px-1.5 font-mono text-right" id="cargo-sum-cbm">0</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>`;
+}
+
+/** The extra grid cells, in DOM order: booking extras first, then bill/docs, then ATD, then cargo items card. */
 export function docsExtHtml(d = {}) {
   return `
     ${fld(t('sales_new.field.booking_no'),        txt('booking_no', d.booking_no))}
@@ -62,7 +166,125 @@ export function docsExtHtml(d = {}) {
     ${fld(t('sales_new.field.haulage_signed_at'),  dateInp('haulage_signed_at', d.haulage_signed_at))}
     ${fld(t('sales_new.field.do_released_at'),     dateInp('do_released_at', d.do_released_at))}
     ${fld(t('sales_new.field.cargo_released_at'),  dateInp('cargo_released_at', d.cargo_released_at))}
-    ${fld(t('sales_new.field.billing_paid_at'),    dateInp('billing_paid_at', d.billing_paid_at))}`;
+    ${fld(t('sales_new.field.billing_paid_at'),    dateInp('billing_paid_at', d.billing_paid_at))}
+    ${cargoItemsCardHtml(d.cargo_items)}`;
+}
+
+/** Recalculates sums across all cargo rows and auto-fills aggregate fields in the header. */
+export function syncCargoRollup(root) {
+  const tbody = root.querySelector('#cargo-items-tbody');
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr[data-cargo-row]'));
+
+  let totalQty = 0;
+  let totalGw  = 0;
+  let totalNw  = 0;
+  let totalCbm = 0;
+  const descriptions = [];
+
+  for (const r of rows) {
+    const qty = Number(r.querySelector('[data-cargo-field="package_qty"]')?.value) || 0;
+    const gw  = Number(r.querySelector('[data-cargo-field="gross_weight_kg"]')?.value) || 0;
+    const nw  = Number(r.querySelector('[data-cargo-field="net_weight_kg"]')?.value) || 0;
+    const cbm = Number(r.querySelector('[data-cargo-field="volume_cbm"]')?.value) || 0;
+    const desc = r.querySelector('[data-cargo-field="description"]')?.value?.trim() || '';
+
+    totalQty += qty;
+    totalGw  += gw;
+    totalNw  += nw;
+    totalCbm += cbm;
+    if (desc) descriptions.push(desc);
+  }
+
+  const elQty = root.querySelector('#cargo-sum-qty');
+  const elGw  = root.querySelector('#cargo-sum-gw');
+  const elNw  = root.querySelector('#cargo-sum-nw');
+  const elCbm = root.querySelector('#cargo-sum-cbm');
+
+  if (elQty) elQty.textContent = totalQty.toLocaleString('vi-VN');
+  if (elGw)  elGw.textContent  = totalGw.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  if (elNw)  elNw.textContent  = totalNw.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  if (elCbm) elCbm.textContent = totalCbm.toLocaleString('vi-VN', { maximumFractionDigits: 3 });
+
+  // Auto-roll up to scalar fields if user populated cargo items
+  if (rows.length > 0 && (totalQty > 0 || totalGw > 0 || totalCbm > 0 || descriptions.length > 0)) {
+    const inpPieces = root.querySelector('input[name=pieces]');
+    const inpGw     = root.querySelector('input[name=weight_actual_kg]');
+    const inpCbm    = root.querySelector('input[name=volume_cbm]');
+    const inpComm   = root.querySelector('input[name=commodity]');
+
+    if (inpPieces && totalQty > 0) inpPieces.value = totalQty;
+    if (inpGw && totalGw > 0)      inpGw.value     = totalGw;
+    if (inpCbm && totalCbm > 0)    inpCbm.value    = totalCbm;
+    if (inpComm && descriptions.length > 0) inpComm.value = descriptions.join('; ');
+  }
+}
+
+export function collectCargoItems(root) {
+  const rows = Array.from(root.querySelectorAll('#cargo-items-tbody tr[data-cargo-row]'));
+  return rows.map((r, i) => {
+    const val = (f) => r.querySelector(`[data-cargo-field="${f}"]`)?.value?.trim() || '';
+    const num = (f) => {
+      const v = Number(val(f));
+      return Number.isFinite(v) && v > 0 ? v : null;
+    };
+    return {
+      item_id: `itm-${i + 1}`,
+      description: val('description') || null,
+      hs_code: val('hs_code') || null,
+      package_qty: num('package_qty'),
+      package_type: val('package_type') || 'CTNS',
+      gross_weight_kg: num('gross_weight_kg'),
+      net_weight_kg: num('net_weight_kg'),
+      volume_cbm: num('volume_cbm'),
+      marks_and_numbers: val('marks_and_numbers') || null,
+    };
+  }).filter((item) => item.description || item.package_qty || item.gross_weight_kg || item.volume_cbm);
+}
+
+export function wireCargoItemsTable(root, onChanged = null) {
+  const table = root.querySelector('#cargo-items-table');
+  const tbody = root.querySelector('#cargo-items-tbody');
+  const addBtn = root.querySelector('#btn-add-cargo-item');
+  if (!table || !tbody) return;
+
+  syncCargoRollup(root);
+
+  tbody.addEventListener('input', () => {
+    syncCargoRollup(root);
+    onChanged?.();
+  });
+
+  addBtn?.addEventListener('click', () => {
+    const nextIdx = tbody.querySelectorAll('tr[data-cargo-row]').length;
+    const tr = document.createElement('tbody');
+    tr.innerHTML = cargoItemRowHtml(nextIdx, {});
+    tbody.appendChild(tr.firstElementChild);
+    syncCargoRollup(root);
+    onChanged?.();
+  });
+
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-rm-cargo]');
+    if (!btn) return;
+    const row = btn.closest('tr[data-cargo-row]');
+    if (row) {
+      if (tbody.querySelectorAll('tr[data-cargo-row]').length <= 1) {
+        // Clear instead of removing last row
+        row.querySelectorAll('input').forEach((inp) => { inp.value = ''; });
+      } else {
+        row.remove();
+        // renumber
+        tbody.querySelectorAll('tr[data-cargo-row]').forEach((r, i) => {
+          r.dataset.cargoRow = i;
+          const numCell = r.querySelector('td:first-child');
+          if (numCell) numCell.textContent = i + 1;
+        });
+      }
+      syncCargoRollup(root);
+      onChanged?.();
+    }
+  });
 }
 
 /** collectFormState delta for the ext fields — one list, so the collector cannot drift. */
@@ -75,3 +297,4 @@ export const DOCS_EXT_FIELDS = [
   'ata', 'customs_cleared_at', 'haulage_signed_at', 'do_released_at',
   'cargo_released_at', 'billing_paid_at',
 ];
+

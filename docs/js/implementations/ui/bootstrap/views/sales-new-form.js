@@ -13,7 +13,7 @@ import { sectionCHtml, wireCommissionSection, collectCommission }
   from './sales-new-form/section-commission.js';
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }
   from './sales-new-form/section-waterfall.js';
-import { docsExtHtml, DOCS_EXT_FIELDS } from './sales-new-form/section-docs-ext.js';
+import { docsExtHtml, DOCS_EXT_FIELDS, wireCargoItemsTable, collectCargoItems } from './sales-new-form/section-docs-ext.js';
 import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
@@ -86,6 +86,7 @@ export async function renderForm(root, opts = {}) {
           <div class="text-xs text-slate-500 mt-0.5">${formSubtitle}</div>
         </div>
       </div>
+      <div id="phase-timeline"></div>
       <form id="shipment-form" class="space-y-4">
         ${sectionAHtml(d, customers, reps)}
         ${sectionBHtml(d)}
@@ -107,6 +108,7 @@ export async function renderForm(root, opts = {}) {
   const onChanged = () => _recomputeWaterfall(root, userConfig);
 
   wireHeaderSection(root, onChanged);
+  wireCargoItemsTable(root, onChanged);
   wireLinesSection(root, onChanged, salesRepId, fxRepo, docDate);
   // F-41-02: the job-side quote door — options, one-job-per-quote guard, auto-rating.
   wireQuoteAttach(root, { repo: typeof window !== 'undefined' ? window.__vdg_repo : null,
@@ -192,6 +194,7 @@ export function collectFormState(root) {
     lines:            collectLines(root),
     commission_lines: collectCommission(root),
     sales_share_pct_override: collectWaterfallOverrides(root).sales_share_pct_override,
+    cargo_items:      collectCargoItems(root),
     // E-39: booking/docs ext fields — one list (section-docs-ext.js), so collector cannot drift
     ...Object.fromEntries(DOCS_EXT_FIELDS.map((n) => [n, g(n)])),
   };

@@ -1958,7 +1958,18 @@
   "master_merge.cancel": "Cancel",
   "master_merge.must_differ": "Target and source must differ.",
   "master_merge.no_diff": "No field differences.",
-  "master_merge.diff_header": "Field differences (target wins):",
   "shipment.revenue.rep_not_account_error": "Shipment {shipment} names “{rep}” as its sales rep, which is a name and not an account, so the revenue cannot be saved. Pick the rep from the list again and save.",
-  "shipment.revenue.foreign_rep_error": "Revenue for {shipment} belongs to {rep} — this build cannot save another rep's revenue yet. Nothing was lost; {rep} needs to enter it."
+  "shipment.revenue.foreign_rep_error": "Revenue for {shipment} belongs to {rep} — this build cannot save another rep's revenue yet. Nothing was lost; {rep} needs to enter it.",
+  "sales_new.cargo.title": "Cargo Items",
+  "sales_new.cargo.add_item": "Add Item",
+  "sales_new.cargo.col_desc": "Commodity Description",
+  "sales_new.cargo.col_hscode": "HS Code",
+  "sales_new.cargo.col_qty": "Packages",
+  "sales_new.cargo.col_pkg_type": "Package Type",
+  "sales_new.cargo.col_gw": "GW (kg)",
+  "sales_new.cargo.col_nw": "NW (kg)",
+  "sales_new.cargo.col_cbm": "CBM (m³)",
+  "sales_new.cargo.col_marks": "Marks & Numbers",
+  "sales_new.cargo.total": "Total:",
+  "sales_new.cargo.desc_ph": "Commodity name / description"
 }

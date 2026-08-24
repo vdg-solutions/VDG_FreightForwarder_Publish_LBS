@@ -97,6 +97,7 @@ export function shipmentToDraft(shipment, ce) {
     // AC-09: back-compat shim — new commission_lines > old CR1 entry > empty
     commission_lines: _resolveCommissionLines(s, ce),
     sales_share_pct_override: s.sales_share_pct_override ?? null,
+    cargo_items: s.cargo_items || [],
     publish_state: s.publish_state || 'draft',
   };
 }

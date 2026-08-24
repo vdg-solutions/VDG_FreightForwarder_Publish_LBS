@@ -48,30 +48,73 @@ export const SCREEN_OF_STATE = {
 // A name not listed here defaults to the booking screen — a field someone forgets to place shows
 // up on screen 1 where it is seen, instead of vanishing.
 const FIELD_SCREEN = {
-  // header/routing — booking, and again on the bill (B/L carries all of them)
-  job_no: [SCREEN_BOOKING, SCREEN_BILL], customer: [SCREEN_BOOKING, SCREEN_BILL],
-  vessel: [SCREEN_BOOKING, SCREEN_BILL], booking_no: [SCREEN_BOOKING, SCREEN_BILL],
-  commodity: [SCREEN_BOOKING, SCREEN_BILL],
-  pol: [SCREEN_BOOKING, SCREEN_BILL], pod: [SCREEN_BOOKING, SCREEN_BILL],
-  etd: [SCREEN_BOOKING, SCREEN_BILL], eta: [SCREEN_BOOKING, SCREEN_BILL],
-  place_of_receipt: [SCREEN_BOOKING, SCREEN_BILL], place_of_delivery: [SCREEN_BOOKING, SCREEN_BILL],
-  // documentation — draft-bill entry, editable again on the final bill
-  mbl: [SCREEN_DOCS, SCREEN_BILL], shipper: [SCREEN_DOCS, SCREEN_BILL],
-  consignee: [SCREEN_DOCS, SCREEN_BILL], notify_party: [SCREEN_DOCS, SCREEN_BILL],
-  for_delivery: [SCREEN_DOCS, SCREEN_BILL], seal_no: [SCREEN_DOCS, SCREEN_BILL],
-  freight_terms: [SCREEN_DOCS, SCREEN_BILL], doc_type: [SCREEN_DOCS, SCREEN_BILL],
-  // cargo figures — docs screen only
-  pieces: [SCREEN_DOCS], weight_actual_kg: [SCREEN_DOCS], volume_cbm: [SCREEN_DOCS],
-  dim_l_cm: [SCREEN_DOCS], dim_w_cm: [SCREEN_DOCS], dim_h_cm: [SCREEN_DOCS],
-  uld_type: [SCREEN_DOCS], chargeable_kg: [SCREEN_DOCS],
-  atd: [SCREEN_BILL],
-  // F-41-03: phase evidence — arrival + delivery proof typed on the bill screen, payment on PNL
-  ata: [SCREEN_BILL], customs_cleared_at: [SCREEN_BILL], haulage_signed_at: [SCREEN_BILL],
-  do_released_at: [SCREEN_BILL], cargo_released_at: [SCREEN_BILL],
-  billing_paid_at: [SCREEN_PNL],
-  roe_buying: [SCREEN_PNL], roe_selling: [SCREEN_PNL], currency: [SCREEN_PNL],
-  // F-41-02: the quote door — CS sees it at booking, Sales at PNL where the price lands
+  // Routing & Booking (Tab 1, Tab 2, Tab 3)
+  mode: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  product: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  direction: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  direction_display: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  job_no: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  customer: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  sales_rep: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
   quote_pick: [SCREEN_BOOKING, SCREEN_PNL],
+  carrier: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  booking_no: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  vessel: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  flight_no: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  pol: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  pod: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  origin_iata: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  dest_iata: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  place_of_receipt: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  place_of_delivery: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  etd: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  eta: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  closing_si: [SCREEN_BOOKING],
+  closing_cy: [SCREEN_BOOKING],
+  empty_pickup_depot: [SCREEN_BOOKING],
+  full_return_depot: [SCREEN_BOOKING],
+  volume: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  container_qty: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  reefer_temp: [SCREEN_BOOKING, SCREEN_DOCS],
+  reefer_vent: [SCREEN_BOOKING, SCREEN_DOCS],
+  has_hbl: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  hbl_do_display: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+
+  // Documentation (Tab 2, Tab 3)
+  shipper: [SCREEN_DOCS, SCREEN_BILL],
+  consignee: [SCREEN_DOCS, SCREEN_BILL],
+  notify_party: [SCREEN_DOCS, SCREEN_BILL],
+  for_delivery: [SCREEN_DOCS, SCREEN_BILL],
+  contact_person: [SCREEN_BOOKING, SCREEN_DOCS],
+  mbl: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
+  seal_no: [SCREEN_DOCS, SCREEN_BILL],
+  freight_terms: [SCREEN_DOCS, SCREEN_BILL],
+  doc_type: [SCREEN_DOCS, SCREEN_BILL],
+
+  // Cargo & Commodity (Tab 2, Tab 3)
+  commodity: [SCREEN_DOCS, SCREEN_BILL],
+  pieces: [SCREEN_DOCS, SCREEN_BILL],
+  weight_actual_kg: [SCREEN_DOCS, SCREEN_BILL],
+  volume_cbm: [SCREEN_DOCS, SCREEN_BILL],
+  dim_l_cm: [SCREEN_DOCS],
+  dim_w_cm: [SCREEN_DOCS],
+  dim_h_cm: [SCREEN_DOCS],
+  uld_type: [SCREEN_DOCS],
+  chargeable_kg: [SCREEN_DOCS, SCREEN_BILL],
+
+  // Milestones & Evidence (Tab 3)
+  atd: [SCREEN_BILL],
+  ata: [SCREEN_BILL],
+  customs_cleared_at: [SCREEN_BILL],
+  haulage_signed_at: [SCREEN_BILL],
+  do_released_at: [SCREEN_BILL],
+  cargo_released_at: [SCREEN_BILL],
+
+  // Financial & PNL (Tab 4)
+  billing_paid_at: [SCREEN_PNL],
+  roe_buying: [SCREEN_PNL],
+  roe_selling: [SCREEN_PNL],
+  currency: [SCREEN_PNL],
 };
 const DEFAULT_SCREENS = [SCREEN_BOOKING];
 
@@ -117,6 +160,10 @@ export function applyScreen(root, screen) {
   const grid = root.querySelector('#sec-a-body .grid');
   if (!grid) return;
   for (const cell of grid.children) {
+    if (cell.hasAttribute('data-cargo-items-card')) {
+      screenShow(cell, screen === SCREEN_DOCS);
+      continue;
+    }
     const input = cell.querySelector('[name]');
     if (!input) continue;
     screenShow(cell, screensOfField(input.getAttribute('name')).includes(screen));

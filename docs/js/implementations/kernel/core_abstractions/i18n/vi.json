@@ -1958,7 +1958,18 @@
   "master_merge.cancel": "Huỷ",
   "master_merge.must_differ": "Bản giữ lại và bản bị xoá phải khác nhau.",
   "master_merge.no_diff": "Không có trường nào khác nhau.",
-  "master_merge.diff_header": "Các trường khác nhau (lấy theo bản giữ lại):",
   "shipment.revenue.rep_not_account_error": "Lô {shipment} đang ghi nhân viên sales là “{rep}” — đây là tên chứ không phải tài khoản, nên chưa lưu được doanh thu. Chọn lại nhân viên từ danh sách rồi lưu lại.",
-  "shipment.revenue.foreign_rep_error": "Doanh thu của lô {shipment} thuộc về sales phụ trách {rep} — bản hiện tại chưa lưu được doanh thu hộ nhân viên khác. Dữ liệu chưa mất, {rep} cần tự nhập doanh thu này."
+  "shipment.revenue.foreign_rep_error": "Doanh thu của lô {shipment} thuộc về sales phụ trách {rep} — bản hiện tại chưa lưu được doanh thu hộ nhân viên khác. Dữ liệu chưa mất, {rep} cần tự nhập doanh thu này.",
+  "sales_new.cargo.title": "Danh mục Hàng hóa (Cargo Items)",
+  "sales_new.cargo.add_item": "Thêm hàng hóa",
+  "sales_new.cargo.col_desc": "Mô tả hàng hóa",
+  "sales_new.cargo.col_hscode": "HS Code",
+  "sales_new.cargo.col_qty": "Số kiện",
+  "sales_new.cargo.col_pkg_type": "Loại kiện",
+  "sales_new.cargo.col_gw": "GW (kg)",
+  "sales_new.cargo.col_nw": "NW (kg)",
+  "sales_new.cargo.col_cbm": "CBM (m³)",
+  "sales_new.cargo.col_marks": "Ký mã hiệu",
+  "sales_new.cargo.total": "Tổng cộng:",
+  "sales_new.cargo.desc_ph": "Tên / mô tả mặt hàng"
 }

@@ -18,11 +18,13 @@ const SELL_QTY_DEFAULT = 1; // a quote line prices the shipment once — qty is 
 /// Quotes this job may attach: Accepted, for this customer (case-insensitive, matching
 /// lastAcceptedAmount's comparison), still valid. Pure — the picker and the tests share it.
 export function eligibleQuotes(quotes, customerName, now = Date.now()) {
-  const needle = (customerName || '').toLowerCase();
-  return (quotes || []).filter((q) =>
-    q.state === 'Accepted'
-    && (!needle || (q.customer || '').toLowerCase() === needle)
-    && (!q.valid_until_ms || q.valid_until_ms >= now));
+  const needle = (customerName || '').toLowerCase().trim();
+  return (quotes || []).filter((q) => {
+    if (q.state === 'Cancelled' || q.state === 'Expired' || q.state === 'Rejected') return false;
+    if (needle && (q.customer || '').toLowerCase().trim() !== needle) return false;
+    if (q.valid_until_ms && q.valid_until_ms < now) return false;
+    return true;
+  });
 }
 
 /// Auto-rating: quote lines → SELL rows. Blank placeholder rows are filled first, more are
@@ -68,7 +70,7 @@ function _toast(message, type) {
 }
 
 async function _attach(root, quote, opts) {
-  const { repo, ownRef } = opts;
+  const { repo, ownRef, onChanged } = opts;
   // One quote, one job — the same guard the convert button runs, minus this job itself.
   const existing = await checkAlreadyConverted(repo, quote.id).catch(() => null);
   if (existing && existing.shipment_ref !== ownRef) {
@@ -77,6 +79,31 @@ async function _attach(root, quote, opts) {
   }
   const hidden = root.querySelector('[name=quote_id]');
   if (hidden) hidden.value = quote.id;
+
+  // Auto-fill header fields from the quote
+  if (quote.customer) {
+    const custInput = root.querySelector('#customer-search-input');
+    const custHidden = root.querySelector('input[name=customer]');
+    if (custInput) custInput.value = quote.customer;
+    if (custHidden) custHidden.value = quote.customer;
+  }
+  if (quote.pol) {
+    const pol = root.querySelector('[name=pol]');
+    if (pol && !pol.value) pol.value = quote.pol;
+  }
+  if (quote.pod) {
+    const pod = root.querySelector('[name=pod]');
+    if (pod && !pod.value) pod.value = quote.pod;
+  }
+  if (quote.carrier) {
+    const carrier = root.querySelector('[name=carrier]');
+    if (carrier && !carrier.value) carrier.value = quote.carrier;
+  }
+  if (quote.container_type) {
+    const vol = root.querySelector('[name=volume]');
+    if (vol && !vol.value) vol.value = quote.container_type;
+  }
+
   applyQuoteSellRows(root, quote.lines, opts);
   // The quote's creator IS the rep — fill the select when nothing picked one yet.
   const repSel = root.querySelector('select[name=sales_rep]');
@@ -86,14 +113,13 @@ async function _attach(root, quote, opts) {
     repSel.dispatchEvent(new Event('change', { bubbles: true }));
   }
   _toast(t('sales_new.quote_attached').replace('{id}', quote.id), 'success');
+  onChanged?.();
   return true;
 }
 
 /**
- * Wires the picker: options re-filter by the current customer each time it opens, a pick runs
- * the one-job-per-quote guard then attaches. On mount, a prefilled quote_id whose form still has
- * no lines (the convert door) auto-rates — the convert button used to carry only header fields,
- * so the price the customer accepted was retyped by hand.
+ * Wires the picker: options pre-load and re-filter by the current customer, a pick runs
+ * the one-job-per-quote guard then attaches and auto-fills routing and sell lines.
  */
 export function wireQuoteAttach(root, { repo, fxRepo = null, docDate = '', ownRef = null, onChanged = null } = {}) {
   const picker = root.querySelector('select[name=quote_pick]');
@@ -107,11 +133,16 @@ export function wireQuoteAttach(root, { repo, fxRepo = null, docDate = '', ownRe
     const current  = picker.value;
     const rows = eligibleQuotes(quotes, customer);
     picker.innerHTML = `<option value="">${t('sales_new.quote_pick_placeholder')}</option>`
-      + rows.map((q) => `<option value="${quoteId(q)}"${q.id === current ? ' selected' : ''}>${quoteId(q)}</option>`).join('');
+      + rows.map((q) => {
+        const label = q.customer ? `${quoteId(q)} — ${q.customer} (${q.pol || 'POL'} → ${q.pod || 'POD'})` : quoteId(q);
+        return `<option value="${quoteId(q)}"${q.id === current ? ' selected' : ''}>${label}</option>`;
+      }).join('');
   };
 
+  refill().catch(() => {});
   picker.addEventListener('mousedown', refill);
   picker.addEventListener('focus', refill);
+  root.querySelector('#customer-search-input')?.addEventListener('change', refill);
   picker.addEventListener('change', async () => {
     const quote = quotes.find((q) => q.id === picker.value);
     if (!quote) return;
