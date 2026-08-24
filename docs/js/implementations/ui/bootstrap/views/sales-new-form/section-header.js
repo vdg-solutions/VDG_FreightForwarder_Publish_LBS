@@ -144,7 +144,60 @@ function quotePickSel(quoteId) {
   </select>`;
 }
 
-export function sectionAHtml(draft = {}, customers = [], reps = []) {
+export const CONTAINER_TYPES = ['20DC', '40DC', '40HC', '45HC', '20RF', '40RF', '20OT', '40OT', '20FR', '40FR', '20TK'];
+
+export function txtWithList(name, val, ph, listId) {
+  const phAttr = ph ? ` placeholder="${ph}"` : '';
+  const listAttr = listId ? ` list="${listId}"` : '';
+  return `<input type="text" name="${name}" value="${val || ''}"${phAttr}${listAttr}
+    class="w-full border border-slate-200 rounded px-2 py-1 text-xs" />`;
+}
+
+export function renderHistoryDatalists(carriers = [], shipments = []) {
+  const carrierSet = new Set();
+  (carriers || []).forEach((c) => {
+    if (c.name) carrierSet.add(c.name);
+    if (c.short_code) carrierSet.add(c.short_code);
+  });
+
+  const vesselSet = new Set();
+  const polSet = new Set();
+  const podSet = new Set();
+  const shipperSet = new Set();
+  const consigneeSet = new Set();
+
+  (shipments || []).forEach((s) => {
+    if (s.carrier) carrierSet.add(s.carrier);
+    if (s.vessel) vesselSet.add(s.vessel);
+    if (s.pol) polSet.add(s.pol);
+    if (s.pod) podSet.add(s.pod);
+    if (s.shipper) shipperSet.add(s.shipper);
+    if (s.consignee) consigneeSet.add(s.consignee);
+  });
+
+  return `
+    <datalist id="carrier-history-list">
+      ${Array.from(carrierSet).map((v) => `<option value="${v}"></option>`).join('')}
+    </datalist>
+    <datalist id="vessel-history-list">
+      ${Array.from(vesselSet).map((v) => `<option value="${v}"></option>`).join('')}
+    </datalist>
+    <datalist id="pol-history-list">
+      ${Array.from(polSet).map((v) => `<option value="${v}"></option>`).join('')}
+    </datalist>
+    <datalist id="pod-history-list">
+      ${Array.from(podSet).map((v) => `<option value="${v}"></option>`).join('')}
+    </datalist>
+    <datalist id="shipper-history-list">
+      ${Array.from(shipperSet).map((v) => `<option value="${v}"></option>`).join('')}
+    </datalist>
+    <datalist id="consignee-history-list">
+      ${Array.from(consigneeSet).map((v) => `<option value="${v}"></option>`).join('')}
+    </datalist>
+  `;
+}
+
+export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], shipments = [] } = {}) {
   const d    = draft;
   const mode = (d.mode || 'SEA').toUpperCase();
   const seaHide = mode === 'AIR' ? ' class="hidden"' : '';
@@ -163,18 +216,34 @@ export function sectionAHtml(draft = {}, customers = [], reps = []) {
         ${cfld(t('sales_new.field.hbl_do'), `<input type="text" name="hbl_do_display" value="${d.has_hbl ? (d.job_no || '') : ''}" readonly class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" />`, `data-hbl-do-row${d.has_hbl ? '' : ' class="hidden"'}`)}
         ${fld(t('sales_new.field.product'),  selFld('product', PRODUCT_OPTIONS, d.product, PRODUCT_LABEL_KEYS))}
         ${fld(t('sales_new.field.direction'), directionSel(d))}
-        ${fld(t('sales_new.field.customer'), custSel(customers, d.customer, d._autofilled))}
         ${fld(t('sales_new.field.quote_pick'), quotePickSel(d.quote_id))}
-        ${fld(t('sales_new.field.shipper'),   txt('shipper',  d.shipper))}
-        ${fld(t('sales_new.field.consignee'), txt('consignee', d.consignee))}
+        ${fld(t('sales_new.field.customer'), custSel(customers, d.customer, d._autofilled))}
+        ${fld(t('sales_new.field.shipper'), txtWithList('shipper', d.shipper, t('sales_new.ph_shipper'), 'shipper-history-list'))}
+        ${fld(t('sales_new.field.consignee'), txtWithList('consignee', d.consignee, t('sales_new.ph_consignee'), 'consignee-history-list'))}
+        ${fld(t('sales_new.field.carrier'), txtWithList('carrier', d.carrier, t('sales_new.ph_carrier'), 'carrier-history-list'))}
+        ${cfld(t('sales_new.field.vessel_voyage'), `
+          <div class="flex items-center gap-1.5">
+            <input type="text" name="vessel" value="${d.vessel || ''}" placeholder="${t('sales_new.ph_vessel')}" list="vessel-history-list"
+              class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs" />
+            <input type="text" name="voyage" value="${d.voyage || ''}" placeholder="${t('sales_new.ph_voyage')}"
+              class="w-24 border border-slate-200 rounded px-2 py-1 text-xs" />
+          </div>
+        `, `data-sea-only${seaHide}`)}
+        ${cfld(t('sales_new.field.volume'), `
+          <div class="flex items-center gap-1.5">
+            <input type="number" name="container_qty" value="${d.container_qty || 1}" min="1" step="1" placeholder="${t('sales_new.ph_container_qty')}"
+              class="w-16 border border-slate-200 rounded px-2 py-1 text-xs font-mono text-center" />
+            <select name="volume" class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs bg-white">
+              <option value="">${t('sales_new.container_spec_placeholder')}</option>
+              ${CONTAINER_TYPES.map((c) => `<option value="${c}"${(d.volume || '40HC') === c ? ' selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </div>
+        `, `data-sea-only${seaHide}`)}
         ${fld(t('sales_new.field.contact'),   txt('contact_person', d.contact_person))}
-        ${cfld(t('sales_new.field.vessel'),   txt('vessel', d.vessel),    `data-sea-only${seaHide}`)}
-        ${fld(t('sales_new.field.carrier'),   txt('carrier', d.carrier))}
         ${fld(t('sales_new.field.etd'),       dateInp('etd', d.etd))}
         ${fld(t('sales_new.field.eta'),       dateInp('eta', d.eta))}
-        ${fld(t('sales_new.field.pol'),       txt('pol', d.pol, 'VNSGN'))}
-        ${fld(t('sales_new.field.pod'),       txt('pod', d.pod, 'USLAX'))}
-        ${cfld(t('sales_new.field.volume'),   txt('volume', d.volume, '1X40HC'), `data-sea-only${seaHide}`)}
+        ${fld(t('sales_new.field.pol'),       txtWithList('pol', d.pol, '', 'pol-history-list'))}
+        ${fld(t('sales_new.field.pod'),       txtWithList('pod', d.pod, '', 'pod-history-list'))}
         ${fld(t('sales_new.field.roe_buy'),  num('roe_buying', d.roe_buying))}
         ${fld(t('sales_new.field.roe_sell'), num('roe_selling', d.roe_selling))}
         ${fld(t('sales_new.field.currency'),
@@ -199,5 +268,6 @@ export function sectionAHtml(draft = {}, customers = [], reps = []) {
         ${cfld(t('sales_new.field.dest_iata'),     txt('dest_iata', d.dest_iata, 'HAN'),        `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.chargeable_kg'), roNum('chargeable_kg', d.chargeable_kg),     `data-air-only${airHide}`)}
       </div>
+      ${renderHistoryDatalists(carriers, shipments)}
     </div>`;
 }

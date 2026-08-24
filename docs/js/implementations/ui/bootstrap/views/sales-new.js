@@ -125,10 +125,14 @@ export async function render(root, opts = {}) {
   // outer RENDER_MOUNT_TIMEOUT_MS ceiling.
   // F-32-01: Job No assignment folded into the SAME bounded block (not a second sequential
   // await) so a stalled repo never doubles the wait — reuses rawUserConfig, no extra fetch.
+  let carriers = [];
+  let shipments = [];
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, rawUserConfig, assignment, wsSettings, repList] = await Promise.all([
+      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList] = await Promise.all([
         repo.list('customers').catch(() => []),
+        repo.list('carriers').catch(() => []),
+        repo.list('shipments').catch(() => []),
         salesRepId ? repo.get('user', `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
         salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
         // Accounting's default header currency — a LOCAL store read (workspace_settings kind),
@@ -150,11 +154,13 @@ export async function render(root, opts = {}) {
           generatedJobNo = await assignJobNo(repo, repCode);
         } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
       }
-      return { customerList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList };
+      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
       customers  = loadRes.value.customerList;
+      carriers   = loadRes.value.carrierList;
+      shipments  = loadRes.value.shipmentList;
       userConfig = loadRes.value.userConfig;
       jobNo      = loadRes.value.jobNo;
       defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
@@ -232,7 +238,7 @@ export async function render(root, opts = {}) {
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
   await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
-                                defaultCurrency, revenueVisible, reps, editRef });
+                                defaultCurrency, revenueVisible, reps, editRef, carriers, shipments });
 
   // F-37-04: the phases, inside the form card. In edit mode it reads the shipment; on a new job there is
   // nothing stored yet, so it reads the draft at Created — which is the point: it tells whoever

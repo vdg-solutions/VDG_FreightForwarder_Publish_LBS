@@ -34,7 +34,7 @@ function resolveHeaderCurrency(saved, configuredDefault) {
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
           mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null,
-          revenueVisible = true, reps = [], editRef = null } = opts;
+          revenueVisible = true, reps = [], editRef = null, carriers = [], shipments = [] } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || todayLocal();
@@ -88,7 +88,7 @@ export async function renderForm(root, opts = {}) {
       </div>
       <div id="phase-timeline"></div>
       <form id="shipment-form" class="space-y-4">
-        ${sectionAHtml(d, customers, reps)}
+        ${sectionAHtml(d, customers, reps, { carriers, shipments })}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ''}
         ${revenueVisible ? sectionDHtml(d, { isManager }) : ''}
