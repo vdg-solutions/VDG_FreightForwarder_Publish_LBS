@@ -1,282 +1,6567 @@
-import '../implementations/ui/bootstrap/components/sidebar.js';
-import '../implementations/ui/bootstrap/components/topbar.js';
-import '../implementations/ui/bootstrap/components/wizard-stepper.js';
-import '../implementations/ui/bootstrap/components/status-badge.js';
-import '../implementations/ui/bootstrap/components/info-tip.js';
-import '../implementations/ui/bootstrap/components/kpi-card.js';
-import '../implementations/ui/bootstrap/components/upload-zone.js';
-import '../implementations/ui/bootstrap/components/cutoff-timer.js';
-import '../implementations/ui/bootstrap/components/detail-panel.js';
-import '../implementations/ui/bootstrap/components/print-button.js';
-import '../implementations/ui/bootstrap/components/offline-banner.js';
-import '../implementations/ui/bootstrap/components/cmd-palette.js';
-import { initRouter, navigate } from '../implementations/ui/bootstrap/router.js';
-// WASM is loaded in boot/repo-init-steps.js critical path (before bootApp)
-import { requireAuth } from '../implementations/ui/core_abstractions/ports/auth/auth-gate.js';
-import { currentSalesRepId, hasRole } from '../implementations/ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../implementations/ui/core_abstractions/roles.js';
-import { renderLoginPage } from '../implementations/ui/bootstrap/views/login.js';
-import { createPlatform } from './platform/index.js';
-import { composeAuth } from './compose-ui/auth.js';
-import { configureAuthPlatform, mountLoginScreen } from './platform/auth.js';
+import "./chunk-375OTNZN.js";
+import {
+  bindLedgerComposer,
+  bindLedgerPoster,
+  bindLedgerReconciler,
+  bindLedgerRepost,
+  bindPeriodOpeningBalance
+} from "./chunk-BRDPRF6R.js";
+import {
+  bindLedgerAggregator
+} from "./chunk-KK2HSU44.js";
+import {
+  bindDefaultCurrencyLock
+} from "./chunk-CHLQ7LZW.js";
+import {
+  bindUserDirectory,
+  listUsers
+} from "./chunk-XVWG4BTC.js";
+import {
+  bindUserAuditLogComposer
+} from "./chunk-GRBWOHUK.js";
+import {
+  jobTracker
+} from "./chunk-OQ4LF4CN.js";
+import {
+  bindShipmentStateMigrator
+} from "./chunk-NM5PQAZF.js";
+import {
+  bindSeedMigrator
+} from "./chunk-YCYJKUQ5.js";
+import {
+  bindMasterRegistry
+} from "./chunk-T2XEYG3A.js";
+import {
+  bindBackupExporter
+} from "./chunk-HNTJLHIX.js";
+import {
+  freshViewRoot,
+  markViewSuperseded
+} from "./chunk-2PLULDG2.js";
+import {
+  bindAwbRepo
+} from "./chunk-LEXYJ5I6.js";
+import {
+  bindPeriodClose
+} from "./chunk-QL3VBJTQ.js";
+import {
+  bindAuditLog
+} from "./chunk-VHCRHQI5.js";
+import {
+  bindNotificationComposer
+} from "./chunk-NJVBPCWY.js";
+import {
+  LicenseReadOnlyError,
+  PeriodLockedError,
+  bindPeriodLockRegistry,
+  bindWriteGate
+} from "./chunk-XF5P4IGN.js";
+import {
+  bindCommissionCalculator,
+  bindCommissionComposer
+} from "./chunk-PJCMTW4C.js";
+import {
+  bindExceptionComposer
+} from "./chunk-WZEL26N6.js";
+import {
+  bindBulkOrchestrator
+} from "./chunk-U4F5HOXH.js";
+import {
+  bindErrorLogStore
+} from "./chunk-PGOTV4PU.js";
+import {
+  SecondWorkspaceForbiddenError,
+  adoptSessionToken,
+  apiFetch,
+  bindBackend,
+  bindFirstRunProvision,
+  isServerBackend,
+  rememberSessionToken
+} from "./chunk-AZPH7NAL.js";
+import {
+  bindStorageApi,
+  bindWorkspaceBootstrap,
+  findSharedFilesByNamePrefix,
+  forkId,
+  getFile,
+  storageApi
+} from "./chunk-VL7USYBE.js";
+import {
+  bindUserProvisioning
+} from "./chunk-LLUXTOR5.js";
+import {
+  bindJobTracker
+} from "./chunk-T3Z2RENW.js";
+import {
+  bindDashboardComposer
+} from "./chunk-6Z6QDIFV.js";
+import {
+  MODE_LS_KEY,
+  readMode,
+  renderModeToggle
+} from "./chunk-RE24EIGD.js";
+import {
+  bindAirPnlComposer,
+  bindPnlComposer
+} from "./chunk-V4KY2AGW.js";
+import {
+  bindArComposer
+} from "./chunk-64ESJPEU.js";
+import {
+  bindDueSoon
+} from "./chunk-REGXU2BV.js";
+import {
+  statusBadgeLabel
+} from "./chunk-UVFPWO47.js";
+import {
+  bindSalesAnalyticsCompute
+} from "./chunk-7472JIPV.js";
+import {
+  bindRepoQuery
+} from "./chunk-EPS4ANRF.js";
+import {
+  UNKNOWN_USER_ID,
+  bindRouteGuard,
+  currentUserRole,
+  currentUserRoles,
+  filterSidebarItems,
+  homeRouteForRole,
+  normalizeRole,
+  resolveUserRole,
+  routeGuard
+} from "./chunk-Z5J2LHCQ.js";
+import {
+  bindBillingPublish
+} from "./chunk-SXXIG76D.js";
+import {
+  bindFxRateRepo
+} from "./chunk-ZRBZYMV7.js";
+import {
+  ROLE_CACHE_KEY,
+  bindFsmAutoAdvance,
+  bindIdentityProvider,
+  bindJobNoGen,
+  bindPnlCommit,
+  bindPnlLineId,
+  bindRepCodeRegistry,
+  bindSalesRepDerivation,
+  bindWmaEngine,
+  bindWmaStore,
+  getCurrentUser,
+  loadKindWmaState,
+  onEvent,
+  pnlLineId,
+  rebuildSessionFromStoredToken,
+  saveKindWmaState,
+  signOut,
+  wasPreviouslySignedIn
+} from "./chunk-BEWNZGQM.js";
+import {
+  bindAirRateCalculator
+} from "./chunk-WKFYYEZM.js";
+import {
+  bindUsersViewComposer
+} from "./chunk-ABASRVXI.js";
+import {
+  bindWorkspaceSettings
+} from "./chunk-IIUQ3SOM.js";
+import {
+  toLocalDateStr,
+  todayLocal
+} from "./chunk-CFMB5DE5.js";
+import {
+  bindQuoteOrchestrator
+} from "./chunk-5UHUC2YB.js";
+import {
+  bindShipmentVoidDelete
+} from "./chunk-TFQRLZCI.js";
+import {
+  bindFsmIngest,
+  rehydrateFsmStates
+} from "./chunk-VTRTBWKI.js";
+import {
+  bindShipmentStateAliases
+} from "./chunk-CDLM5DUW.js";
+import {
+  bindWasmLoader
+} from "./chunk-EJWPNW2L.js";
+import {
+  bindAuthGate,
+  requireAuth
+} from "./chunk-ZT36KEIN.js";
+import {
+  API_BASE,
+  activeWorkspaceName
+} from "./chunk-JDLBDPFG.js";
+import {
+  bindCustomer360Composer
+} from "./chunk-TE5ZYPE3.js";
+import {
+  KIND_SHIPMENT,
+  REVENUE_SEEN,
+  bindShipmentRepo,
+  deleteShipment,
+  putEnvelope,
+  putShipment
+} from "./chunk-U4BJYZQA.js";
+import {
+  bindSalesRegistry
+} from "./chunk-YFN2XPGT.js";
+import {
+  SAFE_AWAIT_DEFAULT_MS,
+  SafeAwaitTimeoutError,
+  bindLog,
+  bindTimer,
+  safeAwait,
+  startInterval,
+  stopInterval
+} from "./chunk-JAZY43GR.js";
+import {
+  bindMasterMerge
+} from "./chunk-AK6DJLS5.js";
+import {
+  bindMasterDeduper
+} from "./chunk-ENSWK7L6.js";
+import {
+  initRouter,
+  navigate
+} from "./chunk-H2H4WJDI.js";
+import "./chunk-SXHZPWVA.js";
+import {
+  ROLES_RESOLVED_EVENT
+} from "./chunk-EQL6UFHA.js";
+import {
+  ROLE_ACCOUNTANT,
+  ROLE_CUSTOMER_SERVICE,
+  ROLE_MANAGER,
+  ROLE_NAMES,
+  ROLE_READ_ONLY,
+  ROLE_SALES_MANAGER,
+  ROLE_SALES_REP
+} from "./chunk-KXTXGKNK.js";
+import {
+  bindSessionRoles,
+  currentRoles,
+  currentSalesRepId,
+  hasRole
+} from "./chunk-B24LWBUG.js";
+import {
+  bindAppEvents,
+  bindClock,
+  bindHttp,
+  currentLocale,
+  loadLocale,
+  nowMs,
+  t
+} from "./chunk-NPO6NGQC.js";
 
-import { composeStorage } from '../implementations/storage/bootstrap/compose.js';
-import '../implementations/kernel/bootstrap/compose.js'; // binds kernel platform ports
-import { currentUserRole, currentUserRoles, normalizeRole, homeRouteForRole } from '../implementations/ui/core_abstractions/ports/governance/route-guard.js';
-import { enforceRouteGuard } from '../implementations/ui/bootstrap/route-enforcer.js';
-import { initGoogleSignIn } from '../implementations/storage/core_abstractions/oauth.js';
-import { renderServerGate } from './boot/server-gate.js';
-import { loadLocale, t } from '../implementations/kernel/core_abstractions/i18n/index.js';
-import { tryParamRoute }       from './app-router-ext.js';
-import { loadView }            from '../implementations/ui/bootstrap/util/view-loader.js';
-import { mountView }           from '../implementations/ui/bootstrap/util/mount-view.js';
-import { freshViewRoot }       from '../implementations/ui/bootstrap/util/view-root.js';
-import { initKeyboardShortcuts } from '../implementations/ui/bootstrap/keyboard-shortcuts.js';
-import { checkVersionBanner, initBreakpointListener, initWmaListener, initConflictModal, initMergeToast, initStoreLockedScreen } from '../implementations/ui/bootstrap/app-events.js';
-import { initAccessTokenRefresh } from '../implementations/storage/implementations/auth/token-refresh.js';
-import { VIEWS } from './app-views.js';
-import { runRepoInit, RepoInitTimeoutError } from './boot/repo-bootstrap.js';
-import { renderRepoInitTimeoutBanner } from './boot/repo-init-fallback.js';
-import { initMigrationOverlay } from '../implementations/ui/bootstrap/migration-overlay.js';
-import './platform/sync-schedulers.js'; // Start background job tracker
+// output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
+import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
 
-// F-14-16 breakpoint constants
-const BREAKPOINT_TABLET_PX  = 768;
-const BREAKPOINT_DESKTOP_PX = 1280; // eslint-disable-line no-unused-vars
-const TOUCH_TARGET_MIN_PX   = 44;   // eslint-disable-line no-unused-vars
+// output/web/js.tmp/implementations/ui/bootstrap/components/sidebar-collapse-state.js
+var SIDEBAR_COLLAPSED_KEY = "vdg.sidebar.collapsed";
+function parseCollapsed(raw) {
+  if (!raw) return /* @__PURE__ */ new Set();
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return /* @__PURE__ */ new Set();
+    return new Set(arr.filter((k) => typeof k === "string"));
+  } catch {
+    return /* @__PURE__ */ new Set();
+  }
+}
+function serializeCollapsed(set) {
+  return JSON.stringify([...set]);
+}
+function toggleCollapsed(set, key) {
+  const next = new Set(set);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  return next;
+}
+function isGroupCollapsed(collapsedSet, groupKey, activeGroupKey2) {
+  return collapsedSet.has(groupKey) && groupKey !== activeGroupKey2;
+}
+function activeGroupKey(items, activeRoute) {
+  const match = items.find((i) => i.route === activeRoute);
+  return match ? match.group : null;
+}
+var DESKTOP_COLLAPSED_KEY = "vdg.sidebar.desktop_collapsed";
+function parseDesktopCollapsed(raw) {
+  return raw === "true";
+}
+function serializeDesktopCollapsed(collapsed) {
+  return String(!!collapsed);
+}
 
-// F-14-20 version constants (OQ-B4-8: CI inject in E-15)
-const NEW_FEATURE_BANNER_DAYS = 7;
+// output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
+var DRAWER_BREAKPOINT_PX = 768;
+var LOCALE_CHANGE_EVENT = "vdg:locale-changed";
+var CHEVRON_EXPANDED = "\u25BE";
+var CHEVRON_COLLAPSED = "\u25B8";
+var V1_ITEMS = [
+  // #15: matches the /dashboard route-guard entry (nav-gates KEEP-CONSISTENT-WITH-route-guard)
+  { group: "workspace", route: "/dashboard", labelKey: "nav.workspace.dashboard", icon: "grid", allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  { group: "workspace", route: "/shipments", labelKey: "nav.workspace.shipments", icon: "ship" },
+  // F-37-03: CS opens a job before a rep is named, so creating one is workspace work and sits with
+  // the shipment list rather than in the Sales group. Its allowRoles is the /shipments reader set.
+  {
+    group: "workspace",
+    route: "/shipments/new",
+    labelKey: "nav.sales.create_shipment",
+    icon: "tag",
+    allowRoles: [ROLE_CUSTOMER_SERVICE, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_MANAGER]
+  },
+  // F-24-09: allowRoles matches route-guard's /sales prefix map (SalesRep | Manager).
+  { group: "sales", route: "/sales/me", labelKey: "nav.sales.my_shipments", icon: "doc", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // F-42-04: the quote list had no nav entry at all — the topbar's "new quote" button created
+  // deals that only a typed URL could find again, and step 1 of the sales flow (quote -> job)
+  // was a one-way street. Owner 2026-08-15, on being shown the gap: "không có".
+  // F-42-06 (owner: "báo giá là chỉ sales làm nha"): the sales desk only — KEEP-CONSISTENT-WITH
+  // access_policy.rs's "/sales/quote" rule. A Manager who also sells holds SalesRep on their user
+  // record and gets the entry through that hat, not through being the manager.
+  { group: "sales", route: "/sales/quote", labelKey: "nav.sales.quotes", icon: "quote", allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER] },
+  // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
+  // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
+  // explanation. A visible menu item that always fails. Now matches the /manager route-guard
+  // prefix (nav-gates KEEP-CONSISTENT-WITH-route-guard).
+  { group: "reports", route: "/manager/reports/pnl", labelKey: "nav.reports.pnl_report", icon: "dollar", managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  // F-23-04: accountant ledger browse — reuses the reports group (R-5 minimal change).
+  // F-24-05: allowRoles opens this to Accountant too; managerOnly kept for the F-23-04
+  // CDP button-count fixture (27-sidebar-v1-trim.js), superseded by allowRoles below.
+  { group: "reports", route: "/accounting/ledger", labelKey: "nav.reports.ledger", icon: "doc", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  // F-23-05: financial reports (TB/P&L/BS) — same reports group; F-24-05 opens to Accountant
+  { group: "reports", route: "/accounting/reports", labelKey: "nav.reports.financial", icon: "doc", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  // #31: finance policy the ACCOUNTANT owns (default P&L currency). Not under /manager — that
+  // prefix is Manager-only in access_policy.rs, which would lock out the very role that sets it.
+  { group: "reports", route: "/accounting/settings", labelKey: "nav.accounting.settings", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  { group: "reports", route: "/manager/commission-rules", labelKey: "nav.reports.comm_rules", icon: "check", managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  // F-24-04: manager-only user CRUD — same reports group (R-5 minimal change, precedent above)
+  { group: "reports", route: "/admin/users", labelKey: "nav.admin.users", icon: "db", managerOnly: true },
+  // Master data — customer list + future master entities. SalesRep is read-only in the
+  // page itself (masters-customers.js gates Add/Edit/Delete behind hasRole(ROLE_MANAGER)), so opening
+  // the nav to Sales just lets them find & browse; it doesn't grant CRUD.
+  { group: "masters", route: "/masters/customers", labelKey: "nav.masters.customers", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  { group: "masters", route: "/masters/local-charges", labelKey: "nav.masters.local_charges", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  { group: "masters", route: "/masters/units-of-measure", labelKey: "nav.masters.units", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // E-26 F-26-04: ocean-carrier master, reachable from Danh mục like local-charges/units
+  { group: "masters", route: "/masters/ocean-carriers", labelKey: "nav.masters.ocean_carriers", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // F-28-15: ocean-tariff priced kind, carrier-joined view — writers mirror ocean-carriers
+  { group: "masters", route: "/masters/ocean-tariff", labelKey: "nav.masters.ocean_tariff", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // F-29-10: FX admin was route-only (no sidebar entry), so the AC-04 no-rate hint
+  // pointed nowhere — mirrors the units/ocean-carriers Danh mục entries, Manager-only.
+  { group: "masters", route: "/manager/fx-rates", labelKey: "nav.masters.fx_rates", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  // F-18-11: alias-editor only (writers manager-only, Q3) — no browse value for SalesRep.
+  { group: "masters", route: "/masters/shipment-states", labelKey: "nav.masters.shipment_states", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] }
+];
+var V1_GROUPS = [
+  { key: "workspace", headingKey: "nav.group.workspace" },
+  { key: "sales", headingKey: "nav.group.sales" },
+  { key: "masters", headingKey: "nav.group.masters" },
+  { key: "reports", headingKey: "nav.group.reports" }
+];
+var ICONS = {
+  grid: '<path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  ship: '<path d="M3 18a9 9 0 0 0 18 0M3 18l1.5-5h15L21 18M6 13V7h12v6M9 7V4h6v3"/>',
+  upload: '<path d="M12 3v12m0-12l-4 4m4-4l4 4M5 21h14"/>',
+  doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+  dollar: '<path d="M12 2v20M17 7H9a3 3 0 0 0 0 6h6a3 3 0 0 1 0 6H7"/>',
+  tag: '<path d="M3 12V3h9l9 9-9 9-9-9z"/><circle cx="7" cy="7" r="1.5"/>',
+  quote: '<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>',
+  db: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'
+};
+var VdgSidebar = class extends LitElement {
+  static styles = css`
+    :host { display: block; }
+  `;
+  static properties = {
+    activeRoute: { type: String, state: true },
+    _drawerOpen: { type: Boolean, state: true },
+    _mobile: { type: Boolean, state: true },
+    _collapsed: { state: true },
+    // Set<string> of collapsed group keys
+    _desktopCollapsed: { type: Boolean, state: true }
+    // F-43-01 AC-04
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.activeRoute = location.hash.slice(1) || "/dashboard";
+    this._drawerOpen = false;
+    this._mobile = window.innerWidth < DRAWER_BREAKPOINT_PX;
+    this._collapsed = /* @__PURE__ */ new Set();
+    this._desktopCollapsed = false;
+    this._onNav = (e) => {
+      this.activeRoute = e.detail.route;
+      if (this._mobile) this._drawerOpen = false;
+      this.requestUpdate();
+    };
+    this._onBreakpt = (e) => {
+      this._mobile = e.detail.mobile;
+      if (!this._mobile) this._drawerOpen = false;
+    };
+    this._onToggle = () => {
+      if (this._mobile) {
+        this._drawerOpen = !this._drawerOpen;
+        return;
+      }
+      this._desktopCollapsed = !this._desktopCollapsed;
+      try {
+        localStorage.setItem(DESKTOP_COLLAPSED_KEY, serializeDesktopCollapsed(this._desktopCollapsed));
+      } catch {
+      }
+    };
+    this._onBackdrop = () => {
+      this._drawerOpen = false;
+    };
+    this._onLocaleChanged = () => this.requestUpdate();
+    this._onRolesResolved = () => this.requestUpdate();
+    this._onGroupToggle = (key) => {
+      this._collapsed = toggleCollapsed(this._collapsed, key);
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, serializeCollapsed(this._collapsed));
+      } catch {
+      }
+      this.requestUpdate();
+    };
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("vdg:navigate", this._onNav);
+    window.addEventListener("vdg:breakpoint-changed", this._onBreakpt);
+    window.addEventListener("vdg:sidebar-toggle", this._onToggle);
+    window.addEventListener(LOCALE_CHANGE_EVENT, this._onLocaleChanged);
+    window.addEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
+    try {
+      this._collapsed = parseCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY));
+    } catch {
+      this._collapsed = /* @__PURE__ */ new Set();
+    }
+    try {
+      this._desktopCollapsed = parseDesktopCollapsed(localStorage.getItem(DESKTOP_COLLAPSED_KEY));
+    } catch {
+      this._desktopCollapsed = false;
+    }
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("vdg:navigate", this._onNav);
+    window.removeEventListener("vdg:breakpoint-changed", this._onBreakpt);
+    window.removeEventListener("vdg:sidebar-toggle", this._onToggle);
+    window.removeEventListener(LOCALE_CHANGE_EVENT, this._onLocaleChanged);
+    window.removeEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
+  }
+  // #28: the role SET from the staff table (grants/). A user holding several roles sees the union of
+  // their items — a manager who also does sales gets both menus.
+  _effectiveRoles() {
+    const roles = currentUserRoles();
+    if (roles.length) return roles;
+    return [normalizeRole(currentUserRole())];
+  }
+  _renderItem(item) {
+    const isActive = this.activeRoute === item.route;
+    const cls = isActive ? "bg-slate-800 text-white border-l-2 border-blue-400" : "text-slate-400 hover:text-white hover:bg-slate-800/60 border-l-2 border-transparent";
+    const disabledCls = item.disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer";
+    const text = item.labelKey ? t(item.labelKey) : item.label;
+    return html`
+      <button
+        class="w-full flex items-center gap-3 px-4 py-2 text-[13px] font-medium transition ${cls} ${disabledCls}"
+        ?disabled=${item.disabled}
+        @click=${() => !item.disabled && navigate(item.route)}
+      >
+        ${item.sub ? html`
+          <span class="w-4"></span>
+        ` : html`
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${this._icon(item.icon)}
+          </svg>
+        `}
+        <span class="flex-1 text-left truncate ${item.sub ? "text-slate-400" : ""}">${text}</span>
+        ${item.disabled ? html`<span class="text-[10px] uppercase tracking-wider text-slate-600">${t("sidebar.badge.soon")}</span>` : ""}
+      </button>
+    `;
+  }
+  _icon(name) {
+    const svg2 = document.createElement("template");
+    svg2.innerHTML = ICONS[name] || "";
+    return svg2.content;
+  }
+  _renderNav() {
+    return html`
+      <div class="px-5 pt-6 pb-8">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center font-bold">V</div>
+          <div>
+            <div class="font-semibold tracking-tight text-white">VDG Freight</div>
+            <div class="text-[11px] text-slate-500 -mt-0.5">NVOCC Console</div>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 flex flex-col gap-0.5 overflow-y-auto pb-4">
+        ${(() => {
+      const visible = filterSidebarItems(V1_ITEMS, this._effectiveRoles());
+      const activeGroup = activeGroupKey(visible, this.activeRoute);
+      let shown = 0;
+      return V1_GROUPS.map((g) => {
+        const items = visible.filter((i) => i.group === g.key);
+        if (items.length === 0) return "";
+        const first = shown === 0;
+        shown += 1;
+        const collapsed = isGroupCollapsed(this._collapsed, g.key, activeGroup);
+        return html`
+              <div data-nav-group="${g.key}">
+                <button type="button" data-nav-toggle="${g.key}"
+                  class="w-full flex items-center justify-between px-4 ${first ? "pb-2" : "pt-6 pb-2"} text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+                  aria-expanded=${collapsed ? "false" : "true"}
+                  @click=${() => this._onGroupToggle(g.key)}>
+                  <span>${t(g.headingKey)}</span>
+                  <span aria-hidden="true">${collapsed ? CHEVRON_COLLAPSED : CHEVRON_EXPANDED}</span>
+                </button>
+                ${collapsed ? "" : items.map((i) => this._renderItem(i))}
+              </div>
+            `;
+      });
+    })()}
+      </nav>
+      <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
+        <span>VDG FreightForwarder</span>
+        <span class="font-mono whitespace-nowrap" title="build 3e6a172">v0.4.16 (3e6a172)</span>
+      </div>
+    `;
+  }
+  render() {
+    if (this._mobile) {
+      return html`
+        ${this._drawerOpen ? html`
+          <div class="fixed inset-0 z-[1000] flex">
+            <aside class="w-64 bg-slate-900 text-slate-100 flex flex-col h-full shadow-2xl"
+                   data-drawer="true">
+              ${this._renderNav()}
+            </aside>
+            <div class="flex-1 bg-black/40" @click="${this._onBackdrop}"></div>
+          </div>` : ""}`;
+    }
+    if (this._desktopCollapsed) return html``;
+    return html`
+      <aside class="w-60 shrink-0 h-screen bg-slate-900 text-slate-100 flex flex-col">
+        ${this._renderNav()}
+      </aside>`;
+  }
+};
+customElements.define("vdg-sidebar", VdgSidebar);
+window._vdgSidebarTest = { v1Items: V1_ITEMS, hasRole };
 
-// ── theme init ────────────────────────────────────────────────────────────────
-// Dark mode is disabled: the view layer has no dark: variants, so a `.dark` root
-// renders dark text on a dark body (unreadable) and hides typed input text. Force
-// light regardless of OS preference or any stale saved pref until dark is fully built.
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar.js
+import { LitElement as LitElement2, html as html4 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+
+// output/web/js.tmp/implementations/storage/core_abstractions/profile-cache.js
+var PROFILE_KEY = "vdg.auth.profile";
+var _impl = null;
+function bindProfileCache(impl) {
+  _impl = impl;
+}
+function _i() {
+  if (!_impl) throw new Error("storage/profile-cache: no adapter bound (the storage bootstrap binds it)");
+  return _impl;
+}
+var readCachedProfile = (...a) => _i().readCachedProfile(...a);
+var writeCachedProfile = (...a) => _i().writeCachedProfile(...a);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/breadcrumb-resolver.js
+var I18N_ROUTES = [
+  { pattern: /^(#\/?)?$/, group: "nav.group.workspace", viewKey: "nav.workspace.dashboard" },
+  { pattern: /^#\/dashboard$/, group: "nav.group.workspace", viewKey: "nav.workspace.dashboard" },
+  { pattern: /^#\/shipments$/, group: "nav.group.workspace", viewKey: "nav.workspace.shipments" },
+  { pattern: /^#\/sales\/new$/, group: "nav.group.sales", viewKey: "nav.sales.create_shipment" },
+  { pattern: /^#\/sales\/me$/, group: "nav.group.sales", viewKey: "nav.sales.my_shipments" },
+  // F-37-03: creating a shipment belongs to the workspace, not to a rep's corner of it — CS opens
+  // this screen too, and the old /sales/:salesId/pnl/new said the job was already somebody's.
+  { pattern: /^#\/shipments\/new$/, group: "nav.group.workspace", viewKey: "nav.sales.create_shipment" },
+  { pattern: /^#\/sales\/edit\/(.+)$/, group: "nav.group.sales", viewKey: "nav.sales.edit_shipment", paramKey: "ref" },
+  { pattern: /^#\/masters\/customers$/, group: "nav.group.masters", viewKey: "nav.masters.customers" },
+  { pattern: /^#\/masters\/ocean-carriers$/, group: "nav.group.masters", viewKey: "nav.masters.ocean_carriers" },
+  { pattern: /^#\/manager\/reports\/pnl$/, group: "nav.group.reports", viewKey: "nav.reports.pnl_report" },
+  { pattern: /^#\/manager\/fx-rates$/, group: "nav.group.manager", viewKey: "nav.manager.fx_rates" },
+  { pattern: /^#\/manager\/settings$/, group: "nav.group.manager", viewKey: "nav.manager.settings" },
+  { pattern: /^#\/manager\/awb$/, group: "nav.group.manager", viewKey: "awb.admin.title" }
+];
+var STATIC_ROUTES = [
+  { pattern: /^#\/upload$/, group: "nav.group.workspace", viewKey: "nav.workspace.excel_import" },
+  { pattern: /^#\/sales\/quote\/new$/, group: "nav.group.sales", viewKey: "nav.sales.new_quote" },
+  { pattern: /^#\/sales\/quote$/, group: "nav.group.sales", viewKey: "nav.sales.quotations" },
+  { pattern: /^#\/masters\/customers$/, group: "nav.group.masters", viewKey: "nav.masters.customers" },
+  { pattern: /^#\/masters\/carriers$/, group: "nav.group.masters", viewKey: "nav.masters.carriers" },
+  { pattern: /^#\/masters\/services$/, group: "nav.group.masters", viewKey: "nav.masters.services" },
+  { pattern: /^#\/masters\/airports$/, group: "nav.group.masters", viewKey: "nav.masters.airports" },
+  { pattern: /^#\/masters\/flights$/, group: "nav.group.masters", viewKey: "nav.masters.flights" },
+  { pattern: /^#\/masters\/airline-carriers$/, group: "nav.group.masters", viewKey: "nav.masters.airline_carriers" },
+  { pattern: /^#\/masters\/uld-types$/, group: "nav.group.masters", viewKey: "nav.masters.uld_types" },
+  { pattern: /^#\/masters\/air-rates$/, group: "nav.group.masters", viewKey: "nav.masters.air_rates" },
+  { pattern: /^#\/quotes\/air-calc$/, group: "nav.group.quotes", viewKey: "nav.quotes.air_calc" },
+  { pattern: /^#\/manager\/manifest$/, group: "nav.group.manager", viewKey: "nav.manager.manifest" },
+  { pattern: /^#\/manager\/air-invoice$/, group: "nav.group.manager", viewKey: "nav.manager.air_invoice" },
+  { pattern: /^#\/help$/, group: "nav.group.workspace", viewKey: "nav.workspace.help" },
+  { pattern: /^#\/manager\/dashboard$/, group: "nav.group.manager", viewKey: "nav.manager.workspace" },
+  { pattern: /^#\/manager\/pipeline$/, group: "nav.group.manager", viewKey: "nav.manager.pipeline" },
+  { pattern: /^#\/manager\/approvals$/, group: "nav.group.manager", viewKey: "nav.manager.approvals" },
+  { pattern: /^#\/manager\/finance\/cash-flow$/, group: "nav.group.manager", viewKey: "nav.manager.cash_flow" },
+  { pattern: /^#\/manager\/finance\/close-period$/, group: "nav.group.manager", viewKey: "nav.manager.close_period" },
+  { pattern: /^#\/manager\/audit$/, group: "nav.group.manager", viewKey: "nav.manager.audit" },
+  { pattern: /^#\/manager\/notifications$/, group: "nav.group.manager", viewKey: "nav.manager.notifications" },
+  { pattern: /^#\/manager\/sales$/, group: "nav.group.manager", viewKey: "nav.manager.sales_perf" },
+  { pattern: /^#\/manager\/finance\/commissions$/, group: "nav.group.manager", viewKey: "nav.manager.commissions" },
+  { pattern: /^#\/manager\/exceptions$/, group: "nav.group.manager", viewKey: "nav.manager.exceptions" },
+  { pattern: /^#\/manager\/masters\/customers$/, group: "nav.group.manager", viewKey: "nav.manager.customer_master" },
+  { pattern: /^#\/manager\/masters\/carriers$/, group: "nav.group.manager", viewKey: "nav.manager.carrier_master" },
+  { pattern: /^#\/manager\/masters\/users$/, group: "nav.group.manager", viewKey: "nav.manager.user_master" },
+  { pattern: /^#\/manager\/errors$/, group: "nav.group.manager", viewKey: "nav.manager.errors" }
+];
+var ROUTES = [...I18N_ROUTES, ...STATIC_ROUTES];
+var FALLBACK_GROUP = "nav.group.workspace";
+var FALLBACK_VIEW = "nav.workspace.dashboard";
+function resolveBreadcrumb(hash, _locale, t2) {
+  const h = (hash == null ? "" : String(hash)).split("?")[0];
+  for (const route of ROUTES) {
+    const m = h.match(route.pattern);
+    if (m) {
+      let view = t2(route.viewKey);
+      if (route.paramKey && m[1]) view = view.replace(`{${route.paramKey}}`, m[1]);
+      return { group: t2(route.group), view };
+    }
+  }
+  return { group: t2(FALLBACK_GROUP), view: t2(FALLBACK_VIEW) };
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar-sync-chip.js
+var SYNC_STUCK_NOTIFY_MS = 5 * 6e4;
+var SYNC_RETRY_PROMOTE_THRESHOLD = 2;
+var DOT_CLASS = {
+  green: "bg-emerald-500",
+  yellow: "bg-amber-400",
+  backing_up: "bg-amber-400",
+  orange: "bg-orange-500",
+  red: "bg-red-500",
+  pending: "bg-slate-400"
+  // F-50-01 — calm, distinct from red: expected structural wait, not a failure
+};
+var STATE_TO_LABEL_KEY = {
+  green: "healthy",
+  yellow: "flushing",
+  backing_up: "backing_up",
+  orange: "retrying",
+  red: "offline",
+  pending: "auth_pending"
+  // F-50-01 AC-10 — distinct key, never reuses offline/healthy
+};
+function buildAriaLabel(state, outboxCount, t2, serverBacklog = 0) {
+  const key = STATE_TO_LABEL_KEY[state] ?? "healthy";
+  let suffix = "";
+  if (outboxCount > 0) {
+    suffix = ` (${t2("topbar.sync.tooltip.pending").replace("{n}", outboxCount)})`;
+  } else if (state === "backing_up" && serverBacklog > 0) {
+    suffix = ` (${serverBacklog})`;
+  }
+  return `${t2("topbar.sync.label")} \u2014 ${t2(`topbar.sync.state.${key}`)}${suffix}`;
+}
+function computeChipState({
+  pending,
+  retrying,
+  retryStreak,
+  backoff429,
+  offline,
+  signedOut,
+  lastSyncMs,
+  now,
+  authReconnect,
+  authPending,
+  serverBacklog = 0,
+  serverOldestPendingAgeMs = null,
+  serverProvider = "Google Drive"
+}) {
+  if (authReconnect) return "red";
+  if (offline || signedOut) return "red";
+  if (pending > 0 && lastSyncMs > 0 && now - lastSyncMs > SYNC_STUCK_NOTIFY_MS) return "red";
+  if (authPending) return "pending";
+  if (serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== void 0 && serverOldestPendingAgeMs > 3e5) {
+    return "orange";
+  }
+  if (backoff429) return "orange";
+  if (retrying) return retryStreak >= SYNC_RETRY_PROMOTE_THRESHOLD ? "orange" : "yellow";
+  if (pending > 0 && lastSyncMs === 0) return "yellow";
+  if (pending > 0) return "yellow";
+  if (serverBacklog > 0) return "backing_up";
+  return "green";
+}
+function displayLastSyncMs(pushMs, pullMs) {
+  return Math.max(pushMs || 0, pullMs || 0);
+}
+function formatLastSyncAgo(lastSyncMs, now) {
+  if (!lastSyncMs) return null;
+  const s = Math.round((now - lastSyncMs) / 1e3);
+  if (s < 60) return `${s}s`;
+  return `${Math.round(s / 60)}m`;
+}
+function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNotifiedStuckEpisode, permission }) {
+  if (permission !== "granted") return false;
+  if (pending <= 0) return false;
+  if (!lastSyncMs || now - lastSyncMs <= SYNC_STUCK_NOTIFY_MS) return false;
+  return lastSyncMs !== lastNotifiedStuckEpisode;
+}
+function buildChipTitle({
+  state,
+  ago,
+  lastError,
+  t: t2,
+  user,
+  online,
+  authReconnect,
+  popupBlocked,
+  serverBacklog = 0,
+  serverOldestPendingAgeMs = null,
+  serverProvider = "Google Drive"
+}) {
+  if (state === "red" && popupBlocked) return t2("auth.popup_blocked");
+  if (state === "red" && authReconnect) return t2("topbar.sync.tooltip.reconnect");
+  if (state === "red" && !user) return t2("topbar.sync.tooltip.click_to_signin");
+  if (state === "red" && !online) return t2("topbar.sync.tooltip.waiting_network");
+  if (state === "pending") return t2("topbar.sync.tooltip.auth_pending");
+  if (state === "backing_up") {
+    return t2("topbar.sync.tooltip.backing_up").replace("{provider}", serverProvider || "Google Drive").replace("{n}", String(serverBacklog));
+  }
+  if (state === "orange" && serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== void 0 && serverOldestPendingAgeMs > 3e5) {
+    return t2("topbar.sync.tooltip.backup_retry").replace("{provider}", serverProvider || "Google Drive");
+  }
+  const stateKey = STATE_TO_LABEL_KEY[state] ?? "healthy";
+  const stateText = t2(`topbar.sync.state.${stateKey}`);
+  if (state === "green") {
+    if (serverProvider) {
+      return t2("topbar.sync.tooltip.healthy_secondary").replace("{provider}", serverProvider);
+    }
+    return ago ? t2("topbar.sync.tooltip.lastSync").replace("{ago}", ago) : t2("topbar.sync.tooltip.lastSync.never");
+  }
+  if (lastError && (state === "orange" || state === "red")) {
+    return `${stateText} \u2014 ${lastError}`;
+  }
+  return stateText;
+}
+function renderSyncChip({
+  html: html12,
+  state,
+  pending,
+  lastSyncMs,
+  now,
+  online,
+  ariaLabel,
+  labelText,
+  lastError,
+  t: t2,
+  onSyncNow,
+  user,
+  authReconnect,
+  popupBlocked,
+  serverBacklog = 0,
+  serverOldestPendingAgeMs = null,
+  serverProvider = "Google Drive"
+}) {
+  const dotClass = DOT_CLASS[state] ?? DOT_CLASS.green;
+  const isFlushing = state === "yellow";
+  const hasPending = pending > 0;
+  const pulseClass = hasPending ? "animate-pulse" : "";
+  const ago = formatLastSyncAgo(lastSyncMs, now);
+  const titleText = buildChipTitle({
+    state,
+    ago,
+    lastError,
+    t: t2,
+    user,
+    online,
+    authReconnect,
+    popupBlocked,
+    serverBacklog,
+    serverOldestPendingAgeMs,
+    serverProvider
+  });
+  return html12`
+    <button type="button"
+            data-sync-chip
+            class="sync-chip hidden md:inline-flex h-9 items-center gap-1.5 px-2.5 rounded-md
+                   text-[11px] font-medium text-slate-600 hover:bg-slate-100
+                   focus-visible:ring-2 focus-visible:ring-blue-500 transition"
+            role="button"
+            tabindex="0"
+            aria-label="${ariaLabel}"
+            aria-busy="${isFlushing ? "true" : "false"}"
+            title="${titleText}"
+            @click="${onSyncNow}">
+      ${authReconnect ? html12`<svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>` : html12`<span class="w-2 h-2 rounded-full ${dotClass} ${pulseClass}" aria-hidden="true"></span>`}
+      <span class="${authReconnect ? "text-red-600 font-semibold" : ""}">${labelText}</span>
+    </button>`;
+}
+var CHIP_ACTION = {
+  NOOP: "noop",
+  SIGNIN: "signin",
+  WAITING_NETWORK: "waiting_network",
+  FORCE_RETRY: "force_retry",
+  RECONNECT: "reconnect",
+  SYNC_NOW: "sync_now"
+};
+function decideChipAction({ state, user, online, lastError, authReconnect, serverBackend = false }) {
+  if (state === "yellow") return CHIP_ACTION.NOOP;
+  if (state === "backing_up") return CHIP_ACTION.NOOP;
+  if (state === "pending") return CHIP_ACTION.NOOP;
+  if (state === "red" && authReconnect) return serverBackend ? CHIP_ACTION.SIGNIN : CHIP_ACTION.RECONNECT;
+  if (state === "red" && !user) return CHIP_ACTION.SIGNIN;
+  if (state === "red" && !online) return CHIP_ACTION.WAITING_NETWORK;
+  if (state === "orange" && lastError) return CHIP_ACTION.FORCE_RETRY;
+  return CHIP_ACTION.SYNC_NOW;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar-helpers.js
+import { html as html2 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var BADGE_MAX = 99;
+function badgeLabel(count) {
+  if (count <= 0) return null;
+  return count > BADGE_MAX ? `${BADGE_MAX}+` : String(count);
+}
+function renderBadge(label) {
+  if (!label) return "";
+  return html2`<span class="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none flex items-center justify-center ring-2 ring-white">${label}</span>`;
+}
+function idbSavePref(patch) {
+  const store = window.__vdg_store;
+  if (!store) return;
+  (async () => {
+    const prefs = await store.cache_get_meta("preferences") || { key: "preferences" };
+    await store.cache_put_meta("preferences", { ...prefs, ...patch });
+  })().catch(() => {
+  });
+}
+function renderAvatar(user) {
+  if (user?.picture) {
+    return html2`<img src="${user.picture}" alt="${user.name || t("topbar.user_fallback")}"
+      class="w-8 h-8 rounded-full object-cover ring-2 ring-slate-200"
+      title="${user.name || user.email}" referrerpolicy="no-referrer" />`;
+  }
+  const initials = user?.name ? user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() : user?.email ? user.email.slice(0, 2).toUpperCase() : "?";
+  return html2`<div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-white text-xs font-semibold flex items-center justify-center"
+    title="${user?.name || user?.email || ""}">${initials}</div>`;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar-menus.js
+import { html as html3 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+function renderUserMenu(host, user, salesId) {
+  if (!host._menuOpen) return html3``;
+  const roleLabel = hasRole(ROLE_MANAGER) ? t("topbar.role.manager") : salesId || t("topbar.role.sales");
+  return html3`
+    <div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 z-50 py-1"
+         @click="${(e) => e.stopPropagation()}">
+      <div class="px-4 py-3 border-b border-slate-100">
+        <div class="text-xs font-semibold text-slate-900 truncate">${user?.name || "\u2014"}</div>
+        <div class="text-[11px] text-slate-500 truncate mt-0.5">${user?.email || ""}</div>
+        <div class="mt-1.5 inline-flex px-2 py-0.5 rounded text-[10px] font-medium
+                    ${hasRole(ROLE_MANAGER) ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}">
+          ${roleLabel}
+        </div>
+      </div>
+      <button @click="${() => {
+    host._menuOpen = false;
+    navigate("/background-jobs");
+  }}"
+        class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+        </svg>
+        ${t("bg_jobs.title")}
+      </button>
+
+      <button @click="${() => host.querySelector("#data-upload")?.click()}"
+        class="w-full text-left px-4 py-2.5 text-xs text-slate-700 hover:bg-slate-50 transition flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        ${t("topbar.import.menu")}
+      </button>
+      <input type="file" id="data-upload" accept=".json" class="hidden" @change="${host._handleFileUpload}">
+
+      <button @click="${host._handleSignOut}" data-testid="topbar-signout"
+        class="w-full text-left px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 transition flex items-center gap-2 border-t border-slate-100">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        ${t("sign_out")}
+      </button>
+    </div>`;
+}
+function renderSwBanner(host) {
+  if (!host._swUpdate) return html3``;
+  return html3`
+    <div class="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-xs flex items-center justify-between px-4 py-2">
+      <span>${t("topbar.sw_update_body")}</span>
+      <div class="flex gap-2">
+        <button @click="${host._handleReloadForUpdate}"
+                class="px-3 py-1 bg-white text-blue-700 rounded font-medium hover:bg-blue-50">${t("topbar.sw_update_action")}</button>
+        <button @click="${host._dismissSwBanner}" class="px-2 py-1 text-blue-100 hover:text-white">✕</button>
+      </div>
+    </div>`;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar.js
+function canQuote() {
+  return hasRole(ROLE_SALES_REP) || hasRole(ROLE_SALES_MANAGER);
+}
+var SW_DISMISS_KEY = "vdg.sw.update.dismissed";
+var SUPPORTED_LOCALES = ["vi", "en"];
+var STUCK_RECHECK_INTERVAL_MS = 3e4;
+var VdgTopbar = class extends LitElement2 {
+  static properties = {
+    route: { type: String, state: true },
+    _exceptionCount: { type: Number, state: true },
+    _approvalCount: { type: Number, state: true },
+    _notifCount: { type: Number, state: true },
+    _dueSoonCount: { type: Number, state: true },
+    // F-48-01
+    _menuOpen: { type: Boolean, state: true },
+    _outboxCount: { type: Number, state: true },
+    _swUpdate: { type: Boolean, state: true },
+    _locale: { type: String, state: true },
+    _mobile: { type: Boolean, state: true },
+    _quotaWarn: { type: Boolean, state: true },
+    _lastSyncMs: { type: Number, state: true },
+    _lastPullMs: { type: Number, state: true },
+    _retrying: { type: Boolean, state: true },
+    _retryStreak: { type: Number, state: true },
+    _backoff429: { type: Boolean, state: true },
+    _online: { type: Boolean, state: true },
+    _lastError: { type: String, state: true },
+    _lastNotifiedStuckEpisode: { type: Number, state: true },
+    _breadcrumb: { type: Object, state: true },
+    _managerMode: { type: String, state: true },
+    _authReconnect: { type: Boolean, state: true },
+    _popupBlocked: { type: Boolean, state: true },
+    _authPending: { type: Boolean, state: true },
+    // F-49-01 ad-blocker hint + F-50-01 calm pending
+    _serverBacklog: { type: Number, state: true },
+    _serverOldestPendingAgeMs: { type: Number, state: true },
+    _serverProvider: { type: String, state: true }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.route = location.hash.slice(1) || "/dashboard";
+    this._exceptionCount = 0;
+    this._approvalCount = 0;
+    this._notifCount = 0;
+    this._menuOpen = false;
+    this._outboxCount = 0;
+    this._dueSoonCount = 0;
+    this._swUpdate = false;
+    this._locale = currentLocale();
+    this._mobile = window.innerWidth < 768;
+    this._quotaWarn = false;
+    this._lastSyncMs = 0;
+    this._lastPullMs = 0;
+    this._retrying = false;
+    this._retryStreak = 0;
+    this._backoff429 = false;
+    this._online = navigator.onLine;
+    this._lastError = null;
+    this._lastNotifiedStuckEpisode = 0;
+    this._stuckTickId = null;
+    this._breadcrumb = { group: "", view: "" };
+    this._managerMode = readMode();
+    this._authReconnect = false;
+    this._popupBlocked = false;
+    this._authPending = false;
+    this._serverBacklog = 0;
+    this._serverOldestPendingAgeMs = null;
+    this._serverProvider = "Google Drive";
+    this._onNav = (e) => {
+      this.route = e.detail.route;
+    };
+    this._onSyncComplete = (e) => {
+      this._lastSyncMs = e.detail?.ts ?? Date.now();
+      this._retryStreak = 0;
+      this._retrying = false;
+      this._lastError = null;
+      this._lastNotifiedStuckEpisode = 0;
+    };
+    this._onDeltaSynced = (e) => {
+      this._lastPullMs = e.detail?.ts ?? Date.now();
+    };
+    this._onSyncError = (e) => {
+      this._retryStreak++;
+      this._retrying = true;
+      this._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.error ?? null;
+    };
+    this._onServerHealth = (e) => {
+      if (e.detail?.backlog_depth !== void 0) this._serverBacklog = Number(e.detail.backlog_depth) || 0;
+      if (e.detail?.oldest_pending_age_ms !== void 0) this._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
+      if (e.detail?.provider) this._serverProvider = e.detail.provider;
+      this.requestUpdate();
+    };
+    this._onException = (e) => {
+      this._exceptionCount = e.detail.count;
+    };
+    this._onApproval = (e) => {
+      this._approvalCount = e.detail?.count ?? 0;
+    };
+    this._onNotifCount = (e) => {
+      this._notifCount = e.detail?.count ?? 0;
+    };
+    this._onDueSoonCount = (e) => {
+      this._dueSoonCount = e.detail?.count ?? 0;
+    };
+    this._onDocClick = (e) => {
+      if (!this.contains(e.target)) this._menuOpen = false;
+    };
+    this._onOutbox = (e) => {
+      this._outboxCount = e.detail?.count ?? 0;
+    };
+    this._onSwUpdate = () => {
+      if (!sessionStorage.getItem(SW_DISMISS_KEY)) this._swUpdate = true;
+    };
+    this._onLocaleChanged = (e) => {
+      this._locale = e.detail?.locale ?? currentLocale();
+      this._computeBreadcrumb();
+    };
+    this._onRolesResolved = () => this.requestUpdate();
+    this._onHashChange = () => {
+      this._computeBreadcrumb();
+    };
+    this._onBreakpt = (e) => {
+      this._mobile = e.detail.mobile;
+    };
+    this._onQuotaWarn = () => {
+      this._quotaWarn = true;
+    };
+    this._onOnline = () => {
+      this._online = true;
+      this._recomputeAndMaybeNotify();
+    };
+    this._onOffline = () => {
+      this._online = false;
+      this._recomputeAndMaybeNotify();
+    };
+    this._onNeedsReconnect = () => {
+      this._authReconnect = true;
+      this._authPending = false;
+    };
+    this._onReconnected = () => {
+      this._authReconnect = false;
+      this._popupBlocked = false;
+      this._authPending = false;
+    };
+    this._onPopupBlocked = () => {
+      this._popupBlocked = true;
+      this._authReconnect = true;
+    };
+    this._onAuthPending = () => {
+      this._authPending = true;
+    };
+  }
+  _computeBreadcrumb() {
+    this._breadcrumb = resolveBreadcrumb(location.hash, this._locale, t);
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("vdg:navigate", this._onNav);
+    window.addEventListener("vdg:exceptions", this._onException);
+    window.addEventListener("vdg:approval-count", this._onApproval);
+    window.addEventListener("vdg:notif-count", this._onNotifCount);
+    window.addEventListener("vdg:due-soon-count", this._onDueSoonCount);
+    window.addEventListener("vdg:outbox-changed", this._onOutbox);
+    window.addEventListener("vdg:sw-update-available", this._onSwUpdate);
+    window.addEventListener("vdg:locale-changed", this._onLocaleChanged);
+    window.addEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
+    window.addEventListener("hashchange", this._onHashChange);
+    window.addEventListener("vdg:breakpoint-changed", this._onBreakpt);
+    window.addEventListener("vdg:quota-warning", this._onQuotaWarn);
+    window.addEventListener("vdg:sync-complete", this._onSyncComplete);
+    window.addEventListener("vdg:delta-synced", this._onDeltaSynced);
+    window.addEventListener("vdg:sync-error", this._onSyncError);
+    window.addEventListener("vdg:server-health", this._onServerHealth);
+    window.addEventListener("online", this._onOnline);
+    window.addEventListener("offline", this._onOffline);
+    window.addEventListener("vdg:auth-needs-reconnect", this._onNeedsReconnect);
+    window.addEventListener("vdg:auth-reconnected", this._onReconnected);
+    window.addEventListener("vdg:auth-popup-blocked", this._onPopupBlocked);
+    window.addEventListener("vdg:auth-refresh-pending", this._onAuthPending);
+    document.addEventListener("click", this._onDocClick);
+    this._stuckTickId = setInterval(() => this._recomputeAndMaybeNotify(), STUCK_RECHECK_INTERVAL_MS);
+    this._computeBreadcrumb();
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("vdg:navigate", this._onNav);
+    window.removeEventListener("vdg:exceptions", this._onException);
+    window.removeEventListener("vdg:approval-count", this._onApproval);
+    window.removeEventListener("vdg:notif-count", this._onNotifCount);
+    window.removeEventListener("vdg:due-soon-count", this._onDueSoonCount);
+    window.removeEventListener("vdg:outbox-changed", this._onOutbox);
+    window.removeEventListener("vdg:sw-update-available", this._onSwUpdate);
+    window.removeEventListener("vdg:locale-changed", this._onLocaleChanged);
+    window.removeEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
+    window.removeEventListener("hashchange", this._onHashChange);
+    window.removeEventListener("vdg:breakpoint-changed", this._onBreakpt);
+    window.removeEventListener("vdg:quota-warning", this._onQuotaWarn);
+    window.removeEventListener("vdg:sync-complete", this._onSyncComplete);
+    window.removeEventListener("vdg:delta-synced", this._onDeltaSynced);
+    window.removeEventListener("vdg:sync-error", this._onSyncError);
+    window.removeEventListener("vdg:server-health", this._onServerHealth);
+    window.removeEventListener("online", this._onOnline);
+    window.removeEventListener("offline", this._onOffline);
+    window.removeEventListener("vdg:auth-needs-reconnect", this._onNeedsReconnect);
+    window.removeEventListener("vdg:auth-reconnected", this._onReconnected);
+    window.removeEventListener("vdg:auth-popup-blocked", this._onPopupBlocked);
+    window.removeEventListener("vdg:auth-refresh-pending", this._onAuthPending);
+    document.removeEventListener("click", this._onDocClick);
+    clearInterval(this._stuckTickId);
+  }
+  _recomputeAndMaybeNotify() {
+    const now = Date.now();
+    const perm = typeof Notification !== "undefined" ? Notification.permission : void 0;
+    if (shouldFireStuckNotification({
+      now,
+      lastSyncMs: this._lastSyncMs,
+      pending: this._outboxCount,
+      lastNotifiedStuckEpisode: this._lastNotifiedStuckEpisode,
+      permission: perm
+    })) {
+      const body = t("topbar.sync.stuck.body").replace("{n}", String(this._outboxCount));
+      new Notification(t("topbar.sync.stuck.title"), { body });
+      this._lastNotifiedStuckEpisode = this._lastSyncMs;
+    }
+    this.requestUpdate();
+  }
+  _handleSignOut() {
+    window.__vdg_auth?.signOut?.();
+    location.reload();
+  }
+  _handleReloadForUpdate() {
+    window.dispatchEvent(new CustomEvent("vdg:sw-update-accept"));
+  }
+  _dismissSwBanner() {
+    sessionStorage.setItem(SW_DISMISS_KEY, "1");
+    this._swUpdate = false;
+  }
+  _handleBellClick() {
+    window.dispatchEvent(new CustomEvent("vdg:open-notif-drawer"));
+    navigate(hasRole(ROLE_MANAGER) ? "/manager/notifications" : "/sales/me");
+  }
+  async _handleLocale(locale) {
+    await loadLocale(locale);
+    this._locale = locale;
+    idbSavePref({ locale });
+    window.dispatchEvent(new CustomEvent("vdg:locale-changed", { detail: { locale } }));
+  }
+  _handleHamburger() {
+    window.dispatchEvent(new CustomEvent("vdg:sidebar-toggle"));
+  }
+  _handleModeSelect(mode) {
+    localStorage.setItem(MODE_LS_KEY, mode);
+    this._managerMode = mode;
+    window.dispatchEvent(new CustomEvent("vdg:mode-change", { detail: { mode } }));
+  }
+  // F-29-13 AC-06: chip click routed through the pure decision fn (unit-testable branch)
+  _onChipClick(state) {
+    const user = window.__vdg_auth?.getCurrentUser?.();
+    const action = decideChipAction({
+      state,
+      user,
+      online: this._online,
+      lastError: this._lastError,
+      authReconnect: this._authReconnect,
+      serverBackend: isServerBackend()
+    });
+    if (action === CHIP_ACTION.NOOP) return;
+    if (action === CHIP_ACTION.SIGNIN) {
+      window.dispatchEvent(new CustomEvent("vdg:auth-signin-request"));
+      return;
+    }
+    if (action === CHIP_ACTION.WAITING_NETWORK) {
+      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "warn", message: t("topbar.sync.action.waiting_network") } }));
+      return;
+    }
+    if (action === CHIP_ACTION.RECONNECT) {
+      window.dispatchEvent(new CustomEvent("vdg:auth-reconnect-request"));
+      return;
+    }
+    if (action === CHIP_ACTION.FORCE_RETRY) {
+      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.sync.action.retrying") } }));
+      window.dispatchEvent(new CustomEvent("vdg:sync-force-retry"));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("vdg:sync-now"));
+  }
+  async _handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const repo3 = window.__vdg_repo;
+    if (!repo3) return;
+    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.processing") } }));
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) throw new Error("Invalid JSON format, expected array.");
+      let count = 0;
+      for (const item of data) {
+        if (!item?.id) throw new Error('Import item missing "id" field.');
+        await putEnvelope(repo3, item.id, item);
+        count++;
+        if (count % 500 === 0) {
+          window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.progress", { count, total: data.length }) } }));
+        }
+      }
+      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t("topbar.import.success", { count }) } }));
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message: t("topbar.import.error", { error: err.message }) } }));
+    }
+    e.target.value = "";
+    this._menuOpen = false;
+  }
+  render() {
+    const badge = badgeLabel(this._exceptionCount + this._approvalCount);
+    const notifBadge = badgeLabel(this._notifCount + this._dueSoonCount);
+    const cached2 = window.__vdg_current_user;
+    const profile = readCachedProfile();
+    const user = window.__vdg_auth?.getCurrentUser?.() || (profile?.email || cached2?.email ? {
+      email: profile?.email || cached2.email,
+      name: profile?.name || "",
+      picture: profile?.picture || "",
+      sub: "",
+      id_token: null
+    } : null);
+    const salesId = currentSalesRepId();
+    const now = Date.now();
+    const state = computeChipState({
+      pending: this._outboxCount,
+      retrying: this._retrying,
+      retryStreak: this._retryStreak,
+      backoff429: this._backoff429,
+      offline: !this._online,
+      signedOut: !user,
+      lastSyncMs: this._lastSyncMs,
+      now,
+      authReconnect: this._authReconnect,
+      authPending: this._authPending,
+      serverBacklog: this._serverBacklog,
+      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
+      serverProvider: this._serverProvider
+    });
+    const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
+    const labelText = state === "red" && this._authReconnect ? t(isServerBackend() ? "topbar.sync.label.signin" : "topbar.sync.label.reconnect") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "backing_up" ? t("topbar.sync.state.backing_up") : t("topbar.sync.label");
+    return html4`
+      ${renderSwBanner(this)}
+      <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
+        <div class="flex items-center gap-3">
+          <button @click="${() => this._handleHamburger()}" aria-label="${t("topbar.aria.open_menu")}"
+                  class="w-11 h-11 border-0 box-border flex items-center justify-center rounded-md text-slate-600 hover:bg-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div>
+            <span class="text-xs text-slate-400">${this._breadcrumb.group}</span>
+            <span class="mx-1 text-slate-300">/</span>
+            <span class="text-xs text-slate-700 font-medium">${this._breadcrumb.view}</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          ${this._quotaWarn ? html4`<a href="https://one.google.com/storage" target="_blank" rel="noreferrer" class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1 px-2.5 rounded-md text-[11px] font-medium text-red-700 hover:bg-red-50 ring-1 ring-red-200" title="${t("topbar.quota.title")}">⚠ ${t("topbar.quota.label")}</a>` : ""}
+          ${renderSyncChip({
+      html: html4,
+      state,
+      pending: this._outboxCount,
+      lastSyncMs: displayLastSyncMs(this._lastSyncMs, this._lastPullMs),
+      now,
+      online: this._online,
+      ariaLabel,
+      labelText,
+      lastError: this._lastError,
+      t,
+      user,
+      authReconnect: this._authReconnect,
+      popupBlocked: this._popupBlocked,
+      serverBacklog: this._serverBacklog,
+      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
+      serverProvider: this._serverProvider,
+      onSyncNow: () => this._onChipClick(state)
+    })}
+          ${hasRole(ROLE_MANAGER) && this.route.startsWith("/manager/") ? renderModeToggle({ html: html4, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ""}
+          ${canQuote() ? html4`
+            <button @click="${() => navigate("/sales/quote/new")}"
+                    class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1.5 px-3 text-[13px] font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              ${t("topbar.new_quote")}
+            </button>
+          ` : ""}
+          <button @click="${() => navigate("/help")}"
+                  class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center px-3 text-[13px] font-medium rounded-md text-slate-600 hover:bg-slate-100 transition">
+            ${t("help")}
+          </button>
+          <div class="hidden md:flex h-9 items-center rounded-md ring-1 ring-slate-200 overflow-hidden text-[11px] font-semibold">
+            ${SUPPORTED_LOCALES.map((loc) => html4`
+              <button @click="${() => this._handleLocale(loc)}"
+                      class="h-full px-2.5 border-0 box-border flex items-center transition ${this._locale === loc ? "bg-slate-50 text-slate-900 underline underline-offset-4 decoration-2" : "text-slate-500 hover:bg-slate-50"}">
+                ${loc.toUpperCase()}
+              </button>`)}
+          </div>
+          <button @click="${() => this._handleBellClick()}"
+                  title="${t("topbar.aria.notif_title", { n: this._notifCount + this._dueSoonCount })}"
+                  aria-label="${t("topbar.aria.notif_label", { n: this._notifCount + this._dueSoonCount })}"
+                  class="relative w-9 h-9 py-0 border-0 box-border rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 transition">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
+            </svg>
+            ${renderBadge(notifBadge || badge)}
+          </button>
+          <div class="relative flex items-center h-9 pl-3 ml-1 border-l border-slate-200">
+            <button @click="${() => {
+      this._menuOpen = !this._menuOpen;
+    }}"
+                    class="flex items-center justify-center h-9 w-9 border-0 box-border rounded-full overflow-hidden hover:ring-2 hover:ring-slate-200 transition focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label="${t("topbar.aria.user_menu")}">
+              ${renderAvatar(user)}
+            </button>
+            ${renderUserMenu(this, user, salesId)}
+          </div>
+        </div>
+      </header>`;
+  }
+};
+customElements.define("vdg-topbar", VdgTopbar);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/wizard-stepper.js
+import { LitElement as LitElement3, html as html5, css as css2 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var VdgWizardStepper = class extends LitElement3 {
+  static properties = {
+    steps: { type: Array },
+    current: { type: Number },
+    completed: { type: Object }
+    // Set<number>
+  };
+  static styles = css2`
+    :host { display: block; }
+  `;
+  // Use light DOM so Tailwind applies
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.steps = [];
+    this.current = 0;
+    this.completed = /* @__PURE__ */ new Set();
+  }
+  _clickStep(idx) {
+    if (!this.completed.has(idx) && idx !== this.current) return;
+    this.dispatchEvent(new CustomEvent("vdg:step-click", { bubbles: true, detail: { step: idx } }));
+  }
+  render() {
+    return html5`
+      <nav class="flex items-center gap-0" aria-label="progress">
+        ${this.steps.map((label, idx) => this._renderStep(label, idx))}
+      </nav>
+    `;
+  }
+  _renderStep(label, idx) {
+    const done = this.completed.has(idx);
+    const active = idx === this.current;
+    const clickable = done && !active;
+    const isLast = idx === this.steps.length - 1;
+    const circleCls = active ? "bg-blue-600 text-white ring-2 ring-blue-300" : done ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600" : "bg-slate-200 text-slate-400";
+    const labelCls = active ? "text-blue-700 font-semibold" : done ? "text-emerald-700 cursor-pointer" : "text-slate-400";
+    const connectorCls = done ? "bg-emerald-400" : "bg-slate-200";
+    return html5`
+      <div class="flex items-center">
+        <button
+          class="flex flex-col items-center gap-1 group"
+          ?disabled=${!clickable}
+          @click=${() => this._clickStep(idx)}
+        >
+          <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition ${circleCls}">
+            ${done && !active ? html5`<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>` : idx + 1}
+          </span>
+          <span class="text-[10px] whitespace-nowrap ${labelCls}">${label}</span>
+        </button>
+        ${!isLast ? html5`
+          <div class="h-0.5 w-8 sm:w-12 mx-1 mb-5 rounded ${connectorCls}"></div>
+        ` : ""}
+      </div>
+    `;
+  }
+};
+customElements.define("vdg-wizard-stepper", VdgWizardStepper);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/status-badge.js
+import { LitElement as LitElement4, html as html6 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var SHIPMENT_COLOR = {
+  Created: ["bg-slate-100", "text-slate-700"],
+  BookingConfirmed: ["bg-blue-100", "text-blue-700"],
+  InTransit: ["bg-amber-100", "text-amber-700"],
+  Arrived: ["bg-emerald-100", "text-emerald-700"],
+  Delivered: ["bg-teal-100", "text-teal-700"],
+  Closed: ["bg-slate-800", "text-white"],
+  Cancelled: ["bg-red-100", "text-red-700"]
+};
+var DOCUMENT_COLOR = {
+  Draft: ["bg-slate-100", "text-slate-700"],
+  PendingApproval: ["bg-amber-100", "text-amber-700"],
+  Issued: ["bg-emerald-100", "text-emerald-700"],
+  Surrendered: ["bg-purple-100", "text-purple-700"],
+  Released: ["bg-teal-100", "text-teal-700"],
+  Cancelled: ["bg-red-100", "text-red-700"]
+};
+var BILLING_COLOR = {
+  DraftCosts: ["bg-slate-100", "text-slate-700"],
+  PendingInvoice: ["bg-amber-100", "text-amber-700"],
+  Billed: ["bg-blue-100", "text-blue-700"],
+  PartiallyPaid: ["bg-indigo-100", "text-indigo-700"],
+  Paid: ["bg-emerald-100", "text-emerald-700"]
+};
+var EXCEPTION_COLOR = {
+  Low: ["bg-yellow-100", "text-yellow-700"],
+  Medium: ["bg-orange-100", "text-orange-700"],
+  High: ["bg-red-100", "text-red-700"],
+  Critical: ["bg-red-700", "text-white"]
+};
+var FAMILIES = {
+  shipment: SHIPMENT_COLOR,
+  document: DOCUMENT_COLOR,
+  billing: BILLING_COLOR,
+  exception: EXCEPTION_COLOR
+};
+var VdgStatusBadge = class extends LitElement4 {
+  static properties = {
+    state: { type: String },
+    fsm: { type: String }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.state = "";
+    this.fsm = "shipment";
+  }
+  render() {
+    const family = FAMILIES[this.fsm] || SHIPMENT_COLOR;
+    const [bg, fg] = family[this.state] || ["bg-slate-100", "text-slate-600"];
+    return html6`
+      <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium tracking-tight ${bg} ${fg}">
+        <span class="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-70"></span>
+        ${statusBadgeLabel(this.fsm, this.state)}
+      </span>
+    `;
+  }
+};
+customElements.define("status-badge", VdgStatusBadge);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/info-tip.js
+import { LitElement as LitElement5, html as html7 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var _seq = 0;
+var VdgInfoTip = class extends LitElement5 {
+  static properties = {
+    text: { type: String },
+    open: { type: Boolean, state: true }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.text = "";
+    this.open = false;
+    this._id = `info-tip-${++_seq}`;
+    this._onDocClick = this._onDocClick.bind(this);
+    this._onKeydown = this._onKeydown.bind(this);
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("click", this._onDocClick);
+    document.addEventListener("keydown", this._onKeydown);
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("click", this._onDocClick);
+    document.removeEventListener("keydown", this._onKeydown);
+  }
+  _onDocClick(e) {
+    if (this.open && !this.contains(e.target)) this.open = false;
+  }
+  _onKeydown(e) {
+    if (this.open && e.key === "Escape") {
+      this.open = false;
+      this.querySelector("button")?.focus();
+    }
+  }
+  _toggle(e) {
+    e.stopPropagation();
+    this.open = !this.open;
+  }
+  render() {
+    return html7`
+      <span class="relative inline-flex">
+        <button type="button" @click=${this._toggle}
+          aria-expanded=${this.open ? "true" : "false"} aria-describedby=${this._id}
+          aria-label=${this.text}
+          class="info-tip-btn w-[15px] h-[15px] inline-flex items-center justify-center rounded-full
+                 border border-slate-300 bg-white text-slate-400 text-[10px] font-semibold leading-none
+                 transition-colors hover:text-slate-600 hover:border-slate-400
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+        >i</button>
+        <span id=${this._id} role="tooltip"
+          class="absolute z-30 left-1/2 -translate-x-1/2 top-[22px] w-60 max-w-[80vw] rounded-lg
+                 bg-slate-800 text-slate-100 text-[11px] font-normal normal-case tracking-normal
+                 leading-relaxed text-left px-3 py-2 shadow-xl ring-1 ring-black/5
+                 transition-opacity duration-150 ${this.open ? "opacity-100" : "opacity-0 pointer-events-none"}"
+        >${this.text}</span>
+      </span>
+    `;
+  }
+};
+customElements.define("info-tip", VdgInfoTip);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/kpi-card.js
+import { LitElement as LitElement6, html as html8, svg } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var TONES = {
+  blue: { dot: "bg-blue-500", ring: "ring-blue-100", text: "text-blue-600" },
+  amber: { dot: "bg-amber-500", ring: "ring-amber-100", text: "text-amber-600" },
+  red: { dot: "bg-red-500", ring: "ring-red-100", text: "text-red-600" },
+  green: { dot: "bg-emerald-500", ring: "ring-emerald-100", text: "text-emerald-600" }
+};
+var ICONS2 = {
+  ship: svg`<path d="M3 18a9 9 0 0 0 18 0M3 18l1.5-5h15L21 18M6 13V7h12v6M9 7V4h6v3"/>`,
+  doc: svg`<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>`,
+  alert: svg`<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="0.5"/>`,
+  dollar: svg`<path d="M12 2v20M17 7H9a3 3 0 0 0 0 6h6a3 3 0 0 1 0 6H7"/>`
+};
+var VdgKpiCard = class extends LitElement6 {
+  static properties = {
+    label: { type: String },
+    value: { type: String },
+    delta: { type: String },
+    tone: { type: String },
+    icon: { type: String },
+    tooltip: { type: String }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.tone = "blue";
+    this.icon = "ship";
+  }
+  render() {
+    const tone = TONES[this.tone] || TONES.blue;
+    const iconContent = ICONS2[this.icon] || ICONS2.ship;
+    return html8`
+      <div class="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-sm transition">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <span>${this.label}</span>
+            ${this.tooltip ? html8`<info-tip text="${this.tooltip}"></info-tip>` : ""}
+          </div>
+          <div class="w-9 h-9 rounded-lg ring-4 ${tone.ring} ${tone.dot} bg-opacity-10 flex items-center justify-center">
+            <svg class="w-4 h-4 ${tone.text}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              ${iconContent}
+            </svg>
+          </div>
+        </div>
+        <div class="mt-3 text-3xl font-bold tracking-tight text-slate-900">${this.value}</div>
+        <div class="mt-1 text-xs ${tone.text} font-medium">${this.delta}</div>
+      </div>
+    `;
+  }
+};
+customElements.define("kpi-card", VdgKpiCard);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/upload-zone.js
+import { LitElement as LitElement7, html as html9 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var MOBILE_BREAKPOINT_PX = 768;
+function isMobileTouch() {
+  return navigator.maxTouchPoints > 0 && window.innerWidth < MOBILE_BREAKPOINT_PX;
+}
+var VdgUploadZone = class extends LitElement7 {
+  static properties = {
+    accept: { type: String },
+    hover: { type: Boolean, state: true },
+    file: { type: Object, state: true }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.accept = ".xlsx";
+    this.hover = false;
+    this.file = null;
+  }
+  _dispatch(file) {
+    this.file = file;
+    this.dispatchEvent(new CustomEvent("vdg:file", { detail: { file }, bubbles: true }));
+  }
+  _onDrop(e) {
+    e.preventDefault();
+    this.hover = false;
+    const f = e.dataTransfer.files?.[0];
+    if (f) this._validateAndDispatch(f);
+  }
+  _onPicker(e) {
+    const f = e.target.files?.[0];
+    if (f) this._validateAndDispatch(f);
+  }
+  _validateAndDispatch(file) {
+    const name = file.name.toLowerCase();
+    const ok2 = name.endsWith(".xlsx") || name.endsWith(".xls");
+    if (!ok2) {
+      this.dispatchEvent(new CustomEvent("vdg:file-rejected", {
+        detail: { reason: "unsupported-format", name: file.name },
+        bubbles: true,
+        composed: true
+      }));
+      return;
+    }
+    this._dispatch(file);
+  }
+  render() {
+    if (isMobileTouch()) {
+      return html9`
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+          <div class="text-sm font-medium text-slate-700 mb-3">
+            ${this.file ? this.file.name : t("upload_zone.choose_file")}
+          </div>
+          <label class="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm rounded-lg cursor-pointer">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            ${t("upload_zone.browse")}
+            <input type="file" accept="${this.accept}" class="hidden" @change=${(e) => this._onPicker(e)} />
+          </label>
+          ${this.file ? html9`
+            <div class="mt-2 text-xs text-slate-500">${t("upload_zone.ready_mobile", { kb: (this.file.size / 1024).toFixed(1) })}</div>` : ""}
+        </div>`;
+    }
+    const cls = this.hover ? "border-blue-400 bg-blue-50/60" : "border-slate-300 bg-white hover:border-slate-400";
+    return html9`
+      <label
+        class="block rounded-xl border-2 border-dashed ${cls} p-10 text-center cursor-pointer transition"
+        @dragover=${(e) => {
+      e.preventDefault();
+      this.hover = true;
+    }}
+        @dragleave=${() => {
+      this.hover = false;
+    }}
+        @drop=${(e) => this._onDrop(e)}
+      >
+        <input type="file" accept=${this.accept} class="hidden" @change=${(e) => this._onPicker(e)} />
+        <div class="mx-auto w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="mt-4 text-sm font-medium text-slate-800">
+          ${this.file ? this.file.name : t("upload_zone.drop_hint")}
+        </div>
+        <div class="mt-1 text-xs text-slate-500">
+          ${this.file ? t("upload_zone.ready", { kb: (this.file.size / 1024).toFixed(1) }) : t("upload_zone.local_note")}
+        </div>
+      </label>`;
+  }
+};
+customElements.define("upload-zone", VdgUploadZone);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/cutoff-timer.js
+import { LitElement as LitElement8, html as html10 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var VdgCutoffTimer = class extends LitElement8 {
+  static properties = {
+    deadline: { type: String },
+    label: { type: String },
+    now: { type: Number, state: true }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this.deadline = new Date(Date.now() + 6 * 3600 * 1e3).toISOString();
+    this.label = "Cutoff";
+    this.now = Date.now();
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    this._timer = setInterval(() => {
+      this.now = Date.now();
+    }, 30 * 1e3);
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    clearInterval(this._timer);
+  }
+  _format(ms) {
+    if (ms <= 0) return "Expired";
+    const h = Math.floor(ms / 36e5);
+    const m = Math.floor(ms % 36e5 / 6e4);
+    if (h >= 24) {
+      const d = Math.floor(h / 24);
+      return `${d}d ${h % 24}h`;
+    }
+    return `${h}h ${m}m`;
+  }
+  _tone(ms) {
+    if (ms <= 0) return "text-slate-400 line-through";
+    if (ms < 4 * 3600 * 1e3) return "text-red-600 font-semibold";
+    if (ms < 24 * 3600 * 1e3) return "text-amber-600 font-medium";
+    return "text-emerald-600";
+  }
+  render() {
+    const ms = new Date(this.deadline).getTime() - this.now;
+    return html10`
+      <div class="inline-flex items-center gap-2 text-xs">
+        <span class="text-slate-500">${this.label}</span>
+        <span class="${this._tone(ms)} font-mono">${this._format(ms)}</span>
+      </div>
+    `;
+  }
+};
+customElements.define("cutoff-timer", VdgCutoffTimer);
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/offline-banner.js
+var LIT_CDN_URL = "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var BANNER_MSG = "Working offline \u2014 changes saved locally, will sync when reconnected";
+var BANNER_Z = 50;
+var DISMISS_DELAY_MS = 2e3;
+async function _defineOfflineBanner() {
+  if (customElements.get("vdg-offline-banner")) return;
+  const { LitElement: LitElement10, html: html12 } = await import(LIT_CDN_URL);
+  class VdgOfflineBanner extends LitElement10 {
+    static properties = {
+      _offline: { type: Boolean, state: true },
+      _visible: { type: Boolean, state: true }
+    };
+    createRenderRoot() {
+      return this;
+    }
+    constructor() {
+      super();
+      this._offline = !navigator.onLine;
+      this._visible = !navigator.onLine;
+      this._onOnline = () => this._handleOnline();
+      this._onOffline = () => this._handleOffline();
+      this._hideTimer = null;
+    }
+    connectedCallback() {
+      super.connectedCallback();
+      window.addEventListener("online", this._onOnline);
+      window.addEventListener("offline", this._onOffline);
+    }
+    disconnectedCallback() {
+      super.disconnectedCallback();
+      window.removeEventListener("online", this._onOnline);
+      window.removeEventListener("offline", this._onOffline);
+      clearTimeout(this._hideTimer);
+    }
+    _handleOffline() {
+      clearTimeout(this._hideTimer);
+      this._offline = true;
+      this._visible = true;
+    }
+    _handleOnline() {
+      this._offline = false;
+      this._hideTimer = setTimeout(() => {
+        this._visible = false;
+      }, DISMISS_DELAY_MS);
+    }
+    render() {
+      if (!this._visible) return html12``;
+      const isOffline = this._offline;
+      return html12`
+        <div
+          role="status"
+          aria-live="polite"
+          style="z-index:${BANNER_Z}"
+          class="fixed top-0 left-0 right-0 flex items-center justify-center gap-2.5 px-4 py-2 text-sm font-medium pointer-events-none
+                 ${isOffline ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"}"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-white/70 ${isOffline ? "animate-pulse" : ""}"></span>
+          ${isOffline ? BANNER_MSG : "Back online \u2014 syncing\u2026"}
+        </div>
+      `;
+    }
+  }
+  customElements.define("vdg-offline-banner", VdgOfflineBanner);
+}
+if (typeof customElements !== "undefined") {
+  _defineOfflineBanner().catch((e) => console.error("[offline-banner] Lit load failed:", e));
+}
+var RETRY_BTN_ID = "view-mount-retry-btn";
+var RETRY_BTN_TESTID = "view-mount-retry";
+function renderViewMountRecovery(root, { route, offline, exhausted, onRetry }) {
+  const bodyKey = offline ? "view_mount_failed_offline" : exhausted ? "view_mount_failed_persist" : "view_mount_failed_body";
+  root.innerHTML = `
+    <div data-testid="view-mount-recovery" data-route="${route}"
+         class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-lg font-semibold text-slate-700">${t("view_mount_failed_title")}</div>
+      <div class="text-sm text-slate-500">${t(bodyKey)}</div>
+      <button id="${RETRY_BTN_ID}" data-testid="${RETRY_BTN_TESTID}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("view_mount_retry")}
+      </button>
+    </div>`;
+  root.querySelector(`#${RETRY_BTN_ID}`)?.addEventListener("click", () => onRetry());
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/cmd-palette.js
+import { LitElement as LitElement9, html as html11 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
+var PALETTE_MAX_RESULTS = 8;
+var PALETTE_RECENT_MAX = 5;
+var PALETTE_PREFS_KEY = "preferences";
+function paletteActions() {
+  return [
+    { label: t("dashboard"), shortcut: "g d", kind: "action", action: () => navigate("/manager/dashboard") },
+    { label: t("cmd_palette.action.shipments_pipeline"), shortcut: "g s", kind: "action", action: () => navigate("/manager/pipeline") },
+    { label: t("masters_customers.title"), shortcut: "g c", kind: "action", action: () => navigate("/masters/customers") },
+    { label: t("nav.reports.pnl_report"), shortcut: "g r", kind: "action", action: () => navigate("/manager/reports/pnl") },
+    { label: t("cmd_palette.action.approve_all"), shortcut: null, kind: "action", action: () => navigate("/manager/approvals") },
+    { label: t("close_period.title"), shortcut: null, kind: "action", action: () => navigate("/manager/finance/close-period") },
+    { label: t("cmd_palette.action.sales_view"), shortcut: null, kind: "action", action: () => navigate("/dashboard") },
+    { label: t("nav.sales.create_shipment"), shortcut: null, kind: "action", action: () => navigate("/shipments/new") }
+  ];
+}
+function fuzzyScore(haystack, needle) {
+  let hi = 0, score = 0, lastIdx = -1;
+  for (const ch of needle.toLowerCase()) {
+    const pos = haystack.toLowerCase().indexOf(ch, hi);
+    if (pos < 0) return 0;
+    score += lastIdx >= 0 ? Math.max(10 - (pos - lastIdx), 1) : 5;
+    lastIdx = pos;
+    hi = pos + 1;
+  }
+  return score;
+}
+function trapFocus(el, e) {
+  const focusable = [...el.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])')];
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.key === "Tab") {
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+}
+var VdgCmdPalette = class extends LitElement9 {
+  static properties = {
+    _open: { state: true },
+    _query: { state: true },
+    _results: { state: true },
+    _activeIdx: { state: true }
+  };
+  createRenderRoot() {
+    return this;
+  }
+  constructor() {
+    super();
+    this._open = false;
+    this._query = "";
+    this._results = [];
+    this._activeIdx = 0;
+    this._store = null;
+    this._onOpen = (e) => {
+      if (e.detail?.action === "open") this.open();
+      if (e.detail?.action === "close") this.close();
+      else this.toggle();
+    };
+    this._onKey = (e) => {
+      if (!this._open) return;
+      this._handleKey(e);
+    };
+  }
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("vdg:cmd-palette", this._onOpen);
+    window.addEventListener("keydown", this._onKey);
+    this._store = window.__vdg_store || null;
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("vdg:cmd-palette", this._onOpen);
+    window.removeEventListener("keydown", this._onKey);
+  }
+  toggle() {
+    this._open ? this.close() : this.open();
+  }
+  open() {
+    this._open = true;
+    this._query = "";
+    this._activeIdx = 0;
+    this._loadRecent().then((r) => {
+      this._results = r;
+    });
+    requestAnimationFrame(() => this.querySelector("#palette-input")?.focus());
+  }
+  close() {
+    this._open = false;
+    this._query = "";
+    this._results = [];
+  }
+  async _loadRecent() {
+    if (!this._store) return paletteActions().slice(0, PALETTE_MAX_RESULTS);
+    try {
+      const prefs = await this._store.cache_get_meta(PALETTE_PREFS_KEY);
+      const recent = prefs?.palette_recent || [];
+      return [...recent.slice(0, PALETTE_RECENT_MAX), ...paletteActions()].slice(0, PALETTE_MAX_RESULTS);
+    } catch {
+      return paletteActions().slice(0, PALETTE_MAX_RESULTS);
+    }
+  }
+  async _search(q) {
+    const candidates = [...paletteActions()];
+    const lru = window.__vdg_lru;
+    if (lru) {
+      try {
+        const ships = lru.getAll?.("shipment") || [];
+        ships.forEach((s) => candidates.push({
+          label: `${s.shipment_ref || s.id} \xB7 ${s.customer_name || s.customer || ""}`,
+          kind: "shipment",
+          id: s.id,
+          action: null,
+          shortcut: null
+        }));
+        const custs = lru.getAll?.("customers") || [];
+        custs.forEach((c) => candidates.push({
+          label: c.name || c.id,
+          kind: "customers",
+          id: c.id,
+          action: null,
+          shortcut: null
+        }));
+      } catch {
+      }
+    }
+    const scored = candidates.map((c) => ({ ...c, score: fuzzyScore(c.label, q) })).filter((c) => c.score > 0).sort((a, b) => b.score - a.score).slice(0, PALETTE_MAX_RESULTS);
+    return scored.length ? scored : await this._loadRecent();
+  }
+  async _handleInput(e) {
+    this._query = e.target.value;
+    this._activeIdx = 0;
+    this._results = this._query.length >= 1 ? await this._search(this._query) : await this._loadRecent();
+  }
+  _handleKey(e) {
+    const len = this._results.length;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this.close();
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "j") {
+      e.preventDefault();
+      this._activeIdx = (this._activeIdx + 1) % len;
+    }
+    if (e.key === "ArrowUp" || e.key === "k") {
+      e.preventDefault();
+      this._activeIdx = (this._activeIdx - 1 + len) % len;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      this._select(this._results[this._activeIdx]);
+    }
+    trapFocus(this, e);
+  }
+  async _select(item) {
+    if (!item) return;
+    if (item.kind === "action" || item.action) {
+      item.action?.();
+    } else {
+      window.dispatchEvent(new CustomEvent("vdg:open-detail", {
+        detail: { kind: item.kind, id: item.id }
+      }));
+    }
+    await this._saveRecent(item);
+    this.close();
+  }
+  async _saveRecent(item) {
+    if (!this._store) return;
+    try {
+      const prefs = await this._store.cache_get_meta(PALETTE_PREFS_KEY) || { key: PALETTE_PREFS_KEY };
+      const recent = (prefs.palette_recent || []).filter((r) => r.label !== item.label);
+      recent.unshift({ label: item.label, kind: item.kind, id: item.id, action: null, shortcut: item.shortcut });
+      prefs.palette_recent = recent.slice(0, PALETTE_RECENT_MAX);
+      await this._store.cache_put_meta(PALETTE_PREFS_KEY, prefs);
+    } catch {
+    }
+  }
+  _handleClickOutside(e) {
+    if (e.target === this.querySelector("#palette-backdrop")) this.close();
+  }
+  render() {
+    if (!this._open) return html11``;
+    return html11`
+      <div id="palette-backdrop"
+           class="fixed inset-0 z-[100] flex items-start justify-center pt-24 bg-black/40"
+           @click="${(e) => this._handleClickOutside(e)}">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-200 flex items-center gap-2">
+            <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35" stroke-linecap="round"/>
+            </svg>
+            <input id="palette-input"
+                   .value="${this._query}"
+                   @input="${(e) => this._handleInput(e)}"
+                   placeholder="${t("cmd_palette.search_placeholder")}"
+                   class="flex-1 outline-none text-sm text-slate-800 placeholder-slate-400"
+                   aria-label="${t("cmd_palette.aria.search")}"
+                   autocomplete="off" spellcheck="false" />
+            <kbd class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Esc</kbd>
+          </div>
+
+          ${this._results.length ? html11`
+            <ul class="py-1 max-h-80 overflow-y-auto" role="listbox" aria-label="${t("cmd_palette.aria.results")}">
+              ${this._results.map((r, i) => html11`
+                <li role="option" aria-selected="${i === this._activeIdx}"
+                    @click="${() => this._select(r)}"
+                    @mouseenter="${() => {
+      this._activeIdx = i;
+    }}"
+                    class="flex items-center gap-3 px-4 py-2.5 cursor-pointer
+                           ${i === this._activeIdx ? "bg-blue-600/20 rounded" : "hover:bg-slate-50"}">
+                  <span class="flex-1 text-sm text-slate-800 truncate">${r.label}</span>
+                  ${r.shortcut ? html11`
+                    <kbd class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">${r.shortcut}</kbd>
+                  ` : ""}
+                </li>`)}
+            </ul>
+          ` : html11`
+            <div class="px-4 py-6 text-center text-sm text-slate-400">${t("cmd_palette.no_results")}</div>
+          `}
+
+          <div class="px-4 py-2 border-t border-slate-100 flex gap-4 text-[10px] text-slate-400">
+            <span>${t("cmd_palette.hint.navigate")}</span>
+            <span>${t("cmd_palette.hint.select")}</span>
+            <span>${t("cmd_palette.hint.close")}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+};
+customElements.define("vdg-cmd-palette", VdgCmdPalette);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/oauth.js
+var _impl2 = null;
+function bindOAuthProvider(impl) {
+  _impl2 = impl;
+}
+function _i2() {
+  if (!_impl2) throw new Error("storage/oauth: no adapter bound (the storage bootstrap binds it)");
+  return _impl2;
+}
+var hydrateSessionFromToken = (...a) => _i2().hydrateSessionFromToken(...a);
+var initGoogleSignIn = (...a) => _i2().initGoogleSignIn(...a);
+var renderSignInButton = (...a) => _i2().renderSignInButton(...a);
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/login.js
+function sessionExpiredMessage() {
+  return t("login.session_expired");
+}
+function loginHtml() {
+  return `
+    <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-lg border border-slate-100 w-full max-w-sm p-10 flex flex-col items-center gap-6">
+
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800
+                      flex items-center justify-center text-white font-bold text-lg tracking-tight">
+            V
+          </div>
+          <div>
+            <div class="text-base font-semibold text-slate-900 leading-tight">VDG FreightForwarder</div>
+            <div class="text-[11px] text-slate-400">${t("login.workspace")}</div>
+          </div>
+        </div>
+
+        <!-- Tagline -->
+        <div class="text-center">
+          <div class="text-sm font-medium text-slate-700">${t("login.tagline")}</div>
+        </div>
+
+        <!-- GIS button target -->
+        <div id="gis-btn-target" class="w-full flex justify-center min-h-[44px]"></div>
+
+        <!-- Error -->
+        <div id="login-error" class="hidden text-xs text-red-600 text-center px-2"></div>
+
+        <!-- #21 stall hint (extension holding the popup) -->
+        <div id="login-hint" class="hidden text-xs text-amber-600 text-center px-2"></div>
+
+        <!-- Footer -->
+        <div class="text-[10px] text-slate-300 text-center">
+          ${t("login.footer")}
+          <div class="mt-1 font-mono text-slate-400">v0.4.16 (3e6a172)</div>
+        </div>
+      </div>
+    </div>`;
+}
+function renderLoginPage(mountEl, onSuccess) {
+  mountEl.innerHTML = loginHtml();
+  const btnTarget = mountEl.querySelector("#gis-btn-target");
+  const errorEl = mountEl.querySelector("#login-error");
+  const hintEl = mountEl.querySelector("#login-hint");
+  function showError(msg) {
+    if (!errorEl) return;
+    errorEl.textContent = msg;
+    errorEl.classList.remove("hidden");
+  }
+  window.addEventListener("vdg:signin-error", (e) => showError(t("login.signin_failed", { detail: e.detail })));
+  window.addEventListener("vdg:session-expired", () => showError(sessionExpiredMessage()), { once: true });
+  window.addEventListener("vdg:signin-stalled", () => {
+    if (!hintEl) return;
+    hintEl.textContent = t("login.signin_stalled");
+    hintEl.classList.remove("hidden");
+  });
+  initGoogleSignIn(
+    null,
+    // no success callback — renderSignInButton does sign-in + location.reload()
+    (err) => showError(t("login.signin_failed", { detail: err?.message || t("login.unknown_error") }))
+  ).then(() => {
+    if (btnTarget) renderSignInButton(btnTarget);
+  }).catch((err) => {
+    showError(t("login.gis_unavailable", { detail: err?.message || t("login.check_network") }));
+  });
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/local-store.js
+var _store = null;
+function bindLocalStore(store) {
+  _store = store;
+}
+function _s() {
+  if (!_store) throw new Error("storage/local-store: no local store bound");
+  return _store;
+}
+function setStoreScope(email) {
+  return _s().setStoreScope(email);
+}
+function sqlCountEntities() {
+  return _s().sqlCountEntities();
+}
+function localStore() {
+  return _s();
+}
+
+// output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
+var _impl3 = null;
+function bindKeyValueStore(impl) {
+  _impl3 = impl;
+}
+function _i3() {
+  if (!_impl3) throw new Error("kernel/key-value: no adapter bound (the kernel bootstrap binds it)");
+  return _impl3;
+}
+var kvGet = (...a) => _i3().getItem(...a);
+var kvSet = (...a) => _i3().setItem(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/grant-file.js
+var GRANT_FILE_TAG = "grant.";
+var NAME_SEPARATOR = ".";
+function grantFileName(workspace, fork) {
+  return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${fork}`;
+}
+function grantSearchKey(workspace, emailBase) {
+  return grantFileName(workspace, emailBase);
+}
+function forkFromGrantName(name, workspace) {
+  const head = grantFileName(workspace, "");
+  if (typeof name !== "string" || !name.startsWith(head)) return null;
+  return name.slice(head.length) || null;
+}
+function parseGrant(json, email, workspace) {
+  let grant;
+  try {
+    grant = JSON.parse(json);
+  } catch {
+    return [];
+  }
+  if (!grant || typeof grant.email !== "string" || typeof grant.fork !== "string" || !grant.fork || !Array.isArray(grant.roles)) return [];
+  if (grant.email.toLowerCase() !== String(email || "").toLowerCase()) return [];
+  if (String(grant.workspace || "").toLowerCase() !== String(workspace || "").toLowerCase()) return [];
+  if (grant.roles.length === 0) return [];
+  if (!grant.roles.every((r) => ROLE_NAMES.includes(r))) return [];
+  return [...grant.roles];
+}
+function parseGrantAreas(json, email, workspace) {
+  let grant;
+  try {
+    grant = JSON.parse(json);
+  } catch {
+    return [];
+  }
+  if (!grant || typeof grant.email !== "string") return [];
+  if (grant.email.toLowerCase() !== String(email || "").toLowerCase()) return [];
+  if (String(grant.workspace || "").toLowerCase() !== String(workspace || "").toLowerCase()) return [];
+  if (!Array.isArray(grant.areas)) return [];
+  return grant.areas.filter((a) => a && typeof a.path === "string" && typeof a.folder_id === "string");
+}
+var GRANT_AREAS_KEY = "vdg.grant.areas";
+function rememberGrantAreas(areas) {
+  if (!Array.isArray(areas) || areas.length === 0) return;
+  try {
+    kvSet(GRANT_AREAS_KEY, JSON.stringify(areas));
+  } catch {
+  }
+}
+function recallGrantAreas() {
+  try {
+    return JSON.parse(kvGet(GRANT_AREAS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/drive-error-classifier.js
+var DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT = "scope_insufficient";
+var DRIVE_ERROR_KIND_FILE_PERMISSION = "file_permission";
+function classifyDriveError(err) {
+  if (!err) return null;
+  if (err.status === 403) return DRIVE_ERROR_KIND_FILE_PERMISSION;
+  if (err.status === 401) return DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT;
+  return null;
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/workspace-authority.js
+var VERDICT_MANAGER = "manager";
+var VERDICT_GRANT = "grant";
+var VERDICT_NOT_PROVISIONED = "not_provisioned";
+var _adapter = null;
+function bindWorkspaceAuthority(adapter) {
+  _adapter = adapter;
+}
+function workspaceAuthority() {
+  if (!_adapter) throw new Error("storage/workspace-authority: no adapter bound (bootstrap selects drive | server)");
+  return _adapter;
+}
+
+// output/web/js.tmp/bootstrap/platform/auth.js
+var AUTH_PROBE_TIMEOUT_MS = 2e4;
+var ROLES_RESOLVED_EVENT2 = "vdg:roles-resolved";
+var LOGIN_ROOT_ID = "login-root";
+var LOGIN_OVERLAY_STYLE = "position:fixed;inset:0;z-index:50;background:#f8fafc;";
+var RoleProbeTimeoutError = class extends Error {
+  constructor() {
+    super("Auth probe timeout");
+    this.name = "RoleProbeTimeoutError";
+  }
+};
+var _lastError = null;
+function takeAuthError() {
+  const err = _lastError;
+  _lastError = null;
+  return err;
+}
+function _readCache() {
+  try {
+    return JSON.parse(localStorage.getItem(ROLE_CACHE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+function readCachedIdentityNow() {
+  const raw = _readCache();
+  return raw?.email && raw?.role ? { email: raw.email, role: raw.role, roles: Array.isArray(raw.roles) ? raw.roles : [] } : null;
+}
+var authPlatform = {
+  auth_current_user: async () => getCurrentUser() ?? null,
+  auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
+  auth_revive_session: async () => await rebuildSessionFromStoredToken() ?? null,
+  auth_sign_out: async () => {
+    await signOut();
+  },
+  auth_set_store_scope: async (email) => {
+    setStoreScope(email);
+  },
+  auth_active_workspace_name: async () => activeWorkspaceName() || null,
+  auth_remember_grant_areas: async (areas) => {
+    rememberGrantAreas(areas ?? []);
+  },
+  // F-57-01 AC-04: does this browser already hold at least one synced entity row? Runs before
+  // repo-init, straight to the SQLite singleton (which opens the worker + creates the schema on
+  // first op). Any failure (no OPFS, timeout) reads as "no cache" — the safe fall-through.
+  auth_has_cached_workspace: async () => {
+    const result = await safeAwait(sqlCountEntities(), SAFE_AWAIT_DEFAULT_MS, 0, "auth-gate:hasCachedWorkspace");
+    return result.ok ? (result.value ?? 0) > 0 : false;
+  },
+  auth_probe_role: async (user, workspace) => {
+    try {
+      return await Promise.race([
+        workspaceAuthority().probeRole(user, workspace),
+        new Promise((_, reject) => setTimeout(() => reject(new RoleProbeTimeoutError()), AUTH_PROBE_TIMEOUT_MS))
+      ]);
+    } catch (err) {
+      _lastError = err;
+      throw err;
+    }
+  },
+  auth_cache_read: async () => _readCache(),
+  auth_cache_write: async (entry) => {
+    try {
+      localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify(entry));
+    } catch {
+    }
+  },
+  auth_cache_clear: async () => {
+    localStorage.removeItem(ROLE_CACHE_KEY);
+    try {
+      localStorage.removeItem(GRANT_AREAS_KEY);
+    } catch {
+    }
+  },
+  // F-42-05: the snapshot on every resolve (the route guard reads it directly, so a repeat resolve
+  // must not leave it stale); the announcement only on a real change, or the chrome flickers.
+  auth_publish_roles: (roles, changed) => {
+    const resolved = [...roles || []];
+    window.__vdg_session_roles = resolved;
+    if (changed) window.dispatchEvent(new CustomEvent(ROLES_RESOLVED_EVENT2, { detail: { roles: [...resolved] } }));
+  }
+};
+var _renderLoginPage = null;
+var _loginMounted = false;
+function configureAuthPlatform({ renderLoginPage: renderLoginPage2 } = {}) {
+  if (renderLoginPage2) _renderLoginPage = renderLoginPage2;
+}
+function mountLoginScreen(onSignedIn) {
+  if (_loginMounted) return;
+  if (!_renderLoginPage) throw new Error("platform/auth: configureAuthPlatform({ renderLoginPage }) was not called by bootstrap");
+  _loginMounted = true;
+  let loginRoot = document.getElementById(LOGIN_ROOT_ID);
+  if (!loginRoot) {
+    loginRoot = document.createElement("div");
+    loginRoot.id = LOGIN_ROOT_ID;
+    loginRoot.style.cssText = LOGIN_OVERLAY_STYLE;
+    document.body.appendChild(loginRoot);
+  }
+  loginRoot.innerHTML = "";
+  _renderLoginPage(loginRoot, (user) => {
+    loginRoot.remove();
+    _loginMounted = false;
+    onSignedIn(user);
+  });
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/priced-envelope.js
+var REQUIRED_ROW_FIELDS = ["pricing_key", "valid_from", "valid_to"];
+var UNKNOWN_CURRENCY = { Other: "UNKNOWN" };
+var KNOWN_CURRENCY_CODES = /* @__PURE__ */ new Set(["VND", "USD", "CNY", "EUR", "JPY", "KRW", "SGD", "THB", "INR"]);
+function _normalizeCurrency(code) {
+  if (!code) return UNKNOWN_CURRENCY;
+  const up = String(code).toUpperCase();
+  if (KNOWN_CURRENCY_CODES.has(up)) return up.charAt(0) + up.slice(1).toLowerCase();
+  return { Other: String(code) };
+}
+function toPricedEnvelope(id, row) {
+  const missing = REQUIRED_ROW_FIELDS.filter((f) => !row?.[f]);
+  if (missing.length) throw new Error(`priced row '${id}' is missing ${missing.join(", ")}`);
+  return {
+    record_id: id,
+    pricing_key: row.pricing_key,
+    valid_from: row.valid_from,
+    valid_to: row.valid_to,
+    currency: _normalizeCurrency(row.currency),
+    body: row
+  };
+}
+
+// output/web/js.tmp/implementations/storage/implementations/repos/file-retire.js
+async function retireFile(driveApi, fileId, parentId) {
+  return "trashed";
+}
+
+// output/web/js.tmp/bootstrap/platform/cache.js
+var repo = () => window.__vdg_repo;
+var io = () => window.__vdg_io;
+var _seedKeys = /* @__PURE__ */ new Map();
+function registerSeedKeys(migrations) {
+  for (const m of migrations || []) {
+    if (m && typeof m.key === "function") _seedKeys.set(m.id, m.key);
+  }
+}
+async function bounded(promise, tag) {
+  const res = await safeAwait(promise, SAFE_AWAIT_DEFAULT_MS, null, tag);
+  if (!res.ok) throw res.error || new Error(`cache platform: ${tag} did not settle`);
+  return res.value ?? null;
+}
+var cachePlatform = {
+  cache_get: (kind, id) => bounded(repo().get(kind, id), `cache:get:${kind}`),
+  cache_list: (kind) => bounded(repo().list(kind, null), `cache:list:${kind}`).then((r) => r || []),
+  cache_put: (kind, id, body) => bounded(repo().put(kind, id, body), `cache:put:${kind}`),
+  cache_meta_get: (key) => bounded(io().cache_get_meta(key), `cache:meta-get:${key}`),
+  cache_meta_put: (key, body) => bounded(io().cache_put_meta(key, body), `cache:meta-put:${key}`),
+  // A seed file that is not there is not a failure — the kind simply has no bundled data.
+  cache_fetch_text: async (url) => {
+    const res = await bounded(fetch(url), `cache:seed-fetch:${url}`);
+    return res && res.ok ? bounded(res.text(), `cache:seed-body:${url}`) : null;
+  },
+  cache_seed_key: (migrationId, row) => {
+    const key = _seedKeys.get(migrationId);
+    return String((key ? key(row) : row?.id) ?? "");
+  },
+  cache_priced_envelope: async (id, row) => toPricedEnvelope(id, row),
+  cache_priced_seed: async (kind, records) => {
+    const ref = window.__vdg_priced_repos?.[kind];
+    if (!ref) return null;
+    return await bounded(ref.seedIfEmpty(records), `cache:priced-seed:${kind}`) ?? {};
+  },
+  cache_workspace_root: () => bounded(storageApi().findWorkspaceRoot(activeWorkspaceName()), "cache:ws-root"),
+  cache_find_folder: (parentId, name) => bounded(storageApi().findFolder(parentId, name), `cache:find-folder:${name}`),
+  cache_list_children: (folderId) => bounded(storageApi().listChildren(folderId), "cache:list-children").then((r) => r || []),
+  cache_get_file: (fileId) => bounded(storageApi().getFile(fileId), "cache:get-file"),
+  cache_delete_file: (fileId) => bounded(storageApi().driveFetch("DELETE", `/files/${fileId}`), "cache:delete-file"),
+  // A legacy job goes back through the SPLIT write path — a plain put would land the whole record,
+  // revenue included, in the folder CS reads. Lines written before E-37 carry no line_id and the
+  // split refuses a line without one, so they are stamped with the scheme the form uses.
+  cache_replay_shipment: async (record) => {
+    const ref = record.shipment_ref || record.id;
+    const lines = (record.pnl_lines || []).map((ln, i) => ({ line_id: ln.line_id || pnlLineId(ref, i + 1), ...ln }));
+    return bounded(putShipment(repo(), { ...record, shipment_ref: ref, pnl_lines: lines }), "cache:replay-shipment");
+  },
+  cache_ws_list_dir: (dir) => bounded(io().ws_list_dir(dir), `cache:ws-list:${dir}`),
+  cache_ws_read_file: (dir, name) => bounded(io().ws_read_file(dir, name), `cache:ws-read:${dir}`),
+  cache_ws_write_file: (dir, name, content, fileId) => bounded(io().ws_write_file(dir, name, content, fileId, ""), `cache:ws-write:${dir}`),
+  // Not a plain trash: the account that created a file owns it, and only an owner may trash. A
+  // non-owner detaches it from the folder instead.
+  cache_trash_file: (fileId, parentId) => bounded(retireFile(storageApi(), fileId, parentId || null), "cache:trash-file"),
+  cache_move_file: (fileId, addParent, removeParent) => bounded(
+    storageApi().driveFetch("PATCH", `/files/${fileId}?addParents=${addParent}&removeParents=${removeParent}`, {}),
+    "cache:move-file"
+  ),
+  cache_local_date: (ms) => toLocalDateStr(ms)
+};
+
+// output/web/js.tmp/bootstrap/platform/data.js
+var AUDIT_STORE_REVENUE = "revenue_audit_log";
+var JSONL_SUFFIX = ".jsonl";
+var _scans = /* @__PURE__ */ new Map();
+function ioPort() {
+  return window.__vdg_io || null;
+}
+async function readForkBundles(dir) {
+  const io2 = ioPort();
+  if (!io2) return [];
+  const listing = await io2.ws_list_dir(dir).catch(() => null);
+  if (!listing?.files?.length) return [];
+  const bodies = [];
+  for (const file of listing.files) {
+    if (!file.name.endsWith(JSONL_SUFFIX)) continue;
+    const res = await io2.ws_read_file(dir, file.name).catch(() => null);
+    if (!res?.found) continue;
+    bodies.push(String(res.content));
+  }
+  return bodies;
+}
+var dataPlatform = {
+  /// Every *.jsonl body in one fork folder. A missing or unreadable folder yields [] — for a
+  /// reader who was never granted that fork, "no file" is the correct answer.
+  data_fork_read_jsonl: async (dir, ttlMs) => {
+    const hit = _scans.get(dir);
+    if (ttlMs > 0 && hit && Date.now() - hit.at < ttlMs) return hit.bodies;
+    const bodies = await readForkBundles(dir);
+    if (ttlMs > 0) _scans.set(dir, { at: Date.now(), bodies });
+    return bodies;
+  },
+  data_clear_fork_scan: async (prefix) => {
+    if (!prefix) {
+      _scans.clear();
+      return;
+    }
+    for (const dir of [..._scans.keys()]) {
+      if (dir.startsWith(`users/${prefix}/`)) _scans.delete(dir);
+    }
+  },
+  /// The identity the fork paths are actually built from — `_resolveFolder` builds `users/{prefix}`
+  /// from the io port's own userEmail, and a mirror of it can be stale.
+  data_io_user_email: async () => ioPort()?.userEmail || "",
+  /// The licence claim the boot gate stamped; null when it has not run.
+  data_license_status: async () => window.__vdg_license_status ?? null,
+  /// Append one shipment change list to the trail its readers already hold.
+  data_audit_append: async (store, kind, entityId, op2, body, changes) => {
+    const log = window.__vdg_audit_log;
+    if (!log) return false;
+    if (store === AUDIT_STORE_REVENUE) log.appendRevenue(kind, entityId, op2, body, changes);
+    else log.append(kind, entityId, op2, body, changes);
+    return true;
+  }
+};
+
+// output/web/js.tmp/bootstrap/platform/sync.js
+var WMA_STORE_TIMEOUT_MS = 2e3;
+var TOKEN_RADIX = 36;
+var TOKEN_START = 2;
+var TOKEN_END = 7;
+var HEX_PAD = 2;
+var DJB2_SEED = 5381;
+function _djb2(text) {
+  let h = DJB2_SEED;
+  for (let i = 0; i < text.length; i++) h = (h << 5) + h ^ text.charCodeAt(i);
+  return h >>> 0;
+}
+var syncPlatform = {
+  sync_sha256_hex: async (text) => {
+    try {
+      const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(HEX_PAD, "0")).join("");
+    } catch {
+      return _djb2(text).toString(16);
+    }
+  },
+  sync_crypto_secure: () => typeof crypto !== "undefined" && !!crypto.subtle,
+  sync_token: () => Math.random().toString(TOKEN_RADIX).slice(TOKEN_START, TOKEN_END),
+  sync_today_local: () => todayLocal(),
+  sync_wma_get: async (key) => {
+    const store = window.__vdg_store;
+    if (!store) return null;
+    const { ok: ok2, value } = await safeAwait(store.cache_get_wma(key), WMA_STORE_TIMEOUT_MS, null, "wma:load");
+    return ok2 ? value ?? null : null;
+  },
+  sync_wma_put: async (key, value) => {
+    const store = window.__vdg_store;
+    if (!store) return;
+    const { ok: ok2, error } = await safeAwait(store.cache_put_wma(key, value), WMA_STORE_TIMEOUT_MS, null, "wma:save");
+    if (!ok2) throw new Error(error?.message || "wma:save timed out");
+  }
+};
+
+// output/web/js.tmp/implementations/storage/core_abstractions/ledger-repo.js
+var _repo = null;
+function ledgerRepo() {
+  if (!_repo) throw new Error("Ledger Repo not initialized");
+  return _repo;
+}
+
+// output/web/js.tmp/bootstrap/platform/manager.js
+var managerPlatform = {
+  ledger_chart_of_accounts: () => ledgerRepo().chartOfAccounts(),
+  ledger_posting_rules: () => ledgerRepo().postingRules(),
+  ledger_list_legs: (year, acc_code) => ledgerRepo().listLegs(year, acc_code, null, null),
+  ledger_replace_leg: (year, acc_code, leg) => ledgerRepo().replaceLeg(year, acc_code, leg),
+  ledger_remove_entry: (year, entry_id) => ledgerRepo().removeEntry(year, entry_id),
+  ledger_append_reconciliation: (record) => ledgerRepo().appendReconciliationRecord(record),
+  ledger_last_reconciliation: () => ledgerRepo().getLastReconciliation(),
+  ledger_append_repost: (record) => ledgerRepo().appendRepostRecord(record)
+};
+
+// output/web/js.tmp/bootstrap/platform/governance.js
+var UNKNOWN_OP_MESSAGE = "unknown workspace op";
+function userRepo() {
+  return window.__vdg_user_repo || null;
+}
+function ledgerRepo2() {
+  return window.__vdg_ledger_repo || null;
+}
+async function workspaceTry(op2, args) {
+  const api = storageApi();
+  if (typeof api[op2] !== "function") {
+    return { ok: false, error: { message: `${UNKNOWN_OP_MESSAGE}: ${op2}` } };
+  }
+  try {
+    const value = await api[op2](...Array.isArray(args) ? args : [args]);
+    return { ok: true, value: value ?? null };
+  } catch (err) {
+    return {
+      ok: false,
+      error: {
+        message: err?.message ?? String(err),
+        status: err?.status ?? null,
+        rate_limited: err?.rateLimited === true
+      }
+    };
+  }
+}
+var governancePlatform = {
+  governance_workspace_try: workspaceTry,
+  governance_workspace_name: async () => activeWorkspaceName() || "",
+  governance_workspace_root: async () => {
+    const found = await workspaceTry("findWorkspaceRoot", [activeWorkspaceName()]);
+    return found.ok ? found.value : null;
+  },
+  governance_users_list: async () => await userRepo()?.list() ?? [],
+  governance_users_get: async (email) => await userRepo()?.get(email) ?? null,
+  governance_users_upsert: async (record) => await userRepo()?.upsert(record) ?? record,
+  governance_users_remove: async (email) => {
+    await userRepo()?.remove(email);
+  },
+  governance_audit_append: async (kind, subject, action, detail) => {
+    window.__vdg_audit_log?.append(kind, subject, action, detail);
+  },
+  governance_user_audit_write: async (action, email, before, after, driveOps) => {
+    window.__vdg_user_audit_log?.write(action, email, before, after, driveOps);
+  },
+  governance_ledger_accounts: async () => await ledgerRepo2()?.chartOfAccounts() ?? [],
+  governance_ledger_balance: async (account, asOf) => {
+    const repo3 = ledgerRepo2();
+    if (!repo3) throw new Error("ledger repo not ready");
+    return repo3.getBalance(account, asOf);
+  },
+  governance_membership_evidence: async () => {
+    const cached2 = readCachedIdentityNow();
+    return { grant_area_count: recallGrantAreas().length, cached_role: cached2?.role ?? null };
+  }
+};
+
+// output/web/js.tmp/bootstrap/platform/flows.js
+var JSZIP_CDN = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+var ZIP_COMPRESSION = "DEFLATE";
+var ZIP_LEVEL = 6;
+var HTTP_TRANSPORT_FAILURE = 0;
+function wasm() {
+  return window.__vdg_wasm;
+}
+function repo2() {
+  return window.__vdg_repo;
+}
+var SHIPMENT_OPS = {
+  putShipment: (shipment) => putShipment(repo2(), shipment),
+  putEnvelope: (ref, record) => putEnvelope(repo2(), ref, record),
+  deleteShipment: (ref) => deleteShipment(repo2(), ref)
+};
+async function loadJsZip() {
+  if (window.JSZip) return;
+  await new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = JSZIP_CDN;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+var flowsPlatform = {
+  // license_arm classifies AND arms the wasm write guard — the boot gate goes through here so the
+  // verdict the repo enforces is the one the screen renders. The Rust i64 param is a JS BigInt.
+  flows_license_arm: async (license, nowUnix) => wasm().license_arm(license, BigInt(Math.trunc(nowUnix))),
+  flows_fsm_register: async (entityId, state) => wasm().register_entity(entityId, state) ?? null,
+  flows_fsm_auto_advance: async (entityId, shipment) => wasm().shipment_auto_advance(entityId, JSON.stringify(shipment)) ?? null,
+  flows_mint_quote_ref: async (salt) => repo2()?.mint_quote_ref(String(salt || "")) ?? null,
+  flows_today_local: async () => todayLocal(),
+  flows_active_workspace: async () => activeWorkspaceName(),
+  // Bounded, and TEXT: a JWT and a JSONL seed are both text, and JSON.parse throws on either.
+  flows_fetch_text: async (url) => {
+    const result = await safeAwait(fetch(url), SAFE_AWAIT_DEFAULT_MS, null, "flows:fetch-text");
+    if (!result.ok) throw result.error ?? new Error(`fetch timed out: ${url}`);
+    const res = result.value;
+    const body = await res.text();
+    return { status: res.status, ok: res.ok, body };
+  },
+  flows_zip_download: async (filename, entries) => {
+    await loadJsZip();
+    const zip = new window.JSZip();
+    for (const { path, content } of entries || []) zip.file(path, content);
+    const blob = await zip.generateAsync({ type: "blob", compression: ZIP_COMPRESSION, compressionOptions: { level: ZIP_LEVEL } });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  },
+  flows_get_or_create_file: async (dirId, name, content) => {
+    const api = storageApi();
+    return api.getOrCreateFile(api.driveFetch, api.uploadFile, dirId, name, content);
+  },
+  // A lost CAS race (412) is an expected outcome of a counter claim, so it answers instead of
+  // throwing — the operator decides whether to retry.
+  flows_cas_upload: async (fileId, name, body, etag) => {
+    try {
+      await storageApi().uploadFile(fileId, name, body, etag, { isUpdate: true });
+      return { ok: true, status: HTTP_TRANSPORT_FAILURE };
+    } catch (err) {
+      return { ok: false, status: err?.status ?? HTTP_TRANSPORT_FAILURE };
+    }
+  },
+  flows_shipments_call: async (op2, args) => {
+    const call = SHIPMENT_OPS[op2];
+    if (!call) throw new Error(`flows_shipments_call: unknown op ${op2}`);
+    return await call(...Array.isArray(args) ? args : [args]) ?? null;
+  },
+  flows_ledger_call: async (op2, args) => {
+    const led = ledgerRepo();
+    if (typeof led[op2] !== "function") throw new Error(`flows_ledger_call: unknown op ${op2}`);
+    return await led[op2](...Array.isArray(args) ? args : [args]) ?? null;
+  }
+};
+
+// output/web/js.tmp/bootstrap/platform/index.js
+var PREFS_NS = "prefs";
+function createPlatform({ repo: repo3, currentUser }) {
+  const base = {
+    records_get: (kind, id) => repo3.get(kind, id),
+    records_list: (kind) => repo3.list(kind),
+    records_put: (kind, id, body) => repo3.put(kind, id, body),
+    records_delete: (kind, id) => repo3.delete(kind, id),
+    // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
+    records_get_meta: (key) => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,
+    records_put_meta: (key, body) => window.__vdg_io ? window.__vdg_io.cache_put_meta(key, body) : null,
+    session_current_user: async () => currentUser(),
+    prefs_get: async (key) => {
+      const v = localStorage.getItem(`${PREFS_NS}:${key}`);
+      return v == null ? null : JSON.parse(v);
+    },
+    prefs_set: async (key, value) => {
+      localStorage.setItem(`${PREFS_NS}:${key}`, JSON.stringify(value));
+    },
+    events_emit: async (name, detail) => {
+      window.dispatchEvent(new CustomEvent(name, { detail }));
+    },
+    log: (level, message) => {
+      (console[level] || console.log)(`[freight_app] ${message}`);
+    },
+    now_ms: () => Date.now(),
+    workspace_call: async (op2, args) => {
+      const api = storageApi();
+      if (typeof api[op2] !== "function") throw new Error(`workspace_call: unknown op ${op2}`);
+      return api[op2](...Array.isArray(args) ? args : [args]);
+    },
+    http_json: async (method, url, body) => {
+      const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: method === "GET" ? void 0 : JSON.stringify(body) });
+      const text = await res.text();
+      return { status: res.status, ok: res.ok, body: text ? JSON.parse(text) : null };
+    },
+    store: localStore
+  };
+  return { ...base, ...authPlatform, ...cachePlatform, ...dataPlatform, ...syncPlatform, ...managerPlatform, ...governancePlatform, ...flowsPlatform };
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/auth.js
+var OUTCOME_SIGNED_IN = "signed-in";
+var OUTCOME_DEGRADED = "degraded";
+var NEEDS_RECONNECT_EVENT = "vdg:auth-needs-reconnect";
+var SIGNIN_REQUEST_EVENT = "vdg:auth-signin-request";
+var _signinListenerWired = false;
+function composeAuth(wasm2) {
+  const sessionRoles = {
+    currentSalesRepId: () => wasm2.auth_session_roles({}).token ?? null,
+    currentRoles: () => wasm2.auth_session_roles({}).roles,
+    hasRole: (role) => wasm2.auth_has_role({ role }).has,
+    setResolvedRoles: (token, roles) => wasm2.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
+  };
+  bindSessionRoles(sessionRoles);
+  const detectRoleViaDrive = async (user, options = {}) => {
+    const reply = await wasm2.auth_detect_role({ user: user ?? null, force: !!options.force });
+    if (!reply.ok) throw takeAuthError() || new Error(reply.error || "auth: the workspace authority did not answer");
+    return reply.role;
+  };
+  const detectOrThrow = async (user, tag) => {
+    const result = await safeAwait(detectRoleViaDrive(user), SAFE_AWAIT_DEFAULT_MS, null, tag);
+    if (!result.ok) throw result.error;
+    return result.value;
+  };
+  const signIn = (onSignedIn) => mountLoginScreen(async (user) => {
+    await wasm2.auth_adopt_session({ email: user.email });
+    await detectOrThrow(user, "auth-gate:loginCb");
+    onSignedIn(user);
+  });
+  const requireAuth2 = async (onSignedIn) => {
+    const verdict = await wasm2.auth_require_auth({});
+    if (verdict.outcome === OUTCOME_SIGNED_IN) {
+      await detectOrThrow(verdict.user, "auth-gate:requireAuth");
+      await onSignedIn(verdict.user);
+      return;
+    }
+    if (verdict.outcome === OUTCOME_DEGRADED) {
+      await onSignedIn(verdict.user);
+      window.dispatchEvent(new CustomEvent(NEEDS_RECONNECT_EVENT));
+      return;
+    }
+    signIn(onSignedIn);
+  };
+  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaDrive, clearRoleCache: () => wasm2.auth_clear_role_cache({}) });
+  if (!_signinListenerWired) {
+    _signinListenerWired = true;
+    window.addEventListener(SIGNIN_REQUEST_EVENT, () => signIn(() => location.reload()));
+  }
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/server-session.js
+var SERVER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
+var _impl4 = null;
+function bindServerSession(impl) {
+  _impl4 = impl;
+}
+function _i4() {
+  if (!_impl4) throw new Error("storage/server-session: no adapter bound (the storage bootstrap binds it)");
+  return _impl4;
+}
+var serverSessionIdentity = (...a) => _i4().serverSessionIdentity(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/popup-guard.js
+var _impl5 = null;
+function bindPopupGuard(impl) {
+  _impl5 = impl;
+}
+function _i5() {
+  if (!_impl5) throw new Error("storage/popup-guard: no adapter bound (the storage bootstrap binds it)");
+  return _impl5;
+}
+var ensureWindowOpen = (...a) => _i5().ensureWindowOpen(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/token-anchor.js
+var ANCHOR_EVT_POPUP_BLOCKED = "popup-blocked";
+var ANCHOR_EVT_SIGNIN_REQUIRED = "signin-required";
+var _impl6 = null;
+function bindTokenAnchorFactory(impl) {
+  _impl6 = impl;
+}
+function _i6() {
+  if (!_impl6) throw new Error("storage/token-anchor: no adapter bound (the storage bootstrap binds it)");
+  return _impl6;
+}
+var createTokenAnchor = (...a) => _i6().createTokenAnchor(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/token.js
+var ACCESS_TOKEN_ISSUED_KEY = "vdg.auth.access_token_issued";
+var _impl7 = null;
+function bindTokenAuthority(impl) {
+  _impl7 = impl;
+}
+function _i7() {
+  if (!_impl7) throw new Error("storage/token: no adapter bound (the storage bootstrap binds it)");
+  return _impl7;
+}
+var reconnectDriveInteractive = (...a) => _i7().reconnectDriveInteractive(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/grant-reader.js
+var _impl8 = null;
+function bindGrantReader(impl) {
+  _impl8 = impl;
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/events.js
+var _impl9 = null;
+function bindEventBus(impl) {
+  _impl9 = impl;
+}
+function _i8() {
+  if (!_impl9) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
+  return _impl9;
+}
+var dispatchAppEvent = (...a) => _i8().dispatchAppEvent(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
+var ApiError = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+};
+
+// output/web/js.tmp/implementations/storage/implementations/server/backend.js
+var HEALTH_PATH = "/api/health";
+var API_PREFIX = "/api";
+var CREDENTIALS_MODE = API_BASE ? "include" : "same-origin";
+var PROBE_TIMEOUT_MS = 1500;
+var BACKEND_SERVER = "server";
+var BACKEND_DRIVE = "drive";
+var SESSION_TOKEN_HEADER = "X-Vdg-Session";
+var SESSION_TOKEN_KEY = "vdg.session-token";
+var BACKEND_KEY = "vdg.backend";
+var _backend = null;
+async function detectBackend() {
+  if (_backend) return _backend;
+  if (API_BASE) {
+    _backend = BACKEND_SERVER;
+    return _backend;
+  }
+  const remembered = _readRemembered();
+  if (remembered) {
+    _backend = remembered;
+    return _backend;
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE });
+    const body = res.ok ? await res.json().catch(() => null) : null;
+    _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
+  } catch {
+    _backend = BACKEND_DRIVE;
+  } finally {
+    clearTimeout(timer);
+  }
+  try {
+    sessionStorage.setItem(BACKEND_KEY, _backend);
+  } catch {
+  }
+  return _backend;
+}
+function isServerBackend2() {
+  if (API_BASE) return true;
+  return (_backend ?? _readRemembered()) === BACKEND_SERVER;
+}
+function _readRemembered() {
+  try {
+    return sessionStorage.getItem(BACKEND_KEY);
+  } catch {
+    return null;
+  }
+}
+function _resetBackend() {
+  _backend = null;
+  try {
+    sessionStorage.removeItem(BACKEND_KEY);
+  } catch {
+  }
+}
+function readSessionToken() {
+  try {
+    return localStorage.getItem(SESSION_TOKEN_KEY) || sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+async function adoptSessionToken2(token) {
+  rememberSessionToken2(token);
+}
+function rememberSessionToken2(token) {
+  try {
+    if (token) {
+      localStorage.setItem(SESSION_TOKEN_KEY, token);
+      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+  } catch {
+  }
+}
+var API_FETCH_TIMEOUT_MS = 3e4;
+async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
+  const url = `${API_BASE}${API_PREFIX}${path}`;
+  const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
+  const token = readSessionToken();
+  if (token) opts.headers[SESSION_TOKEN_HEADER] = token;
+  if (body !== void 0) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error("fetch timeout (30s)")), API_FETCH_TIMEOUT_MS);
+  opts.signal = ctrl.signal;
+  let res;
+  try {
+    console.log(`[API] Fetching ${method} ${url}...`);
+    res = await fetch(url, opts);
+    console.log(`[API] Response from ${method} ${url}:`, res.status);
+  } catch (err) {
+    console.error(`[API] Fetch failed for ${method} ${url}:`, err);
+    throw new ApiError(0, `server unreachable: ${err.message}`);
+  } finally {
+    clearTimeout(timer);
+  }
+  const backlogHeader = res.headers?.get("x-replication-backlog");
+  const providerHeader = res.headers?.get("x-secondary-provider") || res.headers?.get("x-replication-provider");
+  if (backlogHeader !== null && backlogHeader !== void 0) {
+    const backlog_depth = parseInt(backlogHeader, 10);
+    if (!Number.isNaN(backlog_depth) && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("vdg:server-health", {
+        detail: { backlog_depth, provider: providerHeader || void 0 }
+      }));
+    }
+  }
+  const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  if (path === "/health" && json && typeof window !== "undefined") {
+    const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
+    const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
+    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? "Google Drive";
+    window.dispatchEvent(new CustomEvent("vdg:server-health", {
+      detail: { backlog_depth, oldest_pending_age_ms, provider }
+    }));
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`);
+  }
+  return json;
+}
+var backend = { detectBackend, isServerBackend: isServerBackend2, apiFetch: apiFetch2, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-session.js
+async function serverSessionIdentity2() {
+  try {
+    console.log("[Auth] Fetching /me to check server session...");
+    const me = await apiFetch("GET", "/me");
+    console.log("[Auth] /me response:", me);
+    return me?.email ? { email: me.email, name: me.name || "" } : null;
+  } catch (e) {
+    console.error("[Auth] serverSessionIdentity failed (401 or unreachable):", e);
+    return null;
+  }
+}
+var serverSession = { serverSessionIdentity: serverSessionIdentity2 };
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-users.js
+var USERS_PATH = "/users";
+async function listUsers2({ role } = {}) {
+  const qs = role ? `?role=${encodeURIComponent(role)}` : "";
+  return apiFetch("GET", `${USERS_PATH}${qs}`);
+}
+async function createUser({ email, display_name, roles }) {
+  return apiFetch("POST", USERS_PATH, { email, display_name, roles });
+}
+async function patchUser(email, body) {
+  return apiFetch("PATCH", `${USERS_PATH}/${encodeURIComponent(email)}`, body);
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/drive-errors.js
+var DriveApiError = class extends Error {
+  constructor(status, message, driveErrorKind = null) {
+    super(message || `API error ${status}`);
+    this.name = "DriveApiError";
+    this.status = status;
+    this.driveErrorKind = driveErrorKind;
+  }
+};
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-drive-shim.js
+var HTTP_OK = 200;
+var HTTP_NOT_FOUND = 404;
+var HTTP_BAD_REQUEST = 400;
+var SYNTHETIC_QUOTA = "1099511627776";
+var _me = null;
+async function _meCached() {
+  if (!_me) _me = await apiFetch("GET", "/me");
+  return _me;
+}
+var ShimResponse = class {
+  constructor(status, body, headers = {}) {
+    this.status = status;
+    this.ok = status >= HTTP_OK && status < 300;
+    this.statusText = String(status);
+    this._body = body;
+    this._headers = headers;
+    this.headers = { get: (k) => this._headers[String(k).toLowerCase()] ?? null };
+  }
+  async text() {
+    return typeof this._body === "string" ? this._body : JSON.stringify(this._body ?? "");
+  }
+  async json() {
+    return typeof this._body === "string" ? JSON.parse(this._body) : this._body;
+  }
+};
+async function handle(method, path, body = void 0, extraHeaders = {}) {
+  const url = new URL(path.startsWith("http") ? path : `https://drive.local${path}`);
+  const p = url.pathname.replace(/^\/(upload\/)?drive\/v3/, "");
+  const seg = p.split("/").filter(Boolean);
+  try {
+    if (seg[0] === "about") {
+      const me = await _meCached();
+      return ok({ storageQuota: { limit: SYNTHETIC_QUOTA, usage: "0", usageInDrive: "0" }, user: { emailAddress: me.email } });
+    }
+    return fail(HTTP_BAD_REQUEST, `unsupported in native CharterDB mode: ${method} ${p}`);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { status: err.status, body: { error: { code: err.status, message: err.message, errors: [{ message: err.message, reason: err.status === HTTP_NOT_FOUND ? "notFound" : "forbidden" }] } }, headers: {} };
+    }
+    throw err;
+  }
+}
+function ok(body, headers = {}) {
+  return { status: HTTP_OK, body, headers };
+}
+function fail(status, message) {
+  return { status, body: { error: { code: status, message } }, headers: {} };
+}
+async function fetchRaw(method, path, body, extraHeaders) {
+  const r = await handle(method, path, body, extraHeaders);
+  return new ShimResponse(r.status, r.body, { "content-type": typeof r.body === "string" ? "text/plain" : "application/json", ...r.headers });
+}
+var HTTP_UNAUTHORIZED = 401;
+async function driveFetch(method, path, body = void 0) {
+  const r = await handle(method, path, body);
+  if (r.status >= 200 && r.status < 300) return r.body === "" ? {} : r.body;
+  const error = new DriveApiError(r.status, `Drive API ${r.status}: ${JSON.stringify(r.body)}`);
+  if (r.status === HTTP_UNAUTHORIZED) window.dispatchEvent(new CustomEvent("vdg:auth-needs-reconnect"));
+  error.driveErrorKind = classifyDriveError(error);
+  throw error;
+}
+var driveFetchRaw = fetchRaw;
+var serverTransport = { driveFetch, driveFetchRaw };
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-role.js
+async function probeRole(user, _wsName) {
+  let me;
+  try {
+    me = await apiFetch("GET", "/me");
+  } catch (err) {
+    if (err instanceof ApiError) throw new DriveApiError(err.status, err.message);
+    throw err;
+  }
+  const roles = Array.isArray(me?.roles) ? me.roles.filter(Boolean) : [];
+  const areas = Array.isArray(me?.areas) ? me.areas.map((a) => ({ path: a.path, folder_id: a.folder_id })) : [];
+  if (me?.is_owner) return { kind: VERDICT_MANAGER };
+  if (roles.length > 0) {
+    return { kind: VERDICT_GRANT, token: String(me.fork || forkId(user.email)).toUpperCase(), roles, areas };
+  }
+  return { kind: VERDICT_NOT_PROVISIONED };
+}
+var serverWorkspaceAuthority = { probeRole };
+
+// output/web/js.tmp/implementations/storage/core_abstractions/io-port-shared.js
+var UNKNOWN_AUTHOR = "unknown";
+var SharedIoPort = class {
+  constructor(userEmail) {
+    this.userEmail = userEmail;
+  }
+  cache_get(kind, id) {
+    return localStore().cache_get(kind, id);
+  }
+  cache_list(kind) {
+    return localStore().cache_list(kind);
+  }
+  cache_put(kind, id, body) {
+    return localStore().cache_put(kind, id, body);
+  }
+  cache_delete(kind, id) {
+    return localStore().cache_delete(kind, id);
+  }
+  cache_get_meta(key) {
+    return localStore().cache_get_meta(key);
+  }
+  cache_put_meta(key, body) {
+    return localStore().cache_put_meta(key, body);
+  }
+  async dispatch_event(eventName, detail) {
+    dispatchAppEvent(eventName, detail);
+  }
+  // Author identity for _rev_by provenance (F-28-06) — the live signed-in user, falling back to
+  // the boot-time email this port was constructed with.
+  async current_user_email() {
+    let live = null;
+    try {
+      live = getCurrentUser();
+    } catch {
+      live = null;
+    }
+    return live?.email || this.userEmail || UNKNOWN_AUTHOR;
+  }
+  async ledger_get_chart() {
+    return ledgerRepo().chartOfAccounts();
+  }
+  async ledger_get_rules() {
+    return ledgerRepo().postingRules();
+  }
+  async ledger_is_posted(posted_index) {
+    return ledgerRepo().isAlreadyPosted(posted_index);
+  }
+  async ledger_append_leg(year, account_code, leg) {
+    return ledgerRepo().appendLeg(year, account_code, leg);
+  }
+  async ledger_record_posted(posted_index, ids) {
+    return ledgerRepo().recordPosted(posted_index, ids);
+  }
+};
+
+// output/web/js.tmp/implementations/storage/core_abstractions/storage-layout.js
+var USERS_PATH2 = "users";
+var KIND_PATH_OVERRIDES = {
+  error_log: "_shared/error-log",
+  audit_log: "_shared/logs/audit-log"
+};
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-io-adapters.js
+var HTTP_NOT_FOUND2 = 404;
+var HTTP_PRECONDITION = 412;
+var USER_AUDIT_LOG_KIND = "user_audit_log";
+var USER_AUDIT_LOG_FILE = "user-audit-log.jsonl";
+var BUNDLE_EXT = ".jsonl";
+var CAS_FAILED_MSG = "412 Precondition Failed";
+function asDriveError(err) {
+  if (err instanceof ApiError) {
+    return new DriveApiError(err.status, err.message);
+  }
+  return err;
+}
+var ServerIoPort = class extends SharedIoPort {
+  constructor(driveApi, userEmail, fork = null) {
+    super(userEmail);
+    this.driveApi = driveApi;
+    this._fork = fork || forkId(userEmail);
+  }
+  // ── Native CharterDB API ──────────────────────────────────────────────────
+  async record_read(collection, id) {
+    try {
+      const res = await apiFetch("GET", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
+      if (!res?.id) return { found: false, content: "", etag: null, version: null };
+      return { found: true, content: res.content ?? "", etag: res.etag ?? null, version: res.version };
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) {
+        return { found: false, content: "", etag: null, version: null };
+      }
+      throw err;
+    }
+  }
+  async record_write(collection, id, content, etag = null) {
+    const owner = this.userEmail;
+    try {
+      if (etag) {
+        const res = await apiFetch(
+          "PUT",
+          `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+          { content },
+          { "If-Match": etag }
+        );
+        return { id: res.id, etag: res.etag, version: res.version };
+      }
+      try {
+        const res = await apiFetch(
+          "POST",
+          `/records/${encodeURIComponent(collection)}`,
+          { id, content, owner }
+        );
+        return { id: res.id, etag: res.etag, version: res.version };
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          const res = await apiFetch(
+            "PUT",
+            `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
+            { content }
+          );
+          return { id: res.id, etag: res.etag, version: res.version };
+        }
+        throw err;
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_PRECONDITION) throw new Error(CAS_FAILED_MSG);
+      throw err;
+    }
+  }
+  async record_delete(collection, id) {
+    try {
+      await apiFetch("DELETE", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
+      return true;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) return false;
+      throw err;
+    }
+  }
+  async record_list(collection, limit = 1e3, cursor = null) {
+    try {
+      let url = `/records/${encodeURIComponent(collection)}?limit=${limit}`;
+      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
+      const res = await apiFetch("GET", url);
+      return { records: res?.records ?? [], next_cursor: res?.next_cursor };
+    } catch (err) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) {
+        return { records: [], next_cursor: null };
+      }
+      throw err;
+    }
+  }
+  async changes(since = "0") {
+    const res = await apiFetch("GET", `/changes?since=${encodeURIComponent(since)}`);
+    return res;
+  }
+  async start_cursor() {
+    const res = await apiFetch("GET", "/changes/start");
+    return res?.next_cursor || "0";
+  }
+  async poll_health() {
+    try {
+      const res = await apiFetch("GET", "/health");
+      if (res && typeof window !== "undefined") {
+        const backlog_depth = res.mirror?.backlog_depth ?? res.replication_backlog ?? 0;
+        const oldest_pending_age_ms = res.mirror?.oldest_pending_age_ms ?? null;
+        const provider = res.mirror?.provider ?? res.secondary_provider ?? "Google Drive";
+        window.dispatchEvent(new CustomEvent("vdg:server-health", {
+          detail: {
+            backlog_depth,
+            oldest_pending_age_ms,
+            provider
+          }
+        }));
+      }
+      return res;
+    } catch {
+      return null;
+    }
+  }
+  // ── where things live ─────────────────────────────────────────────────────
+  _kindPath(kind) {
+    return KIND_PATH_OVERRIDES[kind] ?? `${USERS_PATH2}/${this._fork}/${kind}`;
+  }
+  _normPath(path) {
+    return String(path || "").replace(/^\/+|\/+$/g, "");
+  }
+  // ── documents (period files) ────────────────────────────────────────────────
+  _bundleName(kind, period) {
+    return kind === USER_AUDIT_LOG_KIND ? USER_AUDIT_LOG_FILE : `${period}${BUNDLE_EXT}`;
+  }
+  async document_read(kind, period) {
+    const fileName = this._bundleName(kind, period);
+    const collection = this._kindPath(kind);
+    try {
+      const r = await this.record_read(collection, fileName);
+      if (!r.found) return { etag: null, content: "", fileId: null, folderId: collection, fileName };
+      return { etag: r.etag, content: r.content, fileId: `${collection}/${fileName}`, folderId: collection, fileName };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async document_write(kind, period, newContent, etag) {
+    const fileName = this._bundleName(kind, period);
+    const collection = this._kindPath(kind);
+    try {
+      const r = await this.record_write(collection, fileName, newContent, etag);
+      return { etag: r.etag };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async document_list(kind) {
+    const collection = this._kindPath(kind);
+    try {
+      const res = await this.record_list(collection);
+      const files = res.records.map((r) => ({ id: `${collection}/${r.id}`, name: r.id, version: String(r.version), modifiedTime: "" }));
+      return { folderId: collection, files };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  _parseFileId(fileId) {
+    const norm = String(fileId || "").replace(/\/+/g, "/");
+    if (!norm.includes("/")) return { col: "", id: norm };
+    const idx = norm.lastIndexOf("/");
+    return { col: norm.slice(0, idx), id: norm.slice(idx + 1) };
+  }
+  async document_read_file(fileId) {
+    const { col, id } = this._parseFileId(fileId);
+    try {
+      const r = await this.record_read(col, id);
+      return { found: r.found, content: r.content, etag: r.etag };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async changes_feed(pageToken) {
+    try {
+      this.poll_health().catch(() => {
+      });
+      const res = await this.changes(pageToken || "0");
+      const changes = (res?.results ?? []).map((c) => ({
+        file: {
+          id: `${c.collection}/${c.id}`,
+          name: c.id,
+          version: String(c.version),
+          parents: [c.collection]
+        },
+        removed: c.event === "removed",
+        fileId: `${c.collection}/${c.id}`,
+        changeType: "file",
+        time: ""
+      }));
+      return { newStartPageToken: res?.next_cursor || pageToken || "0", changes };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async changes_cursor() {
+    try {
+      const token = await this.start_cursor();
+      return { startPageToken: token };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async document_collection_kind(folderId) {
+    for (const [k, p] of Object.entries(KIND_PATH_OVERRIDES)) {
+      if (p === folderId) return k;
+    }
+    const prefix = `${USERS_PATH2}/${this._fork}/`;
+    if (folderId.startsWith(prefix)) return folderId.slice(prefix.length);
+    return null;
+  }
+  async document_target(kind, period) {
+    return { folderId: this._kindPath(kind), fileName: this._bundleName(kind, period) };
+  }
+  // ── path-addressed workspace files ────────────────────────────────────────
+  async ws_list_dir(dirPath) {
+    const collection = this._normPath(dirPath);
+    try {
+      const res = await this.record_list(collection);
+      return {
+        folderId: collection,
+        files: res.records.map((r) => ({
+          id: `${collection}/${r.id}`,
+          name: r.id,
+          version: String(r.version),
+          mimeType: ""
+        }))
+      };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async ws_read_file(dirPath, fileName) {
+    const collection = this._normPath(dirPath);
+    try {
+      const r = await this.record_read(collection, fileName);
+      if (!r.found) return { found: false, id: null, etag: null, content: "" };
+      return { found: true, id: `${collection}/${fileName}`, etag: r.etag, content: r.content };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async ws_write_file(dirPath, fileName, content, fileId, etag) {
+    const collection = this._normPath(dirPath);
+    try {
+      const r = await this.record_write(collection, fileName, content, etag);
+      return { id: fileName, etag: r.etag };
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+  async ws_delete_file(fileId) {
+    const { col, id } = this._parseFileId(fileId);
+    try {
+      await this.record_delete(col, id);
+      return null;
+    } catch (err) {
+      throw asDriveError(err);
+    }
+  }
+};
+
+// output/web/js.tmp/implementations/storage/implementations/auth/window-open-guard.js
+var BLANK_SRC = "about:blank";
+var NATIVE_FN_MARKER = "[native code]";
+function defaultIframeFactory() {
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.src = BLANK_SRC;
+  document.body.appendChild(iframe);
+  return iframe;
+}
+function isNativeOpen(fn) {
+  if (typeof fn !== "function") return false;
+  try {
+    return Function.prototype.toString.call(fn).includes(NATIVE_FN_MARKER);
+  } catch {
+    return false;
+  }
+}
+function ensureWindowOpen2(win = window, makeIframe = defaultIframeFactory) {
+  if (isNativeOpen(win.open)) return true;
+  let iframe = null;
+  try {
+    iframe = makeIframe();
+    const nativeOpen = iframe?.contentWindow?.open;
+    if (typeof nativeOpen === "function") {
+      win.open = nativeOpen.bind(win);
+      return true;
+    }
+  } catch {
+  } finally {
+    if (iframe && typeof iframe.remove === "function") iframe.remove();
+  }
+  return typeof win.open === "function";
+}
+var popupGuard = { ensureWindowOpen: ensureWindowOpen2, isNativeOpen };
+
+// output/web/js.tmp/implementations/storage/implementations/auth/profile-cache.js
+function readCachedProfile2() {
+  try {
+    return JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+function writeCachedProfile2({ email, name, picture } = {}) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify({
+    email: email || "",
+    name: name || "",
+    picture: picture || ""
+  }));
+}
+var profileCache = { readCachedProfile: readCachedProfile2, writeCachedProfile: writeCachedProfile2 };
+
+// output/web/js.tmp/implementations/storage/implementations/auth/gis-error.js
+var GIS_ERROR_POPUP_FAILED = "popup_failed_to_open";
+var GIS_ERROR_POPUP_CLOSED = "popup_closed";
+var POPUP_BLOCKED_TYPES = Object.freeze([GIS_ERROR_POPUP_FAILED, GIS_ERROR_POPUP_CLOSED]);
+function isPopupBlockedError(type) {
+  return POPUP_BLOCKED_TYPES.includes(type);
+}
+function gisErrorMessage(err) {
+  const type = err?.type || "unknown";
+  return isPopupBlockedError(type) ? `popup-blocked:${type}` : `gis-error:${type}`;
+}
+
+// output/web/js.tmp/implementations/storage/implementations/auth/token-anchor.js
+var DEFAULT_SILENT_TIMEOUT_MS = 6e3;
+var DEFAULT_FAILURE_COOLDOWN_MS = 3e4;
+function createTokenAnchor2({
+  clientId,
+  scope,
+  keys,
+  // { token, exp, issued } — storage key names
+  storage,
+  // Storage-like; resolved LAZILY (default globalThis.localStorage) so constructing the anchor at module scope never touches the environment
+  gis = () => window.google?.accounts?.oauth2,
+  loginHint = () => void 0,
+  // () => email — pins every mint to the working account
+  verifyAccount = async () => true,
+  // (resp, hint) => bool — reject cross-account mints
+  ensurePopup = () => true,
+  // pre-flight window.open guard; false => blocked
+  silentTimeoutMs = DEFAULT_SILENT_TIMEOUT_MS,
+  failureCooldownMs = DEFAULT_FAILURE_COOLDOWN_MS,
+  now = () => Date.now(),
+  emit = () => {
+  }
+} = {}) {
+  let _inflight = null;
+  let _cooldownUntil = 0;
+  let _cooldownToken = null;
+  let _cooldownError = null;
+  const _store2 = () => storage ?? globalThis.localStorage;
+  function current() {
+    return _store2().getItem(keys.token);
+  }
+  function expiresAt() {
+    const v = _store2().getItem(keys.exp);
+    return v ? Number(v) : null;
+  }
+  function persist(resp) {
+    const expMs = now() + (resp.expires_in || 3600) * 1e3;
+    _store2().setItem(keys.token, resp.access_token);
+    _store2().setItem(keys.exp, String(expMs));
+    _store2().setItem(keys.issued, String(now()));
+    return expMs;
+  }
+  function mint(prompt, { timeoutMs = 0, returnResp = false } = {}) {
+    return new Promise((resolve, reject) => {
+      const oauth2 = gis();
+      if (!oauth2) {
+        reject(new Error("GIS oauth2 not loaded"));
+        return;
+      }
+      let settled = false;
+      const timer = timeoutMs ? setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error("silent-refresh-timeout"));
+        }
+      }, timeoutMs) : null;
+      const done = (fn, arg) => {
+        if (!settled) {
+          settled = true;
+          if (timer) clearTimeout(timer);
+          fn(arg);
+        }
+      };
+      const hint = loginHint();
+      const client = oauth2.initTokenClient({
+        client_id: clientId,
+        scope,
+        ...hint ? { login_hint: hint } : {},
+        callback: (resp) => {
+          if (resp.error) {
+            done(reject, new Error(resp.error));
+            return;
+          }
+          Promise.resolve(verifyAccount(resp, hint)).then((same) => {
+            if (!same) {
+              done(reject, new Error(`account-mismatch:${hint}`));
+              return;
+            }
+            persist(resp);
+            done(resolve, returnResp ? resp : resp.access_token);
+          }).catch((e) => done(reject, e));
+        },
+        // A definitive GIS error settles immediately, distinct from the timeout — a blocked
+        // popup must never eat the full bound.
+        error_callback: (err) => {
+          const type = err?.type || "unknown";
+          done(reject, new Error(POPUP_BLOCKED_TYPES.includes(type) ? `popup-blocked:${type}` : `gis-error:${type}`));
+        }
+      });
+      if (!ensurePopup()) {
+        emit(ANCHOR_EVT_POPUP_BLOCKED);
+        done(reject, new Error("popup-blocked:window-open-unavailable"));
+        return;
+      }
+      client.requestAccessToken({ prompt });
+    });
+  }
+  function silent() {
+    return mint("", { timeoutMs: silentTimeoutMs });
+  }
+  function recover(usedToken) {
+    const cur = current();
+    if (cur && cur !== usedToken) return Promise.resolve(cur);
+    if (_cooldownToken === cur && now() < _cooldownUntil) {
+      return Promise.reject(_cooldownError || new Error("recover-cooldown"));
+    }
+    if (!_inflight) {
+      _inflight = silent().catch((err) => {
+        _cooldownToken = cur;
+        _cooldownUntil = now() + failureCooldownMs;
+        _cooldownError = err;
+        throw err;
+      }).finally(() => {
+        _inflight = null;
+      });
+    }
+    return _inflight;
+  }
+  async function reconnect() {
+    try {
+      return await mint("", { returnResp: true });
+    } catch (err) {
+      const msg = String(err?.message || "");
+      if (msg.startsWith("popup-blocked:")) throw err;
+      if (msg.startsWith("account-mismatch:")) {
+        try {
+          return await mint("select_account", { returnResp: true });
+        } catch (err2) {
+          if (String(err2?.message || "").startsWith("account-mismatch:")) emit(ANCHOR_EVT_SIGNIN_REQUIRED);
+          throw err2;
+        }
+      }
+      return mint("consent", { returnResp: true });
+    }
+  }
+  return { current, expiresAt, persist, mint, silent, recover, reconnect };
+}
+var tokenAnchorFactory = { createTokenAnchor: createTokenAnchor2 };
+
+// output/web/js.tmp/implementations/kernel/core_abstractions/ports/base64.js
+var _impl10 = null;
+function bindBase64(impl) {
+  _impl10 = impl;
+}
+function _i9() {
+  if (!_impl10) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
+  return _impl10;
+}
+var b64Decode = (...a) => _i9().decode(...a);
+var b64Encode = (...a) => _i9().encode(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/id-token.js
+var TOKEN_KEY = "vdg.auth.id_token";
+function parseIdToken(token) {
+  try {
+    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      b64Decode(base64).split("").map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0")).join("")
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+function buildUser(token) {
+  const payload = parseIdToken(token);
+  if (!payload) return null;
+  const nowSec = Math.floor(nowMs() / 1e3);
+  if (payload.exp && payload.exp < nowSec) return null;
+  return {
+    email: payload.email || "",
+    name: payload.name || "",
+    picture: payload.picture || "",
+    sub: payload.sub || "",
+    id_token: token
+  };
+}
+function encodeSyntheticIdToken(payload) {
+  const header = b64Encode(JSON.stringify({ alg: "none" }));
+  const body = b64Encode(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return `${header}.${body}.`;
+}
+
+// output/web/js.tmp/implementations/storage/implementations/auth/userinfo.js
+var USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+var USERINFO_FETCH_TIMEOUT_MS = 8e3;
+var UserinfoFetchTimeoutError = class extends Error {
+  constructor() {
+    super("userinfo fetch timeout");
+    this.name = "UserinfoFetchTimeoutError";
+  }
+};
+async function fetchUserinfo(accessToken) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), USERINFO_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(USERINFO_URL, {
+      headers: { Authorization: "Bearer " + accessToken },
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`userinfo ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    throw err?.name === "AbortError" ? new UserinfoFetchTimeoutError() : err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// output/web/js.tmp/implementations/storage/core_abstractions/drive-endpoints.js
+var IDENTITY_SCOPE = "openid email profile";
+var DRIVE_SCOPE = "openid email profile";
+
+// output/web/js.tmp/implementations/storage/implementations/auth/access-token.js
+var CLIENT_ID = "875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com";
+var ID_TOKEN_KEY = "vdg.auth.id_token";
+var ACCESS_TOKEN_KEY = "vdg.auth.access_token";
+var ACCESS_TOKEN_EXP_KEY = "vdg.auth.access_token_exp";
+var SILENT_REFRESH_TIMEOUT_MS = Math.max(1e3, SAFE_AWAIT_DEFAULT_MS - 2e3);
+function _sessionEmail() {
+  const token = localStorage.getItem(ID_TOKEN_KEY);
+  const payload = token ? parseIdToken(token) : null;
+  if (payload?.email) return payload.email;
+  try {
+    const raw = localStorage.getItem(ROLE_CACHE_KEY);
+    const email = raw ? JSON.parse(raw)?.email : null;
+    return email || void 0;
+  } catch {
+    return void 0;
+  }
+}
+async function _verifySameAccount(resp, expectedEmail) {
+  if (!expectedEmail) return true;
+  const info = await fetchUserinfo(resp.access_token);
+  return (info.email || "").toLowerCase() === expectedEmail.toLowerCase();
+}
+var _anchorInstance = null;
+function _anchor() {
+  if (_anchorInstance) return _anchorInstance;
+  _anchorInstance = createTokenAnchor({
+    clientId: CLIENT_ID,
+    // Server deployment: the browser talks to the server, never to Drive, so the only thing a token
+    // has to carry is identity — that is all the server needs to mint a session. Asking for the full
+    // Drive scope here got Google's "hasn't verified this app" warning in front of every reconnect,
+    // for a permission the build never exercises. The Drive-direct flavour still needs the real one.
+    scope: isServerBackend() ? IDENTITY_SCOPE : DRIVE_SCOPE,
+    keys: { token: ACCESS_TOKEN_KEY, exp: ACCESS_TOKEN_EXP_KEY, issued: ACCESS_TOKEN_ISSUED_KEY },
+    loginHint: _sessionEmail,
+    verifyAccount: _verifySameAccount,
+    ensurePopup: ensureWindowOpen,
+    // F-49-01 — restore a native window.open an ad-blocker may have nulled
+    silentTimeoutMs: SILENT_REFRESH_TIMEOUT_MS,
+    emit: (name) => {
+      if (name === ANCHOR_EVT_POPUP_BLOCKED) window.dispatchEvent(new CustomEvent("vdg:auth-popup-blocked"));
+      if (name === ANCHOR_EVT_SIGNIN_REQUIRED) window.dispatchEvent(new CustomEvent("vdg:auth-signin-request"));
+    }
+  });
+  return _anchorInstance;
+}
+async function getAccessToken() {
+  return _anchor().current();
+}
+function refreshAccessTokenSilently() {
+  return _anchor().silent();
+}
+function recoverFromUnauthorized(usedToken) {
+  return _anchor().recover(usedToken);
+}
+function reconnectDriveInteractive2() {
+  return _anchor().reconnect();
+}
+var tokenAuthority = { getAccessToken, refreshAccessTokenSilently, recoverFromUnauthorized, reconnectDriveInteractive: reconnectDriveInteractive2 };
+
+// output/web/js.tmp/implementations/storage/implementations/auth/signin-button.js
+var SIGNIN_STALL_HINT_MS = 6e4;
+function renderSignInButton2(container, { hydrate, clientId }) {
+  if (!container) return;
+  container.innerHTML = `
+    <button id="vdg-signin-btn"
+            class="w-full flex items-center justify-center gap-3 px-4 py-2 border border-slate-300 rounded-md hover:bg-slate-50 transition">
+      <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" aria-hidden="true">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      <span class="text-sm font-medium text-slate-700">Sign in with Google</span>
+    </button>
+  `;
+  container.querySelector("#vdg-signin-btn").addEventListener("click", () => {
+    let stallTimer = null;
+    const answered = () => {
+      if (stallTimer) {
+        clearTimeout(stallTimer);
+        stallTimer = null;
+      }
+    };
+    const btnSpan = container.querySelector("#vdg-signin-btn span");
+    const origText = btnSpan ? btnSpan.textContent : "";
+    if (btnSpan) btnSpan.textContent = "\u0110ang m\u1EDF \u0111\u0103ng nh\u1EADp\u2026";
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      // Server backend: identity only. No Drive scope means no Drive consent screen and no
+      // second popup — the server never touches the user's Drive.
+      scope: isServerBackend() ? IDENTITY_SCOPE : `${IDENTITY_SCOPE} ${DRIVE_SCOPE}`,
+      callback: (resp) => {
+        answered();
+        if (resp.error) {
+          if (btnSpan) btnSpan.textContent = origText;
+          window.dispatchEvent(new CustomEvent("vdg:signin-error", { detail: resp.error }));
+          return;
+        }
+        if (btnSpan) btnSpan.textContent = "\u0110ang x\xE1c th\u1EF1c\u2026";
+        console.log("[Auth] Google OAuth callback received. Response error:", resp.error);
+        console.log("[Auth] Calling hydrate(resp)...");
+        hydrate(resp).then((builtUser) => {
+          console.log("[Auth] hydrate successful. Resulting user:", builtUser);
+          console.log("[Auth] Reloading page to apply new session...");
+          location.reload();
+        }).catch((err) => {
+          console.error("[Auth] hydrate failed:", err);
+          if (btnSpan) btnSpan.textContent = origText;
+          window.dispatchEvent(new CustomEvent("vdg:signin-error", { detail: err.message }));
+        });
+      },
+      // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
+      error_callback: (err) => {
+        answered();
+        if (btnSpan) btnSpan.textContent = origText;
+        window.dispatchEvent(new CustomEvent("vdg:signin-error", { detail: gisErrorMessage(err) }));
+      }
+    });
+    if (!ensureWindowOpen()) {
+      window.dispatchEvent(new CustomEvent("vdg:auth-popup-blocked"));
+      window.dispatchEvent(new CustomEvent("vdg:signin-error", { detail: "popup-blocked:window-open-unavailable" }));
+      return;
+    }
+    stallTimer = setTimeout(() => {
+      stallTimer = null;
+      window.dispatchEvent(new CustomEvent("vdg:signin-stalled"));
+    }, SIGNIN_STALL_HINT_MS);
+    client.requestAccessToken({ prompt: "select_account" });
+  });
+}
+
+// output/web/js.tmp/implementations/storage/implementations/auth/google-oauth.js
+var CLIENT_ID2 = "875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com";
+var ACCESS_TOKEN_KEY2 = "vdg.auth.access_token";
+var ACCESS_TOKEN_EXP_KEY2 = "vdg.auth.access_token_exp";
+var DRIVE_SCOPE_KEY = "vdg.auth.drive_scope_granted.v2";
+var GIS_SCRIPT_URL = "https://accounts.google.com/gsi/client";
+var GIS_SCRIPT_TIMEOUT = 1e4;
+var DEFAULT_TOKEN_TTL_SEC = 3600;
+var AUTH_STORAGE_KEYS = Object.freeze([
+  TOKEN_KEY,
+  ACCESS_TOKEN_KEY2,
+  ACCESS_TOKEN_EXP_KEY2,
+  DRIVE_SCOPE_KEY,
+  ROLE_CACHE_KEY,
+  PROFILE_KEY,
+  "vdg.session-token"
+  // display profile & server session token
+]);
+var _currentUser = null;
+function getCurrentUser2() {
+  if (_currentUser) return _currentUser;
+  const stored = localStorage.getItem(TOKEN_KEY);
+  if (!stored) return null;
+  _currentUser = buildUser(stored);
+  if (!_currentUser) localStorage.removeItem(TOKEN_KEY);
+  if (_currentUser && !localStorage.getItem(PROFILE_KEY)) writeCachedProfile(_currentUser);
+  return _currentUser;
+}
+function signOut2() {
+  for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k);
+  _currentUser = null;
+  if (!isServerBackend()) return Promise.resolve();
+  return apiFetch("DELETE", "/session").catch((e) => {
+    console.warn("sign-out: server session not ended:", e?.message || e);
+  }).finally(() => rememberSessionToken(""));
+}
+function shouldGrantDriveScope(resp, hasGrantedAllScopesFn) {
+  const checkFn = hasGrantedAllScopesFn ?? window.google?.accounts?.oauth2?.hasGrantedAllScopes;
+  if (typeof checkFn === "function") return Boolean(checkFn(resp, DRIVE_SCOPE));
+  return (resp?.scope || "").split(" ").includes(DRIVE_SCOPE);
+}
+function hasDriveScopeGrant() {
+  return localStorage.getItem(DRIVE_SCOPE_KEY) === "1";
+}
+function clearDriveScopeGrant() {
+  localStorage.removeItem(DRIVE_SCOPE_KEY);
+}
+function wasPreviouslySignedIn2() {
+  return localStorage.getItem(ACCESS_TOKEN_EXP_KEY2) != null;
+}
+function restampIdTokenExp(accessExpMs) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return false;
+  const payload = parseIdToken(token);
+  if (!payload) return false;
+  payload.exp = Math.floor(accessExpMs / 1e3);
+  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(payload));
+  _currentUser = null;
+  return true;
+}
+function _persistAccessToken(resp) {
+  const expMs = Date.now() + (resp.expires_in || DEFAULT_TOKEN_TTL_SEC) * 1e3;
+  if (isServerBackend()) {
+    localStorage.removeItem(ACCESS_TOKEN_KEY2);
+    localStorage.removeItem(ACCESS_TOKEN_EXP_KEY2);
+    return expMs;
+  }
+  localStorage.setItem(ACCESS_TOKEN_KEY2, resp.access_token);
+  localStorage.setItem(ACCESS_TOKEN_EXP_KEY2, String(expMs));
+  restampIdTokenExp(expMs);
+  return expMs;
+}
+var REVIVED_SESSION_MIN_TTL_MS = 10 * 60 * 1e3;
+async function rebuildSessionFromStoredToken2() {
+  if (isServerBackend()) {
+    const me = await serverSessionIdentity();
+    if (!me) return null;
+    const cached2 = readCachedProfile();
+    localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
+      email: me.email,
+      name: me.name || cached2?.name || "",
+      picture: cached2?.picture || "",
+      sub: cached2?.sub || me.email,
+      exp: Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1e3)
+    }));
+    _currentUser = null;
+    return getCurrentUser2();
+  }
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY2);
+  if (!token) return null;
+  try {
+    const info = await fetchUserinfo(token);
+    if (!info?.sub) return null;
+    const storedExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY2) || "0", 10);
+    const expMs = Math.max(storedExp, Date.now() + REVIVED_SESSION_MIN_TTL_MS);
+    localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
+      email: info.email,
+      name: info.name,
+      picture: info.picture,
+      sub: info.sub,
+      exp: Math.floor(expMs / 1e3)
+    }));
+    _currentUser = null;
+    return getCurrentUser2();
+  } catch {
+    return null;
+  }
+}
+async function hydrateSessionFromToken2(resp) {
+  console.log("[Auth] Hydrating session from token...", { hasAccessToken: !!resp?.access_token });
+  const expMs = _persistAccessToken(resp);
+  const expSec = Math.floor((isServerBackend() ? Date.now() + SERVER_SESSION_TTL_MS : expMs) / 1e3);
+  if (isServerBackend()) {
+    console.log("[Auth] Server backend mode detected, setting DRIVE_SCOPE_KEY and POSTing to /session");
+    localStorage.setItem(DRIVE_SCOPE_KEY, "1");
+    try {
+      const opened = await apiFetch("POST", "/session", { token: resp.access_token });
+      console.log("[Auth] /session POST result:", opened);
+      if (opened?.token) {
+        console.log("[Auth] Adopting session token...");
+        await adoptSessionToken(opened.token);
+      }
+    } catch (e) {
+      console.error("[Auth] Failed to create session via POST /session:", e);
+    }
+  } else {
+    if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, "1");
+    else if (typeof resp?.scope === "string" && resp.scope.length > 0) clearDriveScopeGrant();
+  }
+  console.log("[Auth] Fetching userinfo from Google...");
+  const info = await fetchUserinfo(resp.access_token);
+  console.log("[Auth] Userinfo fetched:", info);
+  const tokenPayload = {
+    email: info.email,
+    name: info.name,
+    picture: info.picture,
+    sub: info.sub,
+    exp: expSec
+  };
+  console.log("[Auth] Writing TOKEN_KEY with payload:", tokenPayload);
+  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(tokenPayload));
+  writeCachedProfile(info);
+  _currentUser = null;
+  const builtUser = getCurrentUser2();
+  console.log("[Auth] Built user from token:", builtUser);
+  return builtUser;
+}
+function requestDriveScopeGrant(onGranted, onDenied) {
+  if (isServerBackend()) {
+    onDenied(new Error("drive scope is never requested on a server build"));
+    return;
+  }
+  if (!window.google?.accounts?.oauth2) {
+    onDenied(new Error("GIS oauth2 not loaded"));
+    return;
+  }
+  const sessionEmail = getCurrentUser2()?.email;
+  const client = window.google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID2,
+    scope: DRIVE_SCOPE,
+    ...sessionEmail ? { login_hint: sessionEmail } : {},
+    callback: (resp) => {
+      if (resp.error) {
+        onDenied(new Error(resp.error));
+        return;
+      }
+      _persistAccessToken(resp);
+      if (shouldGrantDriveScope(resp)) {
+        localStorage.setItem(DRIVE_SCOPE_KEY, "1");
+        onGranted();
+      } else {
+        clearDriveScopeGrant();
+        onDenied(new Error("Drive scope still not granted"));
+      }
+    },
+    // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
+    error_callback: (err) => onDenied(new Error(gisErrorMessage(err)))
+  });
+  if (!ensureWindowOpen()) {
+    window.dispatchEvent(new CustomEvent("vdg:auth-popup-blocked"));
+    onDenied(new Error("popup-blocked:window-open-unavailable"));
+    return;
+  }
+  client.requestAccessToken({ prompt: "consent" });
+}
+function loadGisScript() {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = GIS_SCRIPT_URL;
+    s.async = true;
+    s.defer = true;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("GIS script failed to load"));
+    document.head.appendChild(s);
+    setTimeout(() => reject(new Error("GIS script timeout")), GIS_SCRIPT_TIMEOUT);
+  });
+}
+async function initGoogleSignIn2(onSuccess, onError) {
+  try {
+    await loadGisScript();
+  } catch (err) {
+    if (onError) onError(err);
+  }
+}
+function renderSignInButton3(container) {
+  return renderSignInButton2(container, { hydrate: hydrateSessionFromToken2, clientId: CLIENT_ID2 });
+}
+if (typeof window !== "undefined") window.__vdg_auth = { getCurrentUser: getCurrentUser2, signOut: signOut2 };
+var identityProvider = { getCurrentUser: getCurrentUser2, signOut: signOut2, hasDriveScopeGrant, wasPreviouslySignedIn: wasPreviouslySignedIn2, rebuildSessionFromStoredToken: rebuildSessionFromStoredToken2 };
+var oauthProvider = {
+  clearDriveScopeGrant,
+  hydrateSessionFromToken: hydrateSessionFromToken2,
+  restampIdTokenExp,
+  initGoogleSignIn: initGoogleSignIn2,
+  renderSignInButton: renderSignInButton3,
+  requestDriveScopeGrant,
+  shouldGrantDriveScope
+};
+
+// output/web/js.tmp/implementations/storage/implementations/local/store-client.js
+var INIT_TIMEOUT_MS = 2e4;
+var OP_TIMEOUT_MS = 5e3;
+var SqliteUnavailableError = class extends Error {
+  constructor(msg) {
+    super(msg);
+    this.name = "SqliteUnavailableError";
+  }
+};
+var LOCKED_ERR_RE = /NoModificationAllowedError|createSyncAccessHandle|sahpool/i;
+var _lockedAnnounced = false;
+function _announceLockedIf(errMsg) {
+  if (_lockedAnnounced || !LOCKED_ERR_RE.test(String(errMsg || ""))) return;
+  _lockedAnnounced = true;
+  window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { reason: String(errMsg) } }));
+}
+var BUS_NAME = "vdg-sqlite-bus";
+var LEADER_LOCK = "vdg-sqlite-leader";
+var RID_SEP = "|";
+var SCOPE_MAX_LEN = 64;
+var _scope = null;
+function storeScopeKey(email) {
+  return String(email || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, SCOPE_MAX_LEN);
+}
+function setStoreScope2(email) {
+  const key = storeScopeKey(email);
+  if (!key) throw new SqliteUnavailableError("store scope requires a signed-in account");
+  if (_scope && _scope !== key) {
+    throw new SqliteUnavailableError(`store scope changed (${_scope} \u2192 ${key}) \u2014 reload required`);
+  }
+  _scope = key;
+}
+var LEADER_STEAL_AFTER_TIMEOUTS = 2;
+var _followerTimeouts = 0;
+var _stealAttempted = false;
+var _bus = null;
+var _tabId = null;
+var _isLeader = false;
+var _engine = null;
+var _ready = null;
+var _seq2 = 0;
+var _pending = /* @__PURE__ */ new Map();
+var _injected = null;
+function _deliver(payload) {
+  const { rid, ok: ok2, result, err } = payload || {};
+  const p = _pending.get(rid);
+  if (!p) return;
+  _pending.delete(rid);
+  clearTimeout(p.timer);
+  _followerTimeouts = 0;
+  if (ok2) p.resolve(result);
+  else {
+    _announceLockedIf(err);
+    p.reject(new SqliteUnavailableError(err || "sqlite worker error"));
+  }
+}
+function _spawnEngine() {
+  _engine = new Worker(new URL("./store-worker.js", import.meta.url), { type: "module" });
+  _engine.onmessage = (ev) => {
+    const { rid, ok: ok2, result, err } = ev.data || {};
+    const sep = String(rid).indexOf(RID_SEP);
+    const tab = String(rid).slice(0, sep);
+    const orig = Number(String(rid).slice(sep + 1));
+    const payload = { rid: orig, ok: ok2, result, err };
+    if (tab === _tabId) _deliver(payload);
+    else _bus.postMessage({ t: "res", tab, m: payload });
+  };
+  _engine.onerror = (e) => {
+    console.error("[store-client worker onerror]", e);
+    const dead = new SqliteUnavailableError("sqlite worker crashed: " + (e?.message || "unknown"));
+    for (const [, p] of _pending) {
+      clearTimeout(p.timer);
+      p.reject(dead);
+    }
+    _pending.clear();
+    _engine = null;
+    _ready = null;
+  };
+}
+function _forwardToEngine(tab, msg) {
+  if (!_engine) _spawnEngine();
+  _engine.postMessage({ ...msg, rid: `${tab}${RID_SEP}${msg.rid}` });
+}
+function _dispatch(msg) {
+  if (_isLeader) _forwardToEngine(_tabId, msg);
+  else _bus.postMessage({ t: "req", tab: _tabId, m: msg });
+}
+function _resendPending() {
+  for (const [, p] of _pending) _dispatch(p.msg);
+}
+function _lockName() {
+  return `${LEADER_LOCK}:${_scope}`;
+}
+function _becomeLeader() {
+  _isLeader = true;
+  _resendPending();
+  _bus.postMessage({ t: "leader" });
+  return new Promise(() => {
+  });
+}
+function ensureTransport() {
+  if (_bus) return;
+  if (!_scope) throw new SqliteUnavailableError("store scope not set \u2014 the local database is per-account");
+  _tabId = "t" + Math.random().toString(36).slice(2, 10);
+  _bus = new BroadcastChannel(`${BUS_NAME}:${_scope}`);
+  _bus.onmessage = (ev) => {
+    const m = ev.data || {};
+    if (m.t === "req" && _isLeader) _forwardToEngine(m.tab, m.m);
+    else if (m.t === "res" && m.tab === _tabId) _deliver(m.m);
+    else if (m.t === "leader" && !_isLeader) _resendPending();
+  };
+  if (navigator.locks?.request) {
+    navigator.locks.request(_lockName(), _becomeLeader).catch((err) => {
+      if (err?.name === "AbortError") {
+        _isLeader = false;
+        _terminateEngine();
+        return;
+      }
+      _isLeader = true;
+    });
+  } else {
+    _isLeader = true;
+  }
+}
+function _terminateEngine() {
+  if (!_engine) return;
+  try {
+    _engine.terminate();
+  } catch {
+  }
+  _engine = null;
+  _ready = null;
+}
+function _onOpTimeout() {
+  if (_isLeader || _stealAttempted) return;
+  if (++_followerTimeouts < LEADER_STEAL_AFTER_TIMEOUTS) return;
+  _stealAttempted = true;
+  if (!navigator.locks?.request) return;
+  navigator.locks.request(_lockName(), { steal: true }, _becomeLeader).catch((err) => {
+    _announceLockedIf(err?.message);
+  });
+}
+function send(op2, extra, timeoutMs) {
+  ensureTransport();
+  const rid = ++_seq2;
+  const msg = { rid, op: op2, ...extra, scope: _scope };
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      _pending.delete(rid);
+      _onOpTimeout();
+      reject(new SqliteUnavailableError(op2 + " timed out \u2014 sqlite worker unresponsive"));
+    }, timeoutMs);
+    _pending.set(rid, { resolve, reject, timer, msg });
+    _dispatch(msg);
+  });
+}
+function ensureReady() {
+  ensureTransport();
+  if (!_ready) _ready = send("init", {}, INIT_TIMEOUT_MS).catch((e) => {
+    _ready = null;
+    throw e;
+  });
+  return _ready;
+}
+async function op(name, extra) {
+  await ensureReady();
+  return send(name, extra, OP_TIMEOUT_MS);
+}
+var sqliteStore = {
+  cache_get: (kind, id) => _injected ? _injected.cache_get(kind, id) : op("get", { kind, id }),
+  cache_list: (kind) => _injected ? _injected.cache_list(kind) : op("list", { kind }),
+  cache_put: (kind, id, body) => _injected ? _injected.cache_put(kind, id, body) : op("put", { kind, id, body }),
+  cache_delete: (kind, id) => _injected ? _injected.cache_delete(kind, id) : op("delete", { kind, id }),
+  cache_get_meta: (key) => _injected ? _injected.cache_get_meta(key) : op("getMeta", { key }),
+  cache_put_meta: (key, body) => _injected ? _injected.cache_put_meta(key, body) : op("putMeta", { key, body }),
+  cache_delete_meta: (key) => _injected ? _injected.cache_delete_meta(key) : op("deleteMeta", { key }),
+  cache_get_wma: (key) => _injected ? _injected.cache_get_wma(key) : op("getWma", { key }),
+  cache_put_wma: (key, body) => _injected ? _injected.cache_put_wma(key, body) : op("putWma", { key, body }),
+  cache_list_notifications: () => _injected ? _injected.cache_list_notifications() : op("listNotifications", {}),
+  cache_put_notification: (n) => _injected ? _injected.cache_put_notification(n) : op("putNotification", { body: n })
+};
+function sqlCountEntities2() {
+  return _injected ? _injected.count_entities() : op("countEntities", {});
+}
+var localStoreClient = { ...sqliteStore, setStoreScope: setStoreScope2, sqlCountEntities: sqlCountEntities2 };
+
+// output/web/js.tmp/implementations/storage/implementations/auth/grant-reader.js
+async function readGrant(workspace, emailBase, email) {
+  const candidates = await findSharedFilesByNamePrefix(grantSearchKey(workspace, emailBase));
+  for (const file of candidates) {
+    const fork = forkFromGrantName(file.name, workspace);
+    if (!fork) continue;
+    const res = await getFile(file.id);
+    const json = res?.content || "";
+    const roles = parseGrant(json, email, workspace);
+    if (roles.length > 0) return { fork, roles, areas: parseGrantAreas(json, email, workspace) };
+  }
+  return { fork: null, roles: [], areas: [] };
+}
+var grantReader = { readGrant };
+
+// output/web/js.tmp/implementations/storage/bootstrap/compose.js
+bindBackend(backend);
+bindServerSession(serverSession);
+bindPopupGuard(popupGuard);
+bindProfileCache(profileCache);
+bindTokenAnchorFactory(tokenAnchorFactory);
+bindTokenAuthority(tokenAuthority);
+bindOAuthProvider(oauthProvider);
+bindIdentityProvider(identityProvider);
+bindLocalStore(localStoreClient);
+bindGrantReader(grantReader);
+bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })) });
+bindUserDirectory({ listUsers: listUsers2, createUser, patchUser });
+async function composeStorage() {
+  const backendKind = await backend.detectBackend();
+  bindStorageApi(serverTransport);
+  bindWorkspaceAuthority(serverWorkspaceAuthority);
+  return backendKind;
+}
+function createIoPort(driveApi, userEmail, forkPrefix) {
+  return new ServerIoPort(driveApi, userEmail, forkPrefix);
+}
+
+// output/web/js.tmp/implementations/kernel/core_abstractions/ports/visibility.js
+var _impl11 = null;
+function bindVisibility(impl) {
+  _impl11 = impl;
+}
+function _i10() {
+  if (!_impl11) throw new Error("kernel/visibility: no adapter bound (the kernel bootstrap binds it)");
+  return _impl11;
+}
+var isPageVisible = (...a) => _i10().isPageVisible(...a);
+var onVisibilityChange = (...a) => _i10().onVisibilityChange(...a);
+
+// output/web/js.tmp/implementations/kernel/implementations/browser-platform.js
+var browserClock = {
+  nowMs: () => Date.now(),
+  nowDate: () => /* @__PURE__ */ new Date(),
+  dateFrom: (value) => new Date(value)
+};
+var browserTimer = {
+  startTimer: (fn, ms) => setTimeout(fn, ms),
+  stopTimer: (handle2) => clearTimeout(handle2),
+  startInterval: (fn, ms) => setInterval(fn, ms),
+  stopInterval: (handle2) => clearInterval(handle2)
+};
+var consoleLog = {
+  warn: (...args) => console.warn(...args)
+  // DEV
+};
+var localStorageKv = {
+  getItem: (key) => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+  removeItem: (key) => localStorage.removeItem(key)
+};
+var fetchHttp = {
+  fetchJson: async (url) => {
+    const resp = await fetch(url);
+    return resp.ok ? resp.json() : null;
+  },
+  fetchText: async (url) => {
+    const resp = await fetch(url);
+    return resp.ok ? resp.text() : null;
+  }
+};
+var windowEvents = {
+  dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }))
+};
+var documentVisibility = {
+  isPageVisible: () => typeof document === "undefined" || document.visibilityState === "visible",
+  onVisibilityChange: (cb) => {
+    if (typeof document === "undefined" || !document.addEventListener) return () => {
+    };
+    document.addEventListener("visibilitychange", cb);
+    return () => document.removeEventListener("visibilitychange", cb);
+  }
+};
+var base64Codec = {
+  decode: (b64) => atob(b64),
+  encode: (str) => btoa(str)
+};
+
+// output/web/js.tmp/implementations/kernel/bootstrap/compose.js
+bindClock(browserClock);
+bindTimer(browserTimer);
+bindLog(consoleLog);
+bindKeyValueStore(localStorageKv);
+bindHttp(fetchHttp);
+bindAppEvents(windowEvents);
+bindVisibility(documentVisibility);
+bindBase64(base64Codec);
+
+// output/web/js.tmp/implementations/ui/bootstrap/route-enforcer.js
+var TOAST_EVENT = "vdg:toast";
+var TOAST_TYPE_WARN = "warn";
+var TOAST_DURATION_MS = 4e3;
+function enforceRouteGuard(route, role) {
+  const decision = routeGuard(route, role);
+  if (decision === "allow") return false;
+  if (decision.redirect === route) {
+    console.warn("[route-guard] denied on its own redirect target:", route);
+    return true;
+  }
+  window.dispatchEvent(new CustomEvent(TOAST_EVENT, {
+    detail: { type: TOAST_TYPE_WARN, message: t(decision.reason), duration: TOAST_DURATION_MS }
+  }));
+  navigate(decision.redirect);
+  return true;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/auth/server-access-gate-screen.js
+var SERVER_ACCESS_REASON_TRANSIENT = "transient";
+var SERVER_ACCESS_REASON_SESSION = "session";
+var TRANSIENT_RETRY_BTN_ID = "server-access-transient-retry";
+var SESSION_RECONNECT_BTN_ID = "server-access-session-reconnect";
+var DECLINED_HINT_ID = "server-access-declined-hint";
+var TITLE_KEY = {
+  [SERVER_ACCESS_REASON_TRANSIENT]: "server_access.transient.title",
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.title"
+};
+var BODY_KEY = {
+  [SERVER_ACCESS_REASON_TRANSIENT]: "server_access.transient.body",
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.body"
+};
+var BTN_ID = {
+  [SERVER_ACCESS_REASON_TRANSIENT]: TRANSIENT_RETRY_BTN_ID,
+  [SERVER_ACCESS_REASON_SESSION]: SESSION_RECONNECT_BTN_ID
+};
+var BTN_LABEL_KEY = {
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.button"
+};
+var RETRY_HINT_KEY = {
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.retry_failed"
+};
+function renderServerAccessGateScreen(container, { reason, actionFailed = false, onAction } = {}) {
+  if (!container) return;
+  const btnId = BTN_ID[reason] || TRANSIENT_RETRY_BTN_ID;
+  const labelKey = BTN_LABEL_KEY[reason];
+  const btnLabel = labelKey ? t(labelKey) : t("license.gate.retry_button");
+  const hintKey = actionFailed ? RETRY_HINT_KEY[reason] : null;
+  container.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${TITLE_KEY[reason] ? t(TITLE_KEY[reason]) : "L\u1ED7i"}</div>
+      <div class="text-sm text-slate-500 max-w-md">${BODY_KEY[reason] ? t(BODY_KEY[reason]) : "\u0110\xE3 c\xF3 l\u1ED7i x\u1EA3y ra."}</div>
+      ${hintKey ? `<div id="${DECLINED_HINT_ID}" data-testid="${DECLINED_HINT_ID}" class="text-sm text-amber-600 max-w-md">${t(hintKey)}</div>` : ""}
+      <button id="${btnId}" data-testid="${btnId}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${btnLabel}
+      </button>
+    </div>`;
+  container.querySelector(`#${btnId}`)?.addEventListener("click", () => {
+    if (onAction) onAction();
+    else location.reload();
+  });
+}
+
+// output/web/js.tmp/bootstrap/boot/server-gate.js
+var SERVER_ERROR_NAME = "ServerApiError";
+var HTTP_UNAUTHORIZED2 = 401;
+var EVT_RECONNECT_REQUEST = "vdg:auth-reconnect-request";
+var EVT_RECONNECTED = "vdg:auth-reconnected";
+var EVT_NEEDS_RECONNECT = "vdg:auth-needs-reconnect";
+function serverGateReason(err) {
+  if (err?.name !== SERVER_ERROR_NAME) return null;
+  if (err.status === HTTP_UNAUTHORIZED2) return SERVER_ACCESS_REASON_SESSION;
+  return SERVER_ACCESS_REASON_TRANSIENT;
+}
+function requestReconnect(onSettled, win = window) {
+  let settled = false;
+  const finish = (ok2) => {
+    if (settled) return;
+    settled = true;
+    win.removeEventListener(EVT_RECONNECTED, onOk);
+    win.removeEventListener(EVT_NEEDS_RECONNECT, onFail);
+    onSettled(ok2);
+  };
+  const onOk = () => finish(true);
+  const onFail = () => finish(false);
+  win.addEventListener(EVT_RECONNECTED, onOk);
+  win.addEventListener(EVT_NEEDS_RECONNECT, onFail);
+  win.dispatchEvent(new CustomEvent(EVT_RECONNECT_REQUEST));
+}
+function renderServerGate(mount, err, { onReconnected, onSignIn, serverBackend = true, win = window } = {}) {
+  const reason = serverGateReason(err);
+  if (!reason) return false;
+  if (serverBackend && reason === SERVER_ACCESS_REASON_SESSION) {
+    onSignIn?.();
+    return true;
+  }
+  if (reason === SERVER_ACCESS_REASON_SESSION) {
+    const render = (actionFailed) => renderServerAccessGateScreen(mount, {
+      reason,
+      actionFailed,
+      onAction: () => requestReconnect((ok2) => ok2 ? onReconnected?.() : render(true), win)
+    });
+    render(false);
+    return true;
+  }
+  renderServerAccessGateScreen(mount, { reason });
+  return true;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/util/view-fallback.js
+var MAX_VIEW_MOUNT_RETRIES = 2;
+var _attempts = /* @__PURE__ */ new Map();
+function renderViewFallback(root, route) {
+  const used = _attempts.get(route) ?? 0;
+  const exhausted = used >= MAX_VIEW_MOUNT_RETRIES;
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  renderViewMountRecovery(root, {
+    route,
+    offline,
+    exhausted,
+    onRetry: () => {
+      _attempts.set(route, used + 1);
+      window.dispatchEvent(new CustomEvent("vdg:navigate", { detail: { route } }));
+    }
+  });
+}
+function resetViewMountRetries(route) {
+  _attempts.delete(route);
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/util/view-loader.js
+var VIEW_LOAD_TIMEOUT_MS = 25e3;
+async function loadView(importFn, root, route, _fb = renderViewFallback, _ms = VIEW_LOAD_TIMEOUT_MS) {
+  const result = await safeAwait(importFn(), _ms, null, `view-mount:${route}`);
+  if (!result.ok) {
+    if (result.error && result.error.name !== "SafeAwaitTimeoutError") {
+      console.error(`[view-loader] Import failed for ${route}:`, result.error);
+    }
+    _fb(root, route);
+    return null;
+  }
+  return result.value;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/util/mount-view.js
+var RENDER_MOUNT_TIMEOUT_MS = 8e3;
+var RENDER_MOUNT_HARD_TIMEOUT_MS = 3e4;
+function paintSoftLoadingAffordance(root) {
+  if (!root || root.innerHTML !== "") return;
+  root.innerHTML = `<div class="p-6 text-slate-500 text-sm">${t("loading")}</div>`;
+}
+async function mountView(renderFn, root, route, _fb = renderViewFallback, _softMs = RENDER_MOUNT_TIMEOUT_MS, _hardMs = RENDER_MOUNT_HARD_TIMEOUT_MS) {
+  const renderPromise = Promise.resolve().then(renderFn);
+  const soft = await safeAwait(renderPromise, _softMs, null, `view-render:${route}`);
+  if (soft.ok) {
+    resetViewMountRetries(route);
+    return true;
+  }
+  if (!(soft.error instanceof SafeAwaitTimeoutError)) {
+    markViewSuperseded(root);
+    _fb(root, route);
+    return false;
+  }
+  paintSoftLoadingAffordance(root);
+  const hard = await safeAwait(renderPromise, Math.max(0, _hardMs - _softMs), null, `view-render-hard:${route}`);
+  if (!hard.ok) {
+    markViewSuperseded(root);
+    _fb(root, route);
+    return false;
+  }
+  resetViewMountRetries(route);
+  return true;
+}
+
+// output/web/js.tmp/bootstrap/app-router-ext.js
+var CUSTOMER360_RE = /^\/manager\/customers\/([^/]+)$/;
+var MASTERS_RE = /^\/manager\/masters\/([^/]+)$/;
+var SALES_EDIT_RE = /^\/sales\/edit\/([^/]+)$/;
+var SHIPMENT_NEW_RE = /^\/shipments\/new$/;
+async function tryParamRoute(route) {
+  const basePath = route.split("?")[0];
+  const c360Match = CUSTOMER360_RE.exec(basePath);
+  if (c360Match) {
+    const root = freshViewRoot();
+    const mod = await loadView(() => import("./customer360-42QP3N2V.js"), root, basePath);
+    if (!mod) return true;
+    await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
+    return true;
+  }
+  const mastersMatch = MASTERS_RE.exec(basePath);
+  if (mastersMatch) {
+    const root = freshViewRoot();
+    const mod = await loadView(() => import("./masters-XKDPA55T.js"), root, basePath);
+    if (!mod) return true;
+    await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
+    return true;
+  }
+  const salesEditMatch = SALES_EDIT_RE.exec(basePath);
+  if (salesEditMatch) {
+    const root = freshViewRoot();
+    const mod = await loadView(() => import("./sales-new-ABQZRFQJ.js"), root, basePath);
+    if (!mod) return true;
+    await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
+    return true;
+  }
+  if (SHIPMENT_NEW_RE.test(basePath)) {
+    const root = freshViewRoot();
+    const mod = await loadView(() => import("./sales-new-ABQZRFQJ.js"), root, basePath);
+    if (!mod) return true;
+    const qs = new URLSearchParams(route.split("?")[1] || "");
+    const quoteId = qs.get("quote_id");
+    const quotePrefill = quoteId ? {
+      quote_id: quoteId,
+      customer: qs.get("customer") || "",
+      pol: qs.get("pol") || "",
+      pod: qs.get("pod") || "",
+      container: qs.get("container") || ""
+    } : void 0;
+    await mountView(() => mod.render(root, { salesId: qs.get("sales") || "me", mode: "create", quotePrefill }), root, basePath);
+    return true;
+  }
+  return false;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/keyboard-shortcuts.js
+var CHORD_TIMEOUT_MS = 800;
+var CHORD_MAP = {
+  d: "/manager/dashboard",
+  s: "/manager/pipeline",
+  c: "/masters/customers",
+  r: "/manager/reports/pnl"
+};
+var _chordPending = false;
+var _chordTimer = null;
+function _inInput() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
+}
+function _showCheatsheet() {
+  const existing = document.getElementById("vdg-cheatsheet-dialog");
+  if (existing) {
+    existing.open ? existing.close() : existing.showModal();
+    return;
+  }
+  const d = document.createElement("dialog");
+  d.id = "vdg-cheatsheet-dialog";
+  d.className = "rounded-xl shadow-2xl p-0 w-[640px] max-w-[95vw] bg-white backdrop:bg-black/40";
+  d.innerHTML = `
+    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+      <span class="font-semibold text-slate-900">Keyboard Shortcuts</span>
+      <button onclick="this.closest('dialog').close()"
+              class="text-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Close cheatsheet">\u2715</button>
+    </div>
+    <div class="grid grid-cols-2 gap-x-8 gap-y-2 px-6 py-4 text-xs text-slate-700">
+      <div class="font-semibold col-span-2 text-slate-500 uppercase text-[10px] mt-2">Navigation</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">Ctrl K</kbd> Command palette</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">g d</kbd> Dashboard</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">g s</kbd> Pipeline</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">g c</kbd> Customers</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">g r</kbd> P&L Report</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">/</kbd> Focus search</div>
+      <div class="font-semibold col-span-2 text-slate-500 uppercase text-[10px] mt-2">General</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">?</kbd> This cheatsheet</div>
+      <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">Esc</kbd> Close panel</div>
+    </div>`;
+  document.body.appendChild(d);
+  d.showModal();
+}
+function initKeyboardShortcuts() {
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("vdg:cmd-palette"));
+      return;
+    }
+    if (_inInput()) return;
+    if (_chordPending) {
+      clearTimeout(_chordTimer);
+      _chordPending = false;
+      const route = CHORD_MAP[e.key];
+      if (route) {
+        e.preventDefault();
+        navigate(route);
+      }
+      return;
+    }
+    if (e.key === "g" && !e.ctrlKey && !e.metaKey) {
+      _chordPending = true;
+      _chordTimer = setTimeout(() => {
+        _chordPending = false;
+      }, CHORD_TIMEOUT_MS);
+      return;
+    }
+    if (e.key === "?") {
+      e.preventDefault();
+      _showCheatsheet();
+      return;
+    }
+    if (e.key === "/") {
+      e.preventDefault();
+      document.querySelector("vdg-topbar input[type=search], vdg-topbar input[type=text]")?.focus();
+    }
+  });
+}
+
+// output/web/js.tmp/implementations/kernel/core_abstractions/version.js
+var APP_VERSION = "v0.4.16 (3e6a172)";
+
+// output/web/js.tmp/implementations/ui/bootstrap/app-events.js
+var NEW_FEATURE_BANNER_DAYS = 7;
+var BREAKPOINT_TABLET_PX = 768;
+var PREFS_META_KEY = "preferences";
+function initStoreLockedScreen() {
+  window.addEventListener("vdg:store-locked", () => {
+    if (document.getElementById("vdg-store-locked")) return;
+    const el = document.createElement("div");
+    el.id = "vdg-store-locked";
+    el.className = "fixed inset-0 z-[100] bg-white/95 flex items-center justify-center p-6";
+    el.innerHTML = `
+      <div class="max-w-md w-full bg-white rounded-xl shadow-2xl border border-slate-200 p-6 text-center">
+        <div class="text-3xl mb-3">\u{1F512}</div>
+        <div class="font-semibold text-slate-900 text-sm mb-2">${t("store_locked.title")}</div>
+        <div class="text-xs text-slate-600 leading-relaxed mb-4">${t("store_locked.body")}</div>
+        <button id="store-locked-retry"
+          class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("store_locked.retry")}</button>
+      </div>`;
+    el.querySelector("#store-locked-retry").onclick = () => location.reload();
+    document.body.appendChild(el);
+  }, { once: true });
+}
+var CONFLICT_VAL_MAX_CHARS = 60;
+function _fieldValText(v) {
+  const s = typeof v === "object" && v !== null ? JSON.stringify(v) : String(v ?? "");
+  return s.slice(0, CONFLICT_VAL_MAX_CHARS);
+}
+function _fieldDiffRows(fields, extra = () => "") {
+  return fields.map((c) => `
+    <div class="mb-2">
+      <div class="text-slate-500 mb-1">${t("conflict_field", { field: c.field })}${extra(c)}</div>
+      <div class="flex gap-4">
+        <div class="flex-1 bg-blue-50 rounded p-2">
+          <div class="font-medium text-blue-700 mb-1">${t("your_value")}</div>
+          <div class="font-mono break-all">${_fieldValText(c.local_val)}</div>
+        </div>
+        <div class="flex-1 bg-amber-50 rounded p-2">
+          <div class="font-medium text-amber-700 mb-1">${t("their_value")}</div>
+          <div class="font-mono break-all">${_fieldValText(c.remote_val)}</div>
+        </div>
+      </div>
+    </div>`).join("");
+}
+function initConflictModal() {
+  window.addEventListener("vdg:conflict-detected", (e) => {
+    const { kind, id, local, remote, merged, conflicts } = e.detail || {};
+    const dlg = document.createElement("dialog");
+    dlg.className = "rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40";
+    const rows = _fieldDiffRows(conflicts?.length ? conflicts : [{ field: "(unknown)", local_val: "", remote_val: "" }]);
+    dlg.innerHTML = `
+      <div class="px-6 py-4 border-b border-slate-200">
+        <div class="font-semibold text-slate-900 text-sm">${t("conflict_title")} \xB7 ${kind}:${id}</div>
+        <div class="text-xs text-slate-500 mt-1">${t("conflict.money_note")}</div>
+      </div>
+      <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${rows}</div>
+      <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
+        <button id="keep-mine" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("keep_mine")}</button>
+        <button id="use-theirs" class="px-4 py-2 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700">${t("use_theirs")}</button>
+      </div>`;
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    const repo3 = window.__vdg_repo;
+    const mergeBase = merged && typeof merged === "object" ? merged : null;
+    dlg.querySelector("#keep-mine").addEventListener("click", async () => {
+      const mine = { ...mergeBase ?? local, _rev: remote?._rev };
+      for (const c of conflicts || []) mine[c.field] = c.local_val;
+      await repo3?.put(kind, id, mine);
+      dlg.close();
+      dlg.remove();
+    });
+    dlg.querySelector("#use-theirs").addEventListener("click", async () => {
+      await repo3?.put(kind, id, { ...mergeBase ?? remote, _rev: remote?._rev });
+      dlg.close();
+      dlg.remove();
+    });
+  });
+}
+var MERGE_TOAST_DISMISS_MS = 12e3;
+function initMergeToast() {
+  window.addEventListener("vdg:merge-autoresolved", (e) => {
+    const { kind, id, fields } = e.detail || {};
+    if (!fields?.length) return;
+    const card = document.createElement("div");
+    card.className = "fixed bottom-4 right-4 z-[9999] bg-amber-500 text-white rounded-lg shadow-lg px-4 py-3 text-xs max-w-sm";
+    card.innerHTML = `
+      <div class="font-semibold mb-1">${t("merge.auto_title")}</div>
+      <div class="mb-2">${t("merge.auto_body", { id, n: fields.length })}</div>
+      <div class="flex justify-end gap-2">
+        <button id="merge-view" class="px-3 py-1 bg-white/20 rounded hover:bg-white/30">${t("merge.view")}</button>
+        <button id="merge-dismiss" class="px-3 py-1 bg-white/20 rounded hover:bg-white/30">${t("merge.close")}</button>
+      </div>`;
+    document.body.appendChild(card);
+    const timer = setTimeout(() => card.remove(), MERGE_TOAST_DISMISS_MS);
+    card.querySelector("#merge-dismiss").onclick = () => {
+      clearTimeout(timer);
+      card.remove();
+    };
+    card.querySelector("#merge-view").onclick = () => {
+      clearTimeout(timer);
+      card.remove();
+      const dlg = document.createElement("dialog");
+      dlg.className = "rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40";
+      const winnerLabel = (c) => ` \xB7 <span class="text-slate-400">${t(c.winner === "local" ? "merge.winner.local" : "merge.winner.remote")}</span>`;
+      dlg.innerHTML = `
+        <div class="px-6 py-4 border-b border-slate-200">
+          <div class="font-semibold text-slate-900 text-sm">${t("merge.auto_title")} \xB7 ${kind}:${id}</div>
+        </div>
+        <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${_fieldDiffRows(fields, winnerLabel)}</div>
+        <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
+          <button id="merge-undo" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("merge.use_mine")}</button>
+          <button id="merge-ok" class="px-4 py-2 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300">${t("merge.close")}</button>
+        </div>`;
+      document.body.appendChild(dlg);
+      dlg.showModal();
+      dlg.querySelector("#merge-ok").onclick = () => {
+        dlg.close();
+        dlg.remove();
+      };
+      dlg.querySelector("#merge-undo").onclick = async () => {
+        const repo3 = window.__vdg_repo;
+        const current = await repo3?.get(kind, id);
+        if (current) {
+          for (const c of fields) current[c.field] = c.local_val;
+          await repo3.put(kind, id, current);
+        }
+        dlg.close();
+        dlg.remove();
+      };
+    };
+  });
+}
+async function checkVersionBanner(store) {
+  if (!store) return;
+  try {
+    const prefs = await store.cache_get_meta(PREFS_META_KEY);
+    if (!prefs) return;
+    if (prefs.last_seen_version === APP_VERSION) return;
+    if (prefs.banner_dismissed_at) {
+      const days = (Date.now() - new Date(prefs.banner_dismissed_at).getTime()) / 864e5;
+      if (days < NEW_FEATURE_BANNER_DAYS) return;
+    }
+    const banner = document.createElement("div");
+    banner.className = "fixed top-16 left-0 right-0 z-[8999] bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2";
+    banner.innerHTML = `
+      <span>What's new in ${APP_VERSION}
+        <button id="banner-see" class="ml-2 underline hover:no-underline">See changes</button>
+      </span>
+      <button id="banner-dismiss" class="ml-4 text-indigo-200 hover:text-white">\u2715</button>`;
+    document.body.appendChild(banner);
+    banner.querySelector("#banner-see").addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("vdg:open-help", { detail: { section: "whats-new" } }));
+    });
+    banner.querySelector("#banner-dismiss").addEventListener("click", async () => {
+      banner.remove();
+      await store.cache_put_meta(PREFS_META_KEY, {
+        ...prefs,
+        last_seen_version: APP_VERSION,
+        banner_dismissed_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    });
+  } catch {
+  }
+}
+function initWmaListener() {
+  window.addEventListener("vdg:shipment-committed", async (e) => {
+    const { rep_id, lines } = e.detail || {};
+    if (!rep_id || !lines?.length) return;
+    const store = window.__vdg_store;
+    if (!store) return;
+    for (const ln of lines) {
+      if (!ln.observed_kind) continue;
+      try {
+        const state = await loadKindWmaState(store, rep_id, ln.row_idx);
+        onEvent(state, ln.observed_kind, ln.predicted_kind || null);
+        await saveKindWmaState(store, rep_id, ln.row_idx, state);
+      } catch (err) {
+        console.warn("[wma] on_event failed:", err.message);
+      }
+    }
+  });
+}
+function initBreakpointListener() {
+  const mql = window.matchMedia(`(max-width: ${BREAKPOINT_TABLET_PX - 1}px)`);
+  const onChange = (e) => {
+    document.body.classList.toggle("is-mobile", e.matches);
+    window.dispatchEvent(new CustomEvent("vdg:breakpoint-changed", { detail: { mobile: e.matches } }));
+  };
+  mql.addEventListener("change", onChange);
+  onChange(mql);
+}
+
+// output/web/js.tmp/implementations/storage/implementations/auth/token-refresh.js
+var _onReconnected = null;
+async function _onReconnectRequest() {
+  try {
+    const resp = await reconnectDriveInteractive();
+    const user = await hydrateSessionFromToken(resp);
+    if (user && _onReconnected) await _onReconnected(user);
+    window.dispatchEvent(new CustomEvent("vdg:auth-reconnected"));
+    window.dispatchEvent(new CustomEvent("vdg:sync-now"));
+  } catch {
+    window.dispatchEvent(new CustomEvent("vdg:auth-needs-reconnect"));
+  }
+}
+var _wired = false;
+function initAccessTokenRefresh({ onReconnected = null } = {}) {
+  if (_wired) return;
+  _wired = true;
+  _onReconnected = onReconnected;
+  window.addEventListener("vdg:auth-reconnect-request", _onReconnectRequest);
+}
+
+// output/web/js.tmp/bootstrap/app-views.js
+var VIEWS = {
+  "/dashboard": () => import("./dashboard-FVN5HGMF.js"),
+  "/shipments": () => import("./shipments-PEQNDU53.js"),
+  "/upload": () => import("./upload-MTDKHEH5.js"),
+  "/documents": () => import("./documents-GQLQHBGS.js"),
+  "/finance": () => import("./finance-dashboard-J2GBYRP7.js"),
+  "/finance/credit": () => import("./credit-dashboard-Z2UTANEH.js"),
+  "/finance/demdet": () => import("./demdet-HXJWVHFM.js"),
+  // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
+  // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
+  "/sales/me": () => import("./sales-me-BKSZGQWN.js"),
+  "/sales/analytics": () => import("./sales-analytics-MTII2MWJ.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-PMG46Z4A.js"),
+  "/sales/quote": () => import("./sales-quote-list-UD455A4C.js"),
+  "/masters/customers": () => import("./masters-customers-5SBFD6OK.js"),
+  "/masters/carriers": () => import("./masters-carriers-RPMWNBAK.js"),
+  "/masters/services": () => import("./masters-services-ZPSNZQQP.js"),
+  "/help": () => import("./help-HBY43B2P.js"),
+  "/pending-access": () => import("./pending-access-T7I2VMHC.js"),
+  "/onboarding": () => import("./onboarding-wizard-MWC5KDX2.js"),
+  "/background-jobs": () => import("./background-jobs-BT47U72W.js"),
+  // Manager Workspace — E-14
+  "/manager/dashboard": () => import("./dashboard-67YQE37Q.js"),
+  "/manager/pipeline": () => import("./pipeline-O2P66RXO.js"),
+  "/manager/approvals": () => import("./approvals-QOM77AJJ.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-5OHPUNPT.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-PAIMWMFT.js"),
+  "/manager/finance/close-period": () => import("./close-period-RGSNKQ3X.js"),
+  "/manager/audit": () => import("./audit-2F3ZHFPO.js"),
+  "/manager/notifications": () => import("./notifications-BNA2KTLR.js"),
+  // E-14 batch-02
+  "/manager/sales": () => import("./sales-DQVDM5CD.js"),
+  "/manager/finance/commissions": () => import("./commissions-JU4I6SXB.js"),
+  "/manager/commission-rules": () => import("./commission-rules-IHLSUJ3T.js"),
+  "/manager/exceptions": () => import("./exceptions-REM7RK6N.js"),
+  // E-15
+  "/manager/errors": () => import("./errors-64VZUW7I.js"),
+  "/manager/backup": () => import("./backup-FSDMRJQ4.js"),
+  "/manager/users": () => import("./users-5OS6654E.js"),
+  // E-15 F-15-36
+  "/manager/fx-rates": () => import("./fx-rates-3C3HRQQV.js"),
+  "/manager/settings": () => import("./settings-TXW7JWWE.js"),
+  // E-16 F-16-02
+  "/manager/awb": () => import("./awb-5SYKGBTZ.js"),
+  // E-16 F-16-03
+  "/masters/airports": () => import("./airports-44UNJRTD.js"),
+  "/masters/flights": () => import("./flights-BL7APUOE.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-SGCONU24.js"),
+  // E-26 F-26-04
+  "/masters/ocean-carriers": () => import("./ocean-carriers-T27GE2Z2.js"),
+  // E-20 F-28-15
+  "/masters/ocean-tariff": () => import("./ocean-tariff-KSLTVL44.js"),
+  // E-16 F-16-04
+  "/masters/uld-types": () => import("./uld-types-74UI5UYS.js"),
+  "/manager/manifest": () => import("./manifest-YGXRN2UI.js"),
+  // E-16 F-16-05
+  "/masters/air-rates": () => import("./air-rates-MZRCPHMV.js"),
+  // E-25 / E-26 — sea-freight local charge masters
+  "/masters/units-of-measure": () => import("./units-of-measure-WB5XDQP3.js"),
+  "/masters/local-charges": () => import("./local-charges-QP6BFAZS.js"),
+  // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
+  "/masters/shipment-states": () => import("./shipment-states-YTLFBYJ7.js"),
+  "/quotes/air-calc": () => import("./air-calc-FRYHWXDS.js"),
+  // E-16 F-16-09
+  "/manager/air-invoice": () => import("./air-invoice-KPZW4XS3.js"),
+  // E-23 F-23-04
+  "/accounting/ledger": () => import("./ledger-viewer-WNQ6CENJ.js"),
+  // E-23 F-23-05
+  "/accounting/reports": () => import("./reports-XY56ZUZX.js"),
+  "/accounting/settings": () => import("./settings-E2KMUQ5M.js"),
+  // E-24 F-24-04
+  "/admin/users": () => import("./users-view-UVFVXGU7.js"),
+  // E-24 F-24-06
+  "/admin/users/audit-log": () => import("./user-audit-log-view-I43Q6FW5.js")
+};
+
+// output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
+var _impl12 = null;
+function bindRoutePrefetch(impl) {
+  _impl12 = impl;
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/cache.js
+function composeCache(wasm2) {
+  bindBulkOrchestrator({
+    bulkPut: async (_repo2, kind, entities) => {
+      if (!entities?.length) return;
+      const res = await wasm2.cache_bulk_put({ kind, entities });
+      if (!res.ok) throw new Error(res.error || `bulkPut(${kind}): stopped after ${res.written}`);
+    }
+  });
+  bindMasterRegistry({
+    canWriteMaster: (kind, role) => wasm2.cache_can_write_master({ kind, role: role ?? null }).allowed
+  });
+  bindMasterDeduper({
+    findMatch: (name, existing) => wasm2.cache_find_match({ name, existing: existing || [] })
+  });
+  const runSeedMigrations = async (_repo2, migrations) => {
+    const list = migrations || [];
+    registerSeedKeys(list);
+    return wasm2.cache_run_seed_migrations({
+      migrations: list.map((m) => ({ id: m.id, kind: m.kind, url: m.url }))
+    });
+  };
+  bindSeedMigrator({ runSeedMigrations });
+  bindRoutePrefetch({
+    prefetchDashboard: async () => {
+      await wasm2.cache_route_prefetch({});
+    }
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/data.js
+var REASON_PERIOD_LOCKED = "period-locked";
+var REASON_LICENSE_READONLY = "license-readonly";
+function gateError(gate) {
+  if (!gate || gate.allowed) return null;
+  if (gate.reason === REASON_LICENSE_READONLY) {
+    const days = gate.grace_days_left ?? 0;
+    return new LicenseReadOnlyError(days, t("license.readonly_error", { d: days }));
+  }
+  if (gate.reason === REASON_PERIOD_LOCKED) {
+    return new PeriodLockedError(gate.period, t("period.locked_error", { k: gate.period }));
+  }
+  return null;
+}
+function throwIfRefused(reply) {
+  if (reply.ok) return reply;
+  const refusal = gateError(reply.gate);
+  if (refusal) throw refusal;
+  throw new Error(reply.error || "the write was refused");
+}
+function stamp(record, seen) {
+  if (!record) return record;
+  Object.defineProperty(record, REVENUE_SEEN, { value: seen, enumerable: false, configurable: true });
+  return record;
+}
+function stampRows(reply) {
+  if (!reply.ok) throw new Error(reply.error || "the read failed");
+  return reply.rows.map((row, i) => stamp(row, !!reply.revenue_seen[i]));
+}
+function applyPredicate(rows, predicate) {
+  return typeof predicate === "function" ? rows.filter(predicate) : rows;
+}
+function composeData(wasm2) {
+  const joinLoaded = async (_repo2, envelopes) => stampRows(await wasm2.data_join_loaded({ envelopes: envelopes || [] }));
+  bindShipmentRepo({
+    putShipment: async (_repo2, shipment) => {
+      const reply = throwIfRefused(await wasm2.data_put_shipment({ shipment }));
+      return { envelope: reply.envelope, revenue: reply.revenue };
+    },
+    putEnvelope: async (_repo2, ref, shipmentLike) => {
+      const reply = throwIfRefused(await wasm2.data_put_envelope({ shipment_ref: ref, shipment: shipmentLike }));
+      return reply.envelope;
+    },
+    getEnvelope: async (_repo2, ref) => {
+      const reply = await wasm2.data_get_envelope({ shipment_ref: ref });
+      if (!reply.ok) throw new Error(reply.error || "the read failed");
+      return reply.record;
+    },
+    listEnvelopes: async (_repo2, predicate = null) => {
+      const reply = await wasm2.data_list_envelopes({});
+      if (!reply.ok) throw new Error(reply.error || "the read failed");
+      return applyPredicate(reply.rows, predicate);
+    },
+    deleteShipment: async (_repo2, ref) => {
+      throwIfRefused(await wasm2.data_delete_shipment({ shipment_ref: ref }));
+    },
+    getShipment: async (_repo2, ref) => {
+      const reply = await wasm2.data_get_shipment({ shipment_ref: ref });
+      if (!reply.ok) throw new Error(reply.error || "the read failed");
+      return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
+    },
+    // Filter the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
+    // cross-fork revenue read for everybody else's.
+    listShipments: async (repo3, predicate = null) => {
+      const reply = await wasm2.data_list_envelopes({});
+      if (!reply.ok) throw new Error(reply.error || "the read failed");
+      return joinLoaded(repo3, applyPredicate(reply.rows, predicate));
+    },
+    joinLoaded,
+    anyRevenueVisible: (rows) => (rows || []).some((row) => row?.[REVENUE_SEEN])
+  });
+  bindWriteGate({
+    assertWritable: async (_repo2, etd, kind = KIND_SHIPMENT) => {
+      const refusal = gateError(await wasm2.data_write_gate({ etd: etd ?? null, kind }));
+      if (refusal) throw refusal;
+    }
+  });
+  bindBillingPublish({
+    publishBilling: async (_repo2, shipment, { publishedBy = null, publishedAt = null } = {}) => {
+      const reply = await wasm2.data_publish_billing({
+        shipment,
+        published_by: publishedBy,
+        published_at: publishedAt
+      });
+      if (!reply.ok) throw new Error(reply.error || "publish failed");
+      return reply.snapshot;
+    },
+    readPublishedFor: async (_repo2, shipment) => (await wasm2.data_published_for({ shipment })).rows,
+    currentRevision: async (_repo2, shipment) => (await wasm2.data_current_revision({ shipment })).record
+  });
+  bindRepoQuery({
+    listWhere: async (_repo2, kind, predicate = null) => {
+      const reply = await wasm2.data_list_where({ kind, column: null, equals: null, ignore_case: false });
+      if (!reply.ok) throw new Error(reply.error || "the read failed");
+      return applyPredicate(reply.rows, predicate);
+    }
+  });
+  bindPnlLineId({
+    pnlLineId: (ref, index) => wasm2.data_pnl_line_id({ shipment_ref: ref, index }).id,
+    deletePnlLinesFor: async (_repo2, ref) => {
+      const reply = await wasm2.data_delete_pnl_lines({ shipment_ref: ref });
+      if (!reply.ok) throw new Error(reply.error || "the cleanup failed");
+      return reply.deleted;
+    }
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/sync.js
+function _absorb(state, next) {
+  for (const key of Object.keys(state)) delete state[key];
+  Object.assign(state, next);
+  return state;
+}
+function _rowIdx(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+function composeSync(wasm2) {
+  bindAuditLog({
+    verifyAuditChain: async (rows) => (await wasm2.sync_audit_verify_chain({ rows: rows || [] })).problems
+  });
+  bindDueSoon({
+    computeDueSoonRows: async (salesId) => (await wasm2.sync_due_soon_rows({ sales_id: salesId ?? null })).rows
+  });
+  bindJobTracker(jobTracker);
+  bindWmaEngine({
+    predict: (state, descriptionText, classifyKindFn) => {
+      const descKind = descriptionText && descriptionText.trim() && classifyKindFn ? classifyKindFn(descriptionText) : null;
+      return wasm2.sync_wma_predict({ state, desc_kind: descKind }).kind;
+    },
+    onEvent: (state, observed, predicted) => _absorb(
+      state,
+      wasm2.sync_wma_on_event({ state, observed, predicted: predicted ?? null, now_ms: Date.now() }).state
+    ),
+    dismissPrediction: (state, predictedKind) => _absorb(
+      state,
+      wasm2.sync_wma_dismiss({ state, predicted_kind: predictedKind }).state
+    )
+  });
+  bindWmaStore({
+    loadKindWmaState: async (_store2, repId, rowIdx) => (await wasm2.sync_wma_load({
+      rep_id: String(repId ?? ""),
+      row_idx: _rowIdx(rowIdx),
+      now_ms: Date.now()
+    })).state,
+    saveKindWmaState: async (_store2, repId, rowIdx, state) => {
+      const reply = await wasm2.sync_wma_save({ rep_id: String(repId ?? ""), row_idx: _rowIdx(rowIdx), state });
+      if (!reply.ok) console.warn("[wma] save failed:", reply.error);
+    }
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/manager.js
+var MANAGER_ROLE_LABEL_KEY = "admin.users.role.manager";
+var MONTHS_PER_YEAR = 12;
+var MONTH_SAMPLE_YEAR = 2e3;
+var PREFIX_SEED_RANGE = 1e4;
+var WEEK_DATE_LOCALE = "vi-VN";
+var MARGIN_PCT_DIGITS = 1;
+var tz = () => -(/* @__PURE__ */ new Date()).getTimezoneOffset();
+function managerLabel() {
+  const user = typeof window !== "undefined" ? window.__vdg_current_user : null;
+  const label = t(MANAGER_ROLE_LABEL_KEY);
+  return user?.name || user?.email || (label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label);
+}
+function monthLabels() {
+  return Array.from({ length: MONTHS_PER_YEAR }, (_, m) => new Date(MONTH_SAMPLE_YEAR, m, 1).toLocaleString("default", { month: "short" }));
+}
+var withDims = (rows) => (rows || []).map((r) => ({ ...r, dims: Object.fromEntries(r.dims || []) }));
+var toPairs = (dims) => Object.entries(dims || {});
+var asArray = (rules) => rules instanceof Map ? [...rules.values()] : Object.values(rules || {});
+var msOf = (value) => value instanceof Date ? value.getTime() : Number(value ?? Date.now());
+function weekLabel(week) {
+  const fmt = new Intl.DateTimeFormat(WEEK_DATE_LOCALE, { day: "2-digit", month: "2-digit" });
+  return `W${week.index + 1} (${fmt.format(new Date(week.start_ms))})`;
+}
+function trendWeekLabel(week) {
+  const shown = new Date(week.start_ms).toLocaleDateString(WEEK_DATE_LOCALE, { day: "2-digit", month: "2-digit" });
+  return `W${week.ordinal} (${shown})`;
+}
+function composeManager(wasm2) {
+  bindPnlComposer({
+    compose: ({ shipments = [], pnlLines = [], period = "", dims = [] } = {}) => {
+      const reply = wasm2.manager_pnl_pivot({
+        shipments,
+        pnl_lines: pnlLines,
+        period,
+        dims,
+        now_ms: Date.now(),
+        tz_offset_min: tz(),
+        manager_label: managerLabel(),
+        month_labels: monthLabels()
+      });
+      return { rows: withDims(reply.rows), grandTotals: reply.grandTotals, groupedShipments: reply.groupedShipments };
+    },
+    composeBuySellBreakdown: (pnlLines, refs) => wasm2.manager_pnl_buy_sell({ pnl_lines: pnlLines || [], refs: refs || [] }).rows,
+    filterByDims: (shipments, rowDims) => wasm2.manager_pnl_drill({
+      shipments: shipments || [],
+      row_dims: toPairs(rowDims),
+      tz_offset_min: tz(),
+      manager_label: managerLabel(),
+      month_labels: monthLabels()
+    }).shipments
+  });
+  bindAirPnlComposer({
+    composeAir: ({ shipments = [], pnlLines = [], dims = [] } = {}) => {
+      const reply = wasm2.manager_air_pnl({
+        shipments,
+        pnl_lines: pnlLines,
+        dims,
+        tz_offset_min: tz(),
+        manager_label: managerLabel(),
+        month_labels: monthLabels()
+      });
+      return { rows: withDims(reply.rows), grandTotals: reply.grandTotals };
+    }
+  });
+  bindArComposer({
+    composeAR: ({ billingEntities = [], today } = {}) => wasm2.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz() }),
+    composeAP: ({ pnlLines = [] } = {}) => wasm2.manager_ap_payables({ pnl_lines: pnlLines, tz_offset_min: tz() }),
+    composeTimeline: ({ billingEntities = [], shipments = [], today } = {}) => {
+      const reply = wasm2.manager_ar_timeline({
+        billing: billingEntities,
+        shipments,
+        today_ms: msOf(today),
+        tz_offset_min: tz()
+      });
+      return { weeks: reply.weeks.map(weekLabel), actuals: reply.actuals, forecast: reply.forecast };
+    }
+  });
+  bindCommissionCalculator({
+    computeCommissions: (shipments, pnlLines, rules, advanceLog, periodKey) => wasm2.manager_commissions({
+      shipments: shipments || [],
+      pnl_lines: pnlLines || [],
+      rules: asArray(rules),
+      advances: advanceLog || [],
+      period_key: periodKey || "",
+      tz_offset_min: tz(),
+      manager_label: managerLabel()
+    }).rows,
+    computeSparkline: (shipments, pnlLines, salesId, monthCount) => wasm2.manager_commission_sparkline({
+      shipments: shipments || [],
+      pnl_lines: pnlLines || [],
+      sales_id: salesId || "",
+      month_count: monthCount || 0,
+      now_ms: Date.now(),
+      tz_offset_min: tz(),
+      manager_label: managerLabel()
+    }).values,
+    buildPeriodKey: (mode, date) => wasm2.manager_period_key({ mode: mode || "month", at_ms: msOf(date), tz_offset_min: tz() }).key
+  });
+  bindCommissionComposer({
+    compose: async () => ({ rules: (await wasm2.manager_commission_rules({ all: true })).rules })
+  });
+  bindCustomer360Composer({
+    compose: (customerId, customers, shipments, billing, exceptions) => {
+      const reply = wasm2.manager_customer360({
+        customer_id: customerId || "",
+        customers: customers || [],
+        shipments: shipments || [],
+        billing: billing || [],
+        exceptions: exceptions || [],
+        today_ms: Date.now(),
+        tz_offset_min: tz(),
+        manager_label: managerLabel()
+      });
+      if (!reply.found) return null;
+      return {
+        customer: reply.customer,
+        lifetimeRevenue: reply.lifetimeRevenue,
+        outstanding: reply.outstanding,
+        salesRep: reply.salesRep,
+        lastTouchDate: reply.lastTouchDate,
+        healthScore: reply.healthScore,
+        healthBreakdown: reply.healthBreakdown.map((d) => t(d.key, {
+          d: d.points,
+          n: d.count || d.days,
+          pct: d.pct.toFixed(MARGIN_PCT_DIGITS),
+          warn: d.warn_pct
+        }))
+      };
+    },
+    compose360: (shipments) => wasm2.manager_customer_mode_mix({ shipments: shipments || [] })
+  });
+  bindDashboardComposer({
+    compose: (repo3, period, salesFilter, mode = "All") => wasm2.manager_dashboard({
+      period: period || "",
+      sales_filter: salesFilter ?? null,
+      mode,
+      now_ms: Date.now(),
+      tz_offset_min: tz()
+    })
+  });
+  bindExceptionComposer({
+    computeSortedExceptions: (exceptions) => wasm2.manager_exceptions_sorted({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).exceptions,
+    computeTrends: (exceptions) => {
+      const reply = wasm2.manager_exception_trends({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() });
+      return {
+        weeks: reply.weeks.map(trendWeekLabel),
+        datasets: reply.datasets.map((ds) => ({ label: ds.label_key ? t(ds.label_key) : ds.label, data: ds.data }))
+      };
+    },
+    computeMttr: (exceptions) => wasm2.manager_exception_mttr({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows.map((r) => ({ type: r.typeKey ? t(r.typeKey) : r.type, avgHours: r.avgHours })),
+    computePerSalesRate: (exceptions) => wasm2.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
+    computeEscalated: (severity) => wasm2.manager_exception_escalate({ severity: severity || "" }).severity
+  });
+  bindLedgerAggregator({
+    trialBalance: (chart, legsByAccount, asOfDate) => wasm2.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }).rows,
+    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm2.manager_ledger_pnl({
+      chart: chart || [],
+      legs_by_account: legsByAccount || {},
+      date_from: dateFrom || "",
+      date_to: dateTo || ""
+    }),
+    pnlMonthlyBreakdown: (chart, legsByAccount, year) => wasm2.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
+    balanceSheet: (chart, legsByAccount, asOfDate) => wasm2.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" })
+  });
+  bindLedgerComposer({
+    groupChartByType: (accounts) => wasm2.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
+    filterLegs: (legs, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "" } = {}) => wasm2.manager_ledger_filter_legs({
+      legs: legs || [],
+      date_from: dateFrom || "",
+      date_to: dateTo || "",
+      min_amount: minAmount === "" || minAmount == null ? null : Number(minAmount),
+      max_amount: maxAmount === "" || maxAmount == null ? null : Number(maxAmount),
+      search: search || ""
+    }).legs,
+    computeRunningBalances: (legs, balanceSide, opening = 0) => wasm2.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || "", opening: Number(opening) || 0 }).legs,
+    buildLedgerCSV: (rows) => wasm2.manager_ledger_csv({ rows: rows || [] }).csv
+  });
+  bindLedgerReconciler({
+    runAndRecord: (_ledgerRepo, year) => wasm2.manager_ledger_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
+    // Boot calls this unawaited: a reconciliation that cannot run must never wedge the boot.
+    maybeAutoReconcile: (_ledgerRepo, year) => {
+      wasm2.manager_ledger_auto_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }).catch((err) => {
+        console.error("[ledger-reconciler] auto-reconcile failed:", err);
+      });
+    }
+  });
+  bindLedgerRepost({
+    planRepost: (_entityRepo, _ledgerRepo, year) => wasm2.manager_ledger_plan_repost({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
+    applyRepost: (_ledgerRepo, plan) => wasm2.manager_ledger_apply_repost({ plan }),
+    purgeOrphans: (_ledgerRepo, plan, year) => wasm2.manager_ledger_purge_orphans({ plan, year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() })
+  });
+  bindNotificationComposer({
+    computeFromEvent: ({ kind = "", id = "" } = {}, entities) => {
+      const reply = wasm2.manager_notification_from_event({
+        kind,
+        id,
+        entity: entities?.get?.(`${kind}::${id}`) ?? null,
+        manager_label: managerLabel()
+      });
+      return reply.notification ? stampNotification(reply.notification) : null;
+    },
+    computeTimeBased: (shipments, today) => wasm2.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
+  });
+  bindUserAuditLogComposer({
+    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm2.manager_audit_log_range({ records: records || [], from, to }).records,
+    sortByTimestampDesc: (records) => wasm2.manager_audit_log_sort({ records: records || [] }).records,
+    buildAuditLogCsv: (records) => wasm2.manager_audit_log_csv({ records: records || [] }).csv
+  });
+  bindUsersViewComposer({
+    deriveFork: (email) => wasm2.manager_fork({ email: email || "" }).fork,
+    // Allocation itself is Rust (freight/core_abstractions/fork.rs); this only feeds it the forks
+    // already in use and a random starting suffix, because randomness is the browser's.
+    allocateFork: (email, users) => wasm2.fork_allocate(
+      email,
+      JSON.stringify((users || []).map((u) => u.fork).filter(Boolean)),
+      Math.floor(Math.random() * PREFIX_SEED_RANGE)
+    ),
+    isValidEmail: (email) => wasm2.manager_email_valid({ email: email || "" }).valid,
+    filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm2.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
+    sortUsersByEmail: (users) => wasm2.manager_users_sort({ users: users || [] }).users
+  });
+}
+function stampNotification(draft) {
+  return {
+    id: crypto.randomUUID?.() || `n-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    type: draft.type,
+    title: draft.title,
+    created_at: (/* @__PURE__ */ new Date()).toISOString(),
+    read: false,
+    dismissed: false,
+    ...draft.entityKind ? { entityKind: draft.entityKind, entityId: draft.entityId } : {}
+  };
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/governance.js
+function raise(reply) {
+  if (reply?.error) throw new Error(reply.error);
+  return reply;
+}
+function roleList(roles) {
+  return (Array.isArray(roles) ? roles : [roles]).filter(Boolean);
+}
+function composeGovernance(wasm2) {
+  bindRouteGuard({
+    routeGuard: (route, roles) => {
+      const verdict = wasm2.governance_route_guard({ route: route ?? "", roles: roleList(roles) });
+      return verdict.allow ? "allow" : { redirect: verdict.redirect, reason: verdict.reason };
+    },
+    homeRouteForRole: (roles) => wasm2.governance_home_route({ roles: roleList(roles) }).route,
+    filterSidebarItems: (items, roles) => wasm2.governance_filter_sidebar({ items: items || [], roles: roleList(roles) }).items,
+    resolveUserRoles: (record) => wasm2.governance_user_roles({ record: record ?? null }).roles,
+    normalizeRole: (role) => wasm2.governance_normalize_role({ role: role ?? null }).role,
+    // The boot-populated snapshot. Sign-in resolves the roles from the staff table before repo-init
+    // exists — same source, earlier — so both mirrors are read.
+    currentUserRoles: () => {
+      const fromBoot = window.__vdg_current_user?.roles;
+      return fromBoot?.length ? fromBoot : window.__vdg_session_roles || [];
+    },
+    currentUserRole: () => window.__vdg_current_user?.role || ROLE_READ_ONLY,
+    currentUserId: () => window.__vdg_current_user?.fork || UNKNOWN_USER_ID
+  });
+  bindWorkspaceSettings({
+    readSettings: async () => (await wasm2.governance_load_settings({ local_only: true })).settings,
+    loadWorkspaceSettings: async (_driveApi, wsName) => (await wasm2.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
+    saveWorkspaceSettings: async (_driveApi, _wsName, settings) => {
+      const saved = raise(await wasm2.governance_save_settings({ settings }));
+      window.__vdg_workspace_settings = saved.settings;
+      return saved.settings;
+    }
+  });
+  bindPeriodClose({
+    getCurrentPeriodLock: async (_repo2, period) => {
+      const lock = await wasm2.governance_find_lock({ period_key: period ?? null });
+      return lock.locked ? { locked: true, record: lock.record } : { locked: false };
+    },
+    loadClosedPeriods: async () => (await wasm2.governance_locked_periods({})).keys,
+    listCloseRecords: async () => (await wasm2.governance_close_records({})).records,
+    runPreCloseChecks: async (_repo2, period) => raise(await wasm2.governance_pre_close_checks({ period })).checks,
+    closePeriod: async (_repo2, period, user, checklist, ledgerRepo3 = null) => raise(await wasm2.governance_close_period({
+      period,
+      user: user ?? null,
+      checklist: checklist ?? [],
+      with_ledger: !!ledgerRepo3
+    })),
+    reopenPeriod: async (_repo2, period, reason, user) => raise(await wasm2.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
+  });
+  bindPeriodLockRegistry({
+    readLockedPeriods: async () => (await wasm2.governance_locked_periods({})).locks,
+    lockedPeriodKeys: async () => (await wasm2.governance_locked_periods({})).keys,
+    findLock: async (_repo2, periodKey) => (await wasm2.governance_find_lock({ period_key: periodKey ?? null })).record ?? null,
+    lockPeriod: async (_repo2, periodKey, user) => raise(await wasm2.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
+    unlockPeriod: async (_repo2, periodKey) => raise(await wasm2.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
+  });
+  bindPeriodOpeningBalance({
+    previousPeriod: (period) => wasm2.governance_period_math({ period: period ?? null }).previous,
+    nextPeriod: (period) => wasm2.governance_period_math({ period: period ?? null }).next,
+    periodBounds: (period) => {
+      const math = wasm2.governance_period_math({ period: period ?? null });
+      return math.bounds_start ? { start: math.bounds_start, end: math.bounds_end } : null;
+    },
+    dayBefore: (date) => wasm2.governance_period_math({ date: date ?? null }).day_before,
+    periodOfDate: (date) => wasm2.governance_period_math({ date: date ?? null }).period_of_date,
+    isPeriodStart: (date) => wasm2.governance_period_math({ date: date ?? null }).is_period_start,
+    openingBalanceFor: (closeRecords, period, accountCode) => {
+      const found = wasm2.governance_opening_balance({
+        close_records: closeRecords || [],
+        period: period ?? null,
+        account_code: accountCode ?? ""
+      });
+      return found.found ? { balance: found.balance, source_period: found.source_period, closed_at: found.closed_at, closed_by: found.closed_by } : null;
+    }
+  });
+  bindDefaultCurrencyLock({
+    canEditDefaultCurrency: (shipments, period, periodClosed = false) => wasm2.governance_can_edit_default_currency({
+      shipments: shipments || [],
+      period: period ?? null,
+      period_closed: !!periodClosed
+    }),
+    periodOf: (date) => wasm2.governance_period_of({ date: date == null ? null : String(date) }).period
+  });
+  bindErrorLogStore({
+    listErrorRecords: async () => (await wasm2.governance_error_records({})).records,
+    purgeErrorMonth: async (_driveApi, month) => raise(await wasm2.governance_purge_error_month({ month }))
+  });
+  bindMasterMerge({
+    diffFields: (target, source) => wasm2.governance_merge_diff({ target, source }).diffs,
+    mergeRecords: (target, source) => wasm2.governance_merge_records({ target, source }).record,
+    repointRefs: async (_repo2, masterKind, sourceId, targetId) => raise(await wasm2.governance_repoint_refs({
+      master_kind: masterKind,
+      source_id: sourceId,
+      target_id: targetId
+    })).updated
+  });
+  bindWorkspaceBootstrap({
+    bootstrapAclTargetFolders: (_driveApi, wsRootId) => {
+      if (isServerBackend()) return Promise.resolve({ succeeded: 0, failed: 0, errors: [] });
+      return wasm2.governance_bootstrap_acl_folders({ root_id: wsRootId ?? "" });
+    }
+  });
+  bindFirstRunProvision({
+    isAlreadyProvisionedLocally: async () => {
+      if (isServerBackend()) return true;
+      return (await wasm2.governance_is_already_provisioned({})).provisioned;
+    },
+    ensureWorkspaceRoot: async (_driveApi, workspace) => {
+      if (isServerBackend()) return { rootId: "root", created: false };
+      const reply = await wasm2.governance_ensure_workspace_root({ workspace: workspace ?? "" });
+      if (reply.second_workspace_forbidden) throw new SecondWorkspaceForbiddenError(reply.evidence);
+      return { rootId: raise(reply).root_id, created: reply.created };
+    },
+    runFirstRunProvision: async (_driveApi, workspace) => {
+      if (isServerBackend()) return { rootId: "root" };
+      const reply = await wasm2.governance_first_run_provision({ workspace: workspace ?? "" });
+      if (reply.second_workspace_forbidden) throw new SecondWorkspaceForbiddenError(reply.evidence);
+      return { rootId: raise(reply).root_id };
+    }
+  });
+}
+
+// output/web/js.tmp/implementations/ui/core_abstractions/ports/flows/license.js
+var LICENSE_STATE_VALID = "valid";
+var LICENSE_STATE_INVALID = "invalid";
+var LICENSE_STATE_NETWORK = "network";
+var LICENSE_STATE_GRACE = "grace";
+var LICENSE_STATE_BLOCKED = "blocked";
+var _impl13 = null;
+function bindLicenseGate(impl) {
+  _impl13 = impl;
+}
+function _i11() {
+  if (!_impl13) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
+  return _impl13;
+}
+var resolveLicenseState = (...a) => _i11().resolveLicenseState(...a);
+var errorKindMessage = (...a) => _i11().errorKindMessage(...a);
+
+// output/web/js.tmp/bootstrap/compose-ui/flows-admin.js
+var BACKUP_PROGRESS_EVENT = "vdg:backup-progress";
+var EMPTY = {};
+function unwrap(reply, pick) {
+  if (!reply.ok) throw new Error(t(reply.error));
+  return pick(reply);
+}
+function composeFlowsAdmin(wasm2) {
+  bindLicenseGate({
+    resolveLicenseState: () => wasm2.flows_license_resolve(EMPTY),
+    errorKindMessage: (kind, translate = t) => translate(wasm2.flows_license_error_key({ error_kind: kind ?? null }).key)
+  });
+  bindBackupExporter({
+    // The operator emits progress as an i18n KEY plus its arguments; the translation is the ui's.
+    exportWorkspace: async (_repo2, _driveApi, onProgress = () => {
+    }) => {
+      const relay = (e) => onProgress(e.detail.pct, t(e.detail.key, e.detail.args));
+      window.addEventListener(BACKUP_PROGRESS_EVENT, relay);
+      try {
+        return unwrap(await wasm2.flows_export_workspace(EMPTY), (r) => r.filename);
+      } finally {
+        window.removeEventListener(BACKUP_PROGRESS_EVENT, relay);
+      }
+    }
+  });
+  bindUserProvisioning({
+    inviteSales: async (email, name, _driveApi, _repo2, workspaceRootId) => unwrap(
+      await wasm2.flows_invite_sales({ email, name: name ?? null, workspace_root_id: workspaceRootId ?? null }),
+      (r) => r.user
+    ),
+    promoteToManager: async (userId, _driveApi, _repo2, adminFolderId) => unwrap(
+      await wasm2.flows_promote_to_manager({ user_id: String(userId), admin_folder_id: adminFolderId ?? null }),
+      (r) => r.user
+    ),
+    disableUser: async (userId) => unwrap(await wasm2.flows_disable_user({ user_id: String(userId) }), (r) => r.user),
+    editProfile: async (userId, fields) => unwrap(await wasm2.flows_edit_profile({ user_id: String(userId), fields: fields || {} }), (r) => r.user)
+  });
+  bindLedgerPoster({
+    buildEntriesFromShipment: (shipment, chart, rules) => unwrap(
+      wasm2.flows_build_entries_from_shipment({ source: shipment || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
+      (r) => r.entries
+    ),
+    buildEntriesFromCommission: (commissionEntry, chart, rules) => unwrap(
+      wasm2.flows_build_entries_from_commission({ source: commissionEntry || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
+      (r) => r.entries
+    ),
+    buildReversalEntry: (legs, chart, actorId) => unwrap(
+      wasm2.flows_build_reversal_entry({ legs: legs || [], chart_of_accounts: chart || [], actor_id: actorId ?? null }),
+      (r) => r.entry
+    ),
+    postShipment: async (shipment) => unwrap(await wasm2.flows_post_shipment({ shipment: shipment || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
+    postCommission: async (commissionEntry) => unwrap(await wasm2.flows_post_commission({ commission_entry: commissionEntry || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
+    postReversal: async (entryId, actorId) => unwrap(
+      await wasm2.flows_post_reversal({ entry_id: String(entryId), actor_id: actorId ?? null }),
+      (r) => ({ posted: r.posted, entryIds: r.entry_ids })
+    )
+  });
+  bindPnlCommit({
+    commitPnlReport: async (report) => unwrap(await wasm2.flows_commit_pnl_report({ report: report || {} }), (r) => ({
+      created_shipments: r.created_shipments,
+      created_lines: r.created_lines,
+      new_customers: r.new_customers,
+      new_carriers: r.new_carriers
+    })),
+    computeAndPersistSalesCommission: async (shipment, pnlLines) => unwrap(
+      await wasm2.flows_sales_commission({ shipment: shipment || {}, pnl_lines: pnlLines || [] }),
+      (r) => r.persisted
+    ),
+    slugify: (text) => wasm2.flows_slugify({ text: text ?? null }).slug
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/flows.js
+var ENTITY_CHANGED_EVENT = "vdg:entity-changed";
+var KIND_USER = "user";
+var REASON_CANCELLED = "cancelled";
+var EMPTY2 = {};
+function composeFlows(wasm2) {
+  bindSalesRepDerivation({
+    deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) => wasm2.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
+    selfRepCandidate: (roles, token) => wasm2.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
+    customerRepFor: (customerName, customers) => wasm2.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep
+  });
+  bindAirRateCalculator({
+    computeChargeableKg: (actual, l, w, h) => wasm2.flows_chargeable_kg({ actual, l, w, h }).chargeable_kg,
+    computeFreight: (actual, l, w, h, breaks) => {
+      const r = wasm2.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
+      return r.matched ? r.freight_total : null;
+    },
+    calcResult: (actual, l, w, h, breaks) => {
+      const r = wasm2.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
+      return r.matched ? { chargeableKg: r.chargeable_kg, tier: r.tier, freightTotal: r.freight_total } : null;
+    }
+  });
+  bindFsmIngest({
+    registerFsmEntity: (ref, state) => wasm2.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
+    rehydrateFsmStates: () => wasm2.flows_rehydrate_fsm(EMPTY2),
+    persistAdvancedState: (_repo2, ref, state) => wasm2.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null })
+  });
+  bindFsmAutoAdvance({
+    autoAdvanceShipment: async (_repo2, shipment) => (await wasm2.flows_auto_advance({ shipment: shipment || {} })).advanced_to ?? null
+  });
+  bindJobNoGen({
+    assignJobNo: async (_repo2, repCode) => (await wasm2.flows_assign_job_no({ rep_code: String(repCode || "") })).job_no,
+    formatJobNo: (repCode, localSeq) => wasm2.flows_format_job_no({ rep_code: String(repCode || ""), local_seq: Number(localSeq) || 0 }).job_no,
+    nextLocalSeq: async (_repo2, repCode) => (await wasm2.flows_next_local_seq({ rep_code: String(repCode || "") })).seq,
+    repoMaxSeq: async (_repo2, repCode) => (await wasm2.flows_repo_max_seq({ rep_code: String(repCode || "") })).seq
+  });
+  bindRepCodeRegistry({
+    isValidRepCode: (code) => wasm2.flows_rep_code_valid({ code: code ?? null }).valid,
+    assignRepCode: async () => (await wasm2.flows_assign_rep_code(EMPTY2)).code,
+    ensureRepCode: async (user) => (await wasm2.flows_ensure_rep_code({ user: user || {} })).code,
+    // The form's existing contract is a throw carrying the message it shows.
+    assertRepCodeAssignable: async (code, ownerId) => {
+      const verdict = await wasm2.flows_assert_rep_code({ code: code ?? null, owner_id: ownerId ?? null });
+      if (!verdict.ok) throw new Error(t(verdict.error_key));
+    }
+  });
+  bindSalesRegistry({
+    // F-46-03: the picker's rows come from the server's safe projection, not the local "user"
+    // entity cache (nothing ever wrote that kind — the empty-picker bug). The wasm side still
+    // owns shaping, colour-hashing and the 5-minute cache.
+    getActiveSalesReps: async () => {
+      const { users } = await listUsers({ role: ROLE_SALES_REP });
+      return (await wasm2.flows_active_sales_reps({ rows: users || [], force: false })).reps;
+    },
+    getSalesRepByPrefix: (reps, prefix) => wasm2.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
+    clearRegistryCache: () => wasm2.flows_clear_sales_registry(EMPTY2)
+  });
+  window.addEventListener(ENTITY_CHANGED_EVENT, (e) => {
+    if (e.detail?.kind === KIND_USER) wasm2.flows_clear_sales_registry(EMPTY2);
+  });
+  const analytics = (shipments, lines) => wasm2.flows_sales_analytics({ shipments: shipments || [], lines: lines || [] });
+  bindSalesAnalyticsCompute({
+    computeKpis: (shipments, lines) => analytics(shipments, lines).kpis,
+    computeLeaderboard: (shipments, lines) => analytics(shipments, lines).leaderboard,
+    computeTopCustomers: (shipments, lines) => analytics(shipments, lines).top_customers,
+    computeLaneHeatmap: (shipments, lines) => analytics(shipments, lines).heatmap,
+    computeMonthlyBars: (shipments, lines) => analytics(shipments, lines).monthly_bars,
+    computeBillingFunnel: (shipments) => analytics(shipments, []).billing_funnel,
+    // Read from the ruleset itself rather than re-typed here — the empty pass is the cheapest
+    // way to ask the one source what the rep's cut is.
+    commissionPct: analytics([], []).commission_pct
+  });
+  bindShipmentStateAliases({
+    ensureShipmentStateAliases: async () => (await wasm2.flows_ensure_state_aliases(EMPTY2)).rows
+  });
+  bindShipmentStateMigrator({
+    migrateLegacyShipmentState: async (_repo2, aliasRows) => {
+      const r = await wasm2.flows_migrate_shipment_states({ alias_rows: aliasRows || [] });
+      return { found: r.found, migrated: r.migrated, skippedUnresolved: r.skipped_unresolved };
+    }
+  });
+  bindShipmentVoidDelete({
+    chooseShipmentAffordance: (shipment) => wasm2.flows_shipment_affordance({ shipment: shipment || {} }).affordance,
+    // Two steps on purpose: Rust decides what the manager may do, the view asks, Rust acts.
+    runShipmentAffordance: async ({ shipment, isManager, confirm }) => {
+      const plan = wasm2.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(isManager) });
+      if (!plan.confirmable) return { mutated: false, reason: plan.reason };
+      const ok2 = await confirm(plan.affordance);
+      if (!ok2) return { mutated: false, reason: REASON_CANCELLED };
+      const applied = await wasm2.flows_void_apply({ shipment: shipment || {}, affordance: plan.affordance });
+      if (!applied.ok) throw new Error(applied.error);
+      return { mutated: true, affordance: plan.affordance };
+    }
+  });
+  bindQuoteOrchestrator({
+    generateQuoteId: async (_repo2, salesRepId) => {
+      const r = await wasm2.flows_generate_quote_id({ sales_rep_id: salesRepId ?? null });
+      if (!r.ok) throw new Error(r.error);
+      return r.id;
+    },
+    saveDraft: async (_repo2, salesRepId, formData) => {
+      const r = await wasm2.flows_save_quote_draft({ sales_rep_id: salesRepId ?? null, form: formData || {} });
+      if (!r.ok) throw new Error(r.error);
+      return { id: r.id, quote: r.quote, pending_manager_approval: r.pending_manager_approval };
+    },
+    sendToCustomer: async (_repo2, quote) => {
+      const r = await wasm2.flows_send_quote({ quote: quote || {} });
+      if (!r.ok) throw new Error(r.error);
+      return r.quote;
+    },
+    markAccepted: async (_repo2, quote) => {
+      const r = await wasm2.flows_accept_quote({ quote: quote || {} });
+      if (!r.ok) throw new Error(r.error);
+      return r.quote;
+    },
+    checkAlreadyConverted: async (_repo2, quoteId) => (await wasm2.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null
+  });
+  composeFlowsAdmin(wasm2);
+}
+
+// output/web/js.tmp/implementations/storage/implementations/repos/fx-rate-repo.js
+var FxRateStoreRepo = class {
+  _repo() {
+    const repo3 = window.__vdg_repo;
+    if (!repo3?.fx_months_to_ingest) throw new Error("WASM repo not ready");
+    return repo3;
+  }
+  _wasm() {
+    const wasm2 = window.__vdg_wasm;
+    if (!wasm2?.fx_rate_get) throw new Error("WASM not ready");
+    return wasm2;
+  }
+  async _ensureAllMonthsLoaded() {
+    const wasm2 = this._wasm();
+    for (const { ym, content } of await this._repo().fx_months_to_ingest()) {
+      wasm2.fx_rate_ingest_month(ym, content);
+    }
+  }
+  async getRate(dateStr, pair) {
+    await this._ensureAllMonthsLoaded();
+    try {
+      return this._wasm().fx_rate_get(dateStr, pair);
+    } catch (err) {
+      throw new Error(`FxRateNotFound: ${err.message}`);
+    }
+  }
+  async appendRate(entryJson, role) {
+    await this._ensureAllMonthsLoaded();
+    const writes = this._wasm().fx_rate_prepare_append(entryJson, role);
+    await this._repo().fx_apply_writes(JSON.stringify(writes));
+  }
+  invalidateMonth(ym) {
+    this._repo().fx_invalidate_month(ym);
+  }
+  async listByMonth(ym) {
+    return await this._repo().fx_list_by_month(ym);
+  }
+  async listAll() {
+    return await this._repo().fx_list_all();
+  }
+  async deleteEntry(validFrom, validTo, pair) {
+    await this._repo().fx_delete_entry(validFrom, validTo, pair);
+  }
+};
+
+// output/web/js.tmp/implementations/storage/implementations/repos/awb-repo.js
+var AwbStoreRepo = class {
+  _repo() {
+    const repo3 = window.__vdg_repo;
+    if (!repo3?.awb_list_by_month) throw new Error("WASM repo not ready");
+    return repo3;
+  }
+  async listByMonth(ym) {
+    return await this._repo().awb_list_by_month(ym);
+  }
+  async append(awb) {
+    await this._repo().awb_append(JSON.stringify(awb));
+  }
+  async deleteByAwbNo(awbNo, ym) {
+    await this._repo().awb_delete(awbNo, ym);
+  }
+};
+
+// output/web/js.tmp/bootstrap/compose-ui/storage.js
+function composeStorageUi() {
+  bindFxRateRepo(new FxRateStoreRepo());
+  bindAwbRepo(new AwbStoreRepo());
+}
+
+// output/web/js.tmp/bootstrap/boot/wasm-loader.js
+var cached = null;
+var BRIDGE_EXPORTS = [
+  "vdg_version",
+  "process_excel_file",
+  "get_validation_errors",
+  "apply_fsm_event",
+  "get_entity_state",
+  "register_entity",
+  "drain_events",
+  "get_transition_log",
+  "import_booking_excel_wasm",
+  "verify_license",
+  "permission_can_pull",
+  "permission_can_push",
+  "permission_can_merge",
+  "permission_can_push_own_fork",
+  "permission_resolve_grants",
+  // #28: route/nav authority — route-guard.js reads these; without globalizing them it falls back
+  // to window.__vdg_wasm and a boot path that skipped the loader would silently deny every route.
+  "access_can_route",
+  "access_home_route",
+  "access_redirect_for",
+  "access_roles_from_record",
+  "proposal_propose",
+  "proposal_merge",
+  "proposal_reject",
+  // AC-04: reject round-trip needs the global bridge
+  "priced_ref_resolve_on_date",
+  "compute_due_soon"
+  // F-48-01: payment-due-soon 4-tier ladder shared compute
+];
+function globalizeBridgeExports(mod) {
+  cached = mod;
+  for (const name of BRIDGE_EXPORTS) {
+    if (typeof mod[name] === "function") {
+      window[name] = mod[name];
+    }
+  }
+}
+async function loadWasm() {
+  if (cached) return cached;
+  try {
+    const mod = await import(new URL("pkg/vdg_freight.js?v=3e6a172", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=3e6a172", document.baseURI).href;
+    await mod.default({ module_or_path: wasmUrl });
+    cached = mod;
+    window.__vdg_wasm = mod;
+    globalizeBridgeExports(mod);
+    window.dispatchEvent(new Event("vdg:wasm-ready"));
+    return mod;
+  } catch (err) {
+    console.debug("[wasm-loader]", err);
+    return null;
+  }
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/platform.js
+function composePlatformUi() {
+  bindWasmLoader({ loadWasm });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/index.js
+function composeUi(wasm2) {
+  composeAuth(wasm2);
+  composeCache(wasm2);
+  composeData(wasm2);
+  composeSync(wasm2);
+  composeManager(wasm2);
+  composeGovernance(wasm2);
+  composeFlows(wasm2);
+  composeStorageUi();
+  composePlatformUi();
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/license/license-gate-screen.js
+var LICENSE_GATE_REASON_MISSING = "missing";
+var LICENSE_GATE_REASON_INVALID = "invalid";
+var LICENSE_GATE_REASON_NETWORK = "network";
+var LICENSE_GATE_REASON_BLOCKED = "blocked";
+function licenseGateReasonForState(state) {
+  if (state.kind === LICENSE_STATE_NETWORK) return LICENSE_GATE_REASON_NETWORK;
+  if (state.kind === LICENSE_STATE_INVALID) return LICENSE_GATE_REASON_INVALID;
+  if (state.kind === LICENSE_STATE_BLOCKED) return LICENSE_GATE_REASON_BLOCKED;
+  return LICENSE_GATE_REASON_MISSING;
+}
+var RELOAD_BTN_ID = "license-gate-reload";
+function _title(reason) {
+  switch (reason) {
+    case LICENSE_GATE_REASON_INVALID:
+      return t("license.gate.invalid_title");
+    case LICENSE_GATE_REASON_NETWORK:
+      return t("license.gate.network_title");
+    case LICENSE_GATE_REASON_BLOCKED:
+      return t("license.gate.blocked_title");
+    default:
+      return t("license.gate.missing_title");
+  }
+}
+function _body(reason, errorKind, daysPastExp) {
+  switch (reason) {
+    case LICENSE_GATE_REASON_INVALID:
+      return errorKindMessage(errorKind);
+    case LICENSE_GATE_REASON_NETWORK:
+      return t("license.gate.network_body");
+    case LICENSE_GATE_REASON_BLOCKED:
+      return t("license.gate.blocked_body", { d: daysPastExp ?? 0 });
+    default:
+      return t("license.gate.missing_body");
+  }
+}
+function renderLicenseGateScreen(container, { reason, errorKind = null, daysPastExp = null } = {}) {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${_title(reason)}</div>
+      <div class="text-sm text-slate-500 max-w-md">${_body(reason, errorKind, daysPastExp)}</div>
+      <button id="${RELOAD_BTN_ID}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("license.gate.retry_button")}
+      </button>
+    </div>`;
+  container.querySelector(`#${RELOAD_BTN_ID}`)?.addEventListener("click", () => location.reload());
+}
+
+// output/web/js.tmp/bootstrap/boot/license-boot-gate.js
+async function runLicenseGate({ container }) {
+  const state = await resolveLicenseState();
+  if (state.kind === LICENSE_STATE_VALID || state.kind === LICENSE_STATE_GRACE) {
+    window.__vdg_license_status = state.status ?? { state: "active", can_write: true, grace_days_left: 0 };
+    if (state.kind === LICENSE_STATE_GRACE) {
+      window.dispatchEvent(new CustomEvent("vdg:toast", {
+        detail: { kind: "warn", message: t("license.grace.toast", { d: state.status?.grace_days_left ?? 0 }) }
+      }));
+    }
+    return { proceed: true, payload: state.payload };
+  }
+  renderLicenseGateScreen(container, {
+    reason: licenseGateReasonForState(state),
+    errorKind: state.error_kind ?? null,
+    daysPastExp: state.status?.days_past_exp ?? null
+  });
+  return { proceed: false };
+}
+
+// output/web/js.tmp/bootstrap/boot/boot-fsm.js
+var BootState = {
+  OPENING_DB: "opening_db",
+  LOADING_WASM: "loading_wasm",
+  PROVISIONING: "provisioning",
+  BUILDING_REPO: "building_repo",
+  GATING_LICENSE: "gating_license",
+  RENDERING: "rendering",
+  READY: "ready",
+  // terminal — success
+  ERROR: "error"
+  // terminal — carries { kind, cause }
+};
+var BootEvent = {
+  DB_OPENED: "db_opened",
+  DB_FAILED: "db_failed",
+  // onerror / onblocked
+  WASM_READY: "wasm_ready",
+  WASM_FAILED: "wasm_failed",
+  NEEDS_PROVISION: "needs_provision",
+  // NOT_PROVISIONED role
+  PROVISIONED: "provisioned",
+  REPO_BUILT: "repo_built",
+  LICENSE_OK: "license_ok",
+  LICENSE_GATE: "license_gate",
+  // gate withheld proceed (screen shown)
+  RENDERED: "rendered",
+  AUTH_NEEDED: "auth_needed",
+  // Drive 401
+  DRIVE_FAILED: "drive_failed"
+  // Drive 403 / 5xx / network
+};
+var BootErrorKind = {
+  STORAGE: "storage",
+  // IDB open failed/blocked
+  APP_LOAD: "app_load",
+  // wasm fetch/instantiate failed
+  AUTH: "auth",
+  // 401 — reconnect
+  DRIVE: "drive"
+  // 403 / 5xx / network
+};
+var toError = (kind) => (payload) => ({ state: BootState.ERROR, kind, cause: payload });
+var TRANSITIONS = {
+  [BootState.OPENING_DB]: {
+    [BootEvent.DB_OPENED]: BootState.LOADING_WASM,
+    [BootEvent.DB_FAILED]: toError(BootErrorKind.STORAGE)
+  },
+  [BootState.LOADING_WASM]: {
+    [BootEvent.WASM_READY]: BootState.BUILDING_REPO,
+    [BootEvent.NEEDS_PROVISION]: BootState.PROVISIONING,
+    [BootEvent.WASM_FAILED]: toError(BootErrorKind.APP_LOAD)
+  },
+  [BootState.PROVISIONING]: {
+    [BootEvent.PROVISIONED]: BootState.BUILDING_REPO,
+    [BootEvent.AUTH_NEEDED]: toError(BootErrorKind.AUTH),
+    [BootEvent.DRIVE_FAILED]: toError(BootErrorKind.DRIVE)
+  },
+  [BootState.BUILDING_REPO]: {
+    [BootEvent.REPO_BUILT]: BootState.GATING_LICENSE,
+    [BootEvent.AUTH_NEEDED]: toError(BootErrorKind.AUTH),
+    [BootEvent.DRIVE_FAILED]: toError(BootErrorKind.DRIVE)
+  },
+  [BootState.GATING_LICENSE]: {
+    [BootEvent.LICENSE_OK]: BootState.RENDERING,
+    [BootEvent.LICENSE_GATE]: BootState.READY
+    // gate screen owns the DOM — boot is done, not failed
+  },
+  [BootState.RENDERING]: {
+    [BootEvent.RENDERED]: BootState.READY
+  }
+};
+function createBootFsm(onEnter) {
+  let state = BootState.OPENING_DB;
+  let meta = {};
+  const emit = () => {
+    try {
+      onEnter?.(state, meta);
+    } catch {
+    }
+  };
+  emit();
+  return {
+    get state() {
+      return state;
+    },
+    get meta() {
+      return meta;
+    },
+    isTerminal() {
+      return state === BootState.READY || state === BootState.ERROR;
+    },
+    dispatch(event, payload) {
+      const next = TRANSITIONS[state]?.[event];
+      if (next === void 0) return state;
+      if (typeof next === "function") {
+        const r = next(payload);
+        state = r.state;
+        meta = r;
+      } else {
+        state = next;
+        meta = payload !== void 0 ? { payload } : {};
+      }
+      emit();
+      return state;
+    }
+  };
+}
+
+// output/web/js.tmp/bootstrap/boot/boot-fsm-view.js
+var LOADING_EL_ID = "view-loading";
+var PHASE_KEY = {
+  [BootState.OPENING_DB]: "boot.opening_db",
+  [BootState.LOADING_WASM]: "boot.loading_wasm",
+  [BootState.PROVISIONING]: "boot.provisioning",
+  [BootState.BUILDING_REPO]: "boot.building_repo",
+  [BootState.GATING_LICENSE]: "boot.gating_license",
+  [BootState.RENDERING]: "boot.rendering"
+};
+function renderBootPhase(state) {
+  const key = PHASE_KEY[state];
+  if (!key) return;
+  const el = document.getElementById(LOADING_EL_ID);
+  if (el) el.textContent = t(key);
+}
+
+// output/web/js.tmp/bootstrap/boot/repo-init-steps.js
+var SENTINEL_TOKEN = /^__.*__$/;
+function _forkPrefixFromSession() {
+  const token = currentSalesRepId();
+  return token && !SENTINEL_TOKEN.test(token) ? token.toLowerCase() : null;
+}
+var IDB_OP_TIMEOUT_MS = 8e3;
+var PREFS_META_KEY2 = "preferences";
+var REPO_HANG_SEAM_KEY = "vdg.test.repoHangMs";
+var STEP_OPEN_DB = "openVdgDb";
+var STEP_WASM_INIT = "wasm-init";
+var STEP_BUILD_REPO = "build-repo-stack";
+var STEP_LICENSE_GATE = "license-gate";
+var STEP_BOOT_APP = "bootApp";
+async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
+  const _hangMs = parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || "0", 10);
+  const fsm = createBootFsm(renderBootPhase);
+  stepRef.value = STEP_OPEN_DB;
+  const db = null;
+  fsm.dispatch(BootEvent.DB_OPENED);
+  stepRef.value = STEP_WASM_INIT;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=3e6a172", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=3e6a172", document.baseURI).href;
+  await wasmMod.default({ module_or_path: wasmUrl });
+  window.__vdg_wasm = wasmMod;
+  globalizeBridgeExports(wasmMod);
+  window.dispatchEvent(new Event("vdg:wasm-ready"));
+  fsm.dispatch(BootEvent.WASM_READY);
+  if (_hangMs > 0) await new Promise((r) => setTimeout(r, _hangMs));
+  stepRef.value = STEP_BUILD_REPO;
+  setStoreScope(user.email);
+  const serverApi = storageApi();
+  const ioPort2 = createIoPort(serverApi, user.email, _forkPrefixFromSession());
+  safeAwait(ioPort2.cache_get_meta("__warm"), IDB_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm").then((r) => {
+    if (!r.ok) window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { reason: "sqlite-warm timeout" } }));
+  });
+  const repo3 = new wasmMod.WasmEntityRepo(ioPort2);
+  window.__vdg_repo = repo3;
+  window.__vdg_server_api = serverApi;
+  window.__vdg_store = localStore();
+  window.__vdg_io = ioPort2;
+  const roles = currentRoles();
+  window.__vdg_current_user = {
+    email: user.email,
+    role: roles[0] || ROLE_READ_ONLY,
+    roles,
+    fork: forkId(user.email)
+  };
+  wasmMod.freight_app_init(createPlatform({ repo: repo3, currentUser: () => window.__vdg_current_user || null }));
+  composeUi(wasmMod);
+  await safeAwait(rehydrateFsmStates(repo3), IDB_OP_TIMEOUT_MS, null, "fsm-rehydrate");
+  fsm.dispatch(BootEvent.REPO_BUILT);
+  stepRef.value = STEP_LICENSE_GATE;
+  const app = document.getElementById("app");
+  const gateResult = await runLicenseGate({ container: app });
+  if (!gateResult.proceed) {
+    fsm.dispatch(BootEvent.LICENSE_GATE);
+    return null;
+  }
+  fsm.dispatch(BootEvent.LICENSE_OK);
+  stepRef.value = STEP_BOOT_APP;
+  bootFn(user, db);
+  fsm.dispatch(BootEvent.RENDERED);
+  _deferredInit(user, db, serverApi, repo3);
+  return { db, poller: null, auditLog: null };
+}
+async function _deferredInit(user, db, serverApi, repo3) {
+  const store = localStore();
+  try {
+    if (store) {
+      const prefsResult = await safeAwait(
+        store.cache_get_meta(PREFS_META_KEY2),
+        IDB_OP_TIMEOUT_MS,
+        null,
+        "deferred:prefs"
+      );
+      const locale = prefsResult.ok ? prefsResult.value?.locale || "vi" : "vi";
+      if (locale !== "vi") await loadLocale(locale);
+    }
+    const { startDeltaTick, startOutboxDrain } = await import("./sync-schedulers-UBL4SFYW.js");
+    startDeltaTick({ getRepo: () => repo3 });
+    startOutboxDrain({ getRepo: () => repo3 });
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-QKPEP34Z.js");
+    window.__vdg_audit_log = createAuditLog({
+      getUser: () => window.__vdg_auth?.getCurrentUser?.(),
+      getRole: () => currentSalesRepId()
+    });
+    installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
+    const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
+    startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
+    const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
+    window.__vdg_user_audit_log = userAuditLog;
+    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-AKROEZFC.js");
+    const userRepo2 = new UserServerRepo(userAuditLog);
+    window.__vdg_user_repo = userRepo2;
+    userRepo2.get(user.email).then((record) => {
+      const resolved = (Array.isArray(record?.roles) ? record.roles : []).filter(Boolean);
+      window.__vdg_current_user.roles = resolved;
+      window.__vdg_current_user.role = resolved[0] || resolveUserRole(record);
+      window.__vdg_current_user.fork = record?.fork || forkId(user.email);
+    }).catch(() => {
+    });
+  } catch (err) {
+    console.warn("[VDG] deferred init error:", err.message);
+  }
+}
+
+// output/web/js.tmp/bootstrap/boot/repo-diag.js
+var DIAG_GLOBAL = "__vdg_diag";
+var DIAG_KIND_REPO_INIT_TIMEOUT = "repo-init-timeout";
+var DIAG_KIND_REPO_INIT_OK = "repo-init-ok";
+function pushDiag(entry) {
+  try {
+    if (!Array.isArray(window[DIAG_GLOBAL])) window[DIAG_GLOBAL] = [];
+    window[DIAG_GLOBAL].push(entry);
+  } catch (_) {
+  }
+}
+
+// output/web/js.tmp/implementations/kernel/core_abstractions/util/visible-deadline.js
+var TICK_MS = 1e3;
+function visibleDeadline(budgetMs, makeError, tickMs = TICK_MS) {
+  let visibleMs = 0;
+  let last = nowMs();
+  let sliceVisible = isPageVisible();
+  let timer = null;
+  let offFlip = null;
+  const cancel = () => {
+    if (timer !== null) {
+      stopInterval(timer);
+      timer = null;
+    }
+    if (offFlip) {
+      offFlip();
+      offFlip = null;
+    }
+  };
+  const promise = new Promise((_resolve, reject) => {
+    const settle = () => {
+      const now = nowMs();
+      if (sliceVisible) visibleMs += now - last;
+      last = now;
+      sliceVisible = isPageVisible();
+      if (visibleMs >= budgetMs) {
+        cancel();
+        reject(makeError(Math.round(visibleMs)));
+      }
+    };
+    timer = startInterval(settle, tickMs);
+    offFlip = onVisibilityChange(settle);
+  });
+  return { promise, cancel };
+}
+
+// output/web/js.tmp/bootstrap/boot/repo-bootstrap.js
+var REPO_INIT_TIMEOUT_MS = 3e4;
+var RepoInitTimeoutError = class extends Error {
+  constructor(step, elapsedMs) {
+    super(`Repo init timed out after ${elapsedMs}ms at step: ${step}`);
+    this.name = "RepoInitTimeoutError";
+    this.step = step;
+    this.elapsedMs = elapsedMs;
+  }
+};
+var _singletons = { poller: null, flusher: null, auditLog: null, db: null };
+function disposePriorSingletons() {
+  try {
+    _singletons.poller?.stop?.();
+  } catch (e) {
+    console.warn("[repo-init] poller stop failed:", e);
+  }
+  try {
+    _singletons.flusher?.destroy?.();
+  } catch (e) {
+    console.warn("[repo-init] flusher destroy failed:", e);
+  }
+  _singletons.poller = null;
+  _singletons.flusher = null;
+  _singletons.auditLog = null;
+}
+async function runRepoInit(user, bootFn) {
+  disposePriorSingletons();
+  const startedAt = performance.now();
+  const stepRef = { value: "init" };
+  const deadline = visibleDeadline(
+    REPO_INIT_TIMEOUT_MS,
+    (visibleMs) => new RepoInitTimeoutError(stepRef.value, visibleMs)
+  );
+  const timeoutPromise = deadline.promise;
+  const innerPromise = runRepoInitBounded(
+    user,
+    stepRef,
+    bootFn,
+    _singletons.db,
+    (db) => {
+      _singletons.db = db;
+    }
+  );
+  try {
+    const singletons = await Promise.race([innerPromise, timeoutPromise]);
+    deadline.cancel();
+    if (singletons) {
+      _singletons.db = singletons.db;
+      _singletons.poller = singletons.poller;
+      _singletons.flusher = singletons.flusher;
+      _singletons.auditLog = singletons.auditLog;
+    }
+    const elapsedMs = Math.round(performance.now() - startedAt);
+    console.info(`[repo-init-ok] elapsedMs=${elapsedMs}`);
+    pushDiag({
+      kind: DIAG_KIND_REPO_INIT_OK,
+      step: stepRef.value,
+      elapsedMs,
+      ts: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  } catch (err) {
+    deadline.cancel();
+    if (err?.name === "RepoInitTimeoutError") {
+      console.warn(`[repo-init-timeout] step=${err.step} elapsedMs=${err.elapsedMs}`);
+      pushDiag({
+        kind: DIAG_KIND_REPO_INIT_TIMEOUT,
+        step: err.step,
+        elapsedMs: err.elapsedMs,
+        ts: (/* @__PURE__ */ new Date()).toISOString(),
+        errorName: err.name
+      });
+    }
+    throw err;
+  }
+}
+
+// output/web/js.tmp/bootstrap/boot/repo-init-fallback.js
+var RETRY_BTN_ID2 = "repo-init-retry-btn";
+var RETRY_BTN_TESTID2 = "repo-init-retry";
+function renderRepoInitTimeoutBanner(mount, onRetry) {
+  if (!mount) return;
+  mount.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${t("repo_init_timeout_title")}</div>
+      <div class="text-sm text-slate-500">${t("repo_init_timeout_body")}</div>
+      <button id="${RETRY_BTN_ID2}" data-testid="${RETRY_BTN_TESTID2}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("repo_init_retry")}
+      </button>
+    </div>`;
+  mount.querySelector(`#${RETRY_BTN_ID2}`)?.addEventListener("click", () => onRetry());
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/migration-overlay.js
+var SHOW_DELAY_MS = 300;
+var MIGRATION_EVENT = "vdg:migration";
+var _active = 0;
+var _el = null;
+var _showTimer = null;
+function _ensureEl() {
+  if (_el || typeof document === "undefined" || !document.body) return _el;
+  const style = document.createElement("style");
+  style.textContent = "@keyframes vdg-mig-spin{to{transform:rotate(360deg)}}";
+  document.head.appendChild(style);
+  _el = document.createElement("div");
+  _el.id = "vdg-migration-overlay";
+  _el.setAttribute("role", "status");
+  _el.setAttribute("aria-live", "polite");
+  _el.style.cssText = [
+    "position:fixed",
+    "right:16px",
+    "bottom:16px",
+    "z-index:9999",
+    "display:none",
+    "flex-direction:row",
+    "align-items:center",
+    "gap:10px",
+    "padding:10px 14px",
+    "border-radius:10px",
+    "background:rgba(255,255,255,0.98)",
+    "color:#334155",
+    "border:1px solid #e2e8f0",
+    "box-shadow:0 4px 16px rgba(15,23,42,0.15)",
+    "pointer-events:none",
+    "font:500 13px/1.4 system-ui,-apple-system,sans-serif"
+  ].join(";");
+  _el.innerHTML = '<div style="width:18px;height:18px;border:2px solid #cbd5e1;border-top-color:#3b82f6;border-radius:50%;animation:vdg-mig-spin .8s linear infinite"></div><div data-mig-label></div>';
+  document.body.appendChild(_el);
+  return _el;
+}
+function _render() {
+  const el = _ensureEl();
+  if (!el) return;
+  if (_active > 0) {
+    if (!_showTimer && el.style.display === "none") {
+      _showTimer = setTimeout(() => {
+        _showTimer = null;
+        if (_active > 0) {
+          const label = el.querySelector("[data-mig-label]");
+          if (label) label.textContent = t("migration.syncing");
+          el.style.display = "flex";
+        }
+      }, SHOW_DELAY_MS);
+    }
+  } else {
+    if (_showTimer) {
+      clearTimeout(_showTimer);
+      _showTimer = null;
+    }
+    el.style.display = "none";
+  }
+}
+function initMigrationOverlay() {
+  if (typeof window === "undefined") return;
+  window.addEventListener(MIGRATION_EVENT, (ev) => {
+    _active = Math.max(0, _active + (Number(ev.detail?.delta) || 0));
+    _render();
+  });
+  window.addEventListener("vdg:auth-needs-reconnect", () => {
+    _active = 0;
+    _render();
+  });
+}
+
+// output/web/js.tmp/bootstrap/app.js
 (function initTheme() {
-  document.documentElement.classList.remove('dark');
-}());
-
-const PRINT_ROUTE_RE  = /^\/document\/([^/]+)\/print$/;
-const NOTE_ROUTE_RE   = /^\/note\/([^/]+)\/(debit|credit)$/;
-const BUDGET_ROUTE_RE = /^\/shipment\/([^/]+)\/budget$/;
-const QUOTE_EDIT_RE   = /^\/sales\/quote\/([^/]+)\/edit$/;
-
-const DEFAULT_ROUTE = '/dashboard';
-
-// F-19-16: acquire a FRESH #view-root per navigation (latest-wins). A superseded render still
-// holds its now-detached old element, so its late innerHTML write lands on an orphan node.
+  document.documentElement.classList.remove("dark");
+})();
+var PRINT_ROUTE_RE = /^\/document\/([^/]+)\/print$/;
+var NOTE_ROUTE_RE = /^\/note\/([^/]+)\/(debit|credit)$/;
+var BUDGET_ROUTE_RE = /^\/shipment\/([^/]+)\/budget$/;
+var QUOTE_EDIT_RE = /^\/sales\/quote\/([^/]+)\/edit$/;
 function _viewRoot() {
   return freshViewRoot();
 }
-
 async function renderView(route) {
-  // F-24-05: role gate before any view dispatch — admin/accounting/sales prefixes
-  // redirect roles that don't belong there (toast + navigate, real ACL is Drive-side).
-  // #15: normalize — boot stamps the rep prefix as role until the staff table resolves.
-  // #28: the guard takes the whole SET. Boot window (staff table not resolved yet) falls back to
-  // the normalized single role so a real rep is not bounced on every cold start.
   const roles = currentUserRoles();
   const effectiveRole = roles.length ? roles : [normalizeRole(currentUserRole())];
   if (enforceRouteGuard(route, effectiveRole)) return;
-
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
-    const root = _viewRoot();
-    const mod  = await loadView(() => import('../implementations/ui/bootstrap/views/document-print.js'), root, route);
-    if (!mod) return;
-    await mountView(() => mod.render(root, printMatch[1]), root, route); return;
+    const root2 = _viewRoot();
+    const mod2 = await loadView(() => import("./document-print-WNU2NQ6I.js"), root2, route);
+    if (!mod2) return;
+    await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
+    return;
   }
-
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
-    const root = _viewRoot();
-    const mod  = await loadView(() => import('../implementations/ui/bootstrap/views/note-print.js'), root, route);
-    if (!mod) return;
-    await mountView(() => mod.render(root, noteMatch[1], noteMatch[2]), root, route); return;
+    const root2 = _viewRoot();
+    const mod2 = await loadView(() => import("./note-print-LFOOSN3H.js"), root2, route);
+    if (!mod2) return;
+    await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
+    return;
   }
-
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
-    const root = _viewRoot();
-    const mod  = await loadView(() => import('../implementations/ui/bootstrap/views/shipment-budget-print.js'), root, route);
-    if (!mod) return;
-    await mountView(() => mod.render(root, budgetMatch[1]), root, route); return;
+    const root2 = _viewRoot();
+    const mod2 = await loadView(() => import("./shipment-budget-print-H63CWBL4.js"), root2, route);
+    if (!mod2) return;
+    await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
+    return;
   }
-
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
-    const root = _viewRoot();
-    const mod  = await loadView(() => import('../implementations/ui/bootstrap/views/sales-quote-new.js'), root, route);
-    if (!mod) return;
-    await mountView(() => mod.render(root, quoteEditMatch[1]), root, route); return;
+    const root2 = _viewRoot();
+    const mod2 = await loadView(() => import("./sales-quote-new-PMG46Z4A.js"), root2, route);
+    if (!mod2) return;
+    await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
+    return;
   }
-
   if (await tryParamRoute(route)) return;
-
-  const basePath = route.split('?')[0];
-  // #15: unmatched-route fallback is per-role — the old blanket DEFAULT_ROUTE ('/dashboard')
-  // handed the manager dashboard shell to roles the guard would never let navigate there.
-  const path     = VIEWS[basePath] ? basePath : homeRouteForRole(effectiveRole);
-  const root     = _viewRoot();
-  const mod      = await loadView(VIEWS[path], root, path);
+  const basePath = route.split("?")[0];
+  const path = VIEWS[basePath] ? basePath : homeRouteForRole(effectiveRole);
+  const root = _viewRoot();
+  const mod = await loadView(VIEWS[path], root, path);
   if (!mod) return;
   await mountView(() => mod.render(root), root, path);
 }
-
-window.addEventListener('vdg:navigate', (e) => renderView(e.detail.route));
-
-window.addEventListener('vdg:sync-error', (e) => {
-  // E-43: this logged `${kind} ${id}` and the drain never sends an `id` — every sync failure read
-  // as "<kind> undefined" and carried no diagnosis at all, while the event had the reason and the
-  // raw Drive error in it the whole time. Hours went into re-deriving what was already in hand.
+window.addEventListener("vdg:navigate", (e) => renderView(e.detail.route));
+window.addEventListener("vdg:sync-error", (e) => {
   const { kind, period, reason, error } = e.detail || {};
-  console.warn(`[sync] Đồng bộ thất bại: ${kind}${period ? `/${period}` : ''} — ${reason || 'không rõ'}`,
-    error || ''); // DEV
+  console.warn(
+    `[sync] \u0110\u1ED3ng b\u1ED9 th\u1EA5t b\u1EA1i: ${kind}${period ? `/${period}` : ""} \u2014 ${reason || "kh\xF4ng r\xF5"}`,
+    error || ""
+  );
 });
-
-// F-24-17: outbox dropped a row instead of retrying forever (schema drift or a
-// deleted-since-queued entity) — surface it so a "sync stuck" report isn't silent.
-window.addEventListener('vdg:outbox-drop', (e) => {
+window.addEventListener("vdg:outbox-drop", (e) => {
   const { kind, id, reason } = e.detail || {};
-  console.warn(`[outbox] dropped ${kind}/${id}: ${reason}`); // DEV
-  window.dispatchEvent(new CustomEvent('vdg:toast', {
-    detail: { type: 'info', message: t('topbar.sync.toast.schema_drift_drop') },
+  console.warn(`[outbox] dropped ${kind}/${id}: ${reason}`);
+  window.dispatchEvent(new CustomEvent("vdg:toast", {
+    detail: { type: "info", message: t("topbar.sync.toast.schema_drift_drop") }
   }));
 });
-
-// Lightweight toast renderer — listens vdg:toast, auto-dismiss.
-//
-// F-57-02: toasts now go INTO #vdg-toast-container. The container was created here and then
-// never used — every toast was appended straight to <body> with its own `fixed bottom-4
-// right-4`, so two toasts landed on the exact same pixel and only the last one was readable.
-// The flex column + gap the container already declared is the whole fix; individual toasts
-// just have to stop positioning themselves. This got more visible once F-57-01 added the
-// /manager route guard, which raises how often a denial toast fires.
 (function initToastRenderer() {
-  const TOAST_DEFAULT_MS  = 4_000;
-  const TOAST_FADE_MS     = 300;  // must match `duration-300` below
-  const TOAST_MAX_VISIBLE = 4;    // beyond this the oldest is retired early, never a wall of toasts
-
-  const container = document.createElement('div');
-  container.id        = 'vdg-toast-container';
-  container.className = 'fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none';
+  const TOAST_DEFAULT_MS = 4e3;
+  const TOAST_FADE_MS = 300;
+  const TOAST_MAX_VISIBLE = 4;
+  const container = document.createElement("div");
+  container.id = "vdg-toast-container";
+  container.className = "fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none";
   document.body.appendChild(container);
-
   const COLORS = {
-    success: 'bg-green-600',
-    error:   'bg-red-600',
-    warn:    'bg-amber-500',
-    info:    'bg-slate-800',
+    success: "bg-green-600",
+    error: "bg-red-600",
+    warn: "bg-amber-500",
+    info: "bg-slate-800"
   };
-
   function dismiss(el) {
     if (!el.isConnected) return;
-    el.classList.add('opacity-0');
+    el.classList.add("opacity-0");
     setTimeout(() => el.remove(), TOAST_FADE_MS);
   }
-
-  window.addEventListener('vdg:toast', (e) => {
-    const { message, type = 'info', duration = TOAST_DEFAULT_MS } = e.detail || {};
+  window.addEventListener("vdg:toast", (e) => {
+    const { message, type = "info", duration = TOAST_DEFAULT_MS } = e.detail || {};
     if (!message) return;
-
-    const el = document.createElement('div');
-    // No `fixed`/`bottom`/`right` here — the container owns placement, the toast owns looks.
-    el.className = `${COLORS[type] || COLORS.info} text-white px-4 py-3 rounded shadow-lg `
-                 + 'opacity-0 transition-opacity duration-300';
+    const el = document.createElement("div");
+    el.className = `${COLORS[type] || COLORS.info} text-white px-4 py-3 rounded shadow-lg opacity-0 transition-opacity duration-300`;
     el.textContent = message;
     container.appendChild(el);
-
     while (container.childElementCount > TOAST_MAX_VISIBLE) dismiss(container.firstElementChild);
-
-    requestAnimationFrame(() => el.classList.remove('opacity-0'));
+    requestAnimationFrame(() => el.classList.remove("opacity-0"));
     setTimeout(() => dismiss(el), duration);
   });
-
-}());
-
-// renderNotProvisioned + renderLoadingBanner extracted to auth/auth-fallback-views.js (F-15-19 AC-4)
-
-// Shared boot-error fallback mount lookup (RepoInitTimeoutError + F-24-19 Drive gate screens).
+})();
 function _resolveBootFallbackMount() {
-  return document.getElementById('view-loading')?.parentElement
-      || document.getElementById('view-root')
-      || document.getElementById('app');
+  return document.getElementById("view-loading")?.parentElement || document.getElementById("view-root") || document.getElementById("app");
 }
-
-// keyboard shortcuts extracted to keyboard-shortcuts.js — F-14-13
-
-export function bootApp(user, db) {
-  const app = document.getElementById('app');
-  if (app && !app.querySelector('vdg-sidebar')) {
+function bootApp(user, db) {
+  const app = document.getElementById("app");
+  if (app && !app.querySelector("vdg-sidebar")) {
     app.innerHTML = `
       <vdg-sidebar></vdg-sidebar>
       <div class="flex-1 flex flex-col min-w-0">
         <vdg-topbar></vdg-topbar>
         <main id="view-root" class="flex-1 overflow-auto scrollbar-thin">
-          <div id="view-loading" class="p-6 text-slate-500 text-sm">Loading view…</div>
+          <div id="view-loading" class="p-6 text-slate-500 text-sm">Loading view\u2026</div>
         </main>
       </div>
       <vdg-cmd-palette></vdg-cmd-palette>`;
   }
-
   initBreakpointListener();
   initKeyboardShortcuts();
   checkVersionBanner(window.__vdg_store);
   initWmaListener();
-  initConflictModal(); // F-14-18-3 modal was defined but never mounted — vdg:conflict-detected had zero listeners
-  initMergeToast();    // #14 — vdg:merge-autoresolved toast + undo
-  const _repId = currentSalesRepId() || ''; // AC-02: non-manager provisioned sales → /shipments/new
-  // #15: non-manager without a rep fork boots straight to their role home (pending-access for
-  // ReadOnly) instead of the old blanket '/dashboard' — the guard would bounce them anyway,
-  // this just skips the denial toast on every cold boot.
-  const defaultRoute = !hasRole(ROLE_MANAGER) && _repId && _repId !== 'NOT_PROVISIONED' && _repId !== 'OTHER'
-    ? '/shipments/new'
-    : homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
+  initConflictModal();
+  initMergeToast();
+  const _repId = currentSalesRepId() || "";
+  const defaultRoute = !hasRole(ROLE_MANAGER) && _repId && _repId !== "NOT_PROVISIONED" && _repId !== "OTHER" ? "/shipments/new" : homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);
-
-  // WASM already initialized in repo-init-steps.js critical path
   if (window.__vdg_wasm?.vdg_version) {
-    console.log('[VDG] WASM version:', window.__vdg_wasm.vdg_version()); // DEV
+    console.log("[VDG] WASM version:", window.__vdg_wasm.vdg_version());
   }
-
-  // F-29-11: runtime FX auto-fetch retired — rates are build-time seeded plus
-  // accountant manual entry through the write-gated path. No boot fetch.
-
-  // Debug refresh-role button hidden behind ?debug=1
-  if (new URLSearchParams(location.search).get('debug') === '1') {
-    const btn = document.createElement('button');
-    btn.textContent = 'Refresh Role';
-    btn.className   = 'fixed bottom-4 right-4 z-50 px-3 py-1 bg-slate-700 text-white text-xs rounded';
-    btn.onclick     = async () => {
-      const { detectRoleViaServer } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
+  if (new URLSearchParams(location.search).get("debug") === "1") {
+    const btn = document.createElement("button");
+    btn.textContent = "Refresh Role";
+    btn.className = "fixed bottom-4 right-4 z-50 px-3 py-1 bg-slate-700 text-white text-xs rounded";
+    btn.onclick = async () => {
+      const { detectRoleViaServer } = await import("./auth-gate-C34OZ7ED.js");
       await detectRoleViaServer(user, { force: true });
       location.reload();
     };
     document.body.appendChild(btn);
   }
-
   const initialRoute = location.hash.slice(1) || defaultRoute;
   renderView(initialRoute);
-
-  // NOTE: no eager AI-model pre-fetch here. The semantic-search model is ~100MB from HuggingFace;
-  // pre-fetching it 2s after render saturated the connection right as the boot's Drive data reads
-  // (seed/master-scope/priced-ref migrators) ran, starving them into 8s timeouts on a slow link.
-  // getEmbedding() lazy-loads the model on first real use (a PNL form's semantic search), so the
-  // feature still works — it just no longer competes with boot for bandwidth.
 }
-
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL('pkg/vdg_freight.js?v=3e6a172', document.baseURI).href);
-    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=3e6a172', document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=3e6a172", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=3e6a172", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;
   } catch (err) {
-    if (err instanceof LinkError || err?.name === 'LinkError' || String(err).includes('LinkError')) {
-      console.warn('[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...');
-      if ('caches' in window) {
+    if (err instanceof LinkError || err?.name === "LinkError" || String(err).includes("LinkError")) {
+      console.warn("[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...");
+      if ("caches" in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
@@ -284,57 +6569,48 @@ async function loadWasmModule() {
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map((r) => r.unregister()));
       }
-      if (!sessionStorage.getItem('__wasm_link_reloaded')) {
-        sessionStorage.setItem('__wasm_link_reloaded', '1');
+      if (!sessionStorage.getItem("__wasm_link_reloaded")) {
+        sessionStorage.setItem("__wasm_link_reloaded", "1");
         location.reload();
-        return new Promise(() => {});
+        return new Promise(() => {
+        });
       }
     }
     throw err;
   }
 }
-
 async function main() {
-  // Every auth decision is a wasm call, so the bundle must be in flight before the gate runs.
-  // Kicked off first so it overlaps the locale + storage awaits below instead of adding to them.
   const wasmReady = loadWasmModule();
-  initMigrationOverlay(); // "syncing data" overlay listens for migration start/done events
-  initStoreLockedScreen(); // before any store op — an old-build tab holding OPFS must surface, not starve boot
-  // SW registration lives solely in sw-register.js (invoked from index.html).
-  // Init OAuth + silent token refresh (F-15-02)
-  initGoogleSignIn(null, null).catch(() => { /* offline — gate handles display */ });
-  initAccessTokenRefresh({                           // reconnect-chip listener only (no proactive refresh)
-    onReconnected: async (user) => {                 // the app's role re-resolve, injected — the adapter never imports the gate
-      const { detectRoleViaServer } = await import('../implementations/ui/core_abstractions/ports/auth/auth-gate.js');
-      await detectRoleViaServer(user, { force: true });
-    },
+  initMigrationOverlay();
+  initStoreLockedScreen();
+  initGoogleSignIn(null, null).catch(() => {
   });
-
-  // Load locale before requireAuth so fallback banners render with real text.
-  try { await loadLocale('vi'); }
-  catch (err) { console.warn('[VDG] i18n early load failed, key-fallback:', err.message); } // DEV
-
+  initAccessTokenRefresh({
+    // reconnect-chip listener only (no proactive refresh)
+    onReconnected: async (user) => {
+      const { detectRoleViaServer } = await import("./auth-gate-C34OZ7ED.js");
+      await detectRoleViaServer(user, { force: true });
+    }
+  });
   try {
-    await composeStorage(); // which storage authority this page talks to — decided once, before anything reads it
-    // The gate's decisions are wasm now, so the module has to be up before it is asked anything.
-    // Started at the top of main() so the fetch overlaps the locale + storage awaits above; boot's
-    // own wasm step then finds it loaded.
-    const wasm = await wasmReady;
-    wasm.freight_app_init(createPlatform({ repo: null, currentUser: () => window.__vdg_current_user || null }));
-    configureAuthPlatform({ renderLoginPage }); // the gate mounts the login VIEW through this hook
-    composeAuth(wasm);
+    await loadLocale("vi");
+  } catch (err) {
+    console.warn("[VDG] i18n early load failed, key-fallback:", err.message);
+  }
+  try {
+    await composeStorage();
+    const wasm2 = await wasmReady;
+    wasm2.freight_app_init(createPlatform({ repo: null, currentUser: () => window.__vdg_current_user || null }));
+    configureAuthPlatform({ renderLoginPage });
+    composeAuth(wasm2);
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
-    // AC-07: RoleProbeTimeoutError → existing legacy renderLoadingBanner (F-15-19 path preserved)
-    if (err?.name === 'RoleProbeTimeoutError') {
-      const { renderLoadingBanner } = await import('../implementations/ui/bootstrap/views/auth/auth-fallback-views.js');
-      renderLoadingBanner(document.getElementById('app'));
+    if (err?.name === "RoleProbeTimeoutError") {
+      const { renderLoadingBanner } = await import("./auth-fallback-views-PR3EXMUX.js");
+      renderLoadingBanner(document.getElementById("app"));
       return;
     }
-    // AC-03: repo-init hang → actionable banner with Retry. A jammed IDB open (IdbOpenFailedError
-    // from repo-init-steps) routes to the SAME banner — the slow-storage copy fits — instead of
-    // falling through to a raw error; the memo was already reset so Retry genuinely re-opens.
-    if (err?.name === 'RepoInitTimeoutError' || err?.name === 'IdbOpenFailedError') {
+    if (err?.name === "RepoInitTimeoutError" || err?.name === "IdbOpenFailedError") {
       const mount = _resolveBootFallbackMount();
       renderRepoInitTimeoutBanner(mount, () => {
         const user = window.__vdg_auth?.getCurrentUser?.();
@@ -343,17 +6619,18 @@ async function main() {
       return;
     }
     if (renderServerGate(_resolveBootFallbackMount(), err, {
-      onReconnected:  () => location.reload(),
-      serverBackend:  true,
-      onSignIn:       () => mountLoginScreen(() => location.reload()),
+      onReconnected: () => location.reload(),
+      serverBackend: true,
+      onSignIn: () => mountLoginScreen(() => location.reload())
     })) {
-      console.error('[VDG] boot stopped on Server', err.status, err.message); // DEV
+      console.error("[VDG] boot stopped on Server", err.status, err.message);
       return;
     }
     throw err;
   }
 }
-
 main();
-
-export { navigate };
+export {
+  bootApp,
+  navigate
+};
