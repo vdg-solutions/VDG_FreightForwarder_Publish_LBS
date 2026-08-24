@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f88020f">v0.4.17 (f88020f)</span>
+        <span class="font-mono whitespace-nowrap" title="build d100128">v0.4.18 (d100128)</span>
       </div>
     `;
   }
@@ -2126,7 +2126,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.17 (f88020f)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.18 (d100128)</div>
         </div>
       </div>
     </div>`;
@@ -4105,10 +4105,10 @@ var SqliteUnavailableError = class extends Error {
     this.name = "SqliteUnavailableError";
   }
 };
-var LOCKED_ERR_RE = /NoModificationAllowedError|createSyncAccessHandle|sahpool/i;
+var LOCKED_ERR_RE = /NoModificationAllowedError/i;
 var _lockedAnnounced = false;
 function _announceLockedIf(errMsg) {
-  if (_lockedAnnounced || !LOCKED_ERR_RE.test(String(errMsg || ""))) return;
+  if (_lockedAnnounced || !errMsg || !LOCKED_ERR_RE.test(String(errMsg))) return;
   _lockedAnnounced = true;
   window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { reason: String(errMsg) } }));
 }
@@ -4700,7 +4700,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.17 (f88020f)";
+var APP_VERSION = "v0.4.18 (d100128)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4717,10 +4717,15 @@ function initStoreLockedScreen() {
         <div class="text-3xl mb-3">\u{1F512}</div>
         <div class="font-semibold text-slate-900 text-sm mb-2">${t("store_locked.title")}</div>
         <div class="text-xs text-slate-600 leading-relaxed mb-4">${t("store_locked.body")}</div>
-        <button id="store-locked-retry"
-          class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("store_locked.retry")}</button>
+        <div class="flex justify-center gap-3">
+          <button id="store-locked-retry"
+            class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("store_locked.retry")}</button>
+          <button id="store-locked-dismiss"
+            class="px-4 py-2 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">${t("btn.dismiss") || "B\u1ECF qua & Ti\u1EBFp t\u1EE5c"}</button>
+        </div>
       </div>`;
     el.querySelector("#store-locked-retry").onclick = () => location.reload();
+    el.querySelector("#store-locked-dismiss").onclick = () => el.remove();
     document.body.appendChild(el);
   }, { once: true });
 }
@@ -5860,8 +5865,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=f88020f", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f88020f", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=d100128", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=d100128", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6109,8 +6114,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=f88020f", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f88020f", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=d100128", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=d100128", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6553,8 +6558,8 @@ function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=f88020f", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f88020f", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=d100128", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=d100128", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;
