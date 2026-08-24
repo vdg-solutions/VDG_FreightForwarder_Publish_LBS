@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build fd48beb">v0.4.18 (fd48beb)</span>
+        <span class="font-mono whitespace-nowrap" title="build e18a407">v0.4.18 (e18a407)</span>
       </div>
     `;
   }
@@ -2126,7 +2126,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.18 (fd48beb)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.18 (e18a407)</div>
         </div>
       </div>
     </div>`;
@@ -4609,14 +4609,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-BV3PGNOI.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-5PA4NCBI.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-BV3PGNOI.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-5PA4NCBI.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4718,7 +4718,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.18 (fd48beb)";
+var APP_VERSION = "v0.4.18 (e18a407)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5004,7 +5004,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-WNQ6CENJ.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-XY56ZUZX.js"),
-  "/accounting/settings": () => import("./settings-E2KMUQ5M.js"),
+  "/accounting/settings": () => import("./settings-FL66SPR3.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-UVFVXGU7.js"),
   // E-24 F-24-06
@@ -5880,8 +5880,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=fd48beb", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd48beb", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=e18a407", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e18a407", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6129,8 +6129,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=fd48beb", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd48beb", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=e18a407", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e18a407", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6573,8 +6573,8 @@ function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=fd48beb", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd48beb", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=e18a407", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e18a407", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;

@@ -59,6 +59,13 @@ export function fxCellsHtml(side, line = {}, headerCurrency) {
         class="w-28 ${FX_CELL_CLS}" /></td>`;
 }
 
+function fmtVndNum(val) {
+  if (val == null || val === '') return '';
+  const n = Number(val);
+  if (isNaN(n) || n === 0) return '';
+  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
 /** vndCellHtml — AC-02: readonly derived VND Chi/Thu cell (replaces the old free-input cell) */
 export function vndCellHtml(side, line = {}) {
   const amt      = side === 'buy' ? line.buy_amt : line.sell_amt;
@@ -66,10 +73,10 @@ export function vndCellHtml(side, line = {}) {
   const fxRate   = side === 'buy' ? line.buy_fx_rate : line.sell_fx_rate;
   const vnd      = computeLineVnd(amt, currency, fxRate);
   const fieldName = side === 'buy' ? 'vnd_pay' : 'vnd_collect';
-  const colorCls  = side === 'buy' ? 'text-blue-700' : 'text-emerald-700';
+  const colorCls  = side === 'buy' ? 'text-blue-700 bg-blue-50/40' : 'text-emerald-700 bg-emerald-50/40';
   return `<td class="px-1 py-1">
-    <input name="${fieldName}" type="number" value="${vnd || ''}" placeholder="0" readonly
-      class="w-28 ${RO_CELL_CLS} text-right font-medium ${colorCls}" /></td>`;
+    <input name="${fieldName}" type="text" value="${fmtVndNum(vnd)}" placeholder="0" readonly
+      class="w-28 ${RO_CELL_CLS} text-right font-semibold ${colorCls}" /></td>`;
 }
 
 /** summarizeLineCurrencies — how many lines sit in each currency, mục B rows + mục C rows.
@@ -116,7 +123,8 @@ function _recomputeVndCell(row, side) {
   const rateEl = row.querySelector(`[name=${side}_fx_rate]`);
   const vndEl  = row.querySelector(`[name=${side === 'buy' ? 'vnd_pay' : 'vnd_collect'}]`);
   if (!vndEl) return;
-  vndEl.value = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value) || '';
+  const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value);
+  vndEl.value = fmtVndNum(vnd);
 }
 
 /**

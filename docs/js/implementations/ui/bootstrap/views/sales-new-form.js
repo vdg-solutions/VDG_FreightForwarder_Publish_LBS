@@ -295,4 +295,34 @@ function _recomputeWaterfall(root, userConfig) {
     salesSharePct: share,
     polReceiptSum, podReceiptSum, polPaymentSum, podPaymentSum,
   });
+
+  // UX Enhancement: Update Section B Quick KPI Stats Cards
+  const qPay = root.querySelector('#quick-total-pay');
+  const qCol = root.querySelector('#quick-total-collect');
+  const qMar = root.querySelector('#quick-margin');
+  const qPct = root.querySelector('#quick-margin-pct');
+  const fmt = (v) => v ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '0';
+  if (qPay) qPay.textContent = fmt(sp);
+  if (qCol) qCol.textContent = fmt(sr);
+  if (qMar) {
+    const m = sr - sp;
+    qMar.textContent = fmt(m);
+    if (m < 0) {
+      qMar.className = 'text-sm font-bold text-red-600 mt-0.5';
+    } else if (m > 0) {
+      qMar.className = 'text-sm font-bold text-emerald-700 mt-0.5';
+    } else {
+      qMar.className = 'text-sm font-semibold text-slate-900 mt-0.5';
+    }
+  }
+  if (qPct) {
+    if (sr > 0) {
+      const pct = ((sr - sp) / sr) * 100;
+      qPct.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+      qPct.className = `text-sm font-bold ${pct >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5`;
+    } else {
+      qPct.textContent = '—';
+      qPct.className = 'text-sm font-semibold text-slate-900 mt-0.5';
+    }
+  }
 }
