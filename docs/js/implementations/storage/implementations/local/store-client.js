@@ -105,6 +105,18 @@ function _deliver(payload) {
 function _spawnEngine() {
   _engine = new Worker(new URL('./store-worker.js', import.meta.url), { type: 'module' });
   _engine.onmessage = (ev) => {
+    // fatal = worker-side unhandled error forwarded via postMessage (has real err string)
+    if (ev.data?.fatal) {
+      console.error('[store-client worker fatal]', ev.data.err);
+      const dead = new SqliteUnavailableError('sqlite worker crashed: ' + ev.data.err);
+      for (const [, p] of _pending) { clearTimeout(p.timer); p.reject(dead); }
+      _pending.clear();
+      _announceLockedIf(ev.data.err);
+      try { _engine.terminate(); } catch { /* already gone */ }
+      _engine = null;
+      _ready  = null;
+      return;
+    }
     const { rid, ok, result, err } = ev.data || {};
     const sep  = String(rid).indexOf(RID_SEP);
     const tab  = String(rid).slice(0, sep);

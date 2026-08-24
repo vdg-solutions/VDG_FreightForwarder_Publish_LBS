@@ -26,12 +26,9 @@ export function initStoreLockedScreen() {
         <div class="flex justify-center gap-3">
           <button id="store-locked-retry"
             class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t('store_locked.retry')}</button>
-          <button id="store-locked-dismiss"
-            class="px-4 py-2 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">${t('btn.dismiss') || 'Bỏ qua & Tiếp tục'}</button>
         </div>
       </div>`;
     el.querySelector('#store-locked-retry').onclick = () => location.reload();
-    el.querySelector('#store-locked-dismiss').onclick = () => el.remove();
     document.body.appendChild(el);
   }, { once: true });
 }

@@ -6,34 +6,43 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-import init, {
-  sqlite_init,
-  store_get, store_list, store_put, store_delete,
-  store_get_meta, store_put_meta, store_delete_meta,
-  store_get_wma, store_put_wma,
-  store_list_notifications, store_put_notification,
-  store_count_entities,
-} from '../../../../../pkg/vdg_freight.js';
+// Cache-busted at build time: f9bef96 is replaced by build_dist.ps1 with the git commit hash.
+// Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=f9bef96', import.meta.url).href;
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.
 let _ready = null;
+let _mod   = null;
 function ready(scope) {
   if (_ready) return _ready;
   if (!scope) return Promise.reject(new Error('sqlite: missing store scope — the database is per-account'));
   const useOpfs = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
-  _ready = (async () => { await init(); await sqlite_init(scope, useOpfs); })().catch((e) => { _ready = null; throw e; });
+  _ready = (async () => {
+    _mod = await import(WASM_URL);
+    await _mod.default();
+    await _mod.sqlite_init(scope, useOpfs);
+  })().catch((e) => { _ready = null; _mod = null; throw e; });
   return _ready;
 }
 
 self.addEventListener('unhandledrejection', (event) => {
   console.error('[store-worker unhandledrejection]', event.reason);
+  event.preventDefault();
+  self.postMessage({ fatal: true, err: String(event.reason?.message ?? event.reason ?? 'wasm panic') });
 });
 self.addEventListener('error', (event) => {
   console.error('[store-worker error]', event.message);
+  event.preventDefault();
+  self.postMessage({ fatal: true, err: String(event.message ?? event.error ?? 'wasm error') });
 });
 
 function runOp(m) {
+  const { store_get, store_list, store_put, store_delete,
+          store_get_meta, store_put_meta, store_delete_meta,
+          store_get_wma, store_put_wma,
+          store_list_notifications, store_put_notification,
+          store_count_entities } = _mod;
   switch (m.op) {
     case 'init':              return null;
     case 'get':               return store_get(m.kind, m.id);

@@ -1,0 +1,20 @@
+{"code":"AKE","name":"LD3 Lower Deck Container","kind":"Container","tare_kg":70,"mgw_kg":1588,"max_volume_m3":4.5,"position_codes":["L1","L2","L3","L4","L5"]}
+{"code":"AKN","name":"LD3 Lower Deck Container (no door)","kind":"Container","tare_kg":70,"mgw_kg":1588,"max_volume_m3":4.5,"position_codes":["L1","L2","L3","L4","L5"]}
+{"code":"AKH","name":"LD3 Half-Width Container","kind":"Container","tare_kg":60,"mgw_kg":1000,"max_volume_m3":2.2,"position_codes":["L1","L2"]}
+{"code":"AMA","name":"LD11 Lower Deck Container","kind":"Container","tare_kg":160,"mgw_kg":6800,"max_volume_m3":13.3,"position_codes":["L1","L2"]}
+{"code":"AMP","name":"LD11 Lower Deck Container (oversized)","kind":"Container","tare_kg":160,"mgw_kg":6800,"max_volume_m3":13.3,"position_codes":["L1"]}
+{"code":"AMU","name":"LD11 Wide-Body Container","kind":"Container","tare_kg":160,"mgw_kg":6800,"max_volume_m3":13.3,"position_codes":["L1","L2"]}
+{"code":"ALP","name":"LD6 Lower Deck Container","kind":"Container","tare_kg":90,"mgw_kg":3175,"max_volume_m3":7.0,"position_codes":["L1","L2","L3"]}
+{"code":"PMC","name":"Main Deck Pallet 96×125 in","kind":"Pallet","tare_kg":110,"mgw_kg":6804,"max_volume_m3":null,"position_codes":["M1","M2","M3"]}
+{"code":"PAG","name":"Lower Deck Pallet 60×61.5 in","kind":"Pallet","tare_kg":60,"mgw_kg":1588,"max_volume_m3":null,"position_codes":["L1","L2","L3","L4","L5"]}
+{"code":"PAJ","name":"Lower Deck Pallet 60×61.5 in (nose)","kind":"Pallet","tare_kg":60,"mgw_kg":1134,"max_volume_m3":null,"position_codes":["L1"]}
+{"code":"PLA","name":"Main Deck Pallet 96×238 in","kind":"Pallet","tare_kg":300,"mgw_kg":11340,"max_volume_m3":null,"position_codes":["M1","M2"]}
+{"code":"PGA","name":"Main Deck Pallet 96×196 in","kind":"Pallet","tare_kg":260,"mgw_kg":8391,"max_volume_m3":null,"position_codes":["M1","M2","M3"]}
+{"code":"PMA","name":"Main Deck Pallet 88×108 in","kind":"Pallet","tare_kg":120,"mgw_kg":6804,"max_volume_m3":null,"position_codes":["M1","M2"]}
+{"code":"PNA","name":"Main Deck Pallet 96×160 in","kind":"Pallet","tare_kg":200,"mgw_kg":6804,"max_volume_m3":null,"position_codes":["M1","M2"]}
+{"code":"PEB","name":"Lower Deck Pallet 60×61.5 in (B777)","kind":"Pallet","tare_kg":65,"mgw_kg":1588,"max_volume_m3":null,"position_codes":["L1","L2","L3","L4","L5","L6"]}
+{"code":"ABE","name":"LD2 Small Container","kind":"Container","tare_kg":55,"mgw_kg":1225,"max_volume_m3":3.4,"position_codes":["L1","L2"]}
+{"code":"RKN","name":"Refrigerated Container LD3","kind":"Container","tare_kg":162,"mgw_kg":1588,"max_volume_m3":3.6,"position_codes":["L1","L2"]}
+{"code":"LD3","name":"Standard LD3 Unit","kind":"Container","tare_kg":70,"mgw_kg":1588,"max_volume_m3":4.5,"position_codes":["L1","L2","L3","L4","L5"]}
+{"code":"LD6","name":"Standard LD6 Unit","kind":"Container","tare_kg":90,"mgw_kg":3175,"max_volume_m3":7.0,"position_codes":["L1","L2","L3"]}
+{"code":"LD8","name":"Standard LD8 Unit","kind":"Container","tare_kg":115,"mgw_kg":4626,"max_volume_m3":9.9,"position_codes":["L1","L2","L3"]}
