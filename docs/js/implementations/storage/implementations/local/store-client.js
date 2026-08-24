@@ -103,7 +103,11 @@ function _deliver(payload) {
 }
 
 function _spawnEngine() {
-  _engine = new Worker(new URL('./store-worker.js', import.meta.url), { type: 'module' });
+  // store-worker.js lives at a fixed path from the app root — use an absolute URL so this
+  // works after esbuild bundles store-client.js into js/bootstrap/app.js (where import.meta.url
+  // would make ./store-worker.js resolve to js/bootstrap/store-worker.js → 404).
+  const workerUrl = new URL('js/implementations/storage/implementations/local/store-worker.js', document.baseURI);
+  _engine = new Worker(workerUrl, { type: 'module' });
   _engine.onmessage = (ev) => {
     // fatal = worker-side unhandled error forwarded via postMessage (has real err string)
     if (ev.data?.fatal) {

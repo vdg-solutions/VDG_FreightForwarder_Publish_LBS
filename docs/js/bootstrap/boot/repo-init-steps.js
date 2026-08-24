@@ -48,8 +48,8 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
 
   // 2. Load WASM
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL('pkg/vdg_freight.js?v=f9bef96', document.baseURI).href);
-  const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=f9bef96', document.baseURI).href;
+  const wasmMod = await import(new URL('pkg/vdg_freight.js?v=fd48beb', document.baseURI).href);
+  const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=fd48beb', document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);

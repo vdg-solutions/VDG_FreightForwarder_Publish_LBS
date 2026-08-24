@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f9bef96">v0.4.18 (f9bef96)</span>
+        <span class="font-mono whitespace-nowrap" title="build fd48beb">v0.4.18 (fd48beb)</span>
       </div>
     `;
   }
@@ -2126,7 +2126,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.18 (f9bef96)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.18 (fd48beb)</div>
         </div>
       </div>
     </div>`;
@@ -4153,7 +4153,8 @@ function _deliver(payload) {
   }
 }
 function _spawnEngine() {
-  _engine = new Worker(new URL("./store-worker.js", import.meta.url), { type: "module" });
+  const workerUrl = new URL("js/implementations/storage/implementations/local/store-worker.js", document.baseURI);
+  _engine = new Worker(workerUrl, { type: "module" });
   _engine.onmessage = (ev) => {
     if (ev.data?.fatal) {
       console.error("[store-client worker fatal]", ev.data.err);
@@ -4717,7 +4718,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.18 (f9bef96)";
+var APP_VERSION = "v0.4.18 (fd48beb)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5879,8 +5880,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=f9bef96", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f9bef96", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=fd48beb", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd48beb", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6128,8 +6129,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=f9bef96", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f9bef96", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=fd48beb", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd48beb", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6572,8 +6573,8 @@ function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=f9bef96", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f9bef96", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=fd48beb", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd48beb", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;
