@@ -14,11 +14,11 @@ import {
   listShipments
 } from "./chunk-U4BJYZQA.js";
 import {
-  agGridLocaleText
-} from "./chunk-KZWJDTAL.js";
-import {
   navigate
 } from "./chunk-H2H4WJDI.js";
+import {
+  agGridLocaleText
+} from "./chunk-KZWJDTAL.js";
 import "./chunk-EQL6UFHA.js";
 import {
   ROLE_MANAGER

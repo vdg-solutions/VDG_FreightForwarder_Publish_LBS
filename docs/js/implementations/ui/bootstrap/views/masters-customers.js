@@ -7,12 +7,11 @@ import { openMergeModal } from './merge-modal.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { boundedList, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
+import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND       = 'customers';
 const KIND_PREFIX = 'CUST'; // AC-M2
-
-const COLS = ['name', 'short_code', 'contact_person', 'tel', 'sales_rep', 'actions'];
 
 const LOAD_ERROR_MSG   = "Couldn't load customers. Please retry.";
 const LOAD_RETRY_LABEL = 'Retry';
@@ -143,23 +142,24 @@ function openModal(root, entity, onSave, reps = []) {
   });
 }
 
-// ── table ─────────────────────────────────────────────────────────────────────
+// ── cell renderers ────────────────────────────────────────────────────────────
 
-function rowHtml(e, isM) {
-  const actions = isM ? `
-    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('common.action.edit')}</button>
-    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('common.action.delete')}</button>` : '';
-  const checkCell = isM ? `<td class="px-2 py-2"><input type="checkbox" class="row-check" data-id="${e.id}" /></td>` : '';
-  return `
-    <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
-      ${checkCell}
-      <td class="px-3 py-2">${escHtml(e.name)}</td>
-      <td class="px-3 py-2 font-mono">${escHtml(e.short_code)}</td>
-      <td class="px-3 py-2">${escHtml(e.contact_person)}</td>
-      <td class="px-3 py-2">${escHtml(e.tel)}</td>
-      <td class="px-3 py-2 font-mono">${escHtml(e.sales_rep_id)}</td>
-      ${isM ? `<td class="px-3 py-2">${actions}</td>` : ''}
-    </tr>`;
+function makeActionsRenderer(onEdit, onDelete) {
+  return function actionsRenderer(params) {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex items-center gap-2 h-full';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'text-xs text-blue-600 hover:underline';
+    editBtn.textContent = t('common.action.edit');
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); onEdit(params.data); });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'text-xs text-red-500 hover:underline';
+    delBtn.textContent = t('common.action.delete');
+    delBtn.addEventListener('click', (e) => { e.stopPropagation(); onDelete(params.data); });
+    wrap.appendChild(editBtn);
+    wrap.appendChild(delBtn);
+    return wrap;
+  };
 }
 
 // ── entry point ───────────────────────────────────────────────────────────────
@@ -168,123 +168,169 @@ export async function render(root) {
   const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   let items  = [];
-  // F-41-01: options for the "sales phụ trách" select. Loaded when a modal OPENS, never on
-  // render's critical path — a stalled user-kind read must not push this view past its
-  // bounded-load ceiling (the F-29-14 guarantee).
+  let api    = null;
+
   const loadReps = async () => (repo ? await getActiveSalesReps(repo).catch(() => []) : []);
 
-  const checkCol = isM ? '<th class="px-2 py-2 w-8"></th>' : '';
-  const actCol   = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
-
   root.innerHTML = `
-    <div class="p-6 max-w-[1100px] mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <div class="text-lg font-semibold text-slate-900">${t('masters_customers.title')}</div>
-        <div class="flex gap-2">
-          <button id="btn-merge" class="hidden px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200">Merge into →</button>
-          ${isM ? `<button id="btn-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">${t('masters_customers.action.add')}</button>` : ''}
-        </div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-            <tr>
-              ${checkCol}
-              <th class="px-3 py-2 text-left">${t('masters_customers.col.name')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_customers.col.short_code')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_customers.col.contact')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_customers.col.tel')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_customers.col.sales_rep')}</th>
-              ${actCol}
-            </tr>
-          </thead>
-          <tbody id="m-tbody"></tbody>
-        </table>
-        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('masters_customers.empty')}</div>
-      </div>
+    <div class="p-6 max-w-[1200px] mx-auto">
+      <div id="grid-header"></div>
+      <div id="cust-grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:520px;"></div>
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading…</div>
     </div>`;
 
-  // F-29-14: bounded — a stalled/failed customers read resolves to an actionable retry
-  // instead of hanging the app-shell at "Loading view…". Exactly one terminal state renders.
+  function renderToolbar(total) {
+    const mergeBtn = isM
+      ? `<button id="btn-merge" disabled class="px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed">${t('masters_customers.action.merge')}</button>`
+      : '';
+    const addBtn = isM
+      ? `<button id="btn-add" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('masters_customers.action.add')}</button>`
+      : '';
+    return `
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-lg font-semibold text-slate-900">${t('masters_customers.title')} <span class="text-sm font-normal text-slate-400">(${total})</span></div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="grid-search" placeholder="${t('masters_customers.toolbar.search_placeholder')}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
+          </div>
+          <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('masters_customers.toolbar.export_csv')}</button>
+          ${mergeBtn}
+          ${addBtn}
+        </div>
+      </div>`;
+  }
+
+  async function onEdit(entity) {
+    openModal(root, entity, async (updated) => {
+      await repo.put(KIND, updated.id, updated);
+      items = items.map((i) => (i.id === updated.id ? updated : i));
+      api?.setGridOption('rowData', items);
+    }, await loadReps());
+  }
+
+  async function onDelete(entity) {
+    const ok = await showConfirm({
+      title: t('masters_customers.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
+    });
+    if (!ok) return;
+    await repo.delete(KIND, entity.id);
+    items = items.filter((i) => i.id !== entity.id);
+    api?.setGridOption('rowData', items);
+  }
+
+  function buildColumnDefs() {
+    const cols = [];
+    if (isM) {
+      cols.push({
+        headerCheckboxSelection: false,
+        checkboxSelection: true,
+        width: 45,
+        sortable: false,
+        filter: false,
+        resizable: false,
+      });
+    }
+    cols.push(
+      { headerName: t('masters_customers.col.name'),       field: 'name',           flex: 2, minWidth: 160 },
+      { headerName: t('masters_customers.col.short_code'), field: 'short_code',     width: 110, cellClass: 'font-mono text-xs', valueGetter: (p) => p.data.short_code ?? '—' },
+      { headerName: t('masters_customers.col.contact'),    field: 'contact_person', flex: 1, minWidth: 120, valueGetter: (p) => p.data.contact_person ?? '—' },
+      { headerName: t('masters_customers.col.tel'),        field: 'tel',            width: 130, valueGetter: (p) => p.data.tel ?? '—' },
+      { headerName: t('masters_customers.col.sales_rep'),  field: 'sales_rep_id',   width: 100, cellClass: 'font-mono text-xs', valueGetter: (p) => p.data.sales_rep_id ?? '—' },
+    );
+    if (isM) {
+      cols.push({ headerName: '', field: 'actions', width: 110, sortable: false, filter: false, cellRenderer: makeActionsRenderer(onEdit, onDelete) });
+    }
+    return cols;
+  }
+
   async function reload() {
-    const tbody    = root.querySelector('#m-tbody');
-    const emptyEl  = root.querySelector('#m-empty');
     const statusEl = root.querySelector('#m-status');
     if (!repo) {
       items = [];
-      if (tbody) tbody.innerHTML = '';
-      emptyEl?.classList.add('hidden');
+      api?.setGridOption('rowData', items);
       if (statusEl) statusEl.textContent = '';
-      updateMergeBtn();
       return;
     }
 
     const listRes = await boundedList(repo, KIND, 'customers:list');
     if (!listRes.ok) {
       items = [];
-      if (tbody) tbody.innerHTML = '';
-      emptyEl?.classList.add('hidden');
+      api?.setGridOption('rowData', items);
       renderMasterLoadRetryStatus(statusEl, LOAD_ERROR_MSG, LOAD_RETRY_LABEL, reload);
-      updateMergeBtn();
       return;
     }
 
     items = listRes.value;
-    if (tbody) tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
-    if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
+    api?.setGridOption('rowData', items);
     if (statusEl) statusEl.textContent = '';
-    updateMergeBtn();
+    const hdr = root.querySelector('#grid-header');
+    if (hdr) hdr.innerHTML = renderToolbar(items.length);
+    wireToolbar();
   }
 
   function updateMergeBtn() {
-    const checked = root.querySelectorAll('.row-check:checked');
     const btn = root.querySelector('#btn-merge');
-    if (btn) btn.classList.toggle('hidden', checked.length !== 2);
+    if (!btn) return;
+    const sel = api?.getSelectedRows() || [];
+    btn.disabled = sel.length !== 2;
   }
 
-  await reload();
-
-  root.querySelector('#btn-add')?.addEventListener('click', async () => {
-    openModal(root, null, async (entity) => {
-      await repo.put(KIND, entity.id, entity);
-      await reload();
-    }, await loadReps());
-  });
-
-  root.querySelector('#m-tbody')?.addEventListener('click', async (e) => {
-    const editBtn = e.target.closest('.btn-edit');
-    if (editBtn) {
-      const entity = items.find((i) => i.id === editBtn.dataset.id);
-      if (entity) openModal(root, entity, async (updated) => { await repo.put(KIND, updated.id, updated); await reload(); }, await loadReps());
-    }
-    const delBtn = e.target.closest('.btn-delete');
-    if (delBtn) {
-      const ok = await showConfirm({
-        title: t('masters_customers.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
-      });
-      if (!ok) return;
-      items = items.filter((i) => i.id !== delBtn.dataset.id);
-      root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await repo.delete(KIND, delBtn.dataset.id);
-    }
-    if (e.target.classList.contains('row-check')) updateMergeBtn();
-  });
-
-  root.querySelector('#btn-merge')?.addEventListener('click', async () => {
-    const checked = [...root.querySelectorAll('.row-check:checked')];
-    if (checked.length !== 2) return;
-    const selected = checked.map((c) => items.find((i) => i.id === c.dataset.id)).filter(Boolean);
-    if (selected.length !== 2) return;
-    openMergeModal(root, KIND, selected, async (target, source, _label) => {
-      const merged = mergeRecords(target, source);
-      await repo.put(KIND, target.id, merged);
-      await repo.delete(KIND, source.id);
-      const n = await repointRefs(repo, KIND, source.id, target.id);
-      window.dispatchEvent(new CustomEvent('vdg:toast', {
-        detail: { type: 'success', message: `Merged ${source.name} → ${target.name}, ${n} refs updated` },
-      }));
-      await reload();
+  function wireToolbar() {
+    root.querySelector('#grid-search')?.addEventListener('input', (e) => {
+      api?.setGridOption('quickFilterText', e.target.value);
     });
-  });
+    root.querySelector('#export-csv')?.addEventListener('click', () => {
+      api?.exportDataAsCsv({ fileName: 'vdg_customers.csv' });
+    });
+    root.querySelector('#btn-add')?.addEventListener('click', async () => {
+      openModal(root, null, async (entity) => {
+        await repo.put(KIND, entity.id, entity);
+        items = [...items, entity];
+        api?.setGridOption('rowData', items);
+        const hdr = root.querySelector('#grid-header');
+        if (hdr) hdr.innerHTML = renderToolbar(items.length);
+        wireToolbar();
+      }, await loadReps());
+    });
+    root.querySelector('#btn-merge')?.addEventListener('click', async () => {
+      const selected = api?.getSelectedRows() || [];
+      if (selected.length !== 2) return;
+      openMergeModal(root, KIND, selected, async (target, source, _label) => {
+        const merged = mergeRecords(target, source);
+        await repo.put(KIND, target.id, merged);
+        await repo.delete(KIND, source.id);
+        const n = await repointRefs(repo, KIND, source.id, target.id);
+        window.dispatchEvent(new CustomEvent('vdg:toast', {
+          detail: { type: 'success', message: `Merged ${source.name} → ${target.name}, ${n} refs updated` },
+        }));
+        await reload();
+      });
+    });
+  }
+
+  const headerDiv = root.querySelector('#grid-header');
+  if (headerDiv) headerDiv.innerHTML = renderToolbar(0);
+
+  const gridDiv = root.querySelector('#cust-grid');
+  if (window.agGrid && gridDiv) {
+    api = window.agGrid.createGrid(gridDiv, {
+      columnDefs: buildColumnDefs(),
+      rowData: [],
+      defaultColDef: { sortable: true, resizable: true, filter: true },
+      rowSelection: isM ? 'multiple' : 'single',
+      rowMultiSelectWithClick: false,
+      suppressRowClickSelection: true,
+      onSelectionChanged: updateMergeBtn,
+      rowHeight: 38,
+      headerHeight: 36,
+      localeText: agGridLocaleText(),
+    });
+  }
+
+  wireToolbar();
+  await reload();
 }
+

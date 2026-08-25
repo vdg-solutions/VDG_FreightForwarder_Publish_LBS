@@ -5,6 +5,7 @@ import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { mergeRecords, repointRefs } from '../../core_abstractions/ports/governance/master-merge.js';
 import { openMergeModal } from './merge-modal.js';
 import { showConfirm } from '../helpers/show-confirm.js';
+import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND       = 'carriers';
@@ -100,22 +101,24 @@ function openModal(root, entity, onSave) {
   });
 }
 
-// ── row rendering ─────────────────────────────────────────────────────────────
+// ── cell renderers ────────────────────────────────────────────────────────────
 
-function rowHtml(e, isM) {
-  const actions = isM ? `
-    <button class="btn-edit text-xs text-blue-600 hover:underline mr-2" data-id="${e.id}">${t('common.action.edit')}</button>
-    <button class="btn-delete text-xs text-red-500 hover:underline" data-id="${e.id}">${t('common.action.delete')}</button>` : '';
-  const checkCell = isM ? `<td class="px-2 py-2"><input type="checkbox" class="row-check" data-id="${e.id}" /></td>` : '';
-  return `
-    <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-id="${e.id}">
-      ${checkCell}
-      <td class="px-3 py-2">${escHtml(e.name)}</td>
-      <td class="px-3 py-2 font-mono">${escHtml(e.scac)}</td>
-      <td class="px-3 py-2">${escHtml(e.contact_person)}</td>
-      <td class="px-3 py-2">${escHtml(e.tel)}</td>
-      ${isM ? `<td class="px-3 py-2">${actions}</td>` : ''}
-    </tr>`;
+function makeActionsRenderer(onEdit, onDelete) {
+  return function actionsRenderer(params) {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex items-center gap-2 h-full';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'text-xs text-blue-600 hover:underline';
+    editBtn.textContent = t('common.action.edit');
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); onEdit(params.data); });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'text-xs text-red-500 hover:underline';
+    delBtn.textContent = t('common.action.delete');
+    delBtn.addEventListener('click', (e) => { e.stopPropagation(); onDelete(params.data); });
+    wrap.appendChild(editBtn);
+    wrap.appendChild(delBtn);
+    return wrap;
+  };
 }
 
 // ── entry point ───────────────────────────────────────────────────────────────
@@ -124,92 +127,151 @@ export async function render(root) {
   const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   let items  = [];
-
-  const checkCol = isM ? '<th class="px-2 py-2 w-8"></th>' : '';
-  const actCol   = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
+  let api    = null;
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1100px] mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <div class="text-lg font-semibold text-slate-900">${t('masters_carriers.title')}</div>
-        <div class="flex gap-2">
-          <button id="btn-merge" class="hidden px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200">Merge into →</button>
-          ${isM ? `<button id="btn-add" class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">${t('masters_carriers.action.add')}</button>` : ''}
-        </div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-        <table class="w-full">
-          <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-            <tr>
-              ${checkCol}
-              <th class="px-3 py-2 text-left">${t('masters_carriers.col.name')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_carriers.col.scac')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_carriers.col.contact')}</th>
-              <th class="px-3 py-2 text-left">${t('masters_carriers.col.tel')}</th>
-              ${actCol}
-            </tr>
-          </thead>
-          <tbody id="m-tbody"></tbody>
-        </table>
-        <div id="m-empty" class="hidden text-center text-xs text-slate-400 py-8">${t('masters_carriers.empty')}</div>
-      </div>
+    <div class="p-6 max-w-[1200px] mx-auto">
+      <div id="grid-header"></div>
+      <div id="carr-grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:520px;"></div>
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading…</div>
     </div>`;
 
+  function renderToolbar(total) {
+    const mergeBtn = isM
+      ? `<button id="btn-merge" disabled class="px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed">${t('masters_carriers.action.merge')}</button>`
+      : '';
+    const addBtn = isM
+      ? `<button id="btn-add" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('masters_carriers.action.add')}</button>`
+      : '';
+    return `
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-lg font-semibold text-slate-900">${t('masters_carriers.title')} <span class="text-sm font-normal text-slate-400">(${total})</span></div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="grid-search" placeholder="${t('masters_carriers.toolbar.search_placeholder')}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
+          </div>
+          <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('masters_carriers.toolbar.export_csv')}</button>
+          ${mergeBtn}
+          ${addBtn}
+        </div>
+      </div>`;
+  }
+
+  async function onEdit(entity) {
+    openModal(root, entity, async (u) => {
+      await repo.put(KIND, u.id, u);
+      items = items.map((i) => (i.id === u.id ? u : i));
+      api?.setGridOption('rowData', items);
+    });
+  }
+
+  async function onDelete(entity) {
+    const ok = await showConfirm({
+      title: t('masters_carriers.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
+    });
+    if (!ok) return;
+    await repo.delete(KIND, entity.id);
+    items = items.filter((i) => i.id !== entity.id);
+    api?.setGridOption('rowData', items);
+  }
+
+  function buildColumnDefs() {
+    const cols = [];
+    if (isM) {
+      cols.push({
+        headerCheckboxSelection: false,
+        checkboxSelection: true,
+        width: 45,
+        sortable: false,
+        filter: false,
+        resizable: false,
+      });
+    }
+    cols.push(
+      { headerName: t('masters_carriers.col.name'),    field: 'name',           flex: 2, minWidth: 160 },
+      { headerName: t('masters_carriers.col.scac'),    field: 'scac',           width: 120, cellClass: 'font-mono text-xs', valueGetter: (p) => p.data.scac ?? '—' },
+      { headerName: t('masters_carriers.col.contact'), field: 'contact_person', flex: 1, minWidth: 120, valueGetter: (p) => p.data.contact_person ?? '—' },
+      { headerName: t('masters_carriers.col.tel'),     field: 'tel',            width: 140, valueGetter: (p) => p.data.tel ?? '—' },
+    );
+    if (isM) {
+      cols.push({ headerName: '', field: 'actions', width: 110, sortable: false, filter: false, cellRenderer: makeActionsRenderer(onEdit, onDelete) });
+    }
+    return cols;
+  }
+
   async function reload() {
     items = repo ? await repo.list(KIND, null).catch(() => []) : [];
-    const tbody  = root.querySelector('#m-tbody');
-    const emptyEl = root.querySelector('#m-empty');
-    if (tbody) tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
-    if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
-    root.querySelector('#m-status').textContent = '';
-    updateMergeBtn();
+    api?.setGridOption('rowData', items);
+    const statusEl = root.querySelector('#m-status');
+    if (statusEl) statusEl.textContent = '';
+    const hdr = root.querySelector('#grid-header');
+    if (hdr) hdr.innerHTML = renderToolbar(items.length);
+    wireToolbar();
   }
 
   function updateMergeBtn() {
-    const checked = root.querySelectorAll('.row-check:checked');
-    root.querySelector('#btn-merge')?.classList.toggle('hidden', checked.length !== 2);
+    const btn = root.querySelector('#btn-merge');
+    if (!btn) return;
+    const sel = api?.getSelectedRows() || [];
+    btn.disabled = sel.length !== 2;
   }
 
-  await reload();
-
-  root.querySelector('#btn-add')?.addEventListener('click', () => {
-    openModal(root, null, async (entity) => { await repo.put(KIND, entity.id, entity); await reload(); });
-  });
-
-  root.querySelector('#m-tbody')?.addEventListener('click', async (e) => {
-    const editBtn = e.target.closest('.btn-edit');
-    if (editBtn) {
-      const entity = items.find((i) => i.id === editBtn.dataset.id);
-      if (entity) openModal(root, entity, async (u) => { await repo.put(KIND, u.id, u); await reload(); });
-    }
-    const delBtn = e.target.closest('.btn-delete');
-    if (delBtn) {
-      const ok = await showConfirm({
-        title: t('masters_carriers.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
-      });
-      if (!ok) return;
-      items = items.filter((i) => i.id !== delBtn.dataset.id);
-      root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await repo.delete(KIND, delBtn.dataset.id);
-    }
-    if (e.target.classList.contains('row-check')) updateMergeBtn();
-  });
-
-  root.querySelector('#btn-merge')?.addEventListener('click', async () => {
-    const checked = [...root.querySelectorAll('.row-check:checked')];
-    if (checked.length !== 2) return;
-    const selected = checked.map((c) => items.find((i) => i.id === c.dataset.id)).filter(Boolean);
-    if (selected.length !== 2) return;
-    openMergeModal(root, KIND, selected, async (target, source, _label) => {
-      const merged = mergeRecords(target, source);
-      await repo.put(KIND, target.id, merged);
-      await repo.delete(KIND, source.id);
-      const n = await repointRefs(repo, KIND, source.id, target.id);
-      window.dispatchEvent(new CustomEvent('vdg:toast', {
-        detail: { type: 'success', message: `Merged ${source.name} → ${target.name}, ${n} refs updated` },
-      }));
-      await reload();
+  function wireToolbar() {
+    root.querySelector('#grid-search')?.addEventListener('input', (e) => {
+      api?.setGridOption('quickFilterText', e.target.value);
     });
-  });
+    root.querySelector('#export-csv')?.addEventListener('click', () => {
+      api?.exportDataAsCsv({ fileName: 'vdg_carriers.csv' });
+    });
+    root.querySelector('#btn-add')?.addEventListener('click', () => {
+      openModal(root, null, async (entity) => {
+        await repo.put(KIND, entity.id, entity);
+        items = [...items, entity];
+        api?.setGridOption('rowData', items);
+        const hdr = root.querySelector('#grid-header');
+        if (hdr) hdr.innerHTML = renderToolbar(items.length);
+        wireToolbar();
+      });
+    });
+    root.querySelector('#btn-merge')?.addEventListener('click', async () => {
+      const selected = api?.getSelectedRows() || [];
+      if (selected.length !== 2) return;
+      openMergeModal(root, KIND, selected, async (target, source, _label) => {
+        const merged = mergeRecords(target, source);
+        await repo.put(KIND, target.id, merged);
+        await repo.delete(KIND, source.id);
+        const n = await repointRefs(repo, KIND, source.id, target.id);
+        window.dispatchEvent(new CustomEvent('vdg:toast', {
+          detail: { type: 'success', message: `Merged ${source.name} → ${target.name}, ${n} refs updated` },
+        }));
+        await reload();
+      });
+    });
+  }
+
+  const headerDiv = root.querySelector('#grid-header');
+  if (headerDiv) headerDiv.innerHTML = renderToolbar(0);
+
+  const gridDiv = root.querySelector('#carr-grid');
+  if (window.agGrid && gridDiv) {
+    api = window.agGrid.createGrid(gridDiv, {
+      columnDefs: buildColumnDefs(),
+      rowData: [],
+      defaultColDef: { sortable: true, resizable: true, filter: true },
+      rowSelection: isM ? 'multiple' : 'single',
+      rowMultiSelectWithClick: false,
+      suppressRowClickSelection: true,
+      onSelectionChanged: updateMergeBtn,
+      rowHeight: 38,
+      headerHeight: 36,
+      localeText: agGridLocaleText(),
+    });
+  }
+
+  wireToolbar();
+  await reload();
 }
+

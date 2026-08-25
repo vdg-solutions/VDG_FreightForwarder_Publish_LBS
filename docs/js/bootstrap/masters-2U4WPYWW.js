@@ -1,12 +1,12 @@
 import {
-  agGridLocaleText
-} from "./chunk-KZWJDTAL.js";
-import {
   findMatch
 } from "./chunk-ENSWK7L6.js";
 import {
   navigate
 } from "./chunk-H2H4WJDI.js";
+import {
+  agGridLocaleText
+} from "./chunk-KZWJDTAL.js";
 import {
   showConfirm
 } from "./chunk-SXHZPWVA.js";
@@ -62,7 +62,7 @@ var VdgDupWizard = class extends LitElement {
   }
   async _merge(pair) {
     try {
-      const { openMergeModal } = await import("./masters-customers-5SBFD6OK.js");
+      const { openMergeModal } = await import("./masters-customers-GGA4R6NN.js");
       openMergeModal(pair.a, pair.b, this.repo);
     } catch {
     }
@@ -365,7 +365,7 @@ async function renderCustomersMaster(root) {
     document.body.appendChild(wizard);
   });
   try {
-    const { render: renderCusts } = await import("./masters-customers-5SBFD6OK.js");
+    const { render: renderCusts } = await import("./masters-customers-GGA4R6NN.js");
     await renderCusts(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.customer_load")}</div>`;
@@ -379,7 +379,7 @@ async function renderCarriersMaster(root) {
   root.innerHTML = "";
   root.appendChild(delegate);
   try {
-    const { render: renderCarriers } = await import("./masters-carriers-RPMWNBAK.js");
+    const { render: renderCarriers } = await import("./masters-carriers-GOW2QSNS.js");
     await renderCarriers(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.carrier_load")}</div>`;

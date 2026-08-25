@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build e18a407">v0.4.18 (e18a407)</span>
+        <span class="font-mono whitespace-nowrap" title="build 7d1e83d">v0.4.18 (7d1e83d)</span>
       </div>
     `;
   }
@@ -2126,7 +2126,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.18 (e18a407)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.18 (7d1e83d)</div>
         </div>
       </div>
     </div>`;
@@ -4601,7 +4601,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-XKDPA55T.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-2U4WPYWW.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4718,7 +4718,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.18 (e18a407)";
+var APP_VERSION = "v0.4.18 (7d1e83d)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4937,7 +4937,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-FVN5HGMF.js"),
-  "/shipments": () => import("./shipments-PEQNDU53.js"),
+  "/shipments": () => import("./shipments-IS54SOX5.js"),
   "/upload": () => import("./upload-MTDKHEH5.js"),
   "/documents": () => import("./documents-GQLQHBGS.js"),
   "/finance": () => import("./finance-dashboard-J2GBYRP7.js"),
@@ -4945,13 +4945,13 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-HXJWVHFM.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-BKSZGQWN.js"),
+  "/sales/me": () => import("./sales-me-L44VICRM.js"),
   "/sales/analytics": () => import("./sales-analytics-MTII2MWJ.js"),
   "/sales/quote/new": () => import("./sales-quote-new-PMG46Z4A.js"),
-  "/sales/quote": () => import("./sales-quote-list-UD455A4C.js"),
-  "/masters/customers": () => import("./masters-customers-5SBFD6OK.js"),
-  "/masters/carriers": () => import("./masters-carriers-RPMWNBAK.js"),
-  "/masters/services": () => import("./masters-services-ZPSNZQQP.js"),
+  "/sales/quote": () => import("./sales-quote-list-GFW7IOAC.js"),
+  "/masters/customers": () => import("./masters-customers-GGA4R6NN.js"),
+  "/masters/carriers": () => import("./masters-carriers-GOW2QSNS.js"),
+  "/masters/services": () => import("./masters-services-CNECPPWU.js"),
   "/help": () => import("./help-HBY43B2P.js"),
   "/pending-access": () => import("./pending-access-T7I2VMHC.js"),
   "/onboarding": () => import("./onboarding-wizard-MWC5KDX2.js"),
@@ -4961,12 +4961,12 @@ var VIEWS = {
   "/manager/pipeline": () => import("./pipeline-O2P66RXO.js"),
   "/manager/approvals": () => import("./approvals-QOM77AJJ.js"),
   "/manager/reports/pnl": () => import("./pnl-report-5OHPUNPT.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-PAIMWMFT.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-GPZVZDBW.js"),
   "/manager/finance/close-period": () => import("./close-period-RGSNKQ3X.js"),
   "/manager/audit": () => import("./audit-2F3ZHFPO.js"),
   "/manager/notifications": () => import("./notifications-BNA2KTLR.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-DQVDM5CD.js"),
+  "/manager/sales": () => import("./sales-7RL65C22.js"),
   "/manager/finance/commissions": () => import("./commissions-JU4I6SXB.js"),
   "/manager/commission-rules": () => import("./commission-rules-IHLSUJ3T.js"),
   "/manager/exceptions": () => import("./exceptions-REM7RK6N.js"),
@@ -5880,8 +5880,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=e18a407", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e18a407", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=7d1e83d", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=7d1e83d", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6129,8 +6129,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=e18a407", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e18a407", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=7d1e83d", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=7d1e83d", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6573,8 +6573,8 @@ function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=e18a407", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e18a407", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=7d1e83d", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=7d1e83d", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;

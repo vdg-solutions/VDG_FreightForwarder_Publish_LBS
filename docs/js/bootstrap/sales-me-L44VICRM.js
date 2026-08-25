@@ -18,6 +18,9 @@ import {
 import {
   safeAwait
 } from "./chunk-JAZY43GR.js";
+import {
+  agGridLocaleText
+} from "./chunk-KZWJDTAL.js";
 import "./chunk-EQL6UFHA.js";
 import {
   ROLE_MANAGER
@@ -378,11 +381,19 @@ async function populateView(root, salesId, user) {
       ${kpiCardsHtml(stats)}
 
       <div class="bg-white rounded-xl border border-slate-200 p-5 mb-4">
-        <div class="text-sm font-semibold text-slate-900 mb-3">
-          ${t("sales_me.active_shipments")}
-          <span class="ml-2 text-xs font-normal text-slate-400">${t("sales_me.total_suffix").replace("{n}", activeShipments.length)}</span>
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-semibold text-slate-900">
+            ${t("sales_me.active_shipments")}
+            <span class="ml-2 text-xs font-normal text-slate-400">${t("sales_me.total_suffix").replace("{n}", activeShipments.length)}</span>
+          </div>
+          <div class="relative">
+            <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="active-grid-search" placeholder="${t("sales_me.toolbar.search_placeholder")}" class="text-xs pl-8 pr-3 py-1 border border-slate-200 rounded-md w-48 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
+          </div>
         </div>
-        ${shipmentTableHtml(activeShipments, emptyActive)}
+        <div id="active-shipments-grid" class="ag-theme-quartz rounded-lg overflow-hidden border border-slate-200" style="height:320px;"></div>
       </div>
 
       <div class="bg-white rounded-xl border border-slate-200 p-5 mb-4">
@@ -399,6 +410,73 @@ async function populateView(root, salesId, user) {
       ${await dueSoonHtml(salesId)}
       ${await overdueFollowupsHtml(salesId)}`;
     bodyEl.classList.remove("hidden");
+    const gridDiv = root.querySelector("#active-shipments-grid");
+    if (window.agGrid && gridDiv) {
+      const activeGridApi = window.agGrid.createGrid(gridDiv, {
+        columnDefs: [
+          {
+            headerName: t("sales_me.grid.ref"),
+            field: "ref",
+            width: 140,
+            cellClass: "font-mono text-xs",
+            cellRenderer: (p) => {
+              const s = p.data;
+              const ref = s.shipment_ref || s.ref;
+              const wrap = document.createElement("div");
+              wrap.className = "flex items-center gap-1 h-full";
+              wrap.innerHTML = `<a href="#/sales/edit/${encodeURIComponent(ref || "")}" class="text-blue-600 hover:underline font-mono">${ref || "\u2014"}</a>${publishBadgeHtml(s)}`;
+              return wrap;
+            }
+          },
+          { headerName: t("sales_me.grid.customer"), field: "customer", flex: 2, minWidth: 140, valueGetter: (p) => p.data.customer || "\u2014" },
+          { headerName: t("sales_me.grid.route"), field: "route", width: 140, cellClass: "font-mono text-xs", valueGetter: (p) => `${p.data.pol || "\u2014"} \u2192 ${p.data.pod || "\u2014"}` },
+          { headerName: t("sales_me.grid.etd"), field: "etd", width: 110, cellClass: "font-mono text-xs", valueGetter: (p) => p.data.etd || "\u2014" },
+          {
+            headerName: t("sales_me.grid.state"),
+            field: "state",
+            width: 130,
+            cellRenderer: (p) => {
+              const span = document.createElement("span");
+              span.className = "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700";
+              span.textContent = statusBadgeLabel("shipment", p.data.state) || "\u2014";
+              return span;
+            }
+          },
+          {
+            headerName: t("sales_me.grid.margin_vnd"),
+            field: "margin",
+            width: 130,
+            cellClass: (p) => `font-mono text-xs font-semibold text-right ${(p.value || 0) >= 0 ? "text-emerald-700" : "text-red-600"}`,
+            valueFormatter: (p) => fmtVnd3(p.value || 0)
+          },
+          {
+            headerName: "",
+            field: "budget",
+            width: 50,
+            sortable: false,
+            filter: false,
+            cellRenderer: (p) => {
+              const ref = p.data.shipment_ref || p.data.ref;
+              const a = document.createElement("a");
+              a.href = `#/shipment/${encodeURIComponent(ref || "")}/budget`;
+              a.className = "text-xs text-slate-500 hover:text-blue-600";
+              a.title = t("sales_me.grid.print_budget");
+              a.textContent = "\u2399";
+              return a;
+            }
+          }
+        ],
+        rowData: activeShipments,
+        defaultColDef: { sortable: true, resizable: true, filter: true },
+        rowSelection: "single",
+        rowHeight: 38,
+        headerHeight: 36,
+        localeText: agGridLocaleText()
+      });
+      root.querySelector("#active-grid-search")?.addEventListener("input", (e) => {
+        activeGridApi?.setGridOption("quickFilterText", e.target.value);
+      });
+    }
   }
   if (loadingEl) loadingEl.textContent = "";
   root.querySelector("#me-body")?.addEventListener("click", (e) => {

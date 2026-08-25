@@ -279,7 +279,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build e18a407">v0.4.18 (e18a407)</span>
+        <span class="font-mono whitespace-nowrap" title="build 7d1e83d">v0.4.18 (7d1e83d)</span>
       </div>
     `;
   }

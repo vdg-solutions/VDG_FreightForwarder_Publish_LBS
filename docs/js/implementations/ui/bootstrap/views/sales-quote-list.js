@@ -4,6 +4,7 @@ import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/
 import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
+import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { navigate } from '../router.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
@@ -29,44 +30,95 @@ function effectiveState(q) {
   return q.state;
 }
 
-function stateBadge(state) {
-  const cls = STATE_COLORS[state] || 'bg-slate-100 text-slate-600';
-  return `<span class="inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${cls}">${t('quote.status.' + state)}</span>`;
+// ── cell renderers ────────────────────────────────────────────────────────────
+
+function stateBadgeRenderer(params) {
+  const q = params.data;
+  if (!q) return document.createTextNode('—');
+  const ds = effectiveState(q);
+  const cls = STATE_COLORS[ds] || 'bg-slate-100 text-slate-600';
+  const span = document.createElement('span');
+  span.className = `inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${cls}`;
+  span.textContent = t('quote.status.' + ds);
+  return span;
 }
 
-// ── row rendering ─────────────────────────────────────────────────────────────
+function makeQuoteActionsRenderer(repo, onUpdated) {
+  return function quoteActionsRenderer(params) {
+    const q = params.data;
+    if (!q) return document.createTextNode('—');
+    const isM = hasRole(ROLE_MANAGER);
+    const ds = effectiveState(q);
 
-function actionCell(q, displayState, isM) {
-  if (displayState === 'Draft') {
-    const blocked = q.pending_manager_approval && !isM;
-    if (blocked) {
-      return `<span class="text-xs text-slate-400" title="${t('quote_list.pending_title')}">${t('quote_list.pending_chip')}</span>`;
+    const wrap = document.createElement('div');
+    wrap.className = 'flex items-center gap-1 h-full';
+
+    if (ds === 'Draft') {
+      const blocked = q.pending_manager_approval && !isM;
+      if (blocked) {
+        const span = document.createElement('span');
+        span.className = 'text-xs text-slate-400';
+        span.title = t('quote_list.pending_title');
+        span.textContent = t('quote_list.pending_chip');
+        wrap.appendChild(span);
+        return wrap;
+      }
+      const btn = document.createElement('button');
+      btn.className = 'btn-send text-xs px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700';
+      btn.textContent = t('quote_list.action.send');
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        const updated = await sendToCustomer(repo, q);
+        onUpdated(updated);
+      });
+      wrap.appendChild(btn);
+      return wrap;
     }
-    return `<button class="btn-send text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700" data-id="${q.id}">${t('quote_list.action.send')}</button>`;
-  }
-  if (displayState === 'Sent') {
-    return `<button class="btn-accept text-xs px-2 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700" data-id="${q.id}">${t('quote_list.action.accept')}</button>`;
-  }
-  if (displayState === 'Accepted') {
-    return `<button class="btn-convert text-xs px-2 py-1 rounded bg-purple-600 text-white hover:bg-purple-700" data-id="${q.id}">${t('quote_list.action.convert')}</button>`;
-  }
-  return '—';
-}
 
-function quoteRow(q, isM) {
-  const ds  = effectiveState(q);
-  const pol = q.pol || '—';
-  const pod = q.pod || '—';
-  return `
-    <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-qid="${q.id}">
-      <td class="px-3 py-2 font-mono">${q.id}</td>
-      <td class="px-3 py-2">${q.customer || '—'}</td>
-      <td class="px-3 py-2 font-mono">${pol} → ${pod}</td>
-      <td class="px-3 py-2">${q.container_type || '—'}</td>
-      <td class="px-3 py-2">${stateBadge(ds)}</td>
-      <td class="px-3 py-2">${fmtDate(q.valid_until_ms)}</td>
-      <td class="px-3 py-2 converted-cell">${actionCell(q, ds, isM)}</td>
-    </tr>`;
+    if (ds === 'Sent') {
+      const btn = document.createElement('button');
+      btn.className = 'btn-accept text-xs px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700';
+      btn.textContent = t('quote_list.action.accept');
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        const updated = await markAccepted(repo, q);
+        onUpdated(updated);
+      });
+      wrap.appendChild(btn);
+      return wrap;
+    }
+
+    if (ds === 'Accepted') {
+      const btn = document.createElement('button');
+      btn.className = 'btn-convert text-xs px-2 py-0.5 rounded bg-purple-600 text-white hover:bg-purple-700';
+      btn.textContent = t('quote_list.action.convert');
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        const existing = await checkAlreadyConverted(repo, q.id);
+        if (existing) {
+          wrap.innerHTML = `<span class="text-xs text-slate-500">${t('quote_list.already_converted')} <a href="#/shipments" class="text-blue-600 hover:underline">${existing.shipment_ref || existing.id}</a></span>`;
+        } else {
+          const qs = new URLSearchParams({
+            quote_id: q.id,
+            customer: q.customer || '',
+            pol: q.pol || '',
+            pod: q.pod || '',
+            container: q.container_type || '',
+            sales: q.created_by || '',
+          });
+          navigate(`/shipments/new?${qs.toString()}`);
+        }
+      });
+      wrap.appendChild(btn);
+      return wrap;
+    }
+
+    wrap.textContent = '—';
+    return wrap;
+  };
 }
 
 // ── load & render ─────────────────────────────────────────────────────────────
@@ -76,120 +128,97 @@ async function loadQuotes(repo, salesId, isM) {
   return listWhere(repo, KIND_QUOTATIONS, filter).catch(() => []);
 }
 
-function renderTable(root, quotes, isM) {
-  const tbody = root.querySelector('#qt-tbody');
-  const empty = root.querySelector('#qt-empty');
-  if (!tbody) return;
-  if (!quotes.length) {
-    tbody.innerHTML = '';
-    if (empty) empty.classList.remove('hidden');
-    return;
-  }
-  if (empty) empty.classList.add('hidden');
-  tbody.innerHTML = quotes.map((q) => quoteRow(q, isM)).join('');
-}
-
-// ── event handling ────────────────────────────────────────────────────────────
-
-async function handleActions(e, root, repo) {
-  const btn = e.target.closest('button[data-id]');
-  if (!btn) return;
-  const id = btn.dataset.id;
-  const quotes = window.__qt_quotes || [];
-  const quote  = quotes.find((q) => q.id === id);
-  if (!quote) return;
-
-  btn.disabled = true;
-
-  if (btn.classList.contains('btn-send')) {
-    const updated = await sendToCustomer(repo, quote);
-    Object.assign(quote, updated);
-    root.querySelector(`tr[data-qid="${id}"] .converted-cell`).innerHTML =
-      actionCell(updated, effectiveState(updated), hasRole(ROLE_MANAGER));
-    root.querySelector(`tr[data-qid="${id}"] td:nth-child(5)`).innerHTML =
-      stateBadge(effectiveState(updated));
-  }
-
-  if (btn.classList.contains('btn-accept')) {
-    const updated = await markAccepted(repo, quote);
-    Object.assign(quote, updated);
-    root.querySelector(`tr[data-qid="${id}"] .converted-cell`).innerHTML =
-      actionCell(updated, effectiveState(updated), hasRole(ROLE_MANAGER));
-    root.querySelector(`tr[data-qid="${id}"] td:nth-child(5)`).innerHTML =
-      stateBadge(effectiveState(updated));
-  }
-
-  if (btn.classList.contains('btn-convert')) {
-    const existing = await checkAlreadyConverted(repo, id);
-    const cell = root.querySelector(`tr[data-qid="${id}"] .converted-cell`);
-    if (existing) {
-      cell.innerHTML = `<span class="text-xs text-slate-500">${t('quote_list.already_converted')} <a href="#/shipments" class="text-blue-600 hover:underline">${existing.shipment_ref || existing.id}</a></span>`;
-    } else {
-      const q = quote;
-      // F-41-01: the quote's creator IS the job's rep — the convert door carries it so the form
-      // opens already attributed (industry rule: salesperson derives from the quote).
-      const qs = new URLSearchParams({ quote_id: id, customer: q.customer || '', pol: q.pol || '', pod: q.pod || '', container: q.container_type || '', sales: q.created_by || '' });
-      navigate(`/shipments/new?${qs.toString()}`);
-    }
-  }
-
-  btn.disabled = false;
-}
-
 // ── entry point ───────────────────────────────────────────────────────────────
 
 export async function render(root) {
   const salesId = currentSalesRepId();
   const isM = hasRole(ROLE_MANAGER);
+  const repo = window.__vdg_repo;
+  let items = [];
+  let api = null;
 
   root.innerHTML = `
     <div class="p-6 max-w-[1200px] mx-auto">
-      <div class="flex items-center justify-between mb-6">
-        <div class="text-lg font-semibold text-slate-900">${t('quote_list.title')}</div>
-        <a href="#/sales/quote/new"
-           class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
-          ${t('quote_list.new')}
-        </a>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-        <table class="w-full min-w-[700px]">
-          <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-            <tr>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.id')}</th>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.customer')}</th>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.route')}</th>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.container')}</th>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.state')}</th>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.valid_until')}</th>
-              <th class="px-3 py-2 text-left">${t('quote_list.col.actions')}</th>
-            </tr>
-          </thead>
-          <tbody id="qt-tbody"></tbody>
-        </table>
-        <div id="qt-empty" class="hidden text-center text-xs text-slate-400 py-8">
-          ${t('quote_list.empty')} <a href="#/sales/quote/new" class="text-blue-500 hover:underline">${t('quote_list.create_one')}</a>
-        </div>
-      </div>
+      <div id="grid-header"></div>
+      <div id="quote-grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:520px;"></div>
       <div id="qt-loading" class="text-xs text-slate-400 mt-2">${t('common.loading')}</div>
     </div>`;
 
-  const repo = window.__vdg_repo;
+  function renderToolbar(total) {
+    return `
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-lg font-semibold text-slate-900">${t('quote_list.title')} <span class="text-sm font-normal text-slate-400">(${total})</span></div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="grid-search" placeholder="${t('quote_list.toolbar.search_placeholder')}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
+          </div>
+          <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('quote_list.toolbar.export_csv')}</button>
+          <a href="#/sales/quote/new"
+             class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition inline-block">
+            ${t('quote_list.new')}
+          </a>
+        </div>
+      </div>`;
+  }
+
+  function onQuoteUpdated(updated) {
+    items = items.map((q) => (q.id === updated.id ? { ...q, ...updated } : q));
+    api?.setGridOption('rowData', items);
+  }
+
+  function buildColumnDefs() {
+    return [
+      { headerName: t('quote_list.col.id'),          field: 'id',             width: 140, cellClass: 'font-mono text-xs' },
+      { headerName: t('quote_list.col.customer'),    field: 'customer',       flex: 2, minWidth: 150, valueGetter: (p) => p.data.customer || '—' },
+      { headerName: t('quote_list.col.route'),       field: 'route',          width: 140, cellClass: 'font-mono text-xs', valueGetter: (p) => `${p.data.pol || '—'} → ${p.data.pod || '—'}` },
+      { headerName: t('quote_list.col.container'),   field: 'container_type', width: 110, valueGetter: (p) => p.data.container_type || '—' },
+      { headerName: t('quote_list.col.state'),       field: 'state',          width: 110, cellRenderer: stateBadgeRenderer },
+      { headerName: t('quote_list.col.valid_until'), field: 'valid_until_ms', width: 120, cellClass: 'font-mono text-xs', valueGetter: (p) => fmtDate(p.data.valid_until_ms) },
+      { headerName: t('quote_list.col.actions'),     field: 'actions',        width: 140, sortable: false, filter: false, cellRenderer: makeQuoteActionsRenderer(repo, onQuoteUpdated) },
+    ];
+  }
+
+  function wireToolbar() {
+    root.querySelector('#grid-search')?.addEventListener('input', (e) => {
+      api?.setGridOption('quickFilterText', e.target.value);
+    });
+    root.querySelector('#export-csv')?.addEventListener('click', () => {
+      api?.exportDataAsCsv({ fileName: 'vdg_quotations.csv' });
+    });
+  }
+
   if (!repo) {
     root.querySelector('#qt-loading').textContent = t('quote_list.no_repo');
     return;
   }
 
-  const quotes = await loadQuotes(repo, salesId, isM);
-  window.__qt_quotes = quotes;
-  renderTable(root, quotes, isM);
+  items = await loadQuotes(repo, salesId, isM);
   root.querySelector('#qt-loading').textContent = '';
 
-  root.querySelector('#qt-tbody')?.addEventListener('click', (e) => handleActions(e, root, repo));
+  const headerDiv = root.querySelector('#grid-header');
+  if (headerDiv) headerDiv.innerHTML = renderToolbar(items.length);
 
-  // Re-resolve #view-root at fire time — freshViewRoot() (F-19-16) detaches the captured
-  // `root` node on navigation, so re-rendering into it is a silent no-op.
+  const gridDiv = root.querySelector('#quote-grid');
+  if (window.agGrid && gridDiv) {
+    api = window.agGrid.createGrid(gridDiv, {
+      columnDefs: buildColumnDefs(),
+      rowData: items,
+      defaultColDef: { sortable: true, resizable: true, filter: true },
+      rowSelection: 'single',
+      rowHeight: 38,
+      headerHeight: 36,
+      localeText: agGridLocaleText(),
+    });
+  }
+
+  wireToolbar();
+
   window.addEventListener('vdg:locale-changed', () => {
     const liveRoot = document.getElementById('view-root');
     if (liveRoot) render(liveRoot);
   });
 }
+
