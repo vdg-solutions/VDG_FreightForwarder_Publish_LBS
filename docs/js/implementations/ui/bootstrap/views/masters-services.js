@@ -84,7 +84,7 @@ function openModal(root, entity, onSave) {
     e.preventDefault();
     const name = dialog.querySelector('#m-name').value.trim();
     const errEl = dialog.querySelector('#m-err-name');
-    if (!name) { errEl.textContent = 'Name is required'; errEl.classList.remove('hidden'); return; }
+    if (!name) { errEl.textContent = t('masters.val.name_required'); errEl.classList.remove('hidden'); return; }
     errEl.classList.add('hidden');
     const updated = {
       ...(entity || {}),
@@ -200,9 +200,17 @@ export async function render(root) {
   }
 
   async function reload() {
-    items = repo ? await repo.list(KIND, null).catch(() => []) : [];
-    api?.setGridOption('rowData', items);
     const statusEl = root.querySelector('#m-status');
+    const listRes = await boundedList(repo, KIND, `${KIND}:list`);
+    if (!listRes.ok) {
+      items = [];
+      api?.setGridOption('rowData', items);
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.retry'), reload);
+      return;
+    }
+
+    items = listRes.value;
+    api?.setGridOption('rowData', items);
     if (statusEl) statusEl.textContent = '';
     const hdr = root.querySelector('#grid-header');
     if (hdr) hdr.innerHTML = renderToolbar(items.length);

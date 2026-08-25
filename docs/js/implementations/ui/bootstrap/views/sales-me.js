@@ -224,7 +224,17 @@ async function loadMyData(salesId) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
+
+let _onLocale = null;
+
 export async function render(root) {
+  if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
+  _onLocale = () => {
+    const liveRoot = document.getElementById('view-root');
+    if (liveRoot) render(liveRoot);
+  };
+  window.addEventListener('vdg:locale-changed', _onLocale);
+
   const user    = window.__vdg_auth?.getCurrentUser?.();
   const salesId = currentSalesRepId();
 

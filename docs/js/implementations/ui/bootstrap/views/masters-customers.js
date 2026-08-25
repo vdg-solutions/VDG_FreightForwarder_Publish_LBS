@@ -13,8 +13,8 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 const KIND       = 'customers';
 const KIND_PREFIX = 'CUST'; // AC-M2
 
-const LOAD_ERROR_MSG   = "Couldn't load customers. Please retry.";
-const LOAD_RETRY_LABEL = 'Retry';
+const LOAD_ERROR_MSG   = t('masters.load_error');
+const LOAD_RETRY_LABEL = t('common.retry');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -120,7 +120,7 @@ function openModal(root, entity, onSave, reps = []) {
     const name = dialog.querySelector('#m-name').value.trim();
     const errEl = dialog.querySelector('#m-err-name');
     if (!name) {
-      errEl.textContent = 'Name is required'; errEl.classList.remove('hidden'); return;
+      errEl.textContent = t('masters.val.name_required'); errEl.classList.remove('hidden'); return;
     }
     errEl.classList.add('hidden');
 
@@ -164,7 +164,17 @@ function makeActionsRenderer(onEdit, onDelete) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
+
+let _onLocale = null;
+
 export async function render(root) {
+  if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
+  _onLocale = () => {
+    const liveRoot = document.getElementById('view-root');
+    if (liveRoot) render(liveRoot);
+  };
+  window.addEventListener('vdg:locale-changed', _onLocale);
+
   const isM  = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
   let items  = [];

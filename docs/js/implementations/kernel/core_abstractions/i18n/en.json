@@ -2005,5 +2005,8 @@
   "sales_new.containers.col_cbm": "CBM (m³)",
   "sales_new.containers.total": "Total:",
   "sales_new.containers.ph_no": "e.g. MSKU1234567",
-  "sales_new.containers.ph_seal": "Seal number"
+  "sales_new.containers.ph_seal": "Seal number",
+  "master_merge.diff_header": "Differing fields:",
+  "masters.val.name_required": "Name is required",
+  "masters.load_error": "Could not load list. Please retry."
 }

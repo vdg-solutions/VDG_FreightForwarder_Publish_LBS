@@ -55,8 +55,8 @@ export function globalizeBridgeExports(mod) {
 export async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL('pkg/vdg_freight.js?v=7d1e83d', document.baseURI).href);
-    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=7d1e83d', document.baseURI).href;
+    const mod = await import(new URL('pkg/vdg_freight.js?v=3b3fed7', document.baseURI).href);
+    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=3b3fed7', document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;

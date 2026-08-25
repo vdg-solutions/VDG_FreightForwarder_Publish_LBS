@@ -22,20 +22,9 @@ import {
   t
 } from "./chunk-NPO6NGQC.js";
 
-// output/web/js.tmp/implementations/ui/bootstrap/views/masters-services.js
-var KIND = "services";
-var KIND_PREFIX = "SVC";
-var VALID_SERVICE_KINDS = [
-  "OceanFreight",
-  "LocalCharges",
-  "Documentation",
-  "Customs",
-  "Insurance",
-  "Trucking",
-  "Handling",
-  "Storage",
-  "Other"
-];
+// output/web/js.tmp/implementations/ui/bootstrap/views/masters-carriers.js
+var KIND = "carriers";
+var KIND_PREFIX = "CARR";
 function escHtml(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -44,38 +33,44 @@ function genId() {
 }
 function buildModal(entity) {
   const e = entity || {};
-  const kindOptions = VALID_SERVICE_KINDS.map(
-    (k) => `<option value="${k}" ${e.default_kind === k ? "selected" : ""}>${k}</option>`
-  ).join("");
   return `
     <dialog id="master-modal" class="rounded-xl border border-slate-200 shadow-xl p-0 w-full max-w-md backdrop:bg-black/30">
       <form id="modal-form" method="dialog" class="p-6 space-y-4">
-        <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t("masters_services.modal.edit") : t("masters_services.modal.new")}</div>
+        <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t("masters_carriers.modal.edit") : t("masters_carriers.modal.new")}</div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_services.field.name")} <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_carriers.field.name")} <span class="text-red-500">*</span></label>
           <input id="m-name" type="text" value="${escHtml(e.name)}" required
                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-name" class="hidden text-xs text-red-600"></span>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_services.field.code")}</label>
-            <input id="m-code" type="text" value="${escHtml(e.code)}"
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_carriers.field.short_code")}</label>
+            <input id="m-short_code" type="text" value="${escHtml(e.short_code)}"
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_services.field.default_kind")}</label>
-            <select id="m-default_kind"
-                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-              <option value="">\u2014 select \u2014</option>
-              ${kindOptions}
-            </select>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_carriers.field.scac")}</label>
+            <input id="m-scac" type="text" value="${escHtml(e.scac)}"
+                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_services.field.description")}</label>
-          <textarea id="m-description" rows="2"
-                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none">${escHtml(e.description)}</textarea>
+          <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_carriers.field.contact_person")}</label>
+          <input id="m-contact_person" type="text" value="${escHtml(e.contact_person)}"
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_carriers.field.tel")}</label>
+            <input id="m-tel" type="text" value="${escHtml(e.tel)}"
+                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t("masters_carriers.field.email")}</label>
+            <input id="m-email" type="email" value="${escHtml(e.email)}"
+                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
         </div>
         <div class="flex gap-3 pt-2 border-t border-slate-100">
           <button type="submit"
@@ -97,7 +92,7 @@ function openModal(root, entity, onSave) {
     const name = dialog.querySelector("#m-name").value.trim();
     const errEl = dialog.querySelector("#m-err-name");
     if (!name) {
-      errEl.textContent = "Name is required";
+      errEl.textContent = t("masters.val.name_required");
       errEl.classList.remove("hidden");
       return;
     }
@@ -106,9 +101,11 @@ function openModal(root, entity, onSave) {
       ...entity || {},
       id: entity?.id || genId(),
       name,
-      code: dialog.querySelector("#m-code").value.trim() || null,
-      default_kind: dialog.querySelector("#m-default_kind").value || null,
-      description: dialog.querySelector("#m-description").value.trim() || null
+      short_code: dialog.querySelector("#m-short_code").value.trim() || null,
+      scac: dialog.querySelector("#m-scac").value.trim() || null,
+      contact_person: dialog.querySelector("#m-contact_person").value.trim() || null,
+      tel: dialog.querySelector("#m-tel").value.trim() || null,
+      email: dialog.querySelector("#m-email").value.trim() || null
     };
     await onSave(updated);
     dialog.close();
@@ -145,23 +142,23 @@ async function render(root) {
   root.innerHTML = `
     <div class="p-6 max-w-[1200px] mx-auto">
       <div id="grid-header"></div>
-      <div id="svc-grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:520px;"></div>
+      <div id="carr-grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:520px;"></div>
       <div id="m-status" class="text-xs text-slate-400 mt-2">Loading\u2026</div>
     </div>`;
   function renderToolbar(total) {
-    const mergeBtn = isM ? `<button id="btn-merge" disabled class="px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed">${t("masters_services.action.merge")}</button>` : "";
-    const addBtn = isM ? `<button id="btn-add" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t("masters_services.action.add")}</button>` : "";
+    const mergeBtn = isM ? `<button id="btn-merge" disabled class="px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed">${t("masters_carriers.action.merge")}</button>` : "";
+    const addBtn = isM ? `<button id="btn-add" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t("masters_carriers.action.add")}</button>` : "";
     return `
       <div class="flex items-center justify-between mb-4">
-        <div class="text-lg font-semibold text-slate-900">${t("masters_services.title")} <span class="text-sm font-normal text-slate-400">(${total})</span></div>
+        <div class="text-lg font-semibold text-slate-900">${t("masters_carriers.title")} <span class="text-sm font-normal text-slate-400">(${total})</span></div>
         <div class="flex items-center gap-2">
           <div class="relative">
             <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input id="grid-search" placeholder="${t("masters_services.toolbar.search_placeholder")}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
+            <input id="grid-search" placeholder="${t("masters_carriers.toolbar.search_placeholder")}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
           </div>
-          <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t("masters_services.toolbar.export_csv")}</button>
+          <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t("masters_carriers.toolbar.export_csv")}</button>
           ${mergeBtn}
           ${addBtn}
         </div>
@@ -176,7 +173,7 @@ async function render(root) {
   }
   async function onDelete(entity) {
     const ok = await showConfirm({
-      title: t("masters_services.confirm_delete"),
+      title: t("masters_carriers.confirm_delete"),
       confirmLabel: t("common.action.delete"),
       cancelLabel: t("common.action.cancel"),
       destructive: true
@@ -199,9 +196,10 @@ async function render(root) {
       });
     }
     cols.push(
-      { headerName: t("masters_services.col.name"), field: "name", flex: 2, minWidth: 160 },
-      { headerName: t("masters_services.col.code"), field: "code", width: 120, cellClass: "font-mono text-xs", valueGetter: (p) => p.data.code ?? "\u2014" },
-      { headerName: t("masters_services.col.default_kind"), field: "default_kind", flex: 1, minWidth: 140, valueGetter: (p) => p.data.default_kind ?? "\u2014" }
+      { headerName: t("masters_carriers.col.name"), field: "name", flex: 2, minWidth: 160 },
+      { headerName: t("masters_carriers.col.scac"), field: "scac", width: 120, cellClass: "font-mono text-xs", valueGetter: (p) => p.data.scac ?? "\u2014" },
+      { headerName: t("masters_carriers.col.contact"), field: "contact_person", flex: 1, minWidth: 120, valueGetter: (p) => p.data.contact_person ?? "\u2014" },
+      { headerName: t("masters_carriers.col.tel"), field: "tel", width: 140, valueGetter: (p) => p.data.tel ?? "\u2014" }
     );
     if (isM) {
       cols.push({ headerName: "", field: "actions", width: 110, sortable: false, filter: false, cellRenderer: makeActionsRenderer(onEdit, onDelete) });
@@ -209,9 +207,16 @@ async function render(root) {
     return cols;
   }
   async function reload() {
-    items = repo ? await repo.list(KIND, null).catch(() => []) : [];
-    api?.setGridOption("rowData", items);
     const statusEl = root.querySelector("#m-status");
+    const listRes = await boundedList(repo, KIND, `${KIND}:list`);
+    if (!listRes.ok) {
+      items = [];
+      api?.setGridOption("rowData", items);
+      renderMasterLoadRetryStatus(statusEl, t("masters.load_error"), t("common.retry"), reload);
+      return;
+    }
+    items = listRes.value;
+    api?.setGridOption("rowData", items);
     if (statusEl) statusEl.textContent = "";
     const hdr = root.querySelector("#grid-header");
     if (hdr) hdr.innerHTML = renderToolbar(items.length);
@@ -228,7 +233,7 @@ async function render(root) {
       api?.setGridOption("quickFilterText", e.target.value);
     });
     root.querySelector("#export-csv")?.addEventListener("click", () => {
-      api?.exportDataAsCsv({ fileName: "vdg_services.csv" });
+      api?.exportDataAsCsv({ fileName: "vdg_carriers.csv" });
     });
     root.querySelector("#btn-add")?.addEventListener("click", () => {
       openModal(root, null, async (entity) => {
@@ -257,7 +262,7 @@ async function render(root) {
   }
   const headerDiv = root.querySelector("#grid-header");
   if (headerDiv) headerDiv.innerHTML = renderToolbar(0);
-  const gridDiv = root.querySelector("#svc-grid");
+  const gridDiv = root.querySelector("#carr-grid");
   if (window.agGrid && gridDiv) {
     api = window.agGrid.createGrid(gridDiv, {
       columnDefs: buildColumnDefs(),

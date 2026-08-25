@@ -2005,5 +2005,8 @@
   "sales_new.containers.col_cbm": "CBM (m³)",
   "sales_new.containers.total": "Tổng cộng:",
   "sales_new.containers.ph_no": "VD: MSKU1234567",
-  "sales_new.containers.ph_seal": "Số niêm chì"
+  "sales_new.containers.ph_seal": "Số niêm chì",
+  "master_merge.diff_header": "Các trường có sự khác biệt:",
+  "masters.val.name_required": "Tên là bắt buộc",
+  "masters.load_error": "Không thể tải danh sách. Vui lòng thử lại."
 }

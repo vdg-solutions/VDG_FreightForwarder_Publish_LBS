@@ -130,7 +130,17 @@ async function loadQuotes(repo, salesId, isM) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
+
+let _onLocale = null;
+
 export async function render(root) {
+  if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
+  _onLocale = () => {
+    const liveRoot = document.getElementById('view-root');
+    if (liveRoot) render(liveRoot);
+  };
+  window.addEventListener('vdg:locale-changed', _onLocale);
+
   const salesId = currentSalesRepId();
   const isM = hasRole(ROLE_MANAGER);
   const repo = window.__vdg_repo;
@@ -216,9 +226,5 @@ export async function render(root) {
 
   wireToolbar();
 
-  window.addEventListener('vdg:locale-changed', () => {
-    const liveRoot = document.getElementById('view-root');
-    if (liveRoot) render(liveRoot);
-  });
 }
 
