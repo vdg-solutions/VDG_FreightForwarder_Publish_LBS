@@ -6,9 +6,9 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: fa15c8f is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: 057a642 is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=fa15c8f', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=057a642', import.meta.url).href;
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.

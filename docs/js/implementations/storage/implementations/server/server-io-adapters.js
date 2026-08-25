@@ -135,7 +135,8 @@ export class ServerIoPort extends SharedIoPort {
   // ── where things live ─────────────────────────────────────────────────────
 
   _kindPath(kind) {
-    return KIND_PATH_OVERRIDES[kind] ?? `${USERS_PATH}/${this._fork}/${kind}`;
+    // CharterDB: flat collections — no user fork hierarchy
+    return KIND_PATH_OVERRIDES[kind] ?? kind;
   }
 
   _normPath(path) {
@@ -203,18 +204,22 @@ export class ServerIoPort extends SharedIoPort {
     try {
       this.poll_health().catch(() => {});
       const res = await this.changes(pageToken || '0');
-      const changes = (res?.results ?? []).map((c) => ({
-        file: {
-          id: `${c.collection}/${c.id}`,
-          name: c.id,
-          version: String(c.version),
-          parents: [c.collection],
-        },
-        removed: c.event === 'removed',
-        fileId: `${c.collection}/${c.id}`,
-        changeType: 'file',
-        time: '',
-      }));
+      const changes = (res?.results ?? []).map((c) => {
+        // WASM apply_change calls name.strip_suffix(".json") — must have the suffix
+        const name = c.id.endsWith('.json') ? c.id : `${c.id}.json`;
+        return {
+          file: {
+            id: `${c.collection}/${c.id}`,
+            name,
+            version: String(c.version),
+            parents: [c.collection],
+          },
+          removed: c.event === 'removed',
+          fileId: `${c.collection}/${c.id}`,
+          changeType: 'file',
+          time: '',
+        };
+      });
       return { newStartPageToken: res?.next_cursor || pageToken || '0', changes };
     } catch (err) {
       throw asDriveError(err);
