@@ -148,7 +148,7 @@ export async function render(root) {
   let api = null;
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1200px] mx-auto">
+    <div class="p-6 max-w-[1600px] mx-auto">
       <div id="grid-header"></div>
       <div id="quote-grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:520px;"></div>
       <div id="qt-loading" class="text-xs text-slate-400 mt-2">${t('common.loading')}</div>

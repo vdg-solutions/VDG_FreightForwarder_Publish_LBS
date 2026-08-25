@@ -313,7 +313,7 @@ async function render(root, param) {
   const hashTab = location.hash.match(/#tab=(\w+)/)?.[1] || "overview";
   _tab = tabs.includes(hashTab) ? hashTab : "overview";
   root.innerHTML = `
-    <div class="p-6 space-y-4 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-4 max-w-[1600px] mx-auto">
       <div id="c360-header" class="space-y-2"></div>
       <div class="flex gap-1 border-b border-slate-200 overflow-x-auto">
         ${tabs.map((t2, i) => `<button data-c360-tab="${t2}"

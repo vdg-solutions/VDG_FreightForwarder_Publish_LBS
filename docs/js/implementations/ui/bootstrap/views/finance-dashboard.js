@@ -136,7 +136,7 @@ export async function render(root) {
   }
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto space-y-6">
+    <div class="p-6 max-w-[1600px] mx-auto space-y-6">
       <div class="flex items-center justify-between">
         <div>
           <div class="text-xl font-bold text-slate-900">${t('finance_dash.title')}</div>

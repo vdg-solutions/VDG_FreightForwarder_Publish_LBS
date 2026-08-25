@@ -343,7 +343,7 @@ async function render(root) {
     return;
   }
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto space-y-4">
+    <div class="p-6 max-w-[1600px] mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div class="text-lg font-semibold text-slate-900">Ng\u01B0\u1EDDi d\xF9ng</div>
         <button id="btn-invite"

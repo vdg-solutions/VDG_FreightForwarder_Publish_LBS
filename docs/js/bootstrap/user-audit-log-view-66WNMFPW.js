@@ -28,7 +28,7 @@ var _allRecords = [];
 var _range = { from: "", to: "" };
 function shellHtml() {
   return `
-    <div class="p-6 max-w-[1400px] mx-auto space-y-4">
+    <div class="p-6 max-w-[1600px] mx-auto space-y-4">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="text-lg font-semibold text-slate-900">${t("admin.users.audit_log.title")}</div>
         <button id="btn-export-audit-csv" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100">

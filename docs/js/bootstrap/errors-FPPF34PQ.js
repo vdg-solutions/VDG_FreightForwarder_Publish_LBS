@@ -80,7 +80,7 @@ async function render(root) {
     return;
   }
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto">
+    <div class="p-6 max-w-[1600px] mx-auto">
       <div class="flex items-center justify-between mb-4">
         <div class="text-lg font-semibold text-slate-900">${t("errors.title")}</div>
         <button id="btn-clear-all"

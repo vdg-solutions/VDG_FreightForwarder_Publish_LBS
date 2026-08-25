@@ -145,7 +145,7 @@ export async function render(root) {
   const loaded = await loadData();
   if (!loaded) {
     root.innerHTML = `
-      <div class="p-6 max-w-[1400px] mx-auto">
+      <div class="p-6 max-w-[1600px] mx-auto">
         <div class="text-xs text-red-500 mb-2">${t('masters.load_error')}</div>
         <button id="commission-retry" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700">${t('retry')}</button>
       </div>`;
@@ -154,7 +154,7 @@ export async function render(root) {
   }
 
   root.innerHTML = `
-    <div class="p-6 space-y-5 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-5 max-w-[1600px] mx-auto">
       <div id="commission-suggest-banner"></div>
       <div class="flex items-center gap-4 flex-wrap">
         <label class="text-xs font-medium text-slate-600">${t('commission.settle.period_label')}</label>

@@ -58,7 +58,7 @@ function tabButtons() {
 
 function shellHtml() {
   return `
-    <div class="p-6 space-y-4 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-4 max-w-[1600px] mx-auto">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="text-sm font-semibold text-slate-900">${t('reports.title')}</div>
         <button id="btn-export-pdf" class="px-3 py-1.5 text-xs rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 no-print">

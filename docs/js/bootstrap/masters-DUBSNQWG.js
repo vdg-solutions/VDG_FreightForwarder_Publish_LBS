@@ -62,7 +62,7 @@ var VdgDupWizard = class extends LitElement {
   }
   async _merge(pair) {
     try {
-      const { openMergeModal } = await import("./masters-customers-7OLOLMYQ.js");
+      const { openMergeModal } = await import("./masters-customers-ZDC7JEGZ.js");
       openMergeModal(pair.a, pair.b, this.repo);
     } catch {
     }
@@ -225,7 +225,7 @@ async function renderUsers(root) {
   const repo = getRepo();
   const users = repo ? await repo.list(USER_KIND, null) : [];
   root.innerHTML = `
-    <div class="p-6 space-y-4 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-4 max-w-[1600px] mx-auto">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold text-slate-900">${t("masters_hub.section.user_master")}</div>
         <button id="btn-add-sales" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("masters_hub.action.add_sales")}</button>
@@ -365,7 +365,7 @@ async function renderCustomersMaster(root) {
     document.body.appendChild(wizard);
   });
   try {
-    const { render: renderCusts } = await import("./masters-customers-7OLOLMYQ.js");
+    const { render: renderCusts } = await import("./masters-customers-ZDC7JEGZ.js");
     await renderCusts(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.customer_load")}</div>`;
@@ -379,7 +379,7 @@ async function renderCarriersMaster(root) {
   root.innerHTML = "";
   root.appendChild(delegate);
   try {
-    const { render: renderCarriers } = await import("./masters-carriers-5MBAZTL4.js");
+    const { render: renderCarriers } = await import("./masters-carriers-32MRQM4N.js");
     await renderCarriers(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.carrier_load")}</div>`;

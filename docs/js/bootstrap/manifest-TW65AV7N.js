@@ -111,7 +111,7 @@ function buildFlightSection(flightRef, allocs) {
 async function render(root) {
   const groups = groupByFlight(MOCK_ALLOCATIONS);
   root.innerHTML = `
-    <div class="p-6 max-w-[1100px] mx-auto">
+    <div class="p-6 max-w-6xl mx-auto">
       <div class="flex items-center justify-between mb-6">
         <div class="text-lg font-semibold text-slate-900">${t("manifest.title")}</div>
         <span class="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">${t("manifest.badge.mock_data")}</span>

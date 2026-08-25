@@ -221,7 +221,7 @@ export async function render(root) {
   if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto space-y-4">
+    <div class="p-6 max-w-[1600px] mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div class="text-lg font-semibold text-slate-900">Người dùng</div>
         <button id="btn-invite"

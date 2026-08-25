@@ -150,7 +150,7 @@ export async function render(root) {
   const invoices = MOCK_INVOICES.map((inv) => ({ ...inv }));
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1100px] mx-auto">
+    <div class="p-6 max-w-6xl mx-auto">
       <div class="flex items-center justify-between mb-6">
         <div class="text-lg font-semibold text-slate-900">${t('air_invoice.title')}</div>
         <button id="air-invoice-export"

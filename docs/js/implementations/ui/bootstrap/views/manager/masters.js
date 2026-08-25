@@ -107,7 +107,7 @@ async function renderUsers(root) {
   const users = repo ? await repo.list(USER_KIND, null) : [];
 
   root.innerHTML = `
-    <div class="p-6 space-y-4 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-4 max-w-[1600px] mx-auto">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold text-slate-900">${t('masters_hub.section.user_master')}</div>
         <button id="btn-add-sales" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t('masters_hub.action.add_sales')}</button>

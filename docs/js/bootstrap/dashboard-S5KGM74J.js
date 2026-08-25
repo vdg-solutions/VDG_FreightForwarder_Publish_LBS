@@ -202,7 +202,7 @@ async function render(root) {
   const distribution = buildDistribution(allShipments, aliasRows);
   const cutoffs = [];
   root.innerHTML = `
-    <div class="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-6 max-w-[1600px] mx-auto">
       ${kpiSection(kpis)}
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div class="xl:col-span-2 space-y-4">

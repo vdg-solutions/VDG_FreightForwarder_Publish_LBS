@@ -181,7 +181,7 @@ async function render(root) {
   const monthly = computeMonthlyBars(shipments, lines);
   const funnel = computeBillingFunnel(shipments);
   root.innerHTML = `
-    <div class="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div class="p-6 space-y-6 max-w-[1600px] mx-auto">
       <div class="flex items-center justify-between">
         <div>
           <div class="text-lg font-semibold text-slate-900">${t("sales_analytics.title")}</div>

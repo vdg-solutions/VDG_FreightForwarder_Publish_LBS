@@ -245,7 +245,7 @@ async function render(root) {
   if (_onEntityChanged) window.removeEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
   const isLarge = location.hash.includes("large=1");
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto">
+    <div class="p-6 max-w-[1600px] mx-auto">
       <div id="grid-header">
         <div class="text-sm text-slate-500 py-4">\u0110ang t\u1EA3i d\u1EEF li\u1EC7u...</div>
       </div>

@@ -80,7 +80,7 @@ export async function renderForm(root, opts = {}) {
   const formSubtitle = isEdit ? t('sales_new.form.edit_subtitle') : t('sales_new.form.create_subtitle');
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1100px] mx-auto space-y-4">
+    <div class="p-6 max-w-6xl mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <div class="text-xl font-semibold text-slate-900">${formTitle}</div>

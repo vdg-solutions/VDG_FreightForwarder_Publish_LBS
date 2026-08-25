@@ -244,7 +244,7 @@ export async function render(root) {
   }
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1200px] mx-auto">
+    <div class="p-6 max-w-[1600px] mx-auto">
       <div class="text-lg font-semibold text-slate-900">
         ${t('sales_me.title')} — ${user.name || salesId}${roleBadgeHtml(salesId)}
       </div>

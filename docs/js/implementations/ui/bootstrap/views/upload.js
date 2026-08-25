@@ -184,7 +184,7 @@ async function handleFile(file, statusEl) {
 
 export async function render(root) {
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto">
+    <div class="p-6 max-w-[1600px] mx-auto">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-2 space-y-4">
           <div class="bg-white rounded-xl border border-slate-200 p-5">

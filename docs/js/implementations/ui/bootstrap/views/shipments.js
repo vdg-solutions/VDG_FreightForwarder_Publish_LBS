@@ -184,7 +184,7 @@ export async function render(root) {
   const isLarge = location.hash.includes('large=1');
 
   root.innerHTML = `
-    <div class="p-6 max-w-[1400px] mx-auto">
+    <div class="p-6 max-w-[1600px] mx-auto">
       <div id="grid-header">
         <div class="text-sm text-slate-500 py-4">Đang tải dữ liệu...</div>
       </div>
