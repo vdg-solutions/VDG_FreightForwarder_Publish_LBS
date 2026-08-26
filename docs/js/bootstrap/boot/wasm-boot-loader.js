@@ -10,8 +10,8 @@ import { healOrReloadViaServiceWorker } from '../../implementations/ui/bootstrap
 export async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL('pkg/vdg_freight.js?v=4cc1935', document.baseURI).href);
-    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=4cc1935', document.baseURI).href;
+    const mod = await import(new URL('pkg/vdg_freight.js?v=4d17a29', document.baseURI).href);
+    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=4d17a29', document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;

@@ -109,6 +109,16 @@ function rememberSessionToken(token) {
 
 const API_FETCH_TIMEOUT_MS = 30000;
 
+// Wall-clock ISO-8601 w/ ms — same spelling as the Rust side's Clock::now_iso(), so a pasted
+// dump interleaving both never looks like two clocks disagreeing.
+function _nowIso() { return new Date().toISOString(); }
+
+// Requests interleave (concurrent fetches resolve out of order) and DevTools timestamps don't
+// survive copy-paste — this id + wall-clock + duration on both log lines is what lets a pasted
+// dump be read back into request/response pairs. Per-tab counter: short and monotonic beats a UUID
+// for something a human has to eyeball in a scrollback dump.
+let _apiReqSeq = 0;
+
 async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   const url = `${API_BASE}${API_PREFIX}${path}`;
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
@@ -121,13 +131,15 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(new Error('fetch timeout (30s)')), API_FETCH_TIMEOUT_MS);
   opts.signal = ctrl.signal;
+  const reqId = `r${++_apiReqSeq}`;
+  const startedAtMs = Date.now();
   let res;
   try {
-    console.log(`[API] Fetching ${method} ${url}...`);
+    console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
     res = await fetch(url, opts);
-    console.log(`[API] Response from ${method} ${url}:`, res.status);
+    console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
   } catch (err) {
-    console.error(`[API] Fetch failed for ${method} ${url}:`, err);
+    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, err);
     throw new ApiError(0, `server unreachable: ${err.message}`);
   } finally {
     clearTimeout(timer);

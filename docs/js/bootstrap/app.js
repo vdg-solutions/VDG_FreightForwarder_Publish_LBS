@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 4cc1935">v0.4.27 (4cc1935)</span>
+        <span class="font-mono whitespace-nowrap" title="build 4d17a29">v0.4.28 (4d17a29)</span>
       </div>
     `;
   }
@@ -2146,7 +2146,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.27 (4cc1935)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.28 (4d17a29)</div>
         </div>
       </div>
     </div>`;
@@ -2987,6 +2987,10 @@ function rememberSessionToken2(token) {
   }
 }
 var API_FETCH_TIMEOUT_MS = 3e4;
+function _nowIso() {
+  return (/* @__PURE__ */ new Date()).toISOString();
+}
+var _apiReqSeq = 0;
 async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
   const url = `${API_BASE}${API_PREFIX}${path}`;
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
@@ -2999,13 +3003,15 @@ async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(new Error("fetch timeout (30s)")), API_FETCH_TIMEOUT_MS);
   opts.signal = ctrl.signal;
+  const reqId = `r${++_apiReqSeq}`;
+  const startedAtMs = Date.now();
   let res;
   try {
-    console.log(`[API] Fetching ${method} ${url}...`);
+    console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
     res = await fetch(url, opts);
-    console.log(`[API] Response from ${method} ${url}:`, res.status);
+    console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
   } catch (err) {
-    console.error(`[API] Fetch failed for ${method} ${url}:`, err);
+    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, err);
     throw new ApiError(0, `server unreachable: ${err.message}`);
   } finally {
     clearTimeout(timer);
@@ -4768,7 +4774,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.27 (4cc1935)";
+var APP_VERSION = "v0.4.28 (4d17a29)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5930,8 +5936,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=4cc1935", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4cc1935", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=4d17a29", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4d17a29", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6179,8 +6185,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=4cc1935", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4cc1935", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=4d17a29", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4d17a29", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6482,8 +6488,8 @@ function initMigrationOverlay() {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=4cc1935", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4cc1935", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=4d17a29", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4d17a29", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;
