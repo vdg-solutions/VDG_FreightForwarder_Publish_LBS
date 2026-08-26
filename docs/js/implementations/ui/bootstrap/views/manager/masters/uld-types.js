@@ -6,11 +6,10 @@ import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { t }                            from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { validateUldCode, checkUldCodeUnique } from '../../../../../kernel/core_abstractions/util/uld-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
 const KIND        = 'uld-types';
 const KIND_PREFIX = 'ULD';
-const SEED_URL    = 'seed/masters/uld-types.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -190,7 +189,6 @@ export async function render(root) {
       return;
     }
     items = listRes.value;
-    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, (e) => genId(e.code), 'uld-types:seed');
     if (tbody)   tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
     if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
     if (statusEl) statusEl.textContent = '';

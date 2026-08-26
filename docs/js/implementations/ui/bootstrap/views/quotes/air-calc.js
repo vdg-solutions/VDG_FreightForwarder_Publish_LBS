@@ -4,8 +4,7 @@
 import { t }          from '../../../../kernel/core_abstractions/i18n/index.js';
 import { calcResult } from '../../../core_abstractions/ports/flows/air-rate-calculator.js';
 
-const KIND     = 'air-rates';
-const SEED_URL = 'seed/masters/air-rates.jsonl';
+const KIND = 'air-rates';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -14,12 +13,7 @@ function escHtml(s) {
 async function loadRates(repo) {
   if (!repo) return [];
   try {
-    const items = await repo.list(KIND, null).catch(() => []);
-    if (items.length) return items;
-    // fallback: try seed
-    const res = await fetch(SEED_URL);
-    if (!res.ok) return [];
-    return (await res.text()).trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+    return await repo.list(KIND, null).catch(() => []);
   } catch { /* rates optional */ return []; }
 }
 

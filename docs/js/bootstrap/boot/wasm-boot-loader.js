@@ -1,20 +1,18 @@
 // wasm-boot-loader.js — the app.js critical-path WASM load, extracted so app.js stays under the
 // 350-line cap (same habit as view-fallback.js beside view-loader.js, sw-update-guard.js beside
-// sw-register.js). Distinct from boot/wasm-loader.js's loadWasm(): that one is a fire-and-forget
-// helper for call sites that degrade gracefully on failure (returns null); this one sits on
-// main()'s boot-gating critical path in app.js and must propagate failure so main() can react.
+// sw-register.js). The actual import + instantiation lives in boot/wasm-loader.js's loadWasmOrThrow()
+// now — every main-thread caller shares that one cache (F-57-01: three private caches deciding "is
+// it loaded" independently is the bug, even when it happens not to double-instantiate). This file's
+// own job is narrower: sit on main()'s boot-gating critical path and turn a load failure into
+// recovery (LinkError cache-purge + reload) or a propagated error main() can react to.
 
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { healOrReloadViaServiceWorker } from '../../implementations/ui/bootstrap/util/view-fallback.js';
+import { loadWasmOrThrow } from './wasm-loader.js';
 
 export async function loadWasmModule() {
-  if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL('pkg/vdg_freight.js?v=4d17a29', document.baseURI).href);
-    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=4d17a29', document.baseURI).href;
-    await mod.default({ module_or_path: wasmUrl });
-    window.__vdg_wasm = mod;
-    return mod;
+    return await loadWasmOrThrow();
   } catch (err) {
     // WebAssembly.LinkError — not the bare, un-namespaced `LinkError` this branch checked
     // before, which threw ReferenceError on ANY rejection and skipped this whole recovery path.

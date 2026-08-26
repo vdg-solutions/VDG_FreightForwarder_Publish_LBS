@@ -5,15 +5,11 @@
 // Mirrors ocean-carriers.js's read-focused grid shape (no propose/merge panel here — that
 // contract is already exercised generically by priced-ref-repo.test.mjs).
 
-import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
-import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
 const KIND             = 'ocean-tariff';
 const CARRIER_KIND     = 'ocean-carriers';
-const KIND_PREFIX      = 'OTF';
-const SEED_URL         = 'seed/masters/ocean-tariff.jsonl';
 const ISO_DATE_LENGTH  = 10; // 'YYYY-MM-DD' slice of Date#toISOString()
 
 // verify-domain-arithmetic: a resolved amount whose order of magnitude doesn't fit its
@@ -25,8 +21,6 @@ const MAX_PLAUSIBLE_USD_RATE = 50_000;    // a per-TEU/FEU USD ocean rate never 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
-function genId(row) { return `${KIND_PREFIX}-${row.pricing_key || row.carrier_scac || Date.now()}`; }
 
 function todayIso() { return new Date().toISOString().slice(0, ISO_DATE_LENGTH); }
 
@@ -89,7 +83,6 @@ function rowHtml(row, carrierName, record) {
 }
 
 export async function render(root) {
-  const isM        = hasRole(ROLE_MANAGER);
   const repo       = window.__vdg_repo;
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
 
@@ -135,8 +128,7 @@ export async function render(root) {
       return;
     }
 
-    let items = tariffRes.value;
-    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, genId, 'ocean-tariff:seed');
+    const items = tariffRes.value;
     const carriers   = carrierRes.ok ? carrierRes.value : [];
     const carrierMap = buildCarrierNameMap(carriers);
 

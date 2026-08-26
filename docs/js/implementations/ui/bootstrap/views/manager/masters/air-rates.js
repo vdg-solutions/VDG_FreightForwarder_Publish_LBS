@@ -3,7 +3,7 @@
 
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, boundedSeedIfEmpty, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
@@ -11,13 +11,10 @@ import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/p
 import { isViewSuperseded } from '../../../util/view-root.js';
 
 const KIND       = 'air-rates';
-const SEED_URL   = 'seed/masters/air-rates.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
-function genId(r) { return `AR-${r.route_origin || ''}-${r.route_dest || ''}-${r.carrier_iata || ''}-${Date.now()}`; }
 
 function breaksLabel(breaks) {
   if (!Array.isArray(breaks) || !breaks.length) return '—';
@@ -198,7 +195,6 @@ export async function render(root) {
       return;
     }
     items = listRes.value;
-    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, (e) => e.rate_id || genId(e), 'air-rates:seed');
     if (tbody)   tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
     if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
     if (statusEl) statusEl.textContent = '';

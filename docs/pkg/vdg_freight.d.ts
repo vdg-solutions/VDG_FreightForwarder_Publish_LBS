@@ -145,8 +145,6 @@ export function cache_find_match(req: any): any;
 
 export function cache_route_prefetch(req: any): Promise<any>;
 
-export function cache_run_seed_migrations(req: any): Promise<any>;
-
 export function check_air_rate_transition(from: string, event: string): boolean;
 
 export function check_air_shipment_transition(from: string, event: string, ctx_json: string): boolean;
@@ -694,7 +692,6 @@ export interface InitOutput {
     readonly cache_can_write_master: (a: number, b: number) => void;
     readonly cache_find_match: (a: number, b: number) => void;
     readonly cache_route_prefetch: (a: number) => number;
-    readonly cache_run_seed_migrations: (a: number) => number;
     readonly check_air_rate_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_air_shipment_transition: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly check_allocation_within_mgw: (a: number, b: number, c: number) => number;
@@ -963,9 +960,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15211: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15224: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12373: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15169: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15182: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12331: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -1,4 +1,5 @@
 let cached = null;
+let inflight = null;
 
 // Exported so any boot path that loads the wasm module itself (e.g.
 // boot/repo-init-steps.js) can reuse the exact same list + loop instead of
@@ -52,19 +53,49 @@ export function globalizeBridgeExports(mod) {
   }
 }
 
-export async function loadWasm() {
-  if (cached) return cached;
+// The ONE place that actually imports + instantiates the wasm module on the main thread. Every
+// main-thread boot path funnels through this instead of each holding its own private cache — three
+// loaders (this file, wasm-boot-loader.js, boot/repo-init-steps.js) used to each decide "is it
+// loaded" on their own, which is exactly how F-57-01's duplicate vdg:wasm-ready almost happened:
+// nothing reconciled the three answers. window.__vdg_wasm, the bridge globals and vdg:wasm-ready
+// are all set/dispatched HERE, exactly once, no matter how many callers await this.
+function loadOnce() {
+  if (cached) return Promise.resolve(cached);
+  if (!inflight) {
+    inflight = (async () => {
+      const mod = await import(new URL('pkg/vdg_freight.js?v=cb53bcc8', document.baseURI).href);
+      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=cb53bcc8', document.baseURI).href;
+      await mod.default({ module_or_path: wasmUrl });
+      cached = mod;
+      window.__vdg_wasm = mod;
+      globalizeBridgeExports(mod);
+      window.dispatchEvent(new Event('vdg:wasm-ready'));
+      return mod;
+    })();
+  }
+  return inflight;
+}
+
+// Boot-critical: propagates a load failure so a caller on main()'s boot-gating path (wasm-boot-
+// loader.js) can react to it (LinkError recovery, the unrecognized-boot-error screen) instead of
+// the failure vanishing into a swallowed rejection.
+export async function loadWasmOrThrow() {
   try {
-    const mod = await import(new URL('pkg/vdg_freight.js?v=4d17a29', document.baseURI).href);
-    const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=4d17a29', document.baseURI).href;
-    await mod.default({ module_or_path: wasmUrl });
-    cached = mod;
-    window.__vdg_wasm = mod;
-    globalizeBridgeExports(mod);
-    window.dispatchEvent(new Event('vdg:wasm-ready'));
-    return mod;
+    return await loadOnce();
+  } catch (err) {
+    inflight = null; // let a retry (e.g. after a LinkError cache purge + reload) try again
+    throw err;
+  }
+}
+
+// Fire-and-forget: call sites (/upload, sales-new-form/section-header.js) that degrade gracefully
+// on failure — returns null instead of throwing.
+export async function loadWasm() {
+  try {
+    return await loadOnce();
   } catch (err) {
     console.debug('[wasm-loader]', err); // DEV
+    inflight = null;
     return null;
   }
 }

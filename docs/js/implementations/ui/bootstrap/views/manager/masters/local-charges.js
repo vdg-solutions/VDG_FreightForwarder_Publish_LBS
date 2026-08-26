@@ -2,7 +2,6 @@
 // Route: /masters/local-charges
 // Sales tra cứu biểu phí local charge theo hãng tàu; tên Việt, VAT kép, search alias.
 
-import { runSeedMigrations } from '../../../../core_abstractions/ports/cache/seed-migrator.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
@@ -17,30 +16,6 @@ const LOAD_COL_SPAN    = 6;
 const KIND         = 'local-charges';
 const UNIT_KIND    = 'units-of-measure';
 const CARRIER_KIND = 'ocean-carriers';
-const SEED_URL     = 'seed/masters/local-charges.jsonl';
-const UNIT_SEED    = 'seed/masters/units-of-measure.jsonl';
-const CARRIER_SEED = 'seed/masters/ocean-carriers.jsonl';
-// Matches ocean-carriers.js genId()'s KIND_PREFIX — same row must resolve to the same id
-// whichever view seeds it first (this migration or the ocean-carriers master's own seed).
-const CARRIER_ID_PREFIX = 'OCR';
-
-// Versioned seeds — add a new migration id when a shipping line / rows are appended.
-// Exported for AC-03 direct materialization testing (F-28-08).
-//
-// Each local-charges version REPLACES the last rather than sitting next to it, because the same
-// rows keep being CORRECTED, not appended — and a workspace already seeded holds the old values
-// until a NEW id runs, so the id is the only thing that reaches it. Listing the old ids too would
-// just make a fresh workspace write all 90 rows once per version. `_seed_locked` rows survive all.
-//   v2: vat_pct carried 0.0526315789 (20/19 — dividing by 0.95 instead of multiplying by 1.05,
-//       and not a legal VN rate); 65 of 90 descriptions had no Vietnamese diacritics.
-//   v3: effective_from -> valid_from, explicit valid_to, and a declared pricing_key. The envelope
-//       used to DERIVE pricing_key from the row id, which made every record its own key — no two
-//       could share one, so the overlap guard could never fire and resolveOnDate matched nothing.
-export const SEED_MIGRATIONS = [
-  { id: '2026-07-09-units-of-measure-v1', kind: UNIT_KIND,    url: UNIT_SEED,    key: (e) => e.code },
-  { id: '2026-08-10-local-charges-v3',    kind: KIND,         url: SEED_URL,     key: (e) => e.id },
-  { id: '2026-07-13-ocean-carriers-v1',   kind: CARRIER_KIND, url: CARRIER_SEED, key: (e) => `${CARRIER_ID_PREFIX}-${e.scac}` },
-];
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -150,17 +125,14 @@ export async function render(root) {
   let units    = [];
   let carriers = [];
 
-  // F-20-01: seed + list bounded as one sequence — a stalled Drive write on a fresh
-  // workspace resolves to a caught failure instead of hanging at "Đang tải…".
+  // F-20-01: bounded — a stalled server read on a fresh workspace resolves to a caught
+  // failure instead of hanging at "Đang tải…".
   async function loadAndRender() {
-    const loadRes = await safeMasterLoad(async () => {
-      await runSeedMigrations(repo, SEED_MIGRATIONS); // versioned + idempotent
-      return Promise.all([
-        repo.list(KIND, null).catch(() => []),
-        repo.list(UNIT_KIND, null).catch(() => []),
-        repo.list(CARRIER_KIND, null).catch(() => []),
-      ]);
-    }, 'local-charges:load');
+    const loadRes = await safeMasterLoad(() => Promise.all([
+      repo.list(KIND, null).catch(() => []),
+      repo.list(UNIT_KIND, null).catch(() => []),
+      repo.list(CARRIER_KIND, null).catch(() => []),
+    ]), 'local-charges:load');
 
     if (!loadRes.ok) {
       renderMasterLoadRetryRow(body, colSpan, t('common.load.error'), t('common.load.retry'), loadAndRender);

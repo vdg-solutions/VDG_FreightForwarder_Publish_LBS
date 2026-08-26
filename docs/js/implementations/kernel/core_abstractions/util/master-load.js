@@ -4,8 +4,6 @@
 // at "Đang tải…"/"Loading...". No page-specific logic lives here.
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from './safe-await.js';
-import { fetchText } from '../ports/http.js';
-import { nowMs } from '../ports/clock.js';
 
 const RETRY_BTN_ID = 'master-load-retry-btn';
 
@@ -19,32 +17,6 @@ export async function safeMasterLoad(loadFn, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
 // Bounded repo.list — for callers that just need the settled result.
 export function boundedList(repo, kind, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
   return safeMasterLoad(() => repo.list(kind, null), tag, _ms);
-}
-
-// Generic auto-seed-if-empty: fetch seedUrl once when items is empty, upsert each row
-// via a bounded repo.put. genId(entry) resolves the row id when entry.id is missing.
-// On timeout/failure of the whole sequence, returns the original items — never hangs.
-export async function boundedSeedIfEmpty(repo, kind, seedUrl, items, genId, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
-  if (items.length > 0) return items;
-  const res = await safeMasterLoad(async () => {
-    const text = await fetchText(seedUrl);
-    if (text == null) return items;
-    const lines = text.trim().split('\n').filter(Boolean);
-    const seeded = [];
-    // AC-04: loop-level deadline so a stalled repo.put can't keep the inner loop churning
-    // detached after the outer safeMasterLoad race has already returned at _ms.
-    const _deadline = nowMs() + _ms;
-    for (const line of lines) {
-      if (nowMs() >= _deadline) break;
-      const entry = JSON.parse(line);
-      if (!entry.id) entry.id = genId(entry);
-      const putRes = await safeAwait(repo.put(kind, entry.id, entry), Math.max(0, _deadline - nowMs()), null, `${tag}:put`);
-      if (!putRes.ok) continue; // stalled write — skip row, retry next load
-      seeded.push(entry);
-    }
-    return seeded;
-  }, tag, _ms);
-  return res.ok ? res.value : items;
 }
 
 // Actionable retry row — replaces a colspan "Đang tải…" placeholder inside a <tbody>.

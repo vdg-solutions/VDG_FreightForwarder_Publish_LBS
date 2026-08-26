@@ -6,21 +6,18 @@
 
 import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
-import { runSeedMigrations } from '../../../../core_abstractions/ports/cache/seed-migrator.js';
 import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { migrateLegacyShipmentState } from '../../../../core_abstractions/ports/flows/shipment-state-migrator.js';
-import { SHIPMENT_STATES_SEED_MIGRATION } from '../../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { SHIPMENT_STATES_KIND } from '../../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { openModal } from './shipment-states-modal.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 
-// Single source for the kind + versioned seed migration — shared with every consumer
-// (util/shipment-state-aliases.js) so this view and the read/write paths can never diverge.
-const KIND          = SHIPMENT_STATES_KIND;
-const SEED_MIGRATION = SHIPMENT_STATES_SEED_MIGRATION;
+// Single source for the kind — shared with every consumer (util/shipment-state-aliases.js) so
+// this view and the read path can never diverge.
+const KIND = SHIPMENT_STATES_KIND;
 
 const BASE_COL_SPAN = 4;
 
@@ -35,10 +32,7 @@ function canWrite() {
 }
 
 async function loadStates(repo) {
-  return safeMasterLoad(async () => {
-    await runSeedMigrations(repo, [SEED_MIGRATION]); // versioned + idempotent, never re-invents rows
-    return (await repo.list(KIND, null).catch(() => [])) || [];
-  }, 'shipment-states:load');
+  return safeMasterLoad(async () => (await repo.list(KIND, null).catch(() => [])) || [], 'shipment-states:load');
 }
 
 function rowHtml(s, isEditor) {

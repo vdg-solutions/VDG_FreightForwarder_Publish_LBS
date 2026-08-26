@@ -8,11 +8,10 @@ import {
   validateFlightNo, validateAirportIata, validateAirlineIata,
 } from '../../../../../kernel/core_abstractions/util/iata-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, boundedSeedIfEmpty, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
 const KIND        = 'flights';
 const KIND_PREFIX = 'FLT';
-const SEED_URL    = 'seed/masters/flights.jsonl';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -173,7 +172,6 @@ export async function render(root) {
       return;
     }
     items = listRes.value;
-    if (isM) items = await boundedSeedIfEmpty(repo, KIND, SEED_URL, items, () => genId(), 'flights:seed');
     if (tbody) tbody.innerHTML = items.map((e) => rowHtml(e, isM)).join('');
     if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
     if (statusEl) statusEl.textContent = '';

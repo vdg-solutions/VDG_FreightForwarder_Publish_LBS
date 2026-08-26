@@ -22,7 +22,7 @@ import { resolveUserRole } from '../../implementations/ui/core_abstractions/port
 import { loadLocale } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { APP_VERSION } from '../../implementations/kernel/core_abstractions/version.js';
 import { runLicenseGate } from './license-boot-gate.js';
-import { globalizeBridgeExports } from './wasm-loader.js';
+import { loadWasmOrThrow } from './wasm-loader.js';
 import { rehydrateFsmStates } from '../../implementations/ui/core_abstractions/ports/flows/fsm-ingest.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
@@ -46,14 +46,11 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
 
-  // 2. Load WASM
+  // 2. Load WASM — app.js's main() already kicked this off in parallel with the awaits above
+  // (boot/wasm-boot-loader.js), so this normally resolves from wasm-loader.js's shared cache
+  // instantly; a caller reaching this step first (a test, a retry) still loads it correctly.
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL('pkg/vdg_freight.js?v=4d17a29', document.baseURI).href);
-  const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=4d17a29', document.baseURI).href;
-  await wasmMod.default({ module_or_path: wasmUrl });
-  window.__vdg_wasm = wasmMod;
-  globalizeBridgeExports(wasmMod);
-  window.dispatchEvent(new Event('vdg:wasm-ready'));
+  const wasmMod = await loadWasmOrThrow();
 
   fsm.dispatch(BootEvent.WASM_READY);
 

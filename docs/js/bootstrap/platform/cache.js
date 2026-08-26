@@ -17,17 +17,6 @@ import { pnlLineId } from '../../implementations/ui/core_abstractions/ports/data
 const repo = () => window.__vdg_repo;
 const io   = () => window.__vdg_io;
 
-// The row-key projection each seed migration declares. Registered by the ui port right before the
-// wasm engine runs, because the migration list is the VIEW's declaration — the engine (which ids
-// are applied, what a lock means, when a stall retries) is Rust's.
-const _seedKeys = new Map();
-
-export function registerSeedKeys(migrations) {
-  for (const m of migrations || []) {
-    if (m && typeof m.key === 'function') _seedKeys.set(m.id, m.key);
-  }
-}
-
 async function bounded(promise, tag) {
   const res = await safeAwait(promise, SAFE_AWAIT_DEFAULT_MS, null, tag);
   if (!res.ok) throw res.error || new Error(`cache platform: ${tag} did not settle`);
@@ -40,16 +29,6 @@ export const cachePlatform = {
   cache_put:      (kind, id, body) => bounded(repo().put(kind, id, body), `cache:put:${kind}`),
   cache_meta_get: (key)            => bounded(io().cache_get_meta(key), `cache:meta-get:${key}`),
   cache_meta_put: (key, body)      => bounded(io().cache_put_meta(key, body), `cache:meta-put:${key}`),
-
-  // A seed file that is not there is not a failure — the kind simply has no bundled data.
-  cache_fetch_text: async (url) => {
-    const res = await bounded(fetch(url), `cache:seed-fetch:${url}`);
-    return res && res.ok ? bounded(res.text(), `cache:seed-body:${url}`) : null;
-  },
-  cache_seed_key: (migrationId, row) => {
-    const key = _seedKeys.get(migrationId);
-    return String((key ? key(row) : row?.id) ?? '');
-  },
 
   cache_priced_envelope: async (id, row) => toPricedEnvelope(id, row),
   cache_priced_seed: async (kind, records) => {

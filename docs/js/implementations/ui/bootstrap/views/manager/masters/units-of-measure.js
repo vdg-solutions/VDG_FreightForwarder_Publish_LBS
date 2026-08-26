@@ -7,16 +7,11 @@ import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master
 import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
 import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { runSeedMigrations } from '../../../../core_abstractions/ports/cache/seed-migrator.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { genUnitId, validateUnit, checkCodeUnique } from '../../../../../kernel/core_abstractions/util/uom-validators.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 
-const KIND     = 'units-of-measure';
-const SEED_URL = 'seed/masters/units-of-measure.jsonl';
-// Bump this id (or add a new one) when the seed file gains rows — versioned, idempotent.
-// Exported for AC-03 direct materialization testing (F-28-08).
-export const SEED_MIGRATION = { id: '2026-08-26-units-of-measure-v3', kind: KIND, url: SEED_URL, key: (e) => e.code };
+const KIND = 'units-of-measure';
 
 const BASE_COL_SPAN    = 5;
 
@@ -178,10 +173,7 @@ function rowHtml(u, isEditor) {
 // F-20-01: bounded — a stalled Drive write on a fresh workspace resolves to
 // { ok: false } instead of hanging the caller at "Đang tải…".
 async function loadUnits(repo) {
-  return safeMasterLoad(async () => {
-    await runSeedMigrations(repo, [SEED_MIGRATION]); // versioned + idempotent, không đè user edit
-    return (await repo.list(KIND, null).catch(() => [])) || [];
-  }, 'units-of-measure:load');
+  return safeMasterLoad(async () => (await repo.list(KIND, null).catch(() => [])) || [], 'units-of-measure:load');
 }
 
 export async function render(root) {
