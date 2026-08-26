@@ -210,7 +210,17 @@ function shipmentToDraft(shipment, ce) {
     sales_rep: s.sales_rep_id || "",
     customer: s.customer || "",
     shipper: s.shipper || "",
+    shipper_address: s.shipper_address || "",
     consignee: s.consignee || "",
+    consignee_address: s.consignee_address || "",
+    // Air header block — not read at all before this feature (a pre-existing gap: mode,
+    // dim_l/w/h_cm, uld_type, flight_no, chargeable_kg and the airport fields have the same hole
+    // and stay unmapped here). Fixed for exactly the fields this feature adds/renames, since an
+    // edit that dropped them would make the new quantity/weight unit pickers look broken.
+    pieces: s.pieces ?? "",
+    package_type: s.package_type || "",
+    weight_actual: s.weight_actual ?? "",
+    weight_uom: s.weight_uom || "",
     vessel: s.vessel || "",
     carrier: s.carrier || "",
     etd: s.etd || "",
@@ -290,7 +300,9 @@ function buildShipment(state, ref, salesRepId, opts = {}) {
     job_file_no: state.job_file_no || null,
     customer: state.customer || null,
     shipper: state.shipper || null,
+    shipper_address: state.shipper_address || null,
     consignee: state.consignee || null,
+    consignee_address: state.consignee_address || null,
     notify_party: state.notify_party || null,
     mbl: state.mbl || null,
     // F-32-01: HBL present ⇒ HBL No = D/O No = Job No (auto-fill supersedes any typed value)
@@ -328,8 +340,13 @@ function buildShipment(state, ref, salesRepId, opts = {}) {
     airport_origin: state.origin_iata || null,
     airport_dest: state.dest_iata || null,
     chargeable_kg: parseFloat(state.chargeable_kg) || null,
-    weight_actual_kg: parseFloat(state.weight_actual_kg) || null,
+    // no "_kg" suffix — the value is stored in whatever weight_uom names, never forced to kg.
+    // Every consumer (chargeable-weight calc, document print) reads the two together and must
+    // not assume kilograms.
+    weight_actual: parseFloat(state.weight_actual) || null,
+    weight_uom: state.weight_uom || null,
     pieces: parseInt(state.pieces, 10) || null,
+    package_type: state.package_type || null,
     uld_type: state.uld_type || null,
     flight_no: state.flight_no || null,
     pol: state.pol || null,
@@ -492,6 +509,23 @@ function quotePickSel(quoteId) {
   </select>`;
 }
 var CONTAINER_TYPES = ["20DC", "40DC", "40HC", "45HC", "20RF", "40RF", "20OT", "40OT", "20FR", "40FR", "20TK"];
+var PKG_TYPES = ["CTNS", "PLTS", "BAGS", "BOXES", "CRATES", "PKGS", "DRUMS", "ROLLS", "SETS", "UNITS"];
+var DEFAULT_PACKAGE_TYPE = "CTNS";
+var FALLBACK_WEIGHT_UNITS = ["KG", "LB"];
+var DEFAULT_WEIGHT_UOM = "KG";
+function codeSelect(name, codes, selected, fallback) {
+  const sel = selected || fallback;
+  const legacy = selected && !codes.includes(selected) ? `<option value="${selected}" selected>${selected}</option>` : "";
+  const opts = codes.map((c) => `<option value="${c}"${c === sel ? " selected" : ""}>${c}</option>`).join("");
+  return `<select name="${name}" class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-white">${legacy}${opts}</select>`;
+}
+function packageTypeSelect(selected) {
+  return codeSelect("package_type", PKG_TYPES, selected, DEFAULT_PACKAGE_TYPE);
+}
+function weightUomSelect(weightUnits, selected) {
+  const codes = weightUnits && weightUnits.length > 0 ? weightUnits : FALLBACK_WEIGHT_UNITS;
+  return codeSelect("weight_uom", codes, selected, DEFAULT_WEIGHT_UOM);
+}
 function txtWithList(name, val, ph, listId) {
   const phAttr = ph ? ` placeholder="${ph}"` : "";
   const listAttr = listId ? ` list="${listId}"` : "";
@@ -538,7 +572,7 @@ function renderHistoryDatalists(carriers = [], shipments = []) {
     </datalist>
   `;
 }
-function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], shipments = [] } = {}) {
+function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], shipments = [], weightUnits = [] } = {}) {
   const d = draft;
   const mode = (d.mode || "SEA").toUpperCase();
   const seaHide = mode === "AIR" ? ' class="hidden"' : "";
@@ -562,7 +596,9 @@ function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], sh
         ${fld(t("sales_new.field.quote_pick"), quotePickSel(d.quote_id))}
         ${fld(t("sales_new.field.customer"), custSel(customers, d.customer, d._autofilled))}
         ${fld(t("sales_new.field.shipper"), txtWithList("shipper", d.shipper, t("sales_new.ph_shipper"), "shipper-history-list"))}
+        ${fld(t("sales_new.field.shipper_address"), txt("shipper_address", d.shipper_address))}
         ${fld(t("sales_new.field.consignee"), txtWithList("consignee", d.consignee, t("sales_new.ph_consignee"), "consignee-history-list"))}
+        ${fld(t("sales_new.field.consignee_address"), txt("consignee_address", d.consignee_address))}
         ${fld(t("sales_new.field.carrier"), txtWithList("carrier", d.carrier, t("sales_new.ph_carrier"), "carrier-history-list"))}
         ${cfld(t("sales_new.field.vessel_voyage"), `
           <div class="flex items-center gap-1.5">
@@ -602,11 +638,13 @@ function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], sh
             </span>
           </div>
         </div>
-        ${fld(t("sales_new.field.weight_actual"), num("weight_actual_kg", d.weight_actual_kg))}
+        ${fld(t("sales_new.field.weight_actual"), num("weight_actual", d.weight_actual))}
+        ${fld(t("sales_new.field.weight_uom"), weightUomSelect(weightUnits, d.weight_uom))}
         ${cfld(t("sales_new.field.dim_l"), num("dim_l_cm", d.dim_l_cm), `data-air-only${airHide}`)}
         ${cfld(t("sales_new.field.dim_w"), num("dim_w_cm", d.dim_w_cm), `data-air-only${airHide}`)}
         ${cfld(t("sales_new.field.dim_h"), num("dim_h_cm", d.dim_h_cm), `data-air-only${airHide}`)}
         ${fld(t("sales_new.field.pieces"), num("pieces", d.pieces))}
+        ${fld(t("sales_new.field.qty_uom"), packageTypeSelect(d.package_type))}
         ${cfld(t("sales_new.field.uld_type"), txt("uld_type", d.uld_type), `data-air-only${airHide}`)}
         ${cfld(t("sales_new.field.flight_no"), txt("flight_no", d.flight_no), `data-air-only${airHide}`)}
         ${cfld(t("sales_new.field.origin_iata"), txt("origin_iata", d.origin_iata, "SGN"), `data-air-only${airHide}`)}
@@ -761,14 +799,15 @@ function _applyMode(root, mode) {
     el.classList.toggle("hidden", !isAir);
   });
 }
+var LB_TO_KG = 0.45359237;
+function _toKg(value, uom) {
+  return uom === "LB" ? value * LB_TO_KG : value;
+}
 function _updateChargeable(root) {
   const n = (name) => parseFloat(root.querySelector(`[name=${name}]`)?.value) || 0;
-  const kg = computeChargeableKg(
-    n("weight_actual_kg"),
-    n("dim_l_cm"),
-    n("dim_w_cm"),
-    n("dim_h_cm")
-  );
+  const actualUom = root.querySelector("[name=weight_uom]")?.value;
+  const actualKg = _toKg(n("weight_actual"), actualUom);
+  const kg = computeChargeableKg(actualKg, n("dim_l_cm"), n("dim_w_cm"), n("dim_h_cm"));
   const el = root.querySelector("[name=chargeable_kg]");
   if (el) el.value = kg;
 }
@@ -809,15 +848,19 @@ function wireHeaderSection(root, onChanged) {
     root.querySelectorAll("[data-hbl-do-row]").forEach((el) => el.classList.toggle("hidden", !on));
     if (disp) disp.value = on ? root.querySelector("[name=job_no]")?.value || "" : "";
   });
-  const airFields = ["weight_actual_kg", "dim_l_cm", "dim_w_cm", "dim_h_cm"];
+  const airFields = ["weight_actual", "dim_l_cm", "dim_w_cm", "dim_h_cm"];
   airFields.forEach((name) => {
     root.querySelector(`[name=${name}]`)?.addEventListener("input", () => {
       _updateChargeable(root);
       onChanged?.();
     });
   });
+  root.querySelector("[name=weight_uom]")?.addEventListener("change", () => {
+    _updateChargeable(root);
+    onChanged?.();
+  });
   root.querySelector("#sec-a-body")?.querySelectorAll("input,select").forEach((el) => {
-    if (el !== mblEl && el !== modeEl && !airFields.includes(el.name) && el.id !== "customer-search-input") {
+    if (el !== mblEl && el !== modeEl && !airFields.includes(el.name) && el.name !== "weight_uom" && el.id !== "customer-search-input") {
       el.addEventListener("input", onChanged);
       el.addEventListener("change", onChanged);
     }
@@ -2070,7 +2113,6 @@ var NAME_ATA = "ata";
 function escHtml2(str) {
   return String(str ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-var PKG_TYPES = ["CTNS", "PLTS", "BAGS", "BOXES", "CRATES", "PKGS", "DRUMS", "ROLLS", "SETS", "UNITS"];
 function cargoItemRowHtml(idx, item = {}) {
   const pkgOpts = PKG_TYPES.map(
     (p) => `<option value="${p}"${(item.package_type || "CTNS") === p ? " selected" : ""}>${p}</option>`
@@ -2232,11 +2274,15 @@ function syncCargoRollup(root) {
   if (elCbm) elCbm.textContent = totalCbm.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
   if (rows.length > 0 && (totalQty > 0 || totalGw > 0 || totalCbm > 0 || descriptions.length > 0)) {
     const inpPieces = root.querySelector("input[name=pieces]");
-    const inpGw = root.querySelector("input[name=weight_actual_kg]");
+    const inpGw = root.querySelector("input[name=weight_actual]");
+    const uomGw = root.querySelector("select[name=weight_uom]");
     const inpCbm = root.querySelector("input[name=volume_cbm]");
     const inpComm = root.querySelector("input[name=commodity]");
     if (inpPieces && totalQty > 0) inpPieces.value = totalQty;
-    if (inpGw && totalGw > 0) inpGw.value = totalGw;
+    if (inpGw && totalGw > 0) {
+      inpGw.value = totalGw;
+      if (uomGw) uomGw.value = "KG";
+    }
     if (inpCbm && totalCbm > 0) inpCbm.value = totalCbm;
     if (inpComm && descriptions.length > 0) inpComm.value = descriptions.join("; ");
   }
@@ -2646,7 +2692,9 @@ var FIELD_SCREEN = {
   hbl_do_display: [SCREEN_BOOKING, SCREEN_DOCS, SCREEN_BILL],
   // Documentation (Tab 2, Tab 3)
   shipper: [SCREEN_DOCS, SCREEN_BILL],
+  shipper_address: [SCREEN_DOCS, SCREEN_BILL],
   consignee: [SCREEN_DOCS, SCREEN_BILL],
+  consignee_address: [SCREEN_DOCS, SCREEN_BILL],
   notify_party: [SCREEN_DOCS, SCREEN_BILL],
   for_delivery: [SCREEN_DOCS, SCREEN_BILL],
   contact_person: [SCREEN_BOOKING, SCREEN_DOCS],
@@ -2657,7 +2705,9 @@ var FIELD_SCREEN = {
   // Cargo & Commodity (Tab 2, Tab 3)
   commodity: [SCREEN_DOCS, SCREEN_BILL],
   pieces: [SCREEN_DOCS, SCREEN_BILL],
-  weight_actual_kg: [SCREEN_DOCS, SCREEN_BILL],
+  package_type: [SCREEN_DOCS, SCREEN_BILL],
+  weight_actual: [SCREEN_DOCS, SCREEN_BILL],
+  weight_uom: [SCREEN_DOCS, SCREEN_BILL],
   volume_cbm: [SCREEN_DOCS, SCREEN_BILL],
   dim_l_cm: [SCREEN_DOCS],
   dim_w_cm: [SCREEN_DOCS],
@@ -2923,7 +2973,8 @@ async function renderForm(root, opts = {}) {
     reps = [],
     editRef = null,
     carriers = [],
-    shipments = []
+    shipments = [],
+    weightUnits = []
   } = opts;
   const isEdit = mode === "edit";
   const docDate = draft?.transaction_date || todayLocal();
@@ -2948,7 +2999,7 @@ async function renderForm(root, opts = {}) {
       </div>
       <div id="phase-timeline"></div>
       <form id="shipment-form" class="space-y-4" novalidate>
-        ${sectionAHtml(d, customers, reps, { carriers, shipments })}
+        ${sectionAHtml(d, customers, reps, { carriers, shipments, weightUnits })}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ""}
         ${revenueVisible ? sectionDHtml(d, { isManager }) : ""}
@@ -3024,7 +3075,9 @@ function collectFormState(root) {
     sales_rep: g2("sales_rep"),
     customer: g2("customer"),
     shipper: g2("shipper"),
+    shipper_address: g2("shipper_address"),
     consignee: g2("consignee"),
+    consignee_address: g2("consignee_address"),
     contact_person: g2("contact_person"),
     vessel: g2("vessel"),
     carrier: g2("carrier"),
@@ -3037,11 +3090,13 @@ function collectFormState(root) {
     roe_selling: g2("roe_selling"),
     currency: g2("currency"),
     // air fields
-    weight_actual_kg: g2("weight_actual_kg"),
+    weight_actual: g2("weight_actual"),
+    weight_uom: g2("weight_uom"),
     dim_l_cm: g2("dim_l_cm"),
     dim_w_cm: g2("dim_w_cm"),
     dim_h_cm: g2("dim_h_cm"),
     pieces: g2("pieces"),
+    package_type: g2("package_type"),
     uld_type: g2("uld_type"),
     flight_no: g2("flight_no"),
     origin_iata: g2("origin_iata"),
@@ -3485,9 +3540,10 @@ async function render(root, opts = {}) {
   let revenueVisible = true;
   let carriers = [];
   let shipments = [];
+  let weightUnits = [];
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList] = await Promise.all([
+      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, uomList] = await Promise.all([
         repo.list("customers").catch(() => []),
         repo.list("carriers").catch(() => []),
         repo.list("shipments").catch(() => []),
@@ -3497,7 +3553,10 @@ async function render(root, opts = {}) {
         // not a Drive fetch: the delta tick is what keeps it current, not this render.
         isEdit ? Promise.resolve(null) : readSettings(repo),
         // F-41-01: the rep select's options — a master-kind read, same 5-min registry cache.
-        getActiveSalesReps(repo).catch(() => [])
+        getActiveSalesReps(repo).catch(() => []),
+        // Weight-unit select's options — same registry read pattern as getContainerTypes()
+        // (sales-quote-new.js): a master-kind list, filtered to the "weight" category client-side.
+        repo.list("units-of-measure").catch(() => [])
       ]);
       let resolvedUserConfig = rawUserConfig;
       if (assignment?.sales_pct != null) {
@@ -3512,7 +3571,7 @@ async function render(root, opts = {}) {
         } catch {
         }
       }
-      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList };
+      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList, uomList };
     }, "sales-new:personalization", PERSONALIZATION_LOAD_TIMEOUT_MS);
     if (loadRes.ok) {
       customers = loadRes.value.customerList;
@@ -3522,6 +3581,7 @@ async function render(root, opts = {}) {
       jobNo = loadRes.value.jobNo;
       defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
       reps = loadRes.value.repList;
+      weightUnits = (loadRes.value.uomList || []).filter((u) => u.category === "weight").map((u) => u.code);
     }
   }
   if (isEdit) {
@@ -3592,7 +3652,8 @@ async function render(root, opts = {}) {
     reps,
     editRef,
     carriers,
-    shipments
+    shipments,
+    weightUnits
   });
   mountPhaseTimeline(formMount, {
     ...draft || {},

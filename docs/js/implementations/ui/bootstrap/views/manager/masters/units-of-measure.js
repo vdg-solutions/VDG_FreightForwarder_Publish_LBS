@@ -16,7 +16,7 @@ const KIND     = 'units-of-measure';
 const SEED_URL = 'seed/masters/units-of-measure.jsonl';
 // Bump this id (or add a new one) when the seed file gains rows — versioned, idempotent.
 // Exported for AC-03 direct materialization testing (F-28-08).
-export const SEED_MIGRATION = { id: '2026-08-24-units-of-measure-v2', kind: KIND, url: SEED_URL, key: (e) => e.code };
+export const SEED_MIGRATION = { id: '2026-08-26-units-of-measure-v3', kind: KIND, url: SEED_URL, key: (e) => e.code };
 
 const BASE_COL_SPAN    = 5;
 
@@ -35,7 +35,7 @@ function norm(s) {
 // Module-const gotcha: t() must not resolve before the locale JSON loads — build the
 // category map as a function, called per render, never as a frozen module const.
 function categoryLabels() {
-  return { container: t('uom.category.container'), billing: t('uom.category.billing') };
+  return { container: t('uom.category.container'), billing: t('uom.category.billing'), weight: t('uom.category.weight') };
 }
 
 // F-28-08: registry-driven writer gate — mirrors app.js/sidebar.js's effectiveRole pattern.

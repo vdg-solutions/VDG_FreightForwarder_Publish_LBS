@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 20a1e2d-dirty">v0.4.25 (20a1e2d-dirty)</span>
+        <span class="font-mono whitespace-nowrap" title="build 57a4c83-dirty">v0.4.26 (57a4c83-dirty)</span>
       </div>
     `;
   }
@@ -1831,19 +1831,29 @@ if (typeof customElements !== "undefined") {
 }
 var RETRY_BTN_ID = "view-mount-retry-btn";
 var RETRY_BTN_TESTID = "view-mount-retry";
-function renderViewMountRecovery(root, { route, offline, exhausted, onRetry }) {
-  const bodyKey = offline ? "view_mount_failed_offline" : exhausted ? "view_mount_failed_persist" : "view_mount_failed_body";
+var RELOAD_BTN_ID = "view-mount-reload-btn";
+var RELOAD_BTN_TESTID = "view-mount-reload";
+function renderViewMountRecovery(root, { route, offline, exhausted, reason, onRetry, onReload }) {
+  const bodyKey = offline ? "view_mount_failed_offline" : reason === "network" ? "view_mount_failed_network" : exhausted ? "view_mount_failed_persist" : "view_mount_failed_body";
+  const showReload = !offline && reason === "network";
   root.innerHTML = `
     <div data-testid="view-mount-recovery" data-route="${route}"
          class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-lg font-semibold text-slate-700">${t("view_mount_failed_title")}</div>
       <div class="text-sm text-slate-500">${t(bodyKey)}</div>
-      <button id="${RETRY_BTN_ID}" data-testid="${RETRY_BTN_TESTID}"
-              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-        ${t("view_mount_retry")}
-      </button>
+      <div class="flex gap-2 mt-2">
+        <button id="${RETRY_BTN_ID}" data-testid="${RETRY_BTN_TESTID}"
+                class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+          ${t("view_mount_retry")}
+        </button>
+        ${showReload ? `<button id="${RELOAD_BTN_ID}" data-testid="${RELOAD_BTN_TESTID}"
+                class="px-4 py-2 bg-slate-200 text-slate-700 rounded text-sm hover:bg-slate-300">
+          ${t("view_mount_reload")}
+        </button>` : ""}
+      </div>
     </div>`;
   root.querySelector(`#${RETRY_BTN_ID}`)?.addEventListener("click", () => onRetry());
+  if (showReload) root.querySelector(`#${RELOAD_BTN_ID}`)?.addEventListener("click", () => onReload());
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/cmd-palette.js
@@ -2136,7 +2146,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.25 (20a1e2d-dirty)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.26 (57a4c83-dirty)</div>
         </div>
       </div>
     </div>`;
@@ -4543,7 +4553,7 @@ function renderServerGate(mount, err, { onReconnected, onSignIn, serverBackend =
 // output/web/js.tmp/implementations/ui/bootstrap/util/view-fallback.js
 var MAX_VIEW_MOUNT_RETRIES = 2;
 var _attempts = /* @__PURE__ */ new Map();
-function renderViewFallback(root, route) {
+function renderViewFallback(root, route, reason = "timeout") {
   const used = _attempts.get(route) ?? 0;
   const exhausted = used >= MAX_VIEW_MOUNT_RETRIES;
   const offline = typeof navigator !== "undefined" && navigator.onLine === false;
@@ -4551,11 +4561,22 @@ function renderViewFallback(root, route) {
     route,
     offline,
     exhausted,
+    reason,
     onRetry: () => {
       _attempts.set(route, used + 1);
       window.dispatchEvent(new CustomEvent("vdg:navigate", { detail: { route } }));
-    }
+    },
+    onReload: _healOrReload
+    // fires ONLY on user click — never automatic
   });
+}
+async function _healOrReload() {
+  const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
+  if (reg?.waiting) {
+    window.dispatchEvent(new CustomEvent("vdg:sw-update-accept"));
+  } else {
+    location.reload();
+  }
 }
 function resetViewMountRetries(route) {
   _attempts.delete(route);
@@ -4563,13 +4584,20 @@ function resetViewMountRetries(route) {
 
 // output/web/js.tmp/implementations/ui/bootstrap/util/view-loader.js
 var VIEW_LOAD_TIMEOUT_MS = 25e3;
-async function loadView(importFn, root, route, _fb = renderViewFallback, _ms = VIEW_LOAD_TIMEOUT_MS) {
-  const result = await safeAwait(importFn(), _ms, null, `view-mount:${route}`);
+var VIEW_LOAD_RETRY_COUNT = 1;
+var VIEW_LOAD_RETRY_DELAY_MS = 1200;
+async function loadView(importFn, root, route, _fb = renderViewFallback, _ms = VIEW_LOAD_TIMEOUT_MS, _delayMs = VIEW_LOAD_RETRY_DELAY_MS) {
+  let result = await safeAwait(importFn(), _ms, null, `view-mount:${route}`);
+  for (let attempt = 1; !result.ok && attempt <= VIEW_LOAD_RETRY_COUNT; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, _delayMs));
+    result = await safeAwait(importFn(), _ms, null, `view-mount:${route}:retry${attempt}`);
+  }
   if (!result.ok) {
-    if (result.error && result.error.name !== "SafeAwaitTimeoutError") {
-      console.error(`[view-loader] Import failed for ${route}:`, result.error);
+    const reason = result.error?.name === "SafeAwaitTimeoutError" ? "timeout" : "network";
+    if (reason === "network") {
+      console.error(`[view-loader] Import failed for ${route} after retry:`, result.error);
     }
-    _fb(root, route);
+    _fb(root, route, reason);
     return null;
   }
   return result.value;
@@ -4631,14 +4659,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-GQZWVH3I.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-B3AEFSY6.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-GQZWVH3I.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-B3AEFSY6.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4740,7 +4768,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.25 (20a1e2d-dirty)";
+var APP_VERSION = "v0.4.26 (57a4c83-dirty)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5015,7 +5043,7 @@ var VIEWS = {
   // E-16 F-16-05
   "/masters/air-rates": () => import("./air-rates-MZRCPHMV.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-WB5XDQP3.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-7IIVAGF4.js"),
   "/masters/local-charges": () => import("./local-charges-QP6BFAZS.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
   "/masters/shipment-states": () => import("./shipment-states-YTLFBYJ7.js"),
@@ -5902,8 +5930,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=20a1e2d-dirty", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=20a1e2d-dirty", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=57a4c83-dirty", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=57a4c83-dirty", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -5945,7 +5973,7 @@ function licenseGateReasonForState(state) {
   if (state.kind === LICENSE_STATE_BLOCKED) return LICENSE_GATE_REASON_BLOCKED;
   return LICENSE_GATE_REASON_MISSING;
 }
-var RELOAD_BTN_ID = "license-gate-reload";
+var RELOAD_BTN_ID2 = "license-gate-reload";
 function _title(reason) {
   switch (reason) {
     case LICENSE_GATE_REASON_INVALID:
@@ -5976,12 +6004,12 @@ function renderLicenseGateScreen(container, { reason, errorKind = null, daysPast
     <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-xl font-semibold text-slate-700">${_title(reason)}</div>
       <div class="text-sm text-slate-500 max-w-md">${_body(reason, errorKind, daysPastExp)}</div>
-      <button id="${RELOAD_BTN_ID}"
+      <button id="${RELOAD_BTN_ID2}"
               class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
         ${t("license.gate.retry_button")}
       </button>
     </div>`;
-  container.querySelector(`#${RELOAD_BTN_ID}`)?.addEventListener("click", () => location.reload());
+  container.querySelector(`#${RELOAD_BTN_ID2}`)?.addEventListener("click", () => location.reload());
 }
 
 // output/web/js.tmp/bootstrap/boot/license-boot-gate.js
@@ -6151,8 +6179,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=20a1e2d-dirty", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=20a1e2d-dirty", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=57a4c83-dirty", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=57a4c83-dirty", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6501,7 +6529,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-WNU2NQ6I.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-URR3XW2Y.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6598,8 +6626,8 @@ function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=20a1e2d-dirty", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=20a1e2d-dirty", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=57a4c83-dirty", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=57a4c83-dirty", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;

@@ -38,7 +38,7 @@ function vesselVoy(s) {
 }
 
 function weight(s) {
-  return s.weight_actual_kg ? `${s.weight_actual_kg} KGS` : FIELD_ABSENT;
+  return s.weight_actual ? `${s.weight_actual} ${s.weight_uom || 'KG'}` : FIELD_ABSENT;
 }
 
 // [i18n-key, value] tuples — document-print.js resolves the key through t() at render time.

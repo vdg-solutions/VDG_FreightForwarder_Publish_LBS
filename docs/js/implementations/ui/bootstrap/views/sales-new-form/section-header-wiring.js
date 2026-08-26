@@ -51,12 +51,21 @@ function _applyMode(root, mode) {
   });
 }
 
+// weight_actual is entered in whatever unit weight_uom names, but compute_chargeable_kg (and
+// every rate-card lookup downstream of it) is kg-only — converted here, once, before the wasm
+// call, so a LB actual never gets read as if it were already kg. LB is the only non-kg unit the
+// registry seeds today; an exact international pound (kept as a named constant, not inline).
+const LB_TO_KG = 0.45359237;
+function _toKg(value, uom) {
+  return uom === 'LB' ? value * LB_TO_KG : value;
+}
+
 // recompute + display chargeable weight from air inputs
 function _updateChargeable(root) {
   const n = (name) => parseFloat(root.querySelector(`[name=${name}]`)?.value) || 0;
-  const kg = computeChargeableKg(
-    n('weight_actual_kg'), n('dim_l_cm'), n('dim_w_cm'), n('dim_h_cm')
-  );
+  const actualUom = root.querySelector('[name=weight_uom]')?.value;
+  const actualKg  = _toKg(n('weight_actual'), actualUom);
+  const kg = computeChargeableKg(actualKg, n('dim_l_cm'), n('dim_w_cm'), n('dim_h_cm'));
   const el = root.querySelector('[name=chargeable_kg]');
   if (el) el.value = kg;
 }
@@ -95,16 +104,22 @@ export function wireHeaderSection(root, onChanged) {
     if (disp) disp.value = on ? (root.querySelector('[name=job_no]')?.value || '') : '';
   });
 
-  const airFields = ['weight_actual_kg', 'dim_l_cm', 'dim_w_cm', 'dim_h_cm'];
+  const airFields = ['weight_actual', 'dim_l_cm', 'dim_w_cm', 'dim_h_cm'];
   airFields.forEach((name) => {
     root.querySelector(`[name=${name}]`)?.addEventListener('input', () => {
       _updateChargeable(root);
       onChanged?.();
     });
   });
+  // weight_uom is a <select>, not an air-field text/number input — changing the unit alone (no
+  // change in the typed number) still has to re-run the conversion the chargeable weight depends on.
+  root.querySelector('[name=weight_uom]')?.addEventListener('change', () => {
+    _updateChargeable(root);
+    onChanged?.();
+  });
 
   root.querySelector('#sec-a-body')?.querySelectorAll('input,select').forEach((el) => {
-    if (el !== mblEl && el !== modeEl && !airFields.includes(el.name) && el.id !== 'customer-search-input') {
+    if (el !== mblEl && el !== modeEl && !airFields.includes(el.name) && el.name !== 'weight_uom' && el.id !== 'customer-search-input') {
       el.addEventListener('input', onChanged);
       el.addEventListener('change', onChanged);
     }

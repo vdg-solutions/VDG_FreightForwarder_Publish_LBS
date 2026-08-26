@@ -45,7 +45,7 @@ function checkCodeUnique(items, code, skipId = null) {
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/masters/units-of-measure.js
 var KIND = "units-of-measure";
 var SEED_URL = "seed/masters/units-of-measure.jsonl";
-var SEED_MIGRATION = { id: "2026-08-24-units-of-measure-v2", kind: KIND, url: SEED_URL, key: (e) => e.code };
+var SEED_MIGRATION = { id: "2026-08-26-units-of-measure-v3", kind: KIND, url: SEED_URL, key: (e) => e.code };
 var BASE_COL_SPAN = 5;
 function escHtml(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -54,7 +54,7 @@ function norm(s) {
   return String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 function categoryLabels() {
-  return { container: t("uom.category.container"), billing: t("uom.category.billing") };
+  return { container: t("uom.category.container"), billing: t("uom.category.billing"), weight: t("uom.category.weight") };
 }
 function canWrite() {
   const role = hasRole(ROLE_MANAGER) ? ROLE_MANAGER : currentUserRole();

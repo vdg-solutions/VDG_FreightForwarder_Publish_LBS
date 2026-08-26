@@ -127,9 +127,10 @@ export async function render(root, opts = {}) {
   // await) so a stalled repo never doubles the wait — reuses rawUserConfig, no extra fetch.
   let carriers = [];
   let shipments = [];
+  let weightUnits = [];
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList] = await Promise.all([
+      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, uomList] = await Promise.all([
         repo.list('customers').catch(() => []),
         repo.list('carriers').catch(() => []),
         repo.list('shipments').catch(() => []),
@@ -140,6 +141,9 @@ export async function render(root, opts = {}) {
         isEdit ? Promise.resolve(null) : readSettings(repo),
         // F-41-01: the rep select's options — a master-kind read, same 5-min registry cache.
         getActiveSalesReps(repo).catch(() => []),
+        // Weight-unit select's options — same registry read pattern as getContainerTypes()
+        // (sales-quote-new.js): a master-kind list, filtered to the "weight" category client-side.
+        repo.list('units-of-measure').catch(() => []),
       ]);
       // Resolve manager-assigned sales_pct → inject into userConfig
       let resolvedUserConfig = rawUserConfig;
@@ -154,7 +158,7 @@ export async function render(root, opts = {}) {
           generatedJobNo = await assignJobNo(repo, repCode);
         } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
       }
-      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList };
+      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList, uomList };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
@@ -165,6 +169,7 @@ export async function render(root, opts = {}) {
       jobNo      = loadRes.value.jobNo;
       defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
       reps       = loadRes.value.repList;
+      weightUnits = (loadRes.value.uomList || []).filter((u) => u.category === 'weight').map((u) => u.code);
     }
     // !loadRes.ok (timeout or thrown): customers=[], userConfig=null, jobNo=null — all
     // already-tolerated defaults downstream (sales-new-form.js — no contract change;
@@ -238,7 +243,8 @@ export async function render(root, opts = {}) {
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
   await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
-                                defaultCurrency, revenueVisible, reps, editRef, carriers, shipments });
+                                defaultCurrency, revenueVisible, reps, editRef, carriers, shipments,
+                                weightUnits });
 
   // F-37-04: the phases, inside the form card. In edit mode it reads the shipment; on a new job there is
   // nothing stored yet, so it reads the draft at Created — which is the point: it tells whoever

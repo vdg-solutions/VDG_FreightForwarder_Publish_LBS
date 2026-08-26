@@ -18,3 +18,5 @@
 {"code":"PER_HOUR","category":"billing","unece_code":"HUR","label_vi":"Mỗi giờ","label_en":"Per Hour","aliases":["per hour","hour","giờ","/h"],"description":"Tính phí theo giờ (vd phí điện container lạnh)."}
 {"code":"PER_DAY","category":"billing","unece_code":"DAY","label_vi":"Mỗi ngày","label_en":"Per Day","aliases":["per day","day","ngày","thereafter"],"description":"Tính phí theo ngày (vd DEM/DET sau số ngày miễn phí)."}
 {"code":"PER_CONT_TIME","category":"billing","label_vi":"Mỗi container mỗi lần","label_en":"Per Container per Time","aliases":["per cont per time","per cont/time","mỗi cont mỗi lần"],"description":"Tính phí theo mỗi container cho mỗi lần phát sinh (vd EMF)."}
+{"code":"KG","category":"weight","unece_code":"KGM","factor_to_kg":1,"label_vi":"Kilogram","label_en":"Kilogram","aliases":["kg","kgs","kilo","kilogram"],"description":"Đơn vị trọng lượng hệ mét (kilogram) — mặc định của hệ thống."}
+{"code":"LB","category":"weight","unece_code":"LBR","factor_to_kg":0.45359237,"label_vi":"Pound (Anh/Mỹ)","label_en":"Pound","aliases":["lb","lbs","pound"],"description":"Đơn vị trọng lượng hệ Anh/Mỹ (pound). 1 LB = 0.45359237 KG."}

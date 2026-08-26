@@ -86,22 +86,38 @@ if (typeof customElements !== 'undefined') {
 // #view-root. The fixed <vdg-offline-banner> strip above is pointer-events-none and
 // cannot host the click, so recovery lives here as an exported render fn that reuses
 // the same offline/online state signalling. No cache-bust, no auto re-navigate.
-const RETRY_BTN_ID     = 'view-mount-retry-btn';
-const RETRY_BTN_TESTID = 'view-mount-retry';
+const RETRY_BTN_ID      = 'view-mount-retry-btn';
+const RETRY_BTN_TESTID  = 'view-mount-retry';
+const RELOAD_BTN_ID     = 'view-mount-reload-btn';
+const RELOAD_BTN_TESTID = 'view-mount-reload';
 
-export function renderViewMountRecovery(root, { route, offline, exhausted, onRetry }) {
+export function renderViewMountRecovery(root, { route, offline, exhausted, reason, onRetry, onReload }) {
+  // reason: 'network' — the chunk's URL itself 404/503'd (stale hash vs a moved-on build), not
+  // just "still waiting". Offline still wins the message (the real cause when both are true).
   const bodyKey = offline ? 'view_mount_failed_offline'
+                : reason === 'network' ? 'view_mount_failed_network'
                 : exhausted ? 'view_mount_failed_persist'
                 : 'view_mount_failed_body';
+  // Retry re-runs the SAME route/import — useless against a stale hash that's genuinely gone.
+  // Reload is the real fix for that case (see view-fallback.js's _healOrReload), so only offer
+  // it when there's a network reason to believe a reload would actually change anything.
+  const showReload = !offline && reason === 'network';
   root.innerHTML = `
     <div data-testid="view-mount-recovery" data-route="${route}"
          class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-lg font-semibold text-slate-700">${t('view_mount_failed_title')}</div>
       <div class="text-sm text-slate-500">${t(bodyKey)}</div>
-      <button id="${RETRY_BTN_ID}" data-testid="${RETRY_BTN_TESTID}"
-              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-        ${t('view_mount_retry')}
-      </button>
+      <div class="flex gap-2 mt-2">
+        <button id="${RETRY_BTN_ID}" data-testid="${RETRY_BTN_TESTID}"
+                class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+          ${t('view_mount_retry')}
+        </button>
+        ${showReload ? `<button id="${RELOAD_BTN_ID}" data-testid="${RELOAD_BTN_TESTID}"
+                class="px-4 py-2 bg-slate-200 text-slate-700 rounded text-sm hover:bg-slate-300">
+          ${t('view_mount_reload')}
+        </button>` : ''}
+      </div>
     </div>`;
   root.querySelector(`#${RETRY_BTN_ID}`)?.addEventListener('click', () => onRetry());
+  if (showReload) root.querySelector(`#${RELOAD_BTN_ID}`)?.addEventListener('click', () => onReload());
 }

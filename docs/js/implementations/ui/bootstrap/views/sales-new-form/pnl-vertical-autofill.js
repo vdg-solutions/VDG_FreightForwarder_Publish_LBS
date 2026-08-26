@@ -78,7 +78,17 @@ export function shipmentToDraft(shipment, ce) {
     sales_rep:    s.sales_rep_id          || '',
     customer:     s.customer              || '',
     shipper:      s.shipper               || '',
+    shipper_address:   s.shipper_address    || '',
     consignee:    s.consignee             || '',
+    consignee_address: s.consignee_address  || '',
+    // Air header block — not read at all before this feature (a pre-existing gap: mode,
+    // dim_l/w/h_cm, uld_type, flight_no, chargeable_kg and the airport fields have the same hole
+    // and stay unmapped here). Fixed for exactly the fields this feature adds/renames, since an
+    // edit that dropped them would make the new quantity/weight unit pickers look broken.
+    pieces:       s.pieces                ?? '',
+    package_type: s.package_type          || '',
+    weight_actual: s.weight_actual        ?? '',
+    weight_uom:   s.weight_uom            || '',
     vessel:       s.vessel                || '',
     carrier:      s.carrier               || '',
     etd:          s.etd                   || '',

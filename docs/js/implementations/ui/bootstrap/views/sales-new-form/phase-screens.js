@@ -82,7 +82,9 @@ const FIELD_SCREEN = {
 
   // Documentation (Tab 2, Tab 3)
   shipper: [SCREEN_DOCS, SCREEN_BILL],
+  shipper_address: [SCREEN_DOCS, SCREEN_BILL],
   consignee: [SCREEN_DOCS, SCREEN_BILL],
+  consignee_address: [SCREEN_DOCS, SCREEN_BILL],
   notify_party: [SCREEN_DOCS, SCREEN_BILL],
   for_delivery: [SCREEN_DOCS, SCREEN_BILL],
   contact_person: [SCREEN_BOOKING, SCREEN_DOCS],
@@ -94,7 +96,9 @@ const FIELD_SCREEN = {
   // Cargo & Commodity (Tab 2, Tab 3)
   commodity: [SCREEN_DOCS, SCREEN_BILL],
   pieces: [SCREEN_DOCS, SCREEN_BILL],
-  weight_actual_kg: [SCREEN_DOCS, SCREEN_BILL],
+  package_type: [SCREEN_DOCS, SCREEN_BILL],
+  weight_actual: [SCREEN_DOCS, SCREEN_BILL],
+  weight_uom: [SCREEN_DOCS, SCREEN_BILL],
   volume_cbm: [SCREEN_DOCS, SCREEN_BILL],
   dim_l_cm: [SCREEN_DOCS],
   dim_w_cm: [SCREEN_DOCS],

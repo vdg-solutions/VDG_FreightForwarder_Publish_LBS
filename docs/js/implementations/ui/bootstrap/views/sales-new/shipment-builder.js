@@ -55,7 +55,9 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     job_file_no:           state.job_file_no           || null,
     customer:              state.customer               || null,
     shipper:               state.shipper               || null,
+    shipper_address:       state.shipper_address       || null,
     consignee:             state.consignee             || null,
+    consignee_address:     state.consignee_address     || null,
     notify_party:          state.notify_party          || null,
     mbl:                   state.mbl                   || null,
     // F-32-01: HBL present ⇒ HBL No = D/O No = Job No (auto-fill supersedes any typed value)
@@ -93,8 +95,13 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     airport_origin:        state.origin_iata           || null,
     airport_dest:          state.dest_iata             || null,
     chargeable_kg:         parseFloat(state.chargeable_kg)    || null,
-    weight_actual_kg:      parseFloat(state.weight_actual_kg) || null,
+    // no "_kg" suffix — the value is stored in whatever weight_uom names, never forced to kg.
+    // Every consumer (chargeable-weight calc, document print) reads the two together and must
+    // not assume kilograms.
+    weight_actual:         parseFloat(state.weight_actual)    || null,
+    weight_uom:            state.weight_uom            || null,
     pieces:                parseInt(state.pieces, 10)         || null,
+    package_type:          state.package_type          || null,
     uld_type:              state.uld_type              || null,
     flight_no:             state.flight_no             || null,
     pol:                   state.pol                   || null,

@@ -27,7 +27,7 @@ function vesselVoy(s) {
   return val(s.vessel);
 }
 function weight(s) {
-  return s.weight_actual_kg ? `${s.weight_actual_kg} KGS` : FIELD_ABSENT;
+  return s.weight_actual ? `${s.weight_actual} ${s.weight_uom || "KG"}` : FIELD_ABSENT;
 }
 var BUILDERS = {
   [DOC_TYPE_HBL]: (s) => [

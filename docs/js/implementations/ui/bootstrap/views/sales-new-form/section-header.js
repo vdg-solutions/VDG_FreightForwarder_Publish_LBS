@@ -146,6 +146,41 @@ function quotePickSel(quoteId) {
 
 export const CONTAINER_TYPES = ['20DC', '40DC', '40HC', '45HC', '20RF', '40RF', '20OT', '40OT', '20FR', '40FR', '20TK'];
 
+// Header "Đơn vị tính" next to Số lượng reuses the SAME vocabulary as the per-cargo-line
+// package_type select (section-docs-ext.js) — pieces is a roll-up of those lines, so the unit
+// naming what is being counted has to be one vocabulary end to end, not a second one invented
+// for the header. Exported so section-docs-ext.js's per-line select shares this one array.
+export const PKG_TYPES = ['CTNS', 'PLTS', 'BAGS', 'BOXES', 'CRATES', 'PKGS', 'DRUMS', 'ROLLS', 'SETS', 'UNITS'];
+const DEFAULT_PACKAGE_TYPE = 'CTNS';
+
+// Weight-unit select is registry-backed (units-of-measure, category "weight") — never a
+// hardcoded enum. This is only the offline fallback for when the registry list comes back empty
+// (fresh workspace, nobody has opened Units of Measure yet) — same shape as sales-quote-new.js's
+// getContainerTypes() fallback for the container list.
+const FALLBACK_WEIGHT_UNITS = ['KG', 'LB'];
+const DEFAULT_WEIGHT_UOM = 'KG';
+
+// No blank "—" placeholder — mirrors the per-cargo-line package_type select, which always
+// defaults to a real value rather than an empty pick. A persisted value the current code list no
+// longer offers (registry row renamed/removed after the record was saved) still gets its own
+// option — same "legacy value stays offered" rule repSel() applies to sales_rep — so re-saving
+// the record on read-only load never silently swaps it for whatever sorts first.
+function codeSelect(name, codes, selected, fallback) {
+  const sel     = selected || fallback;
+  const legacy  = selected && !codes.includes(selected) ? `<option value="${selected}" selected>${selected}</option>` : '';
+  const opts    = codes.map((c) => `<option value="${c}"${c === sel ? ' selected' : ''}>${c}</option>`).join('');
+  return `<select name="${name}" class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-white">${legacy}${opts}</select>`;
+}
+
+export function packageTypeSelect(selected) {
+  return codeSelect('package_type', PKG_TYPES, selected, DEFAULT_PACKAGE_TYPE);
+}
+
+export function weightUomSelect(weightUnits, selected) {
+  const codes = weightUnits && weightUnits.length > 0 ? weightUnits : FALLBACK_WEIGHT_UNITS;
+  return codeSelect('weight_uom', codes, selected, DEFAULT_WEIGHT_UOM);
+}
+
 export function txtWithList(name, val, ph, listId) {
   const phAttr = ph ? ` placeholder="${ph}"` : '';
   const listAttr = listId ? ` list="${listId}"` : '';
@@ -197,7 +232,7 @@ export function renderHistoryDatalists(carriers = [], shipments = []) {
   `;
 }
 
-export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], shipments = [] } = {}) {
+export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], shipments = [], weightUnits = [] } = {}) {
   const d    = draft;
   const mode = (d.mode || 'SEA').toUpperCase();
   const seaHide = mode === 'AIR' ? ' class="hidden"' : '';
@@ -219,7 +254,9 @@ export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers =
         ${fld(t('sales_new.field.quote_pick'), quotePickSel(d.quote_id))}
         ${fld(t('sales_new.field.customer'), custSel(customers, d.customer, d._autofilled))}
         ${fld(t('sales_new.field.shipper'), txtWithList('shipper', d.shipper, t('sales_new.ph_shipper'), 'shipper-history-list'))}
+        ${fld(t('sales_new.field.shipper_address'), txt('shipper_address', d.shipper_address))}
         ${fld(t('sales_new.field.consignee'), txtWithList('consignee', d.consignee, t('sales_new.ph_consignee'), 'consignee-history-list'))}
+        ${fld(t('sales_new.field.consignee_address'), txt('consignee_address', d.consignee_address))}
         ${fld(t('sales_new.field.carrier'), txtWithList('carrier', d.carrier, t('sales_new.ph_carrier'), 'carrier-history-list'))}
         ${cfld(t('sales_new.field.vessel_voyage'), `
           <div class="flex items-center gap-1.5">
@@ -257,11 +294,13 @@ export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers =
             </span>
           </div>
         </div>
-        ${fld(t('sales_new.field.weight_actual'), num('weight_actual_kg', d.weight_actual_kg))}
+        ${fld(t('sales_new.field.weight_actual'), num('weight_actual', d.weight_actual))}
+        ${fld(t('sales_new.field.weight_uom'),    weightUomSelect(weightUnits, d.weight_uom))}
         ${cfld(t('sales_new.field.dim_l'),         num('dim_l_cm', d.dim_l_cm),                `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.dim_w'),         num('dim_w_cm', d.dim_w_cm),                `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.dim_h'),         num('dim_h_cm', d.dim_h_cm),                `data-air-only${airHide}`)}
         ${fld(t('sales_new.field.pieces'),        num('pieces', d.pieces))}
+        ${fld(t('sales_new.field.qty_uom'),       packageTypeSelect(d.package_type))}
         ${cfld(t('sales_new.field.uld_type'),      txt('uld_type', d.uld_type),                 `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.flight_no'),     txt('flight_no', d.flight_no),               `data-air-only${airHide}`)}
         ${cfld(t('sales_new.field.origin_iata'),   txt('origin_iata', d.origin_iata, 'SGN'),    `data-air-only${airHide}`)}

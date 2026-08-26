@@ -36,7 +36,8 @@ function resolveHeaderCurrency(saved, configuredDefault) {
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
           mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null,
-          revenueVisible = true, reps = [], editRef = null, carriers = [], shipments = [] } = opts;
+          revenueVisible = true, reps = [], editRef = null, carriers = [], shipments = [],
+          weightUnits = [] } = opts;
   const isEdit    = mode === 'edit';
   // F-29-01 AC-06: doc date for fx_date defaults — persisted transaction_date on edit, today on create
   const docDate   = draft?.transaction_date || todayLocal();
@@ -94,7 +95,7 @@ export async function renderForm(root, opts = {}) {
       </div>
       <div id="phase-timeline"></div>
       <form id="shipment-form" class="space-y-4" novalidate>
-        ${sectionAHtml(d, customers, reps, { carriers, shipments })}
+        ${sectionAHtml(d, customers, reps, { carriers, shipments, weightUnits })}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ''}
         ${revenueVisible ? sectionDHtml(d, { isManager }) : ''}
@@ -182,7 +183,9 @@ export function collectFormState(root) {
     sales_rep:        g('sales_rep'),
     customer:         g('customer'),
     shipper:          g('shipper'),
+    shipper_address:  g('shipper_address'),
     consignee:        g('consignee'),
+    consignee_address: g('consignee_address'),
     contact_person:   g('contact_person'),
     vessel:           g('vessel'),
     carrier:          g('carrier'),
@@ -195,11 +198,13 @@ export function collectFormState(root) {
     roe_selling:      g('roe_selling'),
     currency:         g('currency'),
     // air fields
-    weight_actual_kg: g('weight_actual_kg'),
+    weight_actual:    g('weight_actual'),
+    weight_uom:       g('weight_uom'),
     dim_l_cm:         g('dim_l_cm'),
     dim_w_cm:         g('dim_w_cm'),
     dim_h_cm:         g('dim_h_cm'),
     pieces:           g('pieces'),
+    package_type:     g('package_type'),
     uld_type:         g('uld_type'),
     flight_no:        g('flight_no'),
     origin_iata:      g('origin_iata'),

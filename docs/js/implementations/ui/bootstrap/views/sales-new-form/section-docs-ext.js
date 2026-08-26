@@ -6,7 +6,7 @@
 // Form input name === persisted record key, one vocabulary end to end (shipment-builder.js).
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { fld, txt, num, dateInp, selFld } from './section-header.js';
+import { fld, txt, num, dateInp, selFld, PKG_TYPES } from './section-header.js';
 import { containersCardHtml } from './section-containers-table.js';
 
 export { containersCardHtml, wireContainersTable, collectContainers } from './section-containers-table.js';
@@ -40,8 +40,6 @@ const NAME_ATA       = 'ata';
 function escHtml(str) {
   return String(str ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
-
-const PKG_TYPES = ['CTNS', 'PLTS', 'BAGS', 'BOXES', 'CRATES', 'PKGS', 'DRUMS', 'ROLLS', 'SETS', 'UNITS'];
 
 export function cargoItemRowHtml(idx, item = {}) {
   const pkgOpts = PKG_TYPES.map((p) =>
@@ -212,12 +210,16 @@ export function syncCargoRollup(root) {
   // Auto-roll up to scalar fields if user populated cargo items
   if (rows.length > 0 && (totalQty > 0 || totalGw > 0 || totalCbm > 0 || descriptions.length > 0)) {
     const inpPieces = root.querySelector('input[name=pieces]');
-    const inpGw     = root.querySelector('input[name=weight_actual_kg]');
+    const inpGw     = root.querySelector('input[name=weight_actual]');
+    const uomGw     = root.querySelector('select[name=weight_uom]');
     const inpCbm    = root.querySelector('input[name=volume_cbm]');
     const inpComm   = root.querySelector('input[name=commodity]');
 
     if (inpPieces && totalQty > 0) inpPieces.value = totalQty;
-    if (inpGw && totalGw > 0)      inpGw.value     = totalGw;
+    // Per-line gross_weight_kg is always kg (its name says so) — the rolled-up total is too, so
+    // the unit select has to say kg as well, or the header field would show a number in one
+    // unit under a label claiming another (the exact defect this feature exists to avoid).
+    if (inpGw && totalGw > 0) { inpGw.value = totalGw; if (uomGw) uomGw.value = 'KG'; }
     if (inpCbm && totalCbm > 0)    inpCbm.value    = totalCbm;
     if (inpComm && descriptions.length > 0) inpComm.value = descriptions.join('; ');
   }
