@@ -155,3 +155,18 @@ export function startOutboxDrain({ win = window, getRepo = () => window.__vdg_re
     },
   };
 }
+
+// ── server health chip ───────────────────────────────────────────────────────
+// F-58-02: used to ride every Changes-feed page inside the delta engine (server-io-adapters.js),
+// roughly doubling its HTTP volume for a signal that only needs to move a few times a minute. One
+// slow independent timer instead — the io port's poll_health() already dispatches vdg:server-health
+// itself, so this owns nothing but the interval.
+const HEALTH_POLL_MS = 60_000;
+
+export function startHealthPoll({ getIo = () => window.__vdg_io } = {}) {
+  const tick = () => { getIo()?.poll_health?.().catch(() => {}); };
+  tick();
+  const timer = setInterval(tick, HEALTH_POLL_MS);
+  timer?.unref?.();
+  return { stop() { clearInterval(timer); } };
+}

@@ -69,7 +69,7 @@ var UserStoreRepo = class extends UserRepoPort {
     }
   }
   async ensureSeeded(currentUser) {
-    const { activeWorkspaceName } = await import("./workspace-registry-VLOZZSIF.js");
+    const { activeWorkspaceName } = await import("./workspace-registry-5IXBCQHC.js");
     await this._repo().users_ensure_seeded(
       currentUser.email,
       currentUser.name || "",

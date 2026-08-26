@@ -7,8 +7,9 @@ import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.j
 export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
 import { sectionAHtml } from './sales-new-form/section-header.js';
 import { wireHeaderSection } from './sales-new-form/section-header-wiring.js';
-import { sectionBHtml, wireLinesSection, collectLines, sumVndPay, sumVndCollect }
+import { sectionBHtml, collectLines, sumVndPay, sumVndCollect }
   from './sales-new-form/section-lines.js';
+import { wireLinesSection } from './sales-new-form/section-lines-wiring.js';
 import { sectionCHtml, wireCommissionSection, collectCommission }
   from './sales-new-form/section-commission.js';
 import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOverrides }

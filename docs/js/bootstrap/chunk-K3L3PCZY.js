@@ -123,9 +123,23 @@ function startOutboxDrain({ win = window, getRepo = () => window.__vdg_repo } = 
     }
   };
 }
+var HEALTH_POLL_MS = 6e4;
+function startHealthPoll({ getIo = () => window.__vdg_io } = {}) {
+  const tick = () => {
+    getIo()?.poll_health?.().catch(() => {
+    });
+  };
+  tick();
+  const timer = setInterval(tick, HEALTH_POLL_MS);
+  timer?.unref?.();
+  return { stop() {
+    clearInterval(timer);
+  } };
+}
 
 export {
   jobTracker,
   startDeltaTick,
-  startOutboxDrain
+  startOutboxDrain,
+  startHealthPoll
 };

@@ -967,69 +967,6 @@ function wireHeaderSection(root, onChanged) {
   });
 }
 
-// output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-lines-wma.js
-function ensureWmaStyle() {
-  if (document.getElementById("wma-style")) return;
-  const s = document.createElement("style");
-  s.id = "wma-style";
-  s.textContent = "@keyframes wma-pulse{0%,100%{opacity:1}50%{opacity:.6}}.wma-predicted{animation:wma-pulse .6s ease-in-out;}.wma-badge{cursor:pointer;font-size:10px;margin-left:3px;opacity:.8;vertical-align:middle;}.wma-badge:hover{opacity:1;}";
-  document.head.appendChild(s);
-}
-function injectBadge(kindSel, state) {
-  kindSel.parentElement?.querySelector(".wma-badge")?.remove();
-  const span = document.createElement("span");
-  span.className = "wma-badge";
-  span.title = t("wma.badge_title").replace("{n}", state.total_observations);
-  span.textContent = t("wma.badge_label");
-  kindSel.insertAdjacentElement("afterend", span);
-}
-async function applyWmaToRow(row, repId, classifyKind2) {
-  const rowIdx = parseInt(row.dataset.line, 10);
-  const store = window.__vdg_store;
-  if (!store || !repId) return;
-  const kindSel = row.querySelector("[name=kind]");
-  if (!kindSel || kindSel.dataset.manuallySet === "true" || kindSel.value) return;
-  const desc = row.querySelector("[name=desc]")?.value || "";
-  const state = await loadKindWmaState(store, repId, rowIdx);
-  const top = predict(state, desc, classifyKind2);
-  if (!top) return;
-  kindSel.value = top;
-  kindSel.classList.add("wma-predicted");
-  row.dataset.wmaPredicted = top;
-  injectBadge(kindSel, state);
-  const sorted = Object.entries(state.kind_weights).sort((a, b) => b[1] - a[1]);
-  const topW = (sorted[0]?.[1] ?? 0).toFixed(2);
-  const secW = (sorted[1]?.[1] ?? 0).toFixed(2);
-  console.log(`[wma] row${rowIdx} \u2192 ${top} (w=${topW} vs 2nd=${secW})`);
-}
-async function applyWmaToAllRows(tbody, repId, classifyKind2) {
-  for (const row of Array.from(tbody.querySelectorAll("tr[data-line]"))) {
-    await applyWmaToRow(row, repId, classifyKind2);
-  }
-}
-async function dismissWmaBadge(badge, repId) {
-  const row = badge.closest("tr[data-line]");
-  if (!row || !repId) return false;
-  const rowIdx = parseInt(row.dataset.line, 10);
-  const predictedKind = row.dataset.wmaPredicted;
-  const kindSel = row.querySelector("[name=kind]");
-  if (kindSel) {
-    kindSel.value = "";
-    kindSel.classList.remove("wma-predicted");
-  }
-  badge.remove();
-  delete row.dataset.wmaPredicted;
-  if (predictedKind) {
-    const store = window.__vdg_store;
-    if (store) {
-      const state = await loadKindWmaState(store, repId, rowIdx);
-      dismissPrediction(state, predictedKind);
-      await saveKindWmaState(store, repId, rowIdx, state);
-    }
-  }
-  return true;
-}
-
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-lines.js
 var PNL_VERTICAL_KIND_MAP_JS = {
   "OCEAN FREIGHT": "OceanFreight",
@@ -1125,18 +1062,6 @@ function lineRowHtml(idx, line = {}, headerCurrency) {
           class="text-red-400 hover:text-red-600 text-xs px-1">&#x2715;</button></td>
     </tr>`;
 }
-function applyKindChange(descInput, newKind) {
-  if (!descInput) return;
-  if (descInput.dataset.userEdited === "true") return;
-  if (!newKind || newKind === "\u2014") {
-    descInput.value = "";
-    return;
-  }
-  descInput.value = kindI18nLabel(newKind, currentLocale());
-}
-function onKindChange(rowEl, newKind) {
-  applyKindChange(rowEl.querySelector(".col-description input"), newKind);
-}
 function sectionBHtml(draft = {}) {
   const lines = draft.lines || [];
   const headerCurrency = draft.currency || DEFAULT_HEADER_CURRENCY;
@@ -1207,6 +1132,119 @@ function sectionBHtml(draft = {}) {
         </table>
       </div>
     </div>`;
+}
+function collectLines(root) {
+  return Array.from(root.querySelectorAll("#lines-tbody tr[data-line]")).map((row) => {
+    const buy_amt = parseFloat(row.querySelector("[name=buy_amt]")?.value) || 0;
+    const buy_currency = row.querySelector("[name=buy_currency]")?.value || "";
+    const buy_fx_rate = parseFloat(row.querySelector("[name=buy_fx_rate]")?.value) || 0;
+    const sell_amt = parseFloat(row.querySelector("[name=sell_amt]")?.value) || 0;
+    const sell_currency = row.querySelector("[name=sell_currency]")?.value || "";
+    const sell_fx_rate = parseFloat(row.querySelector("[name=sell_fx_rate]")?.value) || 0;
+    return {
+      desc: row.querySelector("[name=desc]")?.value || "",
+      kind: row.querySelector("[name=kind]")?.value || "",
+      buy_qty: parseFloat(row.querySelector("[name=buy_qty]")?.value) || 0,
+      buy_unit: row.querySelector("[name=buy_unit]")?.value || "",
+      buy_amt,
+      buy_currency,
+      buy_fx_rate,
+      buy_fx_date: row.querySelector("[name=buy_fx_date]")?.value || "",
+      // AC-02: vnd_amount is DERIVED, not read off the (now-readonly) cell
+      vnd_pay: computeLineVnd(buy_amt, buy_currency, buy_fx_rate),
+      sell_qty: parseFloat(row.querySelector("[name=sell_qty]")?.value) || 0,
+      sell_unit: row.querySelector("[name=sell_unit]")?.value || "",
+      sell_amt,
+      sell_currency,
+      sell_fx_rate,
+      sell_fx_date: row.querySelector("[name=sell_fx_date]")?.value || "",
+      vnd_collect: computeLineVnd(sell_amt, sell_currency, sell_fx_rate),
+      pol_pod_side: row.querySelector("[name=pol_pod_side]")?.value || "N/A"
+    };
+  });
+}
+function sumVndPay(lines) {
+  return lines.reduce((s, l) => s + (l.vnd_pay || 0), 0);
+}
+function sumVndCollect(lines) {
+  return lines.reduce((s, l) => s + (l.vnd_collect || 0), 0);
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-lines-wma.js
+function ensureWmaStyle() {
+  if (document.getElementById("wma-style")) return;
+  const s = document.createElement("style");
+  s.id = "wma-style";
+  s.textContent = "@keyframes wma-pulse{0%,100%{opacity:1}50%{opacity:.6}}.wma-predicted{animation:wma-pulse .6s ease-in-out;}.wma-badge{cursor:pointer;font-size:10px;margin-left:3px;opacity:.8;vertical-align:middle;}.wma-badge:hover{opacity:1;}";
+  document.head.appendChild(s);
+}
+function injectBadge(kindSel, state) {
+  kindSel.parentElement?.querySelector(".wma-badge")?.remove();
+  const span = document.createElement("span");
+  span.className = "wma-badge";
+  span.title = t("wma.badge_title").replace("{n}", state.total_observations);
+  span.textContent = t("wma.badge_label");
+  kindSel.insertAdjacentElement("afterend", span);
+}
+async function applyWmaToRow(row, repId, classifyKind2) {
+  const rowIdx = parseInt(row.dataset.line, 10);
+  const store = window.__vdg_store;
+  if (!store || !repId) return;
+  const kindSel = row.querySelector("[name=kind]");
+  if (!kindSel || kindSel.dataset.manuallySet === "true" || kindSel.value) return;
+  const desc = row.querySelector("[name=desc]")?.value || "";
+  const state = await loadKindWmaState(store, repId, rowIdx);
+  const top = predict(state, desc, classifyKind2);
+  if (!top) return;
+  kindSel.value = top;
+  kindSel.classList.add("wma-predicted");
+  row.dataset.wmaPredicted = top;
+  injectBadge(kindSel, state);
+  const sorted = Object.entries(state.kind_weights).sort((a, b) => b[1] - a[1]);
+  const topW = (sorted[0]?.[1] ?? 0).toFixed(2);
+  const secW = (sorted[1]?.[1] ?? 0).toFixed(2);
+  console.log(`[wma] row${rowIdx} \u2192 ${top} (w=${topW} vs 2nd=${secW})`);
+}
+async function applyWmaToAllRows(tbody, repId, classifyKind2) {
+  for (const row of Array.from(tbody.querySelectorAll("tr[data-line]"))) {
+    await applyWmaToRow(row, repId, classifyKind2);
+  }
+}
+async function dismissWmaBadge(badge, repId) {
+  const row = badge.closest("tr[data-line]");
+  if (!row || !repId) return false;
+  const rowIdx = parseInt(row.dataset.line, 10);
+  const predictedKind = row.dataset.wmaPredicted;
+  const kindSel = row.querySelector("[name=kind]");
+  if (kindSel) {
+    kindSel.value = "";
+    kindSel.classList.remove("wma-predicted");
+  }
+  badge.remove();
+  delete row.dataset.wmaPredicted;
+  if (predictedKind) {
+    const store = window.__vdg_store;
+    if (store) {
+      const state = await loadKindWmaState(store, repId, rowIdx);
+      dismissPrediction(state, predictedKind);
+      await saveKindWmaState(store, repId, rowIdx, state);
+    }
+  }
+  return true;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-lines-wiring.js
+function applyKindChange(descInput, newKind) {
+  if (!descInput) return;
+  if (descInput.dataset.userEdited === "true") return;
+  if (!newKind || newKind === "\u2014") {
+    descInput.value = "";
+    return;
+  }
+  descInput.value = kindI18nLabel(newKind, currentLocale());
+}
+function onKindChange(rowEl, newKind) {
+  applyKindChange(rowEl.querySelector(".col-description input"), newKind);
 }
 function _prefillRow(row, fxRepo, onChanged) {
   if (!row || !fxRepo) return;
@@ -1314,42 +1352,6 @@ function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
     btn.closest("tr[data-line]")?.remove();
     onChanged?.();
   });
-}
-function collectLines(root) {
-  return Array.from(root.querySelectorAll("#lines-tbody tr[data-line]")).map((row) => {
-    const buy_amt = parseFloat(row.querySelector("[name=buy_amt]")?.value) || 0;
-    const buy_currency = row.querySelector("[name=buy_currency]")?.value || "";
-    const buy_fx_rate = parseFloat(row.querySelector("[name=buy_fx_rate]")?.value) || 0;
-    const sell_amt = parseFloat(row.querySelector("[name=sell_amt]")?.value) || 0;
-    const sell_currency = row.querySelector("[name=sell_currency]")?.value || "";
-    const sell_fx_rate = parseFloat(row.querySelector("[name=sell_fx_rate]")?.value) || 0;
-    return {
-      desc: row.querySelector("[name=desc]")?.value || "",
-      kind: row.querySelector("[name=kind]")?.value || "",
-      buy_qty: parseFloat(row.querySelector("[name=buy_qty]")?.value) || 0,
-      buy_unit: row.querySelector("[name=buy_unit]")?.value || "",
-      buy_amt,
-      buy_currency,
-      buy_fx_rate,
-      buy_fx_date: row.querySelector("[name=buy_fx_date]")?.value || "",
-      // AC-02: vnd_amount is DERIVED, not read off the (now-readonly) cell
-      vnd_pay: computeLineVnd(buy_amt, buy_currency, buy_fx_rate),
-      sell_qty: parseFloat(row.querySelector("[name=sell_qty]")?.value) || 0,
-      sell_unit: row.querySelector("[name=sell_unit]")?.value || "",
-      sell_amt,
-      sell_currency,
-      sell_fx_rate,
-      sell_fx_date: row.querySelector("[name=sell_fx_date]")?.value || "",
-      vnd_collect: computeLineVnd(sell_amt, sell_currency, sell_fx_rate),
-      pol_pod_side: row.querySelector("[name=pol_pod_side]")?.value || "N/A"
-    };
-  });
-}
-function sumVndPay(lines) {
-  return lines.reduce((s, l) => s + (l.vnd_pay || 0), 0);
-}
-function sumVndCollect(lines) {
-  return lines.reduce((s, l) => s + (l.vnd_collect || 0), 0);
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-commission-fx.js

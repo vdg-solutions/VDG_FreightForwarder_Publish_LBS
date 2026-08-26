@@ -1,0 +1,3 @@
+# Test data lives here
+
+Sample `.xlsx` files for `/qa-freight` scenarios (booking_sample.xlsx, booking_invalid.xlsx, etc.) go in this folder. The directory is committed (via this `.gitkeep`) so the `/qa-freight` skill can rely on the path existing; the `.xlsx` files themselves are gitignored.

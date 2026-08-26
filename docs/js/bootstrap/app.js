@@ -21,7 +21,7 @@ import {
 } from "./chunk-GRBWOHUK.js";
 import {
   jobTracker
-} from "./chunk-OQ4LF4CN.js";
+} from "./chunk-K3L3PCZY.js";
 import {
   bindShipmentStateMigrator
 } from "./chunk-NM5PQAZF.js";
@@ -192,7 +192,7 @@ import {
 import {
   API_BASE,
   activeWorkspaceName
-} from "./chunk-JDLBDPFG.js";
+} from "./chunk-ORRSUUI4.js";
 import {
   bindCustomer360Composer
 } from "./chunk-TE5ZYPE3.js";
@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 057a642">v0.4.21 (057a642)</span>
+        <span class="font-mono whitespace-nowrap" title="build 1fd3cec-dirty">v0.4.23 (1fd3cec-dirty)</span>
       </div>
     `;
   }
@@ -918,6 +918,35 @@ function renderSwBanner(host) {
     </div>`;
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar-import.js
+async function handleFileUpload(host, e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const repo3 = window.__vdg_repo;
+  if (!repo3) return;
+  window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.processing") } }));
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) throw new Error("Invalid JSON format, expected array.");
+    let count = 0;
+    for (const item of data) {
+      if (!item?.id) throw new Error('Import item missing "id" field.');
+      await putEnvelope(repo3, item.id, item);
+      count++;
+      if (count % 500 === 0) {
+        window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.progress", { count, total: data.length }) } }));
+      }
+    }
+    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t("topbar.import.success", { count }) } }));
+    setTimeout(() => window.location.reload(), 1500);
+  } catch (err) {
+    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message: t("topbar.import.error", { error: err.message }) } }));
+  }
+  e.target.value = "";
+  host._menuOpen = false;
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar.js
 function canQuote() {
   return hasRole(ROLE_SALES_REP) || hasRole(ROLE_SALES_MANAGER);
@@ -1006,12 +1035,15 @@ var VdgTopbar = class extends LitElement2 {
     this._onSyncError = (e) => {
       this._retryStreak++;
       this._retrying = true;
-      this._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.error ?? null;
+      this._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.reason === "rate_budget" ? t("topbar.sync.tooltip.rate_budget_reason") : e.detail?.error ?? null;
     };
     this._onServerHealth = (e) => {
       if (e.detail?.backlog_depth !== void 0) this._serverBacklog = Number(e.detail.backlog_depth) || 0;
       if (e.detail?.oldest_pending_age_ms !== void 0) this._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
       if (e.detail?.provider) this._serverProvider = e.detail.provider;
+      if (e.detail?.sync_tick_calls !== void 0) {
+        this._lastError = t("topbar.sync.tooltip.high_volume_reason", { n: e.detail.sync_tick_calls });
+      }
       this.requestUpdate();
     };
     this._onException = (e) => {
@@ -1208,32 +1240,10 @@ var VdgTopbar = class extends LitElement2 {
     }
     window.dispatchEvent(new CustomEvent("vdg:sync-now"));
   }
-  async _handleFileUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const repo3 = window.__vdg_repo;
-    if (!repo3) return;
-    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.processing") } }));
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data)) throw new Error("Invalid JSON format, expected array.");
-      let count = 0;
-      for (const item of data) {
-        if (!item?.id) throw new Error('Import item missing "id" field.');
-        await putEnvelope(repo3, item.id, item);
-        count++;
-        if (count % 500 === 0) {
-          window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.progress", { count, total: data.length }) } }));
-        }
-      }
-      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t("topbar.import.success", { count }) } }));
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (err) {
-      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message: t("topbar.import.error", { error: err.message }) } }));
-    }
-    e.target.value = "";
-    this._menuOpen = false;
+  // Bulk JSON import — extracted to topbar-import.js (350-line cap), kept as a bound method
+  // here since topbar-menus.js wires it in as `host._handleFileUpload`.
+  _handleFileUpload(e) {
+    return handleFileUpload(this, e);
   }
   render() {
     const badge = badgeLabel(this._exceptionCount + this._approvalCount);
@@ -2126,7 +2136,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.21 (057a642)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.23 (1fd3cec-dirty)</div>
         </div>
       </div>
     </div>`;
@@ -2480,6 +2490,11 @@ async function readForkBundles(dir) {
   const bodies = [];
   for (const file of listing.files) {
     if (!file.name.endsWith(JSONL_SUFFIX)) continue;
+    try {
+      window.__vdg_repo?.network_rate_check();
+    } catch {
+      break;
+    }
     const res = await io2.ws_read_file(dir, file.name).catch(() => null);
     if (!res?.found) continue;
     bodies.push(String(res.content));
@@ -3374,10 +3389,14 @@ var ServerIoPort = class extends SharedIoPort {
       throw asDriveError(err);
     }
   }
+  // F-58-02: poll_health() used to fire here too — once per Changes page, roughly doubling the
+  // delta engine's HTTP volume for a signal nobody needed at that cadence. The read routes
+  // (RecordGet/RecordList/Changes) carry no x-replication-backlog header (only RecordCreate/
+  // RecordUpdate stamp it — server/src/bootstrap/edge/dispatch.rs), so the read-only sync path
+  // never saw it that way either. Health now polls on its own slow timer (sync-schedulers.js
+  // startHealthPoll) instead of riding every page fetch.
   async changes_feed(pageToken) {
     try {
-      this.poll_health().catch(() => {
-      });
       const res = await this.changes(pageToken || "0");
       const changes = (res?.results ?? []).map((c) => {
         const name = c.id.endsWith(".json") ? c.id : `${c.id}.json`;
@@ -3817,7 +3836,7 @@ function renderSignInButton2(container, { hydrate, clientId }) {
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      <span class="text-sm font-medium text-slate-700">Sign in with Google</span>
+      <span class="text-sm font-medium text-slate-700">${t("login.signin_button")}</span>
     </button>
   `;
   container.querySelector("#vdg-signin-btn").addEventListener("click", () => {
@@ -3830,7 +3849,7 @@ function renderSignInButton2(container, { hydrate, clientId }) {
     };
     const btnSpan = container.querySelector("#vdg-signin-btn span");
     const origText = btnSpan ? btnSpan.textContent : "";
-    if (btnSpan) btnSpan.textContent = "\u0110ang m\u1EDF \u0111\u0103ng nh\u1EADp\u2026";
+    if (btnSpan) btnSpan.textContent = t("login.signin_opening");
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       // Server backend: identity only. No Drive scope means no Drive consent screen and no
@@ -3843,7 +3862,7 @@ function renderSignInButton2(container, { hydrate, clientId }) {
           window.dispatchEvent(new CustomEvent("vdg:signin-error", { detail: resp.error }));
           return;
         }
-        if (btnSpan) btnSpan.textContent = "\u0110ang x\xE1c th\u1EF1c\u2026";
+        if (btnSpan) btnSpan.textContent = t("login.signin_verifying");
         console.log("[Auth] Google OAuth callback received. Response error:", resp.error);
         console.log("[Auth] Calling hydrate(resp)...");
         hydrate(resp).then((builtUser) => {
@@ -4612,14 +4631,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-USNYNUSK.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-T3RB2IMW.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-USNYNUSK.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-T3RB2IMW.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4721,7 +4740,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.21 (057a642)";
+var APP_VERSION = "v0.4.23 (1fd3cec-dirty)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4948,7 +4967,7 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-OYIGQTHU.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-J2DPSXJR.js"),
+  "/sales/me": () => import("./sales-me-G2TH67FE.js"),
   "/sales/analytics": () => import("./sales-analytics-X652B4WV.js"),
   "/sales/quote/new": () => import("./sales-quote-new-PMG46Z4A.js"),
   "/sales/quote": () => import("./sales-quote-list-K3ILLSBB.js"),
@@ -4956,8 +4975,8 @@ var VIEWS = {
   "/masters/carriers": () => import("./masters-carriers-32MRQM4N.js"),
   "/masters/services": () => import("./masters-services-3GWR3F7Q.js"),
   "/help": () => import("./help-HBY43B2P.js"),
-  "/pending-access": () => import("./pending-access-T7I2VMHC.js"),
-  "/onboarding": () => import("./onboarding-wizard-MWC5KDX2.js"),
+  "/pending-access": () => import("./pending-access-4HRIIG7A.js"),
+  "/onboarding": () => import("./onboarding-wizard-LOVZBNHL.js"),
   "/background-jobs": () => import("./background-jobs-BT47U72W.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-67YQE37Q.js"),
@@ -4976,10 +4995,10 @@ var VIEWS = {
   // E-15
   "/manager/errors": () => import("./errors-FPPF34PQ.js"),
   "/manager/backup": () => import("./backup-FSDMRJQ4.js"),
-  "/manager/users": () => import("./users-WNSDUHLW.js"),
+  "/manager/users": () => import("./users-AHMXVNUO.js"),
   // E-15 F-15-36
   "/manager/fx-rates": () => import("./fx-rates-3C3HRQQV.js"),
-  "/manager/settings": () => import("./settings-TXW7JWWE.js"),
+  "/manager/settings": () => import("./settings-YWHTTEME.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-5SYKGBTZ.js"),
   // E-16 F-16-03
@@ -5007,7 +5026,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-WNQ6CENJ.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-KETP4EMA.js"),
-  "/accounting/settings": () => import("./settings-FL66SPR3.js"),
+  "/accounting/settings": () => import("./settings-OBZKO2NZ.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-WCWPY36U.js"),
   // E-24 F-24-06
@@ -5883,8 +5902,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=057a642", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=057a642", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=1fd3cec-dirty", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=1fd3cec-dirty", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6132,8 +6151,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=057a642", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=057a642", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=1fd3cec-dirty", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=1fd3cec-dirty", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6190,9 +6209,10 @@ async function _deferredInit(user, db, serverApi, repo3) {
       const locale = prefsResult.ok ? prefsResult.value?.locale || "vi" : "vi";
       if (locale !== "vi") await loadLocale(locale);
     }
-    const { startDeltaTick, startOutboxDrain } = await import("./sync-schedulers-UBL4SFYW.js");
+    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-33U5YCHQ.js");
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
+    startHealthPoll();
     const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-QKPEP34Z.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.(),
@@ -6203,7 +6223,7 @@ async function _deferredInit(user, db, serverApi, repo3) {
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
-    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-AKROEZFC.js");
+    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-ZGFUCQZ3.js");
     const userRepo2 = new UserServerRepo(userAuditLog);
     window.__vdg_user_repo = userRepo2;
     userRepo2.get(user.email).then((record) => {
@@ -6430,6 +6450,39 @@ function initMigrationOverlay() {
   });
 }
 
+// output/web/js.tmp/bootstrap/app-toast.js
+var TOAST_DEFAULT_MS = 4e3;
+var TOAST_FADE_MS = 300;
+var TOAST_MAX_VISIBLE = 4;
+(function initToastRenderer() {
+  const container = document.createElement("div");
+  container.id = "vdg-toast-container";
+  container.className = "fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none";
+  document.body.appendChild(container);
+  const COLORS = {
+    success: "bg-green-600",
+    error: "bg-red-600",
+    warn: "bg-amber-500",
+    info: "bg-slate-800"
+  };
+  function dismiss(el) {
+    if (!el.isConnected) return;
+    el.classList.add("opacity-0");
+    setTimeout(() => el.remove(), TOAST_FADE_MS);
+  }
+  window.addEventListener("vdg:toast", (e) => {
+    const { message, type = "info", duration = TOAST_DEFAULT_MS } = e.detail || {};
+    if (!message) return;
+    const el = document.createElement("div");
+    el.className = `${COLORS[type] || COLORS.info} text-white px-4 py-3 rounded shadow-lg opacity-0 transition-opacity duration-300`;
+    el.textContent = message;
+    container.appendChild(el);
+    while (container.childElementCount > TOAST_MAX_VISIBLE) dismiss(container.firstElementChild);
+    requestAnimationFrame(() => el.classList.remove("opacity-0"));
+    setTimeout(() => dismiss(el), duration);
+  });
+})();
+
 // output/web/js.tmp/bootstrap/app.js
 (function initTheme() {
   document.documentElement.classList.remove("dark");
@@ -6500,37 +6553,6 @@ window.addEventListener("vdg:outbox-drop", (e) => {
     detail: { type: "info", message: t("topbar.sync.toast.schema_drift_drop") }
   }));
 });
-(function initToastRenderer() {
-  const TOAST_DEFAULT_MS = 4e3;
-  const TOAST_FADE_MS = 300;
-  const TOAST_MAX_VISIBLE = 4;
-  const container = document.createElement("div");
-  container.id = "vdg-toast-container";
-  container.className = "fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none";
-  document.body.appendChild(container);
-  const COLORS = {
-    success: "bg-green-600",
-    error: "bg-red-600",
-    warn: "bg-amber-500",
-    info: "bg-slate-800"
-  };
-  function dismiss(el) {
-    if (!el.isConnected) return;
-    el.classList.add("opacity-0");
-    setTimeout(() => el.remove(), TOAST_FADE_MS);
-  }
-  window.addEventListener("vdg:toast", (e) => {
-    const { message, type = "info", duration = TOAST_DEFAULT_MS } = e.detail || {};
-    if (!message) return;
-    const el = document.createElement("div");
-    el.className = `${COLORS[type] || COLORS.info} text-white px-4 py-3 rounded shadow-lg opacity-0 transition-opacity duration-300`;
-    el.textContent = message;
-    container.appendChild(el);
-    while (container.childElementCount > TOAST_MAX_VISIBLE) dismiss(container.firstElementChild);
-    requestAnimationFrame(() => el.classList.remove("opacity-0"));
-    setTimeout(() => dismiss(el), duration);
-  });
-})();
 function _resolveBootFallbackMount() {
   return document.getElementById("view-loading")?.parentElement || document.getElementById("view-root") || document.getElementById("app");
 }
@@ -6576,8 +6598,8 @@ function bootApp(user, db) {
 async function loadWasmModule() {
   if (window.__vdg_wasm) return window.__vdg_wasm;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=057a642", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=057a642", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=1fd3cec-dirty", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=1fd3cec-dirty", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     window.__vdg_wasm = mod;
     return mod;

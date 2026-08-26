@@ -10,6 +10,7 @@ import { isServerBackend } from '../../core_abstractions/backend.js';
 import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
 import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
 import { gisErrorMessage } from './gis-error.js';
+import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
 /// How long a click may sit with no GIS callback before the user is told something is wrong.
 const SIGNIN_STALL_HINT_MS = 60_000;
@@ -28,7 +29,7 @@ export function renderSignInButton(container, { hydrate, clientId }) {
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      <span class="text-sm font-medium text-slate-700">Sign in with Google</span>
+      <span class="text-sm font-medium text-slate-700">${t('login.signin_button')}</span>
     </button>
   `;
   container.querySelector('#vdg-signin-btn').addEventListener('click', () => {
@@ -38,7 +39,7 @@ export function renderSignInButton(container, { hydrate, clientId }) {
     const answered = () => { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } };
     const btnSpan = container.querySelector('#vdg-signin-btn span');
     const origText = btnSpan ? btnSpan.textContent : '';
-    if (btnSpan) btnSpan.textContent = 'Đang mở đăng nhập…';
+    if (btnSpan) btnSpan.textContent = t('login.signin_opening');
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       // Server backend: identity only. No Drive scope means no Drive consent screen and no
@@ -51,7 +52,7 @@ export function renderSignInButton(container, { hydrate, clientId }) {
           window.dispatchEvent(new CustomEvent('vdg:signin-error', { detail: resp.error }));
           return;
         }
-        if (btnSpan) btnSpan.textContent = 'Đang xác thực…';
+        if (btnSpan) btnSpan.textContent = t('login.signin_verifying');
         console.log('[Auth] Google OAuth callback received. Response error:', resp.error);
         // F-19-84: sign-in routes through the same hydrate as reconnect/silent-boot — no
         // parallel path (RULE #5).

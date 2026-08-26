@@ -160,14 +160,7 @@ async function dueSoonHtml(salesId) {
     </div>`;
 }
 
-// output/web/js.tmp/implementations/ui/bootstrap/views/sales-me.js
-var LOAD_TIMEOUT_MS = 12e3;
-var CLOSED_LIKE_STATES = ["Closed", "Delivered"];
-var MONTH_YEAR_FMT = { month: "long", year: "numeric" };
-function fmtVnd3(n) {
-  if (!n && n !== 0) return "\u2014";
-  return Number(n).toLocaleString("vi-VN");
-}
+// output/web/js.tmp/implementations/ui/bootstrap/views/sales-me-data.js
 function mtdFilter(s) {
   const now = /* @__PURE__ */ new Date();
   const year = now.getFullYear();
@@ -175,6 +168,66 @@ function mtdFilter(s) {
   const pfx = `${year}-${mo}`;
   const d = s.etd || s.prep_date || s.date || "";
   return d.startsWith(pfx);
+}
+var EMPTY_DATA = { all: [], mtd: [], pending: [], stats: { shipments: 0, revenue: 0, margin: 0, salesCommission: 0, advances: 0 } };
+async function loadMyData(salesId) {
+  const repo = window.__vdg_repo;
+  if (!repo) return EMPTY_DATA;
+  const [allShipments, allLines, allCashFlows, allCommEntries, aliasRows] = await Promise.all([
+    listShipments(repo, (s) => (s.sales_rep || "").toLowerCase() === salesId.toLowerCase()),
+    repo.list("pnl_line").catch(() => []),
+    repo.list("cash_flow_entry").catch(() => []),
+    repo.list("commission_entry").catch(() => []),
+    ensureShipmentStateAliases(repo)
+    // DEFECT-1: seed-on-first-read (sales rep never opens master view)
+  ]);
+  for (const s of allShipments) {
+    s.state = resolveShipmentState(s.state || s.status, aliasRows) || UNKNOWN_STATE;
+  }
+  const mtd = allShipments.filter(mtdFilter);
+  const mtdRefs = new Set(mtd.map((s) => s.shipment_ref || s.ref));
+  const salesCommission = allCommEntries.filter((e) => e.kind === "SalesShare" && mtdRefs.has(e.shipment_ref)).reduce((s, e) => s + Number(e.net_amount?.amount ?? e.net_amount ?? 0), 0);
+  const linesByRef = {};
+  for (const l of allLines) {
+    const r = l.shipment_ref;
+    if (!linesByRef[r]) linesByRef[r] = [];
+    linesByRef[r].push(l);
+  }
+  const pending = allShipments.filter((s) => {
+    const ref = s.shipment_ref || s.ref;
+    const lines = linesByRef[ref] || [];
+    return !lines.some((l) => Number(l.sell_amt || l.selling_vnd_collect || 0) > 0);
+  });
+  let revenue = 0, margin = 0;
+  for (const s of mtd) {
+    const ref = s.shipment_ref || s.ref;
+    const lines = linesByRef[ref] || [];
+    for (const l of lines) {
+      revenue += Number(l.sell_amt || l.selling_vnd_collect || 0);
+      margin += Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0);
+    }
+  }
+  const advances = allCashFlows.filter((c) => (c.source || "").toLowerCase() === salesId.toLowerCase() && mtdFilter(c)).reduce((sum, c) => sum + Number(c.amount || 0), 0);
+  for (const s of allShipments) {
+    const ref = s.shipment_ref || s.ref;
+    const lines = linesByRef[ref] || [];
+    s.margin = lines.reduce((acc, l) => acc + Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0), 0);
+  }
+  return {
+    all: allShipments,
+    mtd,
+    pending,
+    stats: { shipments: mtd.length, revenue, margin, salesCommission, advances }
+  };
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/sales-me.js
+var LOAD_TIMEOUT_MS = 12e3;
+var CLOSED_LIKE_STATES = ["Closed", "Delivered"];
+var MONTH_YEAR_FMT = { month: "long", year: "numeric" };
+function fmtVnd3(n) {
+  if (!n && n !== 0) return "\u2014";
+  return Number(n).toLocaleString("vi-VN");
 }
 function roleBadgeHtml(salesId) {
   const isM = hasRole(ROLE_MANAGER);
@@ -274,57 +327,6 @@ function commissionHtml(stats) {
       </dl>
       <div class="mt-3 text-[10px] text-slate-400">${t("sales_me.commission.rate_note")}</div>
     </div>`;
-}
-var EMPTY_DATA = { all: [], mtd: [], pending: [], stats: { shipments: 0, revenue: 0, margin: 0, salesCommission: 0, advances: 0 } };
-async function loadMyData(salesId) {
-  const repo = window.__vdg_repo;
-  if (!repo) return EMPTY_DATA;
-  const [allShipments, allLines, allCashFlows, allCommEntries, aliasRows] = await Promise.all([
-    listShipments(repo, (s) => (s.sales_rep || "").toLowerCase() === salesId.toLowerCase()),
-    repo.list("pnl_line").catch(() => []),
-    repo.list("cash_flow_entry").catch(() => []),
-    repo.list("commission_entry").catch(() => []),
-    ensureShipmentStateAliases(repo)
-    // DEFECT-1: seed-on-first-read (sales rep never opens master view)
-  ]);
-  for (const s of allShipments) {
-    s.state = resolveShipmentState(s.state || s.status, aliasRows) || UNKNOWN_STATE;
-  }
-  const mtd = allShipments.filter(mtdFilter);
-  const mtdRefs = new Set(mtd.map((s) => s.shipment_ref || s.ref));
-  const salesCommission = allCommEntries.filter((e) => e.kind === "SalesShare" && mtdRefs.has(e.shipment_ref)).reduce((s, e) => s + Number(e.net_amount?.amount ?? e.net_amount ?? 0), 0);
-  const linesByRef = {};
-  for (const l of allLines) {
-    const r = l.shipment_ref;
-    if (!linesByRef[r]) linesByRef[r] = [];
-    linesByRef[r].push(l);
-  }
-  const pending = allShipments.filter((s) => {
-    const ref = s.shipment_ref || s.ref;
-    const lines = linesByRef[ref] || [];
-    return !lines.some((l) => Number(l.sell_amt || l.selling_vnd_collect || 0) > 0);
-  });
-  let revenue = 0, margin = 0;
-  for (const s of mtd) {
-    const ref = s.shipment_ref || s.ref;
-    const lines = linesByRef[ref] || [];
-    for (const l of lines) {
-      revenue += Number(l.sell_amt || l.selling_vnd_collect || 0);
-      margin += Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0);
-    }
-  }
-  const advances = allCashFlows.filter((c) => (c.source || "").toLowerCase() === salesId.toLowerCase() && mtdFilter(c)).reduce((sum, c) => sum + Number(c.amount || 0), 0);
-  for (const s of allShipments) {
-    const ref = s.shipment_ref || s.ref;
-    const lines = linesByRef[ref] || [];
-    s.margin = lines.reduce((acc, l) => acc + Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0), 0);
-  }
-  return {
-    all: allShipments,
-    mtd,
-    pending,
-    stats: { shipments: mtd.length, revenue, margin, salesCommission, advances }
-  };
 }
 var _onLocale = null;
 async function render(root) {

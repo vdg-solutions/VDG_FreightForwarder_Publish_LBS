@@ -27,6 +27,17 @@ async function readForkBundles(dir) {
   const bodies = [];
   for (const file of listing.files) {
     if (!file.name.endsWith(JSONL_SUFFIX)) continue;
+    // F-58-02 follow-up: this is one ws_read_file per bundle file in the fork — the same
+    // per-record fan-out shape the 2026-08-25 incident was made of, just reachable from a foreign-
+    // fork scan instead of a mis-read cursor. This loop never re-enters Rust between files, so it
+    // cannot go through SyncDeltaOperator's rate_gate() the normal way; network_rate_check
+    // (wasm_repo_sync.rs) checks in against that SAME shared budget instead of a second one.
+    // Optional-chained: pre-boot, __vdg_repo is not wired yet and there is nothing to guard.
+    try {
+      window.__vdg_repo?.network_rate_check();
+    } catch {
+      break; // budget spent — stop asking rather than keep fanning out
+    }
     const res = await io.ws_read_file(dir, file.name).catch(() => null);
     if (!res?.found) continue;
     bodies.push(String(res.content));

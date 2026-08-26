@@ -12,7 +12,7 @@ import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAri
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
 import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 import { renderUserMenu, renderSwBanner } from './topbar-menus.js';
-import { putEnvelope } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { handleFileUpload } from './topbar-import.js';
 
 // F-42-06 (owner: "báo giá là chỉ sales làm nha", "theo thông lệ quốc tế"). The button used to
 // read `hasRole(ROLE_MANAGER) ? '' : button` — "everyone EXCEPT the manager", which handed a
@@ -81,15 +81,29 @@ class VdgTopbar extends LitElement {
     this._onDeltaSynced   = (e) => { this._lastPullMs = e.detail?.ts ?? Date.now(); };
     this._onSyncError     = (e) => {
       this._retryStreak++; this._retrying = true;
-      // F-19-20: known reason codes get a localized string; raw error text otherwise
+      // F-19-20 / F-58-02: known reason codes get a localized string; raw error text otherwise.
+      // rate_budget is deliberately its own branch, not folded into the generic fallback — a
+      // reader must be able to tell "my own client is refusing calls" from an ordinary network
+      // blip, which is exactly the distinction that stayed invisible through the 2026-08-25
+      // incident (a console.warn nobody watches is not a report).
       this._lastError = e.detail?.reason === 'max_retries'
         ? t('topbar.sync.tooltip.max_retries_reason')
+        : e.detail?.reason === 'rate_budget'
+        ? t('topbar.sync.tooltip.rate_budget_reason')
         : (e.detail?.error ?? null);
     };
     this._onServerHealth  = (e) => {
       if (e.detail?.backlog_depth !== undefined) this._serverBacklog = Number(e.detail.backlog_depth) || 0;
       if (e.detail?.oldest_pending_age_ms !== undefined) this._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
       if (e.detail?.provider) this._serverProvider = e.detail.provider;
+      // F-58-02: sync_delta.rs only sends this field when one tick's own call count went above
+      // its stated steady-state budget — reusing vdg:server-health rather than a new channel. It
+      // rides the SAME visible tooltip vdg:sync-error already uses (topbar-sync-chip renders
+      // `_lastError`), not a devtools-only log — a "successful" but abnormally large tick must be
+      // as visible as an outright failure, which is exactly what stayed invisible on 2026-08-25.
+      if (e.detail?.sync_tick_calls !== undefined) {
+        this._lastError = t('topbar.sync.tooltip.high_volume_reason', { n: e.detail.sync_tick_calls });
+      }
       this.requestUpdate();
     };
     this._onException     = (e) => { this._exceptionCount = e.detail.count; };
@@ -214,36 +228,9 @@ class VdgTopbar extends LitElement {
     window.dispatchEvent(new CustomEvent('vdg:sync-now'));
   }
 
-  async _handleFileUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const repo = window.__vdg_repo;
-    if (!repo) return;
-    
-    window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.import.processing') } }));
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!Array.isArray(data)) throw new Error('Invalid JSON format, expected array.');
-      
-      let count = 0;
-      for (const item of data) {
-        if (!item?.id) throw new Error('Import item missing "id" field.');
-        await putEnvelope(repo, item.id, item); // envelope only — an undo of a list edit never touches money
-        count++;
-        if (count % 500 === 0) {
-          window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'info', message: t('topbar.import.progress', { count, total: data.length }) } }));
-        }
-      }
-      
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t('topbar.import.success', { count }) } }));
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (err) {
-      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: t('topbar.import.error', { error: err.message }) } }));
-    }
-    e.target.value = ''; // Reset input
-    this._menuOpen = false;
-  }
+  // Bulk JSON import — extracted to topbar-import.js (350-line cap), kept as a bound method
+  // here since topbar-menus.js wires it in as `host._handleFileUpload`.
+  _handleFileUpload(e) { return handleFileUpload(this, e); }
 
   render() {
     const badge = badgeLabel(this._exceptionCount + this._approvalCount);

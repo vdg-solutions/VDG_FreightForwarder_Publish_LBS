@@ -200,9 +200,14 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
+  // F-58-02: poll_health() used to fire here too — once per Changes page, roughly doubling the
+  // delta engine's HTTP volume for a signal nobody needed at that cadence. The read routes
+  // (RecordGet/RecordList/Changes) carry no x-replication-backlog header (only RecordCreate/
+  // RecordUpdate stamp it — server/src/bootstrap/edge/dispatch.rs), so the read-only sync path
+  // never saw it that way either. Health now polls on its own slow timer (sync-schedulers.js
+  // startHealthPoll) instead of riding every page fetch.
   async changes_feed(pageToken) {
     try {
-      this.poll_health().catch(() => {});
       const res = await this.changes(pageToken || '0');
       const changes = (res?.results ?? []).map((c) => {
         // WASM apply_change calls name.strip_suffix(".json") — must have the suffix
