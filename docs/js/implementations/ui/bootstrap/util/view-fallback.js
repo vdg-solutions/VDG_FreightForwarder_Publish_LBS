@@ -17,7 +17,7 @@ export function renderViewFallback(root, route, reason = 'timeout') {
       _attempts.set(route, used + 1);
       window.dispatchEvent(new CustomEvent('vdg:navigate', { detail: { route } }));
     },
-    onReload: _healOrReload,               // fires ONLY on user click — never automatic
+    onReload: healOrReloadViaServiceWorker, // fires ONLY on user click — never automatic
   });
 }
 
@@ -28,7 +28,12 @@ export function renderViewFallback(root, route, reason = 'timeout') {
 // SKIP_WAITING plumbing the update banner uses (sw-register.js _wireUpdatePrompt +
 // sw-update-guard.js's one-shot reload guard) instead of a bare location.reload(). No parallel
 // heal path — this dispatches the identical event a human clicking that banner would.
-async function _healOrReload() {
+// Exported: app.js's boot-critical wasm-load failure (boot/wasm-boot-loader.js) reuses this
+// exact function too — one heal path, not one per caller. Safe to share there specifically
+// because that code only runs AFTER app.js's own module graph has already loaded successfully;
+// entry-loader.js (index.html's pre-app.js bootstrapper) deliberately does NOT import this — see
+// its own header comment for why.
+export async function healOrReloadViaServiceWorker() {
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
   if (reg?.waiting) {
     window.dispatchEvent(new CustomEvent('vdg:sw-update-accept'));

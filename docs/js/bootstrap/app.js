@@ -533,7 +533,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 57a4c83-dirty">v0.4.26 (57a4c83-dirty)</span>
+        <span class="font-mono whitespace-nowrap" title="build 4cc1935">v0.4.27 (4cc1935)</span>
       </div>
     `;
   }
@@ -2146,7 +2146,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.26 (57a4c83-dirty)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.27 (4cc1935)</div>
         </div>
       </div>
     </div>`;
@@ -4566,11 +4566,11 @@ function renderViewFallback(root, route, reason = "timeout") {
       _attempts.set(route, used + 1);
       window.dispatchEvent(new CustomEvent("vdg:navigate", { detail: { route } }));
     },
-    onReload: _healOrReload
+    onReload: healOrReloadViaServiceWorker
     // fires ONLY on user click — never automatic
   });
 }
-async function _healOrReload() {
+async function healOrReloadViaServiceWorker() {
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
   if (reg?.waiting) {
     window.dispatchEvent(new CustomEvent("vdg:sw-update-accept"));
@@ -4768,7 +4768,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.26 (57a4c83-dirty)";
+var APP_VERSION = "v0.4.27 (4cc1935)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5930,8 +5930,8 @@ function globalizeBridgeExports(mod) {
 async function loadWasm() {
   if (cached) return cached;
   try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=57a4c83-dirty", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=57a4c83-dirty", document.baseURI).href;
+    const mod = await import(new URL("pkg/vdg_freight.js?v=4cc1935", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4cc1935", document.baseURI).href;
     await mod.default({ module_or_path: wasmUrl });
     cached = mod;
     window.__vdg_wasm = mod;
@@ -6179,8 +6179,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const db = null;
   fsm.dispatch(BootEvent.DB_OPENED);
   stepRef.value = STEP_WASM_INIT;
-  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=57a4c83-dirty", document.baseURI).href);
-  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=57a4c83-dirty", document.baseURI).href;
+  const wasmMod = await import(new URL("pkg/vdg_freight.js?v=4cc1935", document.baseURI).href);
+  const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4cc1935", document.baseURI).href;
   await wasmMod.default({ module_or_path: wasmUrl });
   window.__vdg_wasm = wasmMod;
   globalizeBridgeExports(wasmMod);
@@ -6478,6 +6478,51 @@ function initMigrationOverlay() {
   });
 }
 
+// output/web/js.tmp/bootstrap/boot/wasm-boot-loader.js
+async function loadWasmModule() {
+  if (window.__vdg_wasm) return window.__vdg_wasm;
+  try {
+    const mod = await import(new URL("pkg/vdg_freight.js?v=4cc1935", document.baseURI).href);
+    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4cc1935", document.baseURI).href;
+    await mod.default({ module_or_path: wasmUrl });
+    window.__vdg_wasm = mod;
+    return mod;
+  } catch (err) {
+    if (err instanceof WebAssembly.LinkError || err?.name === "LinkError" || String(err).includes("LinkError")) {
+      console.warn("[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...");
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (!sessionStorage.getItem("__wasm_link_reloaded")) {
+        sessionStorage.setItem("__wasm_link_reloaded", "1");
+        location.reload();
+        return new Promise(() => {
+        });
+      }
+    }
+    throw err;
+  }
+}
+function handleUnrecognizedBootError(err, mount) {
+  console.error("[VDG] boot failed, unrecognized error:", err);
+  if (!mount) return;
+  mount.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${t("view_mount_failed_title")}</div>
+      <div class="text-sm text-slate-500">${t("view_mount_failed_network")}</div>
+      <button id="boot-error-reload-btn" data-testid="boot-error-reload"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("view_mount_reload")}
+      </button>
+    </div>`;
+  mount.querySelector("#boot-error-reload-btn")?.addEventListener("click", () => healOrReloadViaServiceWorker());
+}
+
 // output/web/js.tmp/bootstrap/app-toast.js
 var TOAST_DEFAULT_MS = 4e3;
 var TOAST_FADE_MS = 300;
@@ -6623,35 +6668,6 @@ function bootApp(user, db) {
   const initialRoute = location.hash.slice(1) || defaultRoute;
   renderView(initialRoute);
 }
-async function loadWasmModule() {
-  if (window.__vdg_wasm) return window.__vdg_wasm;
-  try {
-    const mod = await import(new URL("pkg/vdg_freight.js?v=57a4c83-dirty", document.baseURI).href);
-    const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=57a4c83-dirty", document.baseURI).href;
-    await mod.default({ module_or_path: wasmUrl });
-    window.__vdg_wasm = mod;
-    return mod;
-  } catch (err) {
-    if (err instanceof LinkError || err?.name === "LinkError" || String(err).includes("LinkError")) {
-      console.warn("[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...");
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-      if (navigator.serviceWorker) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-      }
-      if (!sessionStorage.getItem("__wasm_link_reloaded")) {
-        sessionStorage.setItem("__wasm_link_reloaded", "1");
-        location.reload();
-        return new Promise(() => {
-        });
-      }
-    }
-    throw err;
-  }
-}
 async function main() {
   const wasmReady = loadWasmModule();
   initMigrationOverlay();
@@ -6699,7 +6715,7 @@ async function main() {
       console.error("[VDG] boot stopped on Server", err.status, err.message);
       return;
     }
-    throw err;
+    handleUnrecognizedBootError(err, _resolveBootFallbackMount());
   }
 }
 main();

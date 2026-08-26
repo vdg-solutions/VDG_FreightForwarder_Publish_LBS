@@ -7,7 +7,7 @@
        having — 'unsafe-inline' would allow exactly what it is meant to stop). Must stay ahead of
        every script/style/link so it governs them. GitHub Pages cannot set headers, hence <meta>;
        frame-ancestors is header-only and therefore NOT covered here. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://accounts.google.com 'sha256-DHmDDdO8IFATCqDEMMAC5I9wIee8tFQMMvBaksaN914=' 'sha256-CBbRHxGAd+B94ChI4g5/oF6vMOK2X7xdqfSS50tv0wo=' 'sha256-ewaVtQKz+1ZH+npNTVVVgrUvHqt5qUZh2vSu1AJn7ps='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://lh3.googleusercontent.com; connect-src 'self' https://vdg-lbs-edge.lbs-vdg.workers.dev https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.sheetjs.com https://accounts.google.com 'sha256-DHmDDdO8IFATCqDEMMAC5I9wIee8tFQMMvBaksaN914=' 'sha256-CBbRHxGAd+B94ChI4g5/oF6vMOK2X7xdqfSS50tv0wo=' 'sha256-ewaVtQKz+1ZH+npNTVVVgrUvHqt5qUZh2vSu1AJn7ps=' 'sha256-dIYKujHxQzXXKWCI/YNc07pHURwE9Mu0oJSgSPI90qA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://lh3.googleusercontent.com; connect-src 'self' https://vdg-lbs-edge.lbs-vdg.workers.dev https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'" />
   <!-- Base path: '/' at a domain root; a subpath (e.g. /Repo/) for a GitHub Pages project site.
        dist seds /VDG_FreightForwarder_Publish_LBS/. Must precede every relative src/href below so they resolve
        against it (and document.baseURI, used by fetch + dynamic import). -->
@@ -121,6 +121,15 @@
 
       <main id="view-root" class="flex-1 overflow-auto scrollbar-thin">
         <div id="view-loading" class="p-6 text-slate-500 text-sm">Loading view…</div>
+        <!-- entry-loader.js reveals this on a static-import-graph load failure (app.js itself,
+             or a chunk it statically imports, 503/404ing — e.g. a GitHub Pages deploy-window
+             race). Pre-rendered here, not built at runtime: see entry-loader.js for why. Wording
+             hand-mirrored from view_mount_failed_network / view_mount_reload in vi.json. -->
+        <div id="entry-load-failed" hidden class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+          <div class="text-lg font-semibold text-slate-700">Không mở được ứng dụng</div>
+          <div class="text-sm text-slate-500">Không tải được dữ liệu — có thể bản cập nhật mới đang được phát hành. Bấm Tải lại trang để lấy bản mới nhất.</div>
+          <button id="entry-reload-btn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Tải lại trang</button>
+        </div>
       </main>
     </div>
   </div>
@@ -129,6 +138,9 @@
     import { registerServiceWorker } from './js/bootstrap/sw-register.js';
     registerServiceWorker();
   </script>
-  <script type="module" src="js/bootstrap/app.js"></script>
+  <script type="module">
+    import { wireEntryLoad } from './js/bootstrap/entry-loader.js';
+    wireEntryLoad(document, 'js/bootstrap/app.js');
+  </script>
 </body>
 </html>
