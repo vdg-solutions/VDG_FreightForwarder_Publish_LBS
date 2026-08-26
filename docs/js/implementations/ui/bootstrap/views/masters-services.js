@@ -7,6 +7,7 @@ import { openMergeModal } from './merge-modal.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const KIND       = 'services';
 const KIND_PREFIX = 'SVC'; // AC-M2
@@ -224,23 +225,32 @@ export async function render(root) {
     btn.disabled = sel.length !== 2;
   }
 
+  function handleAdd() {
+    openModal(root, null, async (entity) => {
+      await repo.put(KIND, entity.id, entity);
+      items = [...items, entity];
+      api?.setGridOption('rowData', items);
+      const hdr = root.querySelector('#grid-header');
+      if (hdr) hdr.innerHTML = renderToolbar(items.length);
+      wireToolbar();
+    });
+  }
+
   function wireToolbar() {
-    root.querySelector('#grid-search')?.addEventListener('input', (e) => {
-      api?.setGridOption('quickFilterText', e.target.value);
+    wireGridFilterEmptyState({
+      root,
+      getApi: () => api,
+      searchSelector: '#grid-search',
+      getTotal: () => items.length,
+      entity: t('masters_services.empty.entity'),
+      // CTA relies on the generic empty_state.filtered.create / first_run.create templates —
+      // matches this view's own "+ Thêm mới" toolbar verb, so no per-view override is needed.
+      onCreate: isM ? handleAdd : undefined,
     });
     root.querySelector('#export-csv')?.addEventListener('click', () => {
       api?.exportDataAsCsv({ fileName: 'vdg_services.csv' });
     });
-    root.querySelector('#btn-add')?.addEventListener('click', () => {
-      openModal(root, null, async (entity) => {
-        await repo.put(KIND, entity.id, entity);
-        items = [...items, entity];
-        api?.setGridOption('rowData', items);
-        const hdr = root.querySelector('#grid-header');
-        if (hdr) hdr.innerHTML = renderToolbar(items.length);
-        wireToolbar();
-      });
-    });
+    root.querySelector('#btn-add')?.addEventListener('click', handleAdd);
     root.querySelector('#btn-merge')?.addEventListener('click', async () => {
       const selected = api?.getSelectedRows() || [];
       if (selected.length !== 2) return;

@@ -2858,6 +2858,12 @@ function validateShipmentForm(state, { publish = true } = {}) {
   if (!state.customer) {
     errs.push(t("sales_new.validation.no_customer"));
   }
+  if (state.closing_si_bad_input) {
+    errs.push(t("sales_new.validation.closing_si_incomplete"));
+  }
+  if (state.closing_cy_bad_input) {
+    errs.push(t("sales_new.validation.closing_cy_incomplete"));
+  }
   if (!state.sales_rep) {
     errs.push(t("sales_new.validation.no_sales_rep"));
   }
@@ -2941,7 +2947,7 @@ async function renderForm(root, opts = {}) {
         </div>
       </div>
       <div id="phase-timeline"></div>
-      <form id="shipment-form" class="space-y-4">
+      <form id="shipment-form" class="space-y-4" novalidate>
         ${sectionAHtml(d, customers, reps, { carriers, shipments })}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ""}
@@ -2994,6 +3000,7 @@ async function renderForm(root, opts = {}) {
     document.addEventListener("visibilitychange", onHidden);
   }
 }
+var badInput = (root, name) => !!root.querySelector(`[name=${name}]`)?.validity?.badInput;
 function collectFormState(root) {
   const g2 = (name) => root.querySelector(`[name=${name}]`)?.value || "";
   const jobNo = g2("job_no") || null;
@@ -3046,7 +3053,10 @@ function collectFormState(root) {
     cargo_items: collectCargoItems(root),
     containers: collectContainers(root),
     // E-39: booking/docs ext fields — one list (section-docs-ext.js), so collector cannot drift
-    ...Object.fromEntries(DOCS_EXT_FIELDS.map((n) => [n, g2(n)]))
+    ...Object.fromEntries(DOCS_EXT_FIELDS.map((n) => [n, g2(n)])),
+    // the only two datetime-local fields in the form — see badInput() above
+    closing_si_bad_input: badInput(root, "closing_si"),
+    closing_cy_bad_input: badInput(root, "closing_cy")
   };
 }
 function _renderActionBar(publishState) {
@@ -3177,10 +3187,18 @@ function highlightErrors(root, errors) {
   if (errors.some((e) => e === t("sales_new.validation.no_customer"))) {
     root.querySelector("[name=customer]")?.classList.add("border-red-400", "field-error");
   }
-  const summaryEl = root.querySelector("#form-error-summary");
-  if (summaryEl) {
-    summaryEl.innerHTML = errors.map((e) => `<div>\u2022 ${e}</div>`).join("");
-    summaryEl.classList.toggle("hidden", errors.length === 0);
+  if (errors.some((e) => e === t("sales_new.validation.closing_si_incomplete"))) {
+    root.querySelector("[name=closing_si]")?.classList.add("border-red-400", "field-error");
+  }
+  if (errors.some((e) => e === t("sales_new.validation.closing_cy_incomplete"))) {
+    root.querySelector("[name=closing_cy]")?.classList.add("border-red-400", "field-error");
+  }
+  const html = errors.map((e) => `<div>\u2022 ${e}</div>`).join("");
+  for (const sel of ["#form-error-summary", "#shipment-form-errors"]) {
+    const el = root.querySelector(sel);
+    if (!el) continue;
+    el.innerHTML = html;
+    el.classList.toggle("hidden", errors.length === 0);
   }
 }
 async function _writePnlLines(repo, ref, shipment, version) {
@@ -3608,14 +3626,9 @@ async function render(root, opts = {}) {
       const publish = intent === "publish";
       const state = collectFormState(formMount);
       const errors = validateShipmentForm(state, { publish });
+      highlightErrors(root, errors);
       if (errors.length) {
-        highlightErrors(root, errors);
         jumpToFirstError(root);
-        const errEl = root.querySelector("#shipment-form-errors");
-        if (errEl) {
-          errEl.innerHTML = errors.map((err) => `<div>&#x2022; ${err}</div>`).join("");
-          errEl.classList.remove("hidden");
-        }
         return;
       }
       const flagged = await findFxDeviations(state, fxRepo);

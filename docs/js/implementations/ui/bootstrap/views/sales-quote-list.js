@@ -7,6 +7,7 @@ import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../../core_
 import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { navigate } from '../router.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const STATE_COLORS = {
   Draft:    'bg-slate-100 text-slate-700',
@@ -192,8 +193,16 @@ export async function render(root) {
   }
 
   function wireToolbar() {
-    root.querySelector('#grid-search')?.addEventListener('input', (e) => {
-      api?.setGridOption('quickFilterText', e.target.value);
+    wireGridFilterEmptyState({
+      root,
+      getApi: () => api,
+      searchSelector: '#grid-search',
+      getTotal: () => items.length,
+      entity: t('quote_list.empty.entity'),
+      onCreate: () => navigate('/sales/quote/new'),
+      filteredCreateLabel: t('quote_list.empty.create_action'),
+      // first-run CTA relies on the generic empty_state.first_run.create template — "Tạo báo
+      // giá đầu tiên" reads naturally even though this view's own toolbar carries no verb.
     });
     root.querySelector('#export-csv')?.addEventListener('click', () => {
       api?.exportDataAsCsv({ fileName: 'vdg_quotations.csv' });

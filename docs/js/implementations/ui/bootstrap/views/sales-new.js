@@ -285,14 +285,11 @@ export async function render(root, opts = {}) {
       const publish = intent === 'publish';
       const state   = collectFormState(formMount);
       const errors  = validateShipmentForm(state, { publish });
+      // Runs on every attempt, success or fail — a banner a PRIOR failing submit painted must
+      // clear on the attempt that finally passes, not just get overwritten by the next failure.
+      highlightErrors(root, errors);
       if (errors.length) {
-        highlightErrors(root, errors);
         jumpToFirstError(root); // E-39: the flagged field may sit on another screen
-        const errEl = root.querySelector('#shipment-form-errors');
-        if (errEl) {
-          errEl.innerHTML = errors.map((err) => `<div>&#x2022; ${err}</div>`).join('');
-          errEl.classList.remove('hidden');
-        }
         return;
       }
       // F-29-04 VR-03: hard fx-deviation warn — blocks until explicitly confirmed

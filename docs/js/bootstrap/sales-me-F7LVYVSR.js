@@ -19,6 +19,12 @@ import {
   safeAwait
 } from "./chunk-JAZY43GR.js";
 import {
+  wireGridFilterEmptyState
+} from "./chunk-QBLEFP4Q.js";
+import {
+  navigate
+} from "./chunk-H2H4WJDI.js";
+import {
   agGridLocaleText
 } from "./chunk-KZWJDTAL.js";
 import "./chunk-EQL6UFHA.js";
@@ -482,8 +488,15 @@ async function populateView(root, salesId, user) {
         headerHeight: 36,
         localeText: agGridLocaleText()
       });
-      root.querySelector("#active-grid-search")?.addEventListener("input", (e) => {
-        activeGridApi?.setGridOption("quickFilterText", e.target.value);
+      wireGridFilterEmptyState({
+        root,
+        getApi: () => activeGridApi,
+        searchSelector: "#active-grid-search",
+        getTotal: () => activeShipments.length,
+        entity: t("sales_me.empty.entity"),
+        onCreate: () => navigate(`/shipments/new?sales=${encodeURIComponent(salesId)}`),
+        filteredCreateLabel: t("sales_me.empty.create_action"),
+        firstRunCreateLabel: t("sales_me.empty.first_run_action")
       });
     }
   }

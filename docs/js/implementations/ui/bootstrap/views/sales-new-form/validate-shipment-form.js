@@ -20,6 +20,16 @@ export function validateShipmentForm(state, { publish = true } = {}) {
   if (!state.customer) {
     errs.push(t('sales_new.validation.no_customer'));
   }
+  // novalidate (sales-new-form.js) hands the browser's own datetime-local refusal over to this
+  // gate — badInput means the box holds unparseable input (e.g. date+hour+minute typed, AM/PM
+  // segment left empty), which is NOT the same as an untouched field. Blocks on save too, not
+  // only publish: a badInput box must never save silently as blank.
+  if (state.closing_si_bad_input) {
+    errs.push(t('sales_new.validation.closing_si_incomplete'));
+  }
+  if (state.closing_cy_bad_input) {
+    errs.push(t('sales_new.validation.closing_cy_incomplete'));
+  }
   // The job's owner must exist from birth: the revenue fork, the publish fork and the Job No
   // namespace are all addressed by it — an unattributed save writes into nobody's folders.
   if (!state.sales_rep) {

@@ -11,6 +11,7 @@ import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
+import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const PANEL_WIDTH_PX    = 480;
 const SLIDE_DURATION_MS = 250;
@@ -225,8 +226,16 @@ export async function render(root) {
   if (headerDiv) {
     headerDiv.innerHTML = toolbar(rowData.length, isLarge);
 
-    document.getElementById('grid-search')?.addEventListener('input', (e) => {
-      api?.setGridOption('quickFilterText', e.target.value);
+    wireGridFilterEmptyState({
+      root,
+      getApi: () => api,
+      searchSelector: '#grid-search',
+      getTotal: () => rowData.length,
+      entity: t('shipments.empty.entity'),
+      onCreate: () => navigate('/shipments/new'),
+      filteredCreateLabel: t('shipments.empty.create_action'),
+      firstRunCreateLabel: t('shipments.empty.first_run_action'),
+      firstRunBody: t('shipments.empty.first_run_body'),
     });
 
     document.getElementById('export-csv')?.addEventListener('click', () => {

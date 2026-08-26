@@ -7,6 +7,9 @@ import {
   sendToCustomer
 } from "./chunk-5UHUC2YB.js";
 import {
+  wireGridFilterEmptyState
+} from "./chunk-QBLEFP4Q.js";
+import {
   navigate
 } from "./chunk-H2H4WJDI.js";
 import {
@@ -181,8 +184,16 @@ async function render(root) {
     ];
   }
   function wireToolbar() {
-    root.querySelector("#grid-search")?.addEventListener("input", (e) => {
-      api?.setGridOption("quickFilterText", e.target.value);
+    wireGridFilterEmptyState({
+      root,
+      getApi: () => api,
+      searchSelector: "#grid-search",
+      getTotal: () => items.length,
+      entity: t("quote_list.empty.entity"),
+      onCreate: () => navigate("/sales/quote/new"),
+      filteredCreateLabel: t("quote_list.empty.create_action")
+      // first-run CTA relies on the generic empty_state.first_run.create template — "Tạo báo
+      // giá đầu tiên" reads naturally even though this view's own toolbar carries no verb.
     });
     root.querySelector("#export-csv")?.addEventListener("click", () => {
       api?.exportDataAsCsv({ fileName: "vdg_quotations.csv" });

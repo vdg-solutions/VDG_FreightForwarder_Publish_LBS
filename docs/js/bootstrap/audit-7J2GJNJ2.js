@@ -5,8 +5,16 @@ import {
   todayLocal
 } from "./chunk-CFMB5DE5.js";
 import {
+  EMPTY_STATE_VARIANT,
+  bindEmptyStateActions,
+  emptyStateHtml
+} from "./chunk-QBLEFP4Q.js";
+import {
   navigate
 } from "./chunk-H2H4WJDI.js";
+import {
+  agGridLocaleText
+} from "./chunk-KZWJDTAL.js";
 import "./chunk-EQL6UFHA.js";
 import {
   ROLE_MANAGER
@@ -15,6 +23,8 @@ import {
   hasRole
 } from "./chunk-B24LWBUG.js";
 import {
+  dateFrom,
+  nowMs,
   t
 } from "./chunk-NPO6NGQC.js";
 
@@ -71,10 +81,54 @@ function changesCell({ data }) {
   return span;
 }
 
+// output/web/js.tmp/implementations/kernel/core_abstractions/util/rel-time.js
+var _rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+function relTime(iso) {
+  if (!iso) return "\u2014";
+  const diff = (dateFrom(iso).getTime() - nowMs()) / 1e3;
+  if (Math.abs(diff) < 60) return _rtf.format(Math.round(diff), "second");
+  if (Math.abs(diff) < 3600) return _rtf.format(Math.round(diff / 60), "minute");
+  if (Math.abs(diff) < 86400) return _rtf.format(Math.round(diff / 3600), "hour");
+  return _rtf.format(Math.round(diff / 86400), "day");
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/manager/audit-feed.js
+var ACTIVITY_FEED_MAX = 20;
+function buildFeedHtml(entries) {
+  if (!entries.length) return `<li class="py-2 text-xs text-slate-400">${t("dashboard.activity.none")}</li>`;
+  const groups = /* @__PURE__ */ new Map();
+  for (const e of entries) {
+    const key = `${e.entity_kind || e.kind}::${e.entity_id || e.id}`;
+    (groups.get(key) || (() => {
+      const a = [];
+      groups.set(key, a);
+      return a;
+    })()).push(e);
+  }
+  const items = [...groups.values()].slice(0, ACTIVITY_FEED_MAX);
+  return items.map((group) => {
+    const first = group[0];
+    const label = `${first.entity_kind || first.kind || "?"} ${first.entity_id || first.id || "?"}`;
+    if (group.length === 1) {
+      return `<li class="py-1.5 text-xs text-slate-600 border-b border-slate-50">
+        ${relTime(first.created_at || first.ts)} \u2014 ${label} \xB7 ${first.event || first.op || "?"}
+      </li>`;
+    }
+    return `<li class="py-1.5 text-xs border-b border-slate-50">
+      <details>
+        <summary class="cursor-pointer text-slate-600">${relTime(first.created_at || first.ts)} \u2014 ${label} \xB7 ${first.event || first.op || "?"}</summary>
+        <ul class="pl-4 mt-1 space-y-0.5">
+          ${group.slice(1).map((e) => `<li class="text-slate-500">${relTime(e.created_at || e.ts)} \u2014 ${e.event || e.op || "?"}</li>`).join("")}
+          <li class="text-blue-500 text-[11px] cursor-pointer">${t("audit.feed.show_more", { n: group.length - 1 })}</li>
+        </ul>
+      </details>
+    </li>`;
+  }).join("");
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/audit.js
 var AUDIT_LOG_L2_MAX = 500;
 var AUDIT_LOG_SCROLL_BATCH = 50;
-var ACTIVITY_FEED_MAX = 20;
 var SCROLL_THRESHOLD_PX = 200;
 var AUDIT_LOG_KIND = "audit_log";
 function csvHeaders() {
@@ -97,28 +151,19 @@ var _onEntity;
 function getRepo() {
   return window.__vdg_repo;
 }
-var _rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-function relTime(iso) {
-  if (!iso) return "\u2014";
-  const diff = (new Date(iso).getTime() - Date.now()) / 1e3;
-  if (Math.abs(diff) < 60) return _rtf.format(Math.round(diff), "second");
-  if (Math.abs(diff) < 3600) return _rtf.format(Math.round(diff / 60), "minute");
-  if (Math.abs(diff) < 86400) return _rtf.format(Math.round(diff / 3600), "hour");
-  return _rtf.format(Math.round(diff / 86400), "day");
-}
 async function loadRows(repo) {
   const records = await repo.list(AUDIT_LOG_KIND, null);
   return records.filter((r) => !r._deleted).sort((a, b) => new Date(b.created_at || b.ts || 0) - new Date(a.created_at || a.ts || 0)).slice(0, AUDIT_LOG_L2_MAX);
 }
 function applyFilter(rows) {
-  const { kind, entityId, actor, event, dateFrom, dateTo } = _filter;
+  const { kind, entityId, actor, event, dateFrom: dateFrom2, dateTo } = _filter;
   return rows.filter((r) => {
     if (kind && (r.entity_kind || r.kind || "").toLowerCase() !== kind.toLowerCase()) return false;
     if (entityId && !(r.entity_id || "").includes(entityId)) return false;
     if (actor && !(r.actor_email || r.actor || "").includes(actor)) return false;
     if (event && !(r.event || r.op || "").toLowerCase().includes(event.toLowerCase())) return false;
     const ts = r.created_at || r.ts;
-    if (dateFrom && ts && ts < dateFrom) return false;
+    if (dateFrom2 && ts && ts < dateFrom2) return false;
     if (dateTo && ts && ts > dateTo) return false;
     return true;
   });
@@ -178,6 +223,7 @@ function initGrid(container, rows) {
     columnDefs: _colDefs(),
     rowData: rows,
     rowHeight: 34,
+    localeText: agGridLocaleText(),
     onGridReady: (p) => {
       api = p.api;
     },
@@ -202,37 +248,6 @@ function initGrid(container, rows) {
     }
   });
   return api;
-}
-function buildFeedHtml(entries) {
-  if (!entries.length) return `<li class="py-2 text-xs text-slate-400">${t("dashboard.activity.none")}</li>`;
-  const groups = /* @__PURE__ */ new Map();
-  for (const e of entries) {
-    const key = `${e.entity_kind || e.kind}::${e.entity_id || e.id}`;
-    (groups.get(key) || (() => {
-      const a = [];
-      groups.set(key, a);
-      return a;
-    })()).push(e);
-  }
-  const items = [...groups.values()].slice(0, ACTIVITY_FEED_MAX);
-  return items.map((group) => {
-    const first = group[0];
-    const label = `${first.entity_kind || first.kind || "?"} ${first.entity_id || first.id || "?"}`;
-    if (group.length === 1) {
-      return `<li class="py-1.5 text-xs text-slate-600 border-b border-slate-50">
-        ${relTime(first.created_at || first.ts)} \u2014 ${label} \xB7 ${first.event || first.op || "?"}
-      </li>`;
-    }
-    return `<li class="py-1.5 text-xs border-b border-slate-50">
-      <details>
-        <summary class="cursor-pointer text-slate-600">${relTime(first.created_at || first.ts)} \u2014 ${label} \xB7 ${first.event || first.op || "?"}</summary>
-        <ul class="pl-4 mt-1 space-y-0.5">
-          ${group.slice(1).map((e) => `<li class="text-slate-500">${relTime(e.created_at || e.ts)} \u2014 ${e.event || e.op || "?"}</li>`).join("")}
-          <li class="text-blue-500 text-[11px] cursor-pointer">${t("audit.feed.show_more", { n: group.length - 1 })}</li>
-        </ul>
-      </details>
-    </li>`;
-  }).join("");
 }
 function handleExportCsv() {
   const rows = _gridApi ? _gridApi.getRenderedNodes().map((n) => n.data) : applyFilter(_allRows);
@@ -321,22 +336,23 @@ async function render(root) {
   renderChainStatus(root.querySelector("#chain-status"), _allRows);
   const gridWrap = root.querySelector("#grid-wrap");
   gridWrap.innerHTML = "";
-  if (!_allRows.length) {
-    gridWrap.innerHTML = `
-      <div class="flex flex-col items-center gap-2 py-16 text-slate-400">
-        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-        <div class="text-sm font-medium">${t("audit.empty.no_entries")}</div>
-      </div>`;
-  } else {
-    _gridApi = initGrid(gridWrap, _allRows);
+  _gridApi = initGrid(gridWrap, _allRows);
+  function refreshEmptyState() {
+    if (!_gridApi) return;
+    const total = _allRows.length;
+    const displayed = applyFilter(_allRows).length;
+    const variant = total === 0 ? EMPTY_STATE_VARIANT.FIRST_RUN : EMPTY_STATE_VARIANT.FILTERED;
+    _gridApi.setGridOption("overlayNoRowsTemplate", emptyStateHtml({ variant, entity: t("audit.empty.entity") }));
+    if (displayed === 0) _gridApi.showNoRowsOverlay();
+    else _gridApi.hideOverlay();
   }
+  refreshEmptyState();
+  const FILTER_INPUT_IDS = ["f-kind", "f-entity-id", "f-actor", "f-event", "f-date-from", "f-date-to"];
   const bindFilter = (id, key) => {
     root.querySelector(`#${id}`)?.addEventListener("input", (e) => {
       _filter[key] = e.target.value.trim();
       if (_gridApi) _gridApi.setRowData(applyFilter(_allRows));
+      refreshEmptyState();
     });
   };
   bindFilter("f-kind", "kind");
@@ -345,6 +361,19 @@ async function render(root) {
   bindFilter("f-event", "event");
   bindFilter("f-date-from", "dateFrom");
   bindFilter("f-date-to", "dateTo");
+  bindEmptyStateActions(root, {
+    onClearFilter: () => {
+      Object.keys(_filter).forEach((k) => {
+        _filter[k] = "";
+      });
+      FILTER_INPUT_IDS.forEach((id) => {
+        const el = root.querySelector(`#${id}`);
+        if (el) el.value = "";
+      });
+      if (_gridApi) _gridApi.setRowData(_allRows);
+      refreshEmptyState();
+    }
+  });
   root.querySelector("#btn-export-csv")?.addEventListener("click", handleExportCsv);
   _onEntity = (e) => {
     const { kind } = e.detail || {};

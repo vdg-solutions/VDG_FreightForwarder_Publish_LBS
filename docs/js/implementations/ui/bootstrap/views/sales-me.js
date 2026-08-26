@@ -10,6 +10,8 @@ import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { statusBadgeLabel } from '../../../kernel/core_abstractions/util/status-i18n.js';
 import { loadMyData } from './sales-me-data.js';
+import { navigate } from '../router.js';
+import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const LOAD_TIMEOUT_MS = 12000;
 const CLOSED_LIKE_STATES = ['Closed', 'Delivered'];
@@ -311,8 +313,15 @@ async function populateView(root, salesId, user) {
         localeText: agGridLocaleText(),
       });
 
-      root.querySelector('#active-grid-search')?.addEventListener('input', (e) => {
-        activeGridApi?.setGridOption('quickFilterText', e.target.value);
+      wireGridFilterEmptyState({
+        root,
+        getApi: () => activeGridApi,
+        searchSelector: '#active-grid-search',
+        getTotal: () => activeShipments.length,
+        entity: t('sales_me.empty.entity'),
+        onCreate: () => navigate(`/shipments/new?sales=${encodeURIComponent(salesId)}`),
+        filteredCreateLabel: t('sales_me.empty.create_action'),
+        firstRunCreateLabel: t('sales_me.empty.first_run_action'),
       });
     }
   }

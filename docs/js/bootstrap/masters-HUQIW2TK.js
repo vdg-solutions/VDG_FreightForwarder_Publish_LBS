@@ -62,7 +62,7 @@ var VdgDupWizard = class extends LitElement {
   }
   async _merge(pair) {
     try {
-      const { openMergeModal } = await import("./masters-customers-ZDC7JEGZ.js");
+      const { openMergeModal } = await import("./masters-customers-WI442YUI.js");
       openMergeModal(pair.a, pair.b, this.repo);
     } catch {
     }
@@ -365,7 +365,7 @@ async function renderCustomersMaster(root) {
     document.body.appendChild(wizard);
   });
   try {
-    const { render: renderCusts } = await import("./masters-customers-ZDC7JEGZ.js");
+    const { render: renderCusts } = await import("./masters-customers-WI442YUI.js");
     await renderCusts(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.customer_load")}</div>`;
@@ -379,7 +379,7 @@ async function renderCarriersMaster(root) {
   root.innerHTML = "";
   root.appendChild(delegate);
   try {
-    const { render: renderCarriers } = await import("./masters-carriers-32MRQM4N.js");
+    const { render: renderCarriers } = await import("./masters-carriers-KRHC4OA5.js");
     await renderCarriers(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.carrier_load")}</div>`;

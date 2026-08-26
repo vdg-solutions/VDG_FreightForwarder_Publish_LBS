@@ -4,12 +4,15 @@ import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-rol
 import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
+import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import { changeLines, changesCell, renderChainStatus } from './audit-changes.js';
+import { emptyStateHtml, EMPTY_STATE_VARIANT, bindEmptyStateActions } from '../../components/empty-state.js';
+import { relTime } from '../../../../kernel/core_abstractions/util/rel-time.js';
+export { buildFeedHtml } from './audit-feed.js';
 
 const AUDIT_LOG_L2_MAX       = 500;
 const AUDIT_LOG_SCROLL_BATCH = 50;
-const ACTIVITY_FEED_MAX      = 20;
 const SCROLL_THRESHOLD_PX    = 200;
 const AUDIT_LOG_KIND         = 'audit_log';
 
@@ -27,19 +30,6 @@ let _gridApi   = null;
 let _onEntity;
 
 function getRepo() { return window.__vdg_repo; }
-
-// ── relative time ─────────────────────────────────────────────────────────────
-
-const _rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
-function relTime(iso) {
-  if (!iso) return '—';
-  const diff = (new Date(iso).getTime() - Date.now()) / 1000;
-  if (Math.abs(diff) < 60)   return _rtf.format(Math.round(diff), 'second');
-  if (Math.abs(diff) < 3600) return _rtf.format(Math.round(diff / 60), 'minute');
-  if (Math.abs(diff) < 86400) return _rtf.format(Math.round(diff / 3600), 'hour');
-  return _rtf.format(Math.round(diff / 86400), 'day');
-}
 
 // ── data ──────────────────────────────────────────────────────────────────────
 
@@ -121,6 +111,7 @@ function initGrid(container, rows) {
     columnDefs: _colDefs(),
     rowData:    rows,
     rowHeight:  34,
+    localeText: agGridLocaleText(),
     onGridReady: (p) => { api = p.api; },
     onRowClicked: (ev) => {
       window.dispatchEvent(new CustomEvent('vdg:open-detail', {
@@ -142,44 +133,6 @@ function initGrid(container, rows) {
     },
   });
   return api;
-}
-
-// ── activity feed ─────────────────────────────────────────────────────────────
-
-/**
- * Exported helper — builds feed HTML from entries; imported by dashboard.js.
- * @param {object[]} entries
- * @returns {string}
- */
-export function buildFeedHtml(entries) {
-  if (!entries.length) return `<li class="py-2 text-xs text-slate-400">${t('dashboard.activity.none')}</li>`;
-
-  // group by entity
-  const groups = new Map();
-  for (const e of entries) {
-    const key = `${e.entity_kind || e.kind}::${e.entity_id || e.id}`;
-    (groups.get(key) || (() => { const a = []; groups.set(key, a); return a; })()).push(e);
-  }
-
-  const items = [...groups.values()].slice(0, ACTIVITY_FEED_MAX);
-  return items.map((group) => {
-    const first = group[0];
-    const label = `${first.entity_kind || first.kind || '?'} ${first.entity_id || first.id || '?'}`;
-    if (group.length === 1) {
-      return `<li class="py-1.5 text-xs text-slate-600 border-b border-slate-50">
-        ${relTime(first.created_at || first.ts)} — ${label} · ${first.event || first.op || '?'}
-      </li>`;
-    }
-    return `<li class="py-1.5 text-xs border-b border-slate-50">
-      <details>
-        <summary class="cursor-pointer text-slate-600">${relTime(first.created_at || first.ts)} — ${label} · ${first.event || first.op || '?'}</summary>
-        <ul class="pl-4 mt-1 space-y-0.5">
-          ${group.slice(1).map((e) => `<li class="text-slate-500">${relTime(e.created_at || e.ts)} — ${e.event || e.op || '?'}</li>`).join('')}
-          <li class="text-blue-500 text-[11px] cursor-pointer">${t('audit.feed.show_more', { n: group.length - 1 })}</li>
-        </ul>
-      </details>
-    </li>`;
-  }).join('');
 }
 
 // ── CSV export ────────────────────────────────────────────────────────────────
@@ -277,25 +230,28 @@ export async function render(root) {
 
   const gridWrap = root.querySelector('#grid-wrap');
   gridWrap.innerHTML = '';
+  _gridApi = initGrid(gridWrap, _allRows);
 
-  if (!_allRows.length) {
-    gridWrap.innerHTML = `
-      <div class="flex flex-col items-center gap-2 py-16 text-slate-400">
-        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-        <div class="text-sm font-medium">${t('audit.empty.no_entries')}</div>
-      </div>`;
-  } else {
-    _gridApi = initGrid(gridWrap, _allRows);
+  // Two empty sub-states an audit log tells apart from a `kind`/entity/date filter: no log
+  // entries exist yet at all (FIRST_RUN, no create action — entries are system-written, never
+  // user-created) vs the filter above matches none of the entries that do exist (FILTERED).
+  function refreshEmptyState() {
+    if (!_gridApi) return;
+    const total     = _allRows.length;
+    const displayed = applyFilter(_allRows).length;
+    const variant   = total === 0 ? EMPTY_STATE_VARIANT.FIRST_RUN : EMPTY_STATE_VARIANT.FILTERED;
+    _gridApi.setGridOption('overlayNoRowsTemplate', emptyStateHtml({ variant, entity: t('audit.empty.entity') }));
+    if (displayed === 0) _gridApi.showNoRowsOverlay(); else _gridApi.hideOverlay();
   }
+  refreshEmptyState();
 
   // Filter inputs
+  const FILTER_INPUT_IDS = ['f-kind', 'f-entity-id', 'f-actor', 'f-event', 'f-date-from', 'f-date-to'];
   const bindFilter = (id, key) => {
     root.querySelector(`#${id}`)?.addEventListener('input', (e) => {
       _filter[key] = e.target.value.trim();
       if (_gridApi) _gridApi.setRowData(applyFilter(_allRows));
+      refreshEmptyState();
     });
   };
   bindFilter('f-kind',      'kind');
@@ -304,6 +260,18 @@ export async function render(root) {
   bindFilter('f-event',     'event');
   bindFilter('f-date-from', 'dateFrom');
   bindFilter('f-date-to',   'dateTo');
+
+  bindEmptyStateActions(root, {
+    onClearFilter: () => {
+      Object.keys(_filter).forEach((k) => { _filter[k] = ''; });
+      FILTER_INPUT_IDS.forEach((id) => {
+        const el = root.querySelector(`#${id}`);
+        if (el) el.value = '';
+      });
+      if (_gridApi) _gridApi.setRowData(_allRows);
+      refreshEmptyState();
+    },
+  });
 
   root.querySelector('#btn-export-csv')?.addEventListener('click', handleExportCsv);
 

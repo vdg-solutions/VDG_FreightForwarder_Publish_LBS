@@ -21,6 +21,9 @@ import {
   safeAwait
 } from "./chunk-JAZY43GR.js";
 import {
+  wireGridFilterEmptyState
+} from "./chunk-QBLEFP4Q.js";
+import {
   navigate
 } from "./chunk-H2H4WJDI.js";
 import {
@@ -284,8 +287,16 @@ async function render(root) {
   const headerDiv = document.getElementById("grid-header");
   if (headerDiv) {
     headerDiv.innerHTML = toolbar(rowData.length, isLarge);
-    document.getElementById("grid-search")?.addEventListener("input", (e) => {
-      api?.setGridOption("quickFilterText", e.target.value);
+    wireGridFilterEmptyState({
+      root,
+      getApi: () => api,
+      searchSelector: "#grid-search",
+      getTotal: () => rowData.length,
+      entity: t("shipments.empty.entity"),
+      onCreate: () => navigate("/shipments/new"),
+      filteredCreateLabel: t("shipments.empty.create_action"),
+      firstRunCreateLabel: t("shipments.empty.first_run_action"),
+      firstRunBody: t("shipments.empty.first_run_body")
     });
     document.getElementById("export-csv")?.addEventListener("click", () => {
       api?.exportDataAsCsv({ fileName: "vdg_shipments.csv" });

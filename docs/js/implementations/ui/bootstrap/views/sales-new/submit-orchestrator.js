@@ -51,7 +51,9 @@ export function validateForm(state) {
   return errs;
 }
 
-// Highlight fields + show summary block (AC-11)
+// Highlight fields + show summary block (AC-11). Called on EVERY submit attempt, not only a
+// failing one — a stale banner from a prior attempt only clears because this runs unconditionally
+// and toggles `hidden` off the current error count instead of only ever turning it on.
 export function highlightErrors(root, errors) {
   root.querySelectorAll('.field-error').forEach((el) =>
     el.classList.remove('border-red-400', 'field-error')
@@ -65,11 +67,23 @@ export function highlightErrors(root, errors) {
   if (errors.some((e) => e === t('sales_new.validation.no_customer'))) {
     root.querySelector('[name=customer]')?.classList.add('border-red-400', 'field-error');
   }
+  if (errors.some((e) => e === t('sales_new.validation.closing_si_incomplete'))) {
+    root.querySelector('[name=closing_si]')?.classList.add('border-red-400', 'field-error');
+  }
+  if (errors.some((e) => e === t('sales_new.validation.closing_cy_incomplete'))) {
+    root.querySelector('[name=closing_cy]')?.classList.add('border-red-400', 'field-error');
+  }
 
-  const summaryEl = root.querySelector('#form-error-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = errors.map((e) => `<div>• ${e}</div>`).join('');
-    summaryEl.classList.toggle('hidden', errors.length === 0);
+  // Two ids have carried this same summary block across the form's history —
+  // #form-error-summary (no longer rendered by sales-new-form.js's markup) and
+  // #shipment-form-errors (the one actually mounted today). Drive whichever is present so
+  // neither a leftover reference nor the live one is left half-wired.
+  const html = errors.map((e) => `<div>• ${e}</div>`).join('');
+  for (const sel of ['#form-error-summary', '#shipment-form-errors']) {
+    const el = root.querySelector(sel);
+    if (!el) continue;
+    el.innerHTML = html;
+    el.classList.toggle('hidden', errors.length === 0);
   }
 }
 
