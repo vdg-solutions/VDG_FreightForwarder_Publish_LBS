@@ -89,10 +89,10 @@ const BUILDERS = {
   ],
 };
 
-// The Debit Note tab shares its numbers with /note/:ref/debit — one source, so the two screens
-// can never disagree about what the customer owes.
+// The Debit Note tab shares its numbers with /note/:ref/debit — note.total comes straight off
+// loadNoteData (flows_note_lines, note_lines.rs), never resummed here, so the two screens can
+// never disagree about what the customer owes.
 function debitFields(shipment, note) {
-  const total = note.lines.reduce((sum, l) => sum + l.total, 0);
   return [
     ['document_print.field.debit_note_no', note.noteNo],
     ['note_print.recipient.issued_to',     val(note.customer?.name || shipment.customer)],
@@ -101,7 +101,7 @@ function debitFields(shipment, note) {
       ? note.lines.map((l) => l.description).filter(Boolean).join(' · ')
       : FIELD_ABSENT],
     ['quote_new.col.amount',               note.lines.length
-      ? `${note.currency} ${total.toFixed(2)}`
+      ? `${note.currency} ${note.total.toFixed(2)}`
       : FIELD_ABSENT],
     ['currency',                           val(note.currency)],
     ['document_print.field.due_date',      FIELD_ABSENT], // no payment-term field on the shipment

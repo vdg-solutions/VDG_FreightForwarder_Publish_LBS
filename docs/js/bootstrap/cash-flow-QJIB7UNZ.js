@@ -64,7 +64,7 @@ function renderFxRevalSummary(root, amount) {
   }
   const sign = amount > 0 ? "+" : "";
   el.className = `text-sm mt-2 ${fxRevalCls(amount)}`;
-  el.textContent = `${t("cash_flow.ar.fx_reval.label")}: ${sign}${Math.round(amount).toLocaleString()}`;
+  el.textContent = `${t("cash_flow.ar.fx_reval.label")}: ${sign}${amount.toLocaleString()}`;
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/cash-flow.js

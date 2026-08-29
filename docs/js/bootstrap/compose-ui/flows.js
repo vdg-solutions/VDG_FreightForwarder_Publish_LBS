@@ -4,6 +4,9 @@
 // platform now. Rules live behind `wasm.flows_*` — nothing here decides anything.
 import { bindSalesRepDerivation } from '../../implementations/ui/core_abstractions/ports/flows/sales-rep-derivation.js';
 import { bindAirRateCalculator } from '../../implementations/ui/core_abstractions/ports/flows/air-rate-calculator.js';
+import { bindPnlGate } from '../../implementations/ui/core_abstractions/ports/flows/pnl-gate.js';
+import { bindQuoteTotals } from '../../implementations/ui/core_abstractions/ports/flows/quote-totals.js';
+import { bindNoteLines } from '../../implementations/ui/core_abstractions/ports/flows/note-lines.js';
 import { bindFsmIngest } from '../../implementations/ui/core_abstractions/ports/flows/fsm-ingest.js';
 import { bindFsmAutoAdvance } from '../../implementations/ui/core_abstractions/ports/flows/fsm-auto-advance.js';
 import { bindJobNoGen } from '../../implementations/ui/core_abstractions/ports/flows/job-no-gen.js';
@@ -43,6 +46,44 @@ export function composeFlows(wasm) {
       const r = wasm.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
       return r.matched ? { chargeableKg: r.chargeable_kg, tier: r.tier, freightTotal: r.freight_total } : null;
     },
+  });
+
+  bindPnlGate({
+    lineVnd: (amount, currency, fxRate, bookCurrency) => wasm.flows_pnl_line_vnd({
+      amount: Number(amount) || 0, currency: currency || '', fx_rate: Number(fxRate) || 0, book_currency: bookCurrency || '',
+    }).vnd,
+    vndInvariant: (lines, commissionNetAfterTax, bookCurrency) => {
+      const r = wasm.flows_pnl_vnd_invariant({
+        lines: lines || [], commission_net_after_tax: commissionNetAfterTax || [], book_currency: bookCurrency || '',
+      });
+      return { match: r.match, expected: r.expected, actual: r.actual, delta: r.delta };
+    },
+    fxDeviation: (currency, fxRate, referenceRate) => {
+      const r = wasm.flows_pnl_fx_deviation({
+        currency: currency || '', fx_rate: Number(fxRate) || 0, reference_rate: referenceRate == null ? null : Number(referenceRate),
+      });
+      return { flagged: r.flagged, reason: r.reason, deviation: r.deviation, threshold: r.threshold };
+    },
+  });
+
+  bindQuoteTotals({
+    compute: (lines, commissionNetAfterTax) => {
+      const r = wasm.flows_quote_totals({
+        lines: (lines || []).map((l) => ({
+          vnd_pay: l.vnd_pay || 0, vnd_collect: l.vnd_collect || 0, pol_pod_side: l.pol_pod_side || '',
+        })),
+        commission_net_after_tax: commissionNetAfterTax || [],
+      });
+      return {
+        sumReceipt: r.sum_receipt, sumPayment: r.sum_payment, commissionTotal: r.commission_total,
+        polReceiptSum: r.pol_receipt_sum, podReceiptSum: r.pod_receipt_sum,
+        polPaymentSum: r.pol_payment_sum, podPaymentSum: r.pod_payment_sum,
+      };
+    },
+  });
+
+  bindNoteLines({
+    derive: (pnlLineRows, noteType) => wasm.flows_note_lines({ lines: pnlLineRows || [], note_type: noteType || '' }),
   });
 
   bindFsmIngest({

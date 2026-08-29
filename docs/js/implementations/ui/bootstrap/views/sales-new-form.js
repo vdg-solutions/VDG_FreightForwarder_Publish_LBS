@@ -8,8 +8,8 @@ import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.j
 export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
 import { sectionAHtml } from './sales-new-form/section-header.js';
 import { wireHeaderSection } from './sales-new-form/section-header-wiring.js';
-import { sectionBHtml, collectLines, sumVndPay, sumVndCollect }
-  from './sales-new-form/section-lines.js';
+import { sectionBHtml, collectLines } from './sales-new-form/section-lines.js';
+import { computeQuoteTotals } from '../../core_abstractions/ports/flows/quote-totals.js';
 import { wireLinesSection } from './sales-new-form/section-lines-wiring.js';
 import { sectionCHtml, wireCommissionSection, collectCommission }
   from './sales-new-form/section-commission.js';
@@ -283,10 +283,12 @@ function _recomputeWaterfall(root, userConfig) {
 
   _renderCurrencySummary(root, summarizeLineCurrencies(lines, commissionLines));
 
-  const sr  = sumVndCollect(lines);
-  const sp  = sumVndPay(lines);
-  // AC-07: sum all commission rows' net_after_tax
-  const cat = commissionLines.reduce((s, l) => s + (l.net_after_tax || 0), 0);
+  // Σvnd_pay / Σvnd_collect / mục C net + the POL/POD split — one wasm call (F-15-27
+  // quote_totals), never resummed per widget so the KPI cards and waterfall can't drift apart.
+  const {
+    sumReceipt: sr, sumPayment: sp, commissionTotal: cat,
+    polReceiptSum, podReceiptSum, polPaymentSum, podPaymentSum,
+  } = computeQuoteTotals(lines, commissionLines.map((l) => l.net_after_tax || 0));
 
   const share = window.__vdg_wasm.commission_resolve_sales_share_pct(
     overrides.sales_share_pct_override,
@@ -297,15 +299,6 @@ function _recomputeWaterfall(root, userConfig) {
   // loss → clamp_negatives=false. margin=receipt-payment, com=Section C net.
   const w  = window.__vdg_wasm.commission_waterfall(sr - sp, cat, share, false);
   const wf = { margin: w.margin, tax20: w.tndn, gp: w.net_after, finalProfit: w.lbs_share };
-
-  const polReceiptSum = lines.filter((l) => l.pol_pod_side === 'POL')
-    .reduce((s, l) => s + l.vnd_collect, 0);
-  const podReceiptSum = lines.filter((l) => l.pol_pod_side === 'POD')
-    .reduce((s, l) => s + l.vnd_collect, 0);
-  const polPaymentSum = lines.filter((l) => l.pol_pod_side === 'POL')
-    .reduce((s, l) => s + l.vnd_pay, 0);
-  const podPaymentSum = lines.filter((l) => l.pol_pod_side === 'POD')
-    .reduce((s, l) => s + l.vnd_pay, 0);
 
   renderWaterfall(root, {
     sumReceipt: sr, sumPayment: sp,
@@ -324,11 +317,11 @@ function _recomputeWaterfall(root, userConfig) {
   if (qPay) qPay.textContent = fmt(sp);
   if (qCol) qCol.textContent = fmt(sr);
   if (qMar) {
-    const m = sr - sp;
-    qMar.textContent = fmt(m);
-    if (m < 0) {
+    // wf.margin IS sr - sp: commission_waterfall received that exact value as margin_vnd.
+    qMar.textContent = fmt(wf.margin);
+    if (wf.margin < 0) {
       qMar.className = 'text-sm font-bold text-red-600 mt-0.5';
-    } else if (m > 0) {
+    } else if (wf.margin > 0) {
       qMar.className = 'text-sm font-bold text-emerald-700 mt-0.5';
     } else {
       qMar.className = 'text-sm font-semibold text-slate-900 mt-0.5';
@@ -336,7 +329,7 @@ function _recomputeWaterfall(root, userConfig) {
   }
   if (qPct) {
     if (sr > 0) {
-      const pct = ((sr - sp) / sr) * 100;
+      const pct = (wf.margin / sr) * 100;
       qPct.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
       qPct.className = `text-sm font-bold ${pct >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5`;
     } else {

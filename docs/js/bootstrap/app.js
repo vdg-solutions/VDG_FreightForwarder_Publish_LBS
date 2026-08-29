@@ -2,6 +2,9 @@ import {
   bindLedgerRepo,
   ledgerRepo
 } from "./chunk-SLVNFTMX.js";
+import {
+  bindNoteLines
+} from "./chunk-SZYDA4BO.js";
 import "./chunk-QCJ4CO74.js";
 import {
   bindLedgerComposer,
@@ -113,6 +116,7 @@ import {
   bindJobNoGen,
   bindPnlCommit,
   bindPnlLineId,
+  bindQuoteTotals,
   bindRepCodeRegistry,
   bindWmaEngine,
   bindWmaStore,
@@ -124,7 +128,10 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-QSNHEPQA.js";
+} from "./chunk-6DYTBMNJ.js";
+import {
+  bindPnlGate
+} from "./chunk-53TPUVAF.js";
 import {
   bindUsersViewComposer
 } from "./chunk-IXBTUL5S.js";
@@ -567,7 +574,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build a232d5f4">v0.4.30 (a232d5f4)</span>
+        <span class="font-mono whitespace-nowrap" title="build d8daaae5">v0.4.31 (d8daaae5)</span>
       </div>
     `;
   }
@@ -2226,7 +2233,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.30 (a232d5f4)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.31 (d8daaae5)</div>
         </div>
       </div>
     </div>`;
@@ -2829,6 +2836,12 @@ function createPlatform({ repo: repo3 }) {
     records_get: (kind, id) => repo3.get(kind, id),
     records_list: (kind) => repo3.list(kind),
     records_put: (kind, id, body) => repo3.put(kind, id, body),
+    // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
+    // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
+    records_put_labeled: (kind, id, body, labels) => repo3.put_labeled(kind, id, body, labels),
+    // A reopened period invalidates the store module's own "fully cached" marker for it
+    // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
+    records_invalidate_period_cache: (kind, period) => repo3.invalidate_period_cache(kind, period),
     records_delete: (kind, id) => repo3.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     records_get_meta: (key) => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,
@@ -3259,8 +3272,16 @@ var ServerIoPort = class extends SharedIoPort {
       throw err;
     }
   }
-  async record_write(collection, id, content, etag = null) {
-    const owner = this.userEmail;
+  // CDB-DM-15: `labels` is wire-opaque JSON object text (`{"k":"v",...}`), the same shape
+  // `record_list`'s own filter speaks -- CREATE-only, parsed and sent only on the POST branch.
+  // The server's Update body has no labels field at all (`deny_unknown_fields`), so it is never
+  // even attempted on the PUT branches below, whatever this caller passed.
+  // `owner` is the caller's declared owner (CDB-DM-04) -- this adapter is a thin relay, it never
+  // mints one from the signed-in session. A create with no owner declared is a caller bug, not a
+  // session-identity fallback (that mint was the defect: CS keying a job in on a rep's behalf
+  // silently became the record CS owns).
+  async record_write(collection, id, content, etag = null, labels = "", owner = null) {
+    if (!etag && !owner) throw new Error(`record_write: ${collection}/${id} create with no owner declared`);
     try {
       if (etag) {
         const res = await apiFetch(
@@ -3271,11 +3292,12 @@ var ServerIoPort = class extends SharedIoPort {
         );
         return { id: res.id, etag: res.etag, version: res.version };
       }
+      const createBody = labels ? { id, content, owner, labels: JSON.parse(labels) } : { id, content, owner };
       try {
         const res = await apiFetch(
           "POST",
           `/records/${encodeURIComponent(collection)}`,
-          { id, content, owner }
+          createBody
         );
         return { id: res.id, etag: res.etag, version: res.version };
       } catch (err) {
@@ -3305,13 +3327,15 @@ var ServerIoPort = class extends SharedIoPort {
   }
   // CDB-Q-02, param order matches TransportPort::list_records(collection, owner, cursor, limit)
   // 1:1 -- `ws_list_dir` below calls this with only `collection` (every default applies) so its
-  // own single-page, unfiltered listing is unaffected by this order.
-  async record_list(collection, owner = null, cursor = null, limit = 1e3) {
+  // own single-page, unfiltered listing is unaffected by this order. `labels` -- CDB-Q-19's
+  // wire-opaque JSON object text, same shape `record_write`'s own labels param speaks.
+  async record_list(collection, owner = null, cursor = null, limit = 1e3, labels = "") {
     const path = this._normPath(collection);
     try {
       let url = `/records/${encodeURIComponent(path)}?limit=${limit}`;
       if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
       if (owner) url += `&owner=${encodeURIComponent(owner)}`;
+      if (labels) url += `&labels=${encodeURIComponent(labels)}`;
       const res = await apiFetch("GET", url);
       return { records: res?.records ?? [], next_cursor: res?.next_cursor ?? null, has_more: res?.has_more ?? false };
     } catch (err) {
@@ -3406,15 +3430,24 @@ var ServerIoPort = class extends SharedIoPort {
     if (!r.found) return { found: false, id: null, etag: null, version: null, owner: null, content: "" };
     return { found: true, id: `${collection}/${fileName}`, etag: r.etag, version: r.version, owner: r.owner, content: r.content };
   }
-  async ws_write_file(dirPath, fileName, content, fileId, etag) {
+  async ws_write_file(dirPath, fileName, content, fileId, etag, labels = "", owner = null) {
     const collection = this._normPath(dirPath);
-    const r = await this.record_write(collection, fileName, content, etag);
+    const r = await this.record_write(collection, fileName, content, etag, labels, owner);
     return { id: fileName, etag: r.etag, version: r.version };
   }
   async ws_delete_file(fileId) {
     const { col, id } = this._parseFileId(fileId);
     await this.record_delete(col, id);
     return null;
+  }
+  // CDB-DM-16: declare (or redeclare) one collection's label vocabulary -- the registry entry
+  // a labelled create/Relabel is checked against before it is ever authorized.
+  async declare_collection(collection, labelKeysJson, owner) {
+    const res = await apiFetch("PUT", `/collections/${encodeURIComponent(collection)}`, {
+      label_keys: JSON.parse(labelKeysJson),
+      owner
+    });
+    return { id: res?.id ?? collection };
   }
 };
 
@@ -4582,14 +4615,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-63MFRNHQ.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-VC6FDEVK.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-63MFRNHQ.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-VC6FDEVK.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4691,7 +4724,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.30 (a232d5f4)";
+var APP_VERSION = "v0.4.31 (d8daaae5)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4918,7 +4951,7 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-W54IXCMN.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-JSGQEQEV.js"),
+  "/sales/me": () => import("./sales-me-LUHLENTR.js"),
   "/sales/analytics": () => import("./sales-analytics-JWO3PH63.js"),
   "/sales/quote/new": () => import("./sales-quote-new-4WEU7Z57.js"),
   "/sales/quote": () => import("./sales-quote-list-CIFZVLVP.js"),
@@ -4933,7 +4966,7 @@ var VIEWS = {
   "/manager/pipeline": () => import("./pipeline-EUHZFO5V.js"),
   "/manager/approvals": () => import("./approvals-FJOY6GVC.js"),
   "/manager/reports/pnl": () => import("./pnl-report-QAYE7VOB.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-KWEIULZU.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-QJIB7UNZ.js"),
   "/manager/finance/close-period": () => import("./close-period-ZHIFQNHD.js"),
   "/manager/audit": () => import("./audit-XWEANZSS.js"),
   "/manager/notifications": () => import("./notifications-IR5TYITQ.js"),
@@ -4976,7 +5009,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-LDXTVIDT.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-NLPLAJFK.js"),
-  "/accounting/settings": () => import("./settings-KQN6K3YY.js"),
+  "/accounting/settings": () => import("./settings-V2QWWRV4.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-5O4QUOGN.js"),
   // E-24 F-24-06
@@ -5598,6 +5631,54 @@ function composeFlows(wasm3) {
       return r.matched ? { chargeableKg: r.chargeable_kg, tier: r.tier, freightTotal: r.freight_total } : null;
     }
   });
+  bindPnlGate({
+    lineVnd: (amount, currency, fxRate, bookCurrency) => wasm3.flows_pnl_line_vnd({
+      amount: Number(amount) || 0,
+      currency: currency || "",
+      fx_rate: Number(fxRate) || 0,
+      book_currency: bookCurrency || ""
+    }).vnd,
+    vndInvariant: (lines, commissionNetAfterTax, bookCurrency) => {
+      const r = wasm3.flows_pnl_vnd_invariant({
+        lines: lines || [],
+        commission_net_after_tax: commissionNetAfterTax || [],
+        book_currency: bookCurrency || ""
+      });
+      return { match: r.match, expected: r.expected, actual: r.actual, delta: r.delta };
+    },
+    fxDeviation: (currency, fxRate, referenceRate) => {
+      const r = wasm3.flows_pnl_fx_deviation({
+        currency: currency || "",
+        fx_rate: Number(fxRate) || 0,
+        reference_rate: referenceRate == null ? null : Number(referenceRate)
+      });
+      return { flagged: r.flagged, reason: r.reason, deviation: r.deviation, threshold: r.threshold };
+    }
+  });
+  bindQuoteTotals({
+    compute: (lines, commissionNetAfterTax) => {
+      const r = wasm3.flows_quote_totals({
+        lines: (lines || []).map((l) => ({
+          vnd_pay: l.vnd_pay || 0,
+          vnd_collect: l.vnd_collect || 0,
+          pol_pod_side: l.pol_pod_side || ""
+        })),
+        commission_net_after_tax: commissionNetAfterTax || []
+      });
+      return {
+        sumReceipt: r.sum_receipt,
+        sumPayment: r.sum_payment,
+        commissionTotal: r.commission_total,
+        polReceiptSum: r.pol_receipt_sum,
+        podReceiptSum: r.pod_receipt_sum,
+        polPaymentSum: r.pol_payment_sum,
+        podPaymentSum: r.pod_payment_sum
+      };
+    }
+  });
+  bindNoteLines({
+    derive: (pnlLineRows, noteType) => wasm3.flows_note_lines({ lines: pnlLineRows || [], note_type: noteType || "" })
+  });
   bindFsmIngest({
     registerFsmEntity: (ref, state) => wasm3.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
     rehydrateFsmStates: () => wasm3.flows_rehydrate_fsm(EMPTY2),
@@ -5815,8 +5896,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=a232d5f4", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=a232d5f4", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=d8daaae5", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=d8daaae5", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6459,7 +6540,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-6BQC6ZGA.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-J5FWMSCO.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6467,7 +6548,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-LBU77EXZ.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-HEJQQHID.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;

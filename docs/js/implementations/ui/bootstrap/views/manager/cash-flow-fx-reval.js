@@ -48,11 +48,13 @@ function fxRevalCls(amount) {
   return 'text-slate-500';
 }
 
+// amount is already whole-VND — compose_ar (ar_aging.rs) rounds it before it crosses the
+// bridge, so JS only formats the locale grouping, never re-rounds money.
 export function renderFxRevalSummary(root, amount) {
   const el = root.querySelector('#fx-reval-summary');
   if (!el) return;
   if (!amount) { el.textContent = ''; return; }
   const sign = amount > 0 ? '+' : '';
   el.className = `text-sm mt-2 ${fxRevalCls(amount)}`;
-  el.textContent = `${t('cash_flow.ar.fx_reval.label')}: ${sign}${Math.round(amount).toLocaleString()}`;
+  el.textContent = `${t('cash_flow.ar.fx_reval.label')}: ${sign}${amount.toLocaleString()}`;
 }

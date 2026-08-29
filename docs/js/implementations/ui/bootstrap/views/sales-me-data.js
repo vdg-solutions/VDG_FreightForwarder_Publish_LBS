@@ -25,10 +25,9 @@ export async function loadMyData(salesId) {
   const repo = window.__vdg_repo;
   if (!repo) return EMPTY_DATA;
 
-  const [allShipments, allLines, allCashFlows, allCommEntries, aliasRows] = await Promise.all([
+  const [allShipments, allLines, allCommEntries, aliasRows] = await Promise.all([
     listShipments(repo, (s) => (s.sales_rep || '').toLowerCase() === salesId.toLowerCase()),
     repo.list('pnl_line').catch(() => []),
-    repo.list('cash_flow_entry').catch(() => []),
     repo.list('commission_entry').catch(() => []),
     ensureShipmentStateAliases(repo), // DEFECT-1: seed-on-first-read (sales rep never opens master view)
   ]);
@@ -71,10 +70,12 @@ export async function loadMyData(salesId) {
     }
   }
 
-  // F-20-03: advances from CashFlowEntry source=salesId MTD
-  const advances = allCashFlows
-    .filter((c) => (c.source || '').toLowerCase() === salesId.toLowerCase() && mtdFilter(c))
-    .reduce((sum, c) => sum + Number(c.amount || 0), 0);
+  // F-20-03: advances from CashFlowEntry source=salesId MTD -- CashFlowEntry itself was never
+  // built (docs/architecture/canonical-shipment-model.md split it into a standalone CashFlowLedger
+  // module that never shipped), so there is no kind to list here; the sync loop must not ask for
+  // one nobody ever writes (F-43-08's own class of hole, other direction — a kind that should
+  // never be registered because nothing produces it). Stays an honest 0 until that module exists.
+  const advances = 0;
 
   for (const s of allShipments) {
     const ref   = s.shipment_ref || s.ref;

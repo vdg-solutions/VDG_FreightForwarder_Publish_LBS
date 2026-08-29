@@ -2,7 +2,8 @@ import {
   NOTE_TYPE_CREDIT,
   NOTE_TYPE_DEBIT,
   loadNoteData
-} from "./chunk-5MWQ74TZ.js";
+} from "./chunk-HGXGF75V.js";
+import "./chunk-SZYDA4BO.js";
 import "./chunk-EPS4ANRF.js";
 import {
   todayLocal
@@ -62,7 +63,7 @@ function billedToBlock(type, customer) {
     </div>
   `;
 }
-function lineTable(lines, currency) {
+function lineTable(lines, currency, grandTotal) {
   const rows = lines.map((l) => `
     <tr class="border-b border-slate-100">
       <td class="py-2 pr-4">${l.description}</td>
@@ -72,7 +73,6 @@ function lineTable(lines, currency) {
       <td class="py-2 text-right w-28 font-medium">${l.total.toFixed(2)}</td>
     </tr>
   `).join("");
-  const grandTotal = lines.reduce((s, l) => s + l.total, 0);
   return `
     <table class="w-full text-sm mb-6">
       <thead>
@@ -178,7 +178,7 @@ async function render(root, shipmentRef, type) {
         ${draftBanner()}
         ${noteHeader(data.noteNo, noteType, shipmentRef)}
         ${billedToBlock(noteType, data.customer)}
-        ${lineTable(data.lines, data.currency)}
+        ${lineTable(data.lines, data.currency, data.total)}
         ${paymentTerms()}
         ${signatureBlock()}
       </div>

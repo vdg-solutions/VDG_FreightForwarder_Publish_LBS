@@ -4,8 +4,7 @@
 import { getRateForDate } from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { showConfirm }    from '../../helpers/show-confirm.js';
 import { t }              from '../../../../kernel/core_abstractions/i18n/index.js';
-import { detectFxDeviation, buildFxOverrideRecord, FX_DEVIATION_THRESHOLD }
-  from './pnl-save-validations.js';
+import { detectFxDeviation, buildFxOverrideRecord } from './pnl-save-validations.js';
 
 const VND_CURRENCY = 'VND';
 
@@ -22,9 +21,9 @@ async function _resolveReference(fxRepo, fxDate, currency, direction) {
 async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }) {
   if (!amount || !currency) return;
   const referenceRate = await _resolveReference(fxRepo, fxDate, currency, direction);
-  const { flagged: isFlagged, reason } = detectFxDeviation({ currency, fxRate, referenceRate });
+  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate });
   if (isFlagged) {
-    flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason });
+    flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason, threshold });
   }
 }
 
@@ -83,7 +82,7 @@ export async function confirmFxDeviations(flagged, { confirmedBy } = {}) {
     fxRate:        f.fxRate,
     referenceRate: f.referenceRate,
     fxDate:        f.fxDate,
-    threshold:     FX_DEVIATION_THRESHOLD,
+    threshold:     f.threshold,
     reason:        f.reason,
     confirmedBy,
     confirmedAt,

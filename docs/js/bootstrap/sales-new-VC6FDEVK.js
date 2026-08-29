@@ -12,7 +12,7 @@ import {
   summarizeLineCurrencies,
   vndCellHtml,
   wireLineFx
-} from "./chunk-UM4HMENE.js";
+} from "./chunk-XMGAR6EY.js";
 import {
   kindI18nLabel
 } from "./chunk-FMFMNHF5.js";
@@ -29,6 +29,7 @@ import "./chunk-ETXXTRJC.js";
 import {
   assignJobNo,
   autoAdvanceShipment,
+  computeQuoteTotals,
   deletePnlLinesFor,
   dismissPrediction,
   ensureRepCode,
@@ -38,7 +39,11 @@ import {
   predict,
   saveKindWmaState,
   slugify
-} from "./chunk-QSNHEPQA.js";
+} from "./chunk-6DYTBMNJ.js";
+import {
+  fxDeviation,
+  vndInvariant
+} from "./chunk-53TPUVAF.js";
 import {
   ROLE_LABEL_KEYS
 } from "./chunk-IXBTUL5S.js";
@@ -1217,12 +1222,6 @@ function collectLines(root) {
       pol_pod_side: row.querySelector("[name=pol_pod_side]")?.value || "N/A"
     };
   });
-}
-function sumVndPay(lines) {
-  return lines.reduce((s, l) => s + (l.vnd_pay || 0), 0);
-}
-function sumVndCollect(lines) {
-  return lines.reduce((s, l) => s + (l.vnd_collect || 0), 0);
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-lines-wma.js
@@ -2849,46 +2848,14 @@ function jumpToFirstError(root) {
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/pnl-save-validations.js
-var VND_INVARIANT_EPSILON = 1;
-var FX_DEVIATION_THRESHOLD = 0.05;
-var VND_CURRENCY2 = "VND";
-var REASON_NON_POSITIVE = "non_positive";
-var REASON_DEVIATION = "deviation";
-function computeVndInvariant(state = {}, epsilon = VND_INVARIANT_EPSILON) {
+function computeVndInvariant(state = {}) {
   const lines = state.lines || [];
-  const commissionLines = state.commission_lines || [];
+  const commissionNetAfterTax = (state.commission_lines || []).map((l) => l.net_after_tax || 0);
   const bookCurrency = state.book_currency || DEFAULT_HEADER_CURRENCY;
-  let expected = 0;
-  let actual = 0;
-  for (const l of lines) {
-    expected += computeLineVnd(l.buy_amt, l.buy_currency, l.buy_fx_rate, bookCurrency);
-    expected += computeLineVnd(l.sell_amt, l.sell_currency, l.sell_fx_rate, bookCurrency);
-    actual += l.vnd_pay || 0;
-    actual += l.vnd_collect || 0;
-  }
-  for (const l of commissionLines) {
-    const net = l.net_after_tax || 0;
-    expected += net;
-    actual += net;
-  }
-  const delta = expected - actual;
-  return { match: Math.abs(delta) <= epsilon, expected, actual, delta };
+  return vndInvariant(lines, commissionNetAfterTax, bookCurrency);
 }
-function detectFxDeviation({ currency, fxRate, referenceRate }, threshold = FX_DEVIATION_THRESHOLD) {
-  const rate = Number(fxRate);
-  if (currency === VND_CURRENCY2) {
-    return { flagged: false, reason: null, deviation: null };
-  }
-  if (!(rate > 0)) {
-    return { flagged: true, reason: REASON_NON_POSITIVE, deviation: null };
-  }
-  if (referenceRate == null) {
-    return { flagged: false, reason: null, deviation: null };
-  }
-  const ref = Number(referenceRate);
-  const deviation = ref !== 0 ? Math.abs(rate - ref) / ref : 0;
-  const flagged = deviation > threshold;
-  return { flagged, reason: flagged ? REASON_DEVIATION : null, deviation };
+function detectFxDeviation({ currency, fxRate, referenceRate }) {
+  return fxDeviation(currency, fxRate, referenceRate);
 }
 function buildFxOverrideRecord(lineRef, {
   currency,
@@ -3175,19 +3142,21 @@ function _recomputeWaterfall(root, userConfig) {
   const commissionLines = collectCommission(root);
   const overrides = collectWaterfallOverrides(root);
   _renderCurrencySummary(root, summarizeLineCurrencies(lines, commissionLines));
-  const sr = sumVndCollect(lines);
-  const sp = sumVndPay(lines);
-  const cat = commissionLines.reduce((s, l) => s + (l.net_after_tax || 0), 0);
+  const {
+    sumReceipt: sr,
+    sumPayment: sp,
+    commissionTotal: cat,
+    polReceiptSum,
+    podReceiptSum,
+    polPaymentSum,
+    podPaymentSum
+  } = computeQuoteTotals(lines, commissionLines.map((l) => l.net_after_tax || 0));
   const share = window.__vdg_wasm.commission_resolve_sales_share_pct(
     overrides.sales_share_pct_override,
     userConfig?.sales_share_pct ?? null
   );
   const w = window.__vdg_wasm.commission_waterfall(sr - sp, cat, share, false);
   const wf = { margin: w.margin, tax20: w.tndn, gp: w.net_after, finalProfit: w.lbs_share };
-  const polReceiptSum = lines.filter((l) => l.pol_pod_side === "POL").reduce((s, l) => s + l.vnd_collect, 0);
-  const podReceiptSum = lines.filter((l) => l.pol_pod_side === "POD").reduce((s, l) => s + l.vnd_collect, 0);
-  const polPaymentSum = lines.filter((l) => l.pol_pod_side === "POL").reduce((s, l) => s + l.vnd_pay, 0);
-  const podPaymentSum = lines.filter((l) => l.pol_pod_side === "POD").reduce((s, l) => s + l.vnd_pay, 0);
   renderWaterfall(root, {
     sumReceipt: sr,
     sumPayment: sp,
@@ -3209,11 +3178,10 @@ function _recomputeWaterfall(root, userConfig) {
   if (qPay) qPay.textContent = fmt(sp);
   if (qCol) qCol.textContent = fmt(sr);
   if (qMar) {
-    const m = sr - sp;
-    qMar.textContent = fmt(m);
-    if (m < 0) {
+    qMar.textContent = fmt(wf.margin);
+    if (wf.margin < 0) {
       qMar.className = "text-sm font-bold text-red-600 mt-0.5";
-    } else if (m > 0) {
+    } else if (wf.margin > 0) {
       qMar.className = "text-sm font-bold text-emerald-700 mt-0.5";
     } else {
       qMar.className = "text-sm font-semibold text-slate-900 mt-0.5";
@@ -3221,7 +3189,7 @@ function _recomputeWaterfall(root, userConfig) {
   }
   if (qPct) {
     if (sr > 0) {
-      const pct = (sr - sp) / sr * 100;
+      const pct = wf.margin / sr * 100;
       qPct.textContent = `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
       qPct.className = `text-sm font-bold ${pct >= 0 ? "text-emerald-700" : "text-red-600"} mt-0.5`;
     } else {
@@ -3417,18 +3385,18 @@ function createSubmitGuard() {
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/pnl-fx-deviation-gate.js
-var VND_CURRENCY3 = "VND";
+var VND_CURRENCY2 = "VND";
 async function _resolveReference(fxRepo, fxDate, currency, direction) {
-  if (currency === VND_CURRENCY3) return 1;
+  if (currency === VND_CURRENCY2) return 1;
   if (!fxRepo || !fxDate) return null;
   return getRateForDate(fxRepo, fxDate, currency, direction);
 }
 async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }) {
   if (!amount || !currency) return;
   const referenceRate = await _resolveReference(fxRepo, fxDate, currency, direction);
-  const { flagged: isFlagged, reason } = detectFxDeviation({ currency, fxRate, referenceRate });
+  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate });
   if (isFlagged) {
-    flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason });
+    flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason, threshold });
   }
 }
 async function findFxDeviations(state = {}, fxRepo) {
@@ -3484,7 +3452,7 @@ ${_confirmBody(flagged)}`,
     fxRate: f.fxRate,
     referenceRate: f.referenceRate,
     fxDate: f.fxDate,
-    threshold: FX_DEVIATION_THRESHOLD,
+    threshold: f.threshold,
     reason: f.reason,
     confirmedBy,
     confirmedAt

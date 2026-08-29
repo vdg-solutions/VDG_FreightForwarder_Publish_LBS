@@ -1,6 +1,9 @@
 import {
   getRateForDate
 } from "./chunk-QOACCM4N.js";
+import {
+  lineVnd
+} from "./chunk-53TPUVAF.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/pnl-line-fx.js
 var VND_CURRENCY = "VND";
@@ -9,9 +12,7 @@ var RO_CELL_CLS = `${FX_CELL_CLS} bg-slate-50`;
 var LINE_CURRENCY_OPTIONS = ["USD", "VND", "EUR", "SGD", "JPY"];
 var DEFAULT_HEADER_CURRENCY = "VND";
 function computeLineVnd(amount, currency, fxRate, bookCurrency) {
-  const amt = Number(amount) || 0;
-  if (currency === bookCurrency) return amt;
-  return amt * (Number(fxRate) || 0);
+  return lineVnd(amount, currency, fxRate, bookCurrency);
 }
 function lockFxIfVnd(currency, bookCurrency) {
   return currency === bookCurrency ? { rate: 1, locked: true } : { rate: null, locked: false };

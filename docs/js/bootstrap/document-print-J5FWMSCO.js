@@ -1,7 +1,8 @@
 import {
   NOTE_TYPE_DEBIT,
   loadNoteData
-} from "./chunk-5MWQ74TZ.js";
+} from "./chunk-HGXGF75V.js";
+import "./chunk-SZYDA4BO.js";
 import "./chunk-EPS4ANRF.js";
 import {
   getShipment
@@ -79,13 +80,12 @@ var BUILDERS = {
   ]
 };
 function debitFields(shipment, note) {
-  const total = note.lines.reduce((sum, l) => sum + l.total, 0);
   return [
     ["document_print.field.debit_note_no", note.noteNo],
     ["note_print.recipient.issued_to", val(note.customer?.name || shipment.customer)],
     ["document_print.field.ref_shipment", val(shipment.shipment_ref)],
     ["sales_drop.preview.col.description", note.lines.length ? note.lines.map((l) => l.description).filter(Boolean).join(" \xB7 ") : FIELD_ABSENT],
-    ["quote_new.col.amount", note.lines.length ? `${note.currency} ${total.toFixed(2)}` : FIELD_ABSENT],
+    ["quote_new.col.amount", note.lines.length ? `${note.currency} ${note.total.toFixed(2)}` : FIELD_ABSENT],
     ["currency", val(note.currency)],
     ["document_print.field.due_date", FIELD_ABSENT],
     // no payment-term field on the shipment

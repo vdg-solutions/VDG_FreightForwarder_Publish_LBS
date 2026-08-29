@@ -178,10 +178,9 @@ var EMPTY_DATA = { all: [], mtd: [], pending: [], stats: { shipments: 0, revenue
 async function loadMyData(salesId) {
   const repo = window.__vdg_repo;
   if (!repo) return EMPTY_DATA;
-  const [allShipments, allLines, allCashFlows, allCommEntries, aliasRows] = await Promise.all([
+  const [allShipments, allLines, allCommEntries, aliasRows] = await Promise.all([
     listShipments(repo, (s) => (s.sales_rep || "").toLowerCase() === salesId.toLowerCase()),
     repo.list("pnl_line").catch(() => []),
-    repo.list("cash_flow_entry").catch(() => []),
     repo.list("commission_entry").catch(() => []),
     ensureShipmentStateAliases(repo)
     // DEFECT-1: seed-on-first-read (sales rep never opens master view)
@@ -212,7 +211,7 @@ async function loadMyData(salesId) {
       margin += Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0);
     }
   }
-  const advances = allCashFlows.filter((c) => (c.source || "").toLowerCase() === salesId.toLowerCase() && mtdFilter(c)).reduce((sum, c) => sum + Number(c.amount || 0), 0);
+  const advances = 0;
   for (const s of allShipments) {
     const ref = s.shipment_ref || s.ref;
     const lines = linesByRef[ref] || [];

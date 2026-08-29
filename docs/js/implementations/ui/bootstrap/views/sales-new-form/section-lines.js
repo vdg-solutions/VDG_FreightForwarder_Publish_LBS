@@ -218,13 +218,3 @@ export function collectLines(root) {
     };
   });
 }
-
-/** sumVndPay — Σ line.vnd_pay */
-export function sumVndPay(lines) {
-  return lines.reduce((s, l) => s + (l.vnd_pay || 0), 0);
-}
-
-/** sumVndCollect — Σ line.vnd_collect */
-export function sumVndCollect(lines) {
-  return lines.reduce((s, l) => s + (l.vnd_collect || 0), 0);
-}

@@ -20,6 +20,12 @@ export function createPlatform({ repo }) {
     records_get:      (kind, id)        => repo.get(kind, id),
     records_list:     (kind)            => repo.list(kind),
     records_put:      (kind, id, body)  => repo.put(kind, id, body),
+    // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
+    // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
+    records_put_labeled: (kind, id, body, labels) => repo.put_labeled(kind, id, body, labels),
+    // A reopened period invalidates the store module's own "fully cached" marker for it
+    // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
+    records_invalidate_period_cache: (kind, period) => repo.invalidate_period_cache(kind, period),
     records_delete:   (kind, id)        => repo.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     records_get_meta: (key)             => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,

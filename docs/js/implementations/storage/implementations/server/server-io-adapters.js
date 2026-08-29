@@ -35,8 +35,19 @@ export class ServerIoPort extends SharedIoPort {
     }
   }
 
-  async record_write(collection, id, content, etag = null) {
-    const owner = this.userEmail;
+  // CDB-DM-15: `labels` is wire-opaque JSON object text (`{"k":"v",...}`), the same shape
+  // `record_list`'s own filter speaks -- CREATE-only, parsed and sent only on the POST branch.
+  // The server's Update body has no labels field at all (`deny_unknown_fields`), so it is never
+  // even attempted on the PUT branches below, whatever this caller passed.
+  // `owner` is the caller's declared owner (CDB-DM-04) -- this adapter is a thin relay, it never
+  // mints one from the signed-in session. A create with no owner declared is a caller bug, not a
+  // session-identity fallback (that mint was the defect: CS keying a job in on a rep's behalf
+  // silently became the record CS owns).
+  async record_write(collection, id, content, etag = null, labels = '', owner = null) {
+    // CDB-DM-04: owner is supplied explicitly on create, never defaulted. Update carries no
+    // owner over the wire at all (CDB-DM-07 -- owner cannot change as a side effect of a content
+    // update), so the check only applies to the create branch below.
+    if (!etag && !owner) throw new Error(`record_write: ${collection}/${id} create with no owner declared`);
     try {
       if (etag) {
         const res = await apiFetch(
@@ -47,11 +58,12 @@ export class ServerIoPort extends SharedIoPort {
         );
         return { id: res.id, etag: res.etag, version: res.version };
       }
+      const createBody = labels ? { id, content, owner, labels: JSON.parse(labels) } : { id, content, owner };
       try {
         const res = await apiFetch(
           'POST',
           `/records/${encodeURIComponent(collection)}`,
-          { id, content, owner }
+          createBody
         );
         return { id: res.id, etag: res.etag, version: res.version };
       } catch (err) {
@@ -83,13 +95,15 @@ export class ServerIoPort extends SharedIoPort {
 
   // CDB-Q-02, param order matches TransportPort::list_records(collection, owner, cursor, limit)
   // 1:1 -- `ws_list_dir` below calls this with only `collection` (every default applies) so its
-  // own single-page, unfiltered listing is unaffected by this order.
-  async record_list(collection, owner = null, cursor = null, limit = 1000) {
+  // own single-page, unfiltered listing is unaffected by this order. `labels` -- CDB-Q-19's
+  // wire-opaque JSON object text, same shape `record_write`'s own labels param speaks.
+  async record_list(collection, owner = null, cursor = null, limit = 1000, labels = '') {
     const path = this._normPath(collection);
     try {
       let url = `/records/${encodeURIComponent(path)}?limit=${limit}`;
       if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
       if (owner) url += `&owner=${encodeURIComponent(owner)}`;
+      if (labels) url += `&labels=${encodeURIComponent(labels)}`;
       const res = await apiFetch('GET', url);
       // has_more alongside next_cursor: CDB-Q-12 states it explicitly (a filtered page can read
       // empty while more still exists) -- TransportPort::list_records needs it, not a caller
@@ -204,9 +218,9 @@ export class ServerIoPort extends SharedIoPort {
     return { found: true, id: `${collection}/${fileName}`, etag: r.etag, version: r.version, owner: r.owner, content: r.content };
   }
 
-  async ws_write_file(dirPath, fileName, content, fileId, etag) {
+  async ws_write_file(dirPath, fileName, content, fileId, etag, labels = '', owner = null) {
     const collection = this._normPath(dirPath);
-    const r = await this.record_write(collection, fileName, content, etag);
+    const r = await this.record_write(collection, fileName, content, etag, labels, owner);
     // version alongside etag -- same gap, same fix as ws_read_file just above: record_write
     // already computes it (CDB-CON-05's post-push confirmation), TransportPort::push_record
     // needs the real server-confirmed number, not a value this adapter would otherwise have to
@@ -218,5 +232,15 @@ export class ServerIoPort extends SharedIoPort {
     const { col, id } = this._parseFileId(fileId);
     await this.record_delete(col, id);
     return null;
+  }
+
+  // CDB-DM-16: declare (or redeclare) one collection's label vocabulary -- the registry entry
+  // a labelled create/Relabel is checked against before it is ever authorized.
+  async declare_collection(collection, labelKeysJson, owner) {
+    const res = await apiFetch('PUT', `/collections/${encodeURIComponent(collection)}`, {
+      label_keys: JSON.parse(labelKeysJson),
+      owner,
+    });
+    return { id: res?.id ?? collection };
   }
 }

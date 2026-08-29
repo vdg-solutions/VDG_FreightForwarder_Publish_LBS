@@ -1,6 +1,7 @@
 // pnl-line-fx.js — per-line currency + fx markup/calc/wiring for mục B cost lines (F-29-01)
 // Split out of section-lines.js (already at the 350-line cap) — see design.md §4.
 import { getRateForDate } from '../../../../kernel/core_abstractions/util/fx-lookup.js';
+import { lineVnd } from '../../../core_abstractions/ports/flows/pnl-gate.js';
 
 const VND_CURRENCY = 'VND';
 const FX_CELL_CLS  = 'border border-slate-200 rounded px-1 py-0.5 text-xs';
@@ -17,11 +18,11 @@ export const LINE_CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 // against another in the line cells and called every cell a mismatch. Hand-sync rule as above.
 export const DEFAULT_HEADER_CURRENCY = 'VND';
 
-/** computeLineVnd — AC-02: vnd_amount = amount × fx_rate, book-currency passthrough */
+/** computeLineVnd — AC-02: vnd_amount = amount × fx_rate, book-currency passthrough. Money
+ *  arithmetic lives in wasm (flows_pnl_line_vnd, pnl_gate.rs) — the same function the VR-02
+ *  invariant recomputes against, so the live cell and the save gate never disagree. */
 export function computeLineVnd(amount, currency, fxRate, bookCurrency) {
-  const amt = Number(amount) || 0;
-  if (currency === bookCurrency) return amt;
-  return amt * (Number(fxRate) || 0);
+  return lineVnd(amount, currency, fxRate, bookCurrency);
 }
 
 /** lockFxIfVnd — AC-03: currency matching the workspace's book currency locks fx_rate at 1.

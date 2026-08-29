@@ -18,6 +18,14 @@ export class WasmEntityRepo {
     delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
     /**
+     * A CLOSED period outside the eager set (period_window.rs) -- a screen reaching back before
+     * current/previous calls this before it reads the kind, so a period never fetched gets
+     * loaded exactly once; a period already cached, or still inside the eager set, is a no-op.
+     * No-op for a kind that is not period-scoped (cache_policy::is_period_scoped) -- load-all
+     * already covers every period for those.
+     */
+    ensure_period_loaded(kind: string, period: string): Promise<any>;
+    /**
      * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
      */
     fx_apply_writes(writes_json: string): Promise<any>;
@@ -54,6 +62,12 @@ export class WasmEntityRepo {
      * before answering.
      */
     index_unique_holder(kind: string, column: string, value: string, by_id: string): Promise<any>;
+    /**
+     * A reopened period (period_close.rs's own reopen_period) invalidates THIS session's "fully
+     * cached" marker for it -- see `ensure_period_loaded`'s own doc comment for the cross-client
+     * gap this does not close.
+     */
+    invalidate_period_cache(kind: string, period: string): Promise<any>;
     lgr_append_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_append_log(file: string, record_json: string): Promise<any>;
     lgr_ensure_seed_file(file_name: string, content: string): Promise<any>;
@@ -100,6 +114,13 @@ export class WasmEntityRepo {
     pref_write_pending(ref_name: string, dto_json: string): Promise<any>;
     pref_write_state(ref_name: string, dto_json: string): Promise<any>;
     put(kind: string, id: string, body: any): Promise<any>;
+    /**
+     * CDB-DM-15: same as `put`, plus labels -- the ONE extra capability a period-bound kind
+     * needs (freight_app's `Records::put_labeled`, e.g. `ShipmentRepo` stamping `period` at
+     * create). `labels` only matters when this call is a CREATE (`EntityStoreOperator::put`'s own
+     * rule); an edit of an existing record drops them silently, same as `put` always has.
+     */
+    put_labeled(kind: string, id: string, body: any, labels: any): Promise<any>;
     sync_delta(): Promise<any>;
     users_ensure_seeded(email: string, name: string, workspace: string): Promise<any>;
     users_get(email: string): Promise<any>;
@@ -294,7 +315,15 @@ export function flows_migrate_shipment_states(req: any): Promise<any>;
 
 export function flows_next_local_seq(req: any): Promise<any>;
 
+export function flows_note_lines(req: any): any;
+
 export function flows_persist_advanced_state(req: any): Promise<any>;
+
+export function flows_pnl_fx_deviation(req: any): any;
+
+export function flows_pnl_line_vnd(req: any): any;
+
+export function flows_pnl_vnd_invariant(req: any): any;
 
 export function flows_post_commission(req: any): Promise<any>;
 
@@ -303,6 +332,8 @@ export function flows_post_reversal(req: any): Promise<any>;
 export function flows_post_shipment(req: any): Promise<any>;
 
 export function flows_quote_converted(req: any): Promise<any>;
+
+export function flows_quote_totals(req: any): any;
 
 export function flows_register_entity(req: any): Promise<any>;
 
@@ -774,11 +805,16 @@ export interface InitOutput {
     readonly flows_license_resolve: (a: number) => number;
     readonly flows_migrate_shipment_states: (a: number) => number;
     readonly flows_next_local_seq: (a: number) => number;
+    readonly flows_note_lines: (a: number, b: number) => void;
     readonly flows_persist_advanced_state: (a: number) => number;
+    readonly flows_pnl_fx_deviation: (a: number, b: number) => void;
+    readonly flows_pnl_line_vnd: (a: number, b: number) => void;
+    readonly flows_pnl_vnd_invariant: (a: number, b: number) => void;
     readonly flows_post_commission: (a: number) => number;
     readonly flows_post_reversal: (a: number) => number;
     readonly flows_post_shipment: (a: number) => number;
     readonly flows_quote_converted: (a: number) => number;
+    readonly flows_quote_totals: (a: number, b: number) => void;
     readonly flows_register_entity: (a: number) => number;
     readonly flows_rehydrate_fsm: (a: number) => number;
     readonly flows_rep_code_valid: (a: number, b: number) => void;
@@ -927,6 +963,7 @@ export interface InitOutput {
     readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
+    readonly wasmentityrepo_ensure_period_loaded: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_fx_apply_writes: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_fx_delete_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_fx_invalidate_month: (a: number, b: number, c: number) => void;
@@ -938,6 +975,7 @@ export interface InitOutput {
     readonly wasmentityrepo_index_note_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_index_note_write: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly wasmentityrepo_index_unique_holder: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
+    readonly wasmentityrepo_invalidate_period_cache: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_lgr_append_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_append_log: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_lgr_ensure_seed_file: (a: number, b: number, c: number, d: number, e: number) => number;
@@ -965,6 +1003,7 @@ export interface InitOutput {
     readonly wasmentityrepo_pref_write_pending: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_pref_write_state: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly wasmentityrepo_put_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
@@ -984,9 +1023,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13102: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13115: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9173: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13350: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13363: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9410: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

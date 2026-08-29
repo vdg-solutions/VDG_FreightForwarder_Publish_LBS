@@ -1,7 +1,7 @@
 import {
   DEFAULT_HEADER_CURRENCY,
   LINE_CURRENCY_OPTIONS
-} from "./chunk-UM4HMENE.js";
+} from "./chunk-XMGAR6EY.js";
 import "./chunk-QOACCM4N.js";
 import {
   LOCK_REASON_PERIOD_CLOSED,
@@ -11,6 +11,7 @@ import {
 import {
   getCurrentPeriodLock
 } from "./chunk-QL3VBJTQ.js";
+import "./chunk-53TPUVAF.js";
 import {
   DEFAULT_CURRENCY_FIELD,
   loadWorkspaceSettings,

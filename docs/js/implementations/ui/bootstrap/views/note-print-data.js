@@ -5,6 +5,7 @@
 
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { deriveNoteLines } from '../../core_abstractions/ports/flows/note-lines.js';
 
 export const NOTE_TYPE_DEBIT  = 'debit';
 export const NOTE_TYPE_CREDIT = 'credit';
@@ -36,35 +37,13 @@ export function noteNumberFor(shipmentRef, noteType, year) {
   return `${prefix}-${year}-${seq.padStart(NOTE_SEQ_WIDTH, '0')}`;
 }
 
-// A debit note bills the customer → the SELLING side of each P&L line.
-// A credit note is an adjustment in the customer's favour → only negative selling amounts,
-// rendered as the credits they are. A line with nothing on the selling side belongs on
-// neither document.
-function toNoteLine(line, noteType) {
-  const amount   = Number(line.selling_amount ?? line.sell_amt ?? 0);
-  const qty      = Number(line.selling_qty ?? line.sell_qty ?? 1) || 1;
-  const currency = line.selling_currency || line.sell_currency || DEFAULT_CURRENCY;
-
-  if (!amount) return null;
-  if (noteType === NOTE_TYPE_CREDIT && amount >= 0) return null;
-  if (noteType === NOTE_TYPE_DEBIT  && amount <= 0) return null;
-
-  return {
-    description: line.description || line.desc || line.subtype || '',
-    qty,
-    currency,
-    unit_amount: amount / qty,
-    total: amount,
-  };
-}
-
 /**
  * @param {string} shipmentRef
  * @param {string} noteType     NOTE_TYPE_DEBIT | NOTE_TYPE_CREDIT
  * @param {object} [repo]       injectable for tests; defaults to window.__vdg_repo
  * @param {number} [year]       injectable for tests; defaults to the local calendar year
  * @returns {Promise<{shipment: object|null, lines: object[], customer: object|null,
- *                    currency: string, noteNo: string}>}
+ *                    currency: string, noteNo: string, total: number}>}
  */
 export async function loadNoteData(
   shipmentRef,
@@ -74,7 +53,7 @@ export async function loadNoteData(
 ) {
   const empty = {
     shipment: null, lines: [], customer: null,
-    currency: DEFAULT_CURRENCY, noteNo: noteNumberFor(shipmentRef, noteType, year),
+    currency: DEFAULT_CURRENCY, noteNo: noteNumberFor(shipmentRef, noteType, year), total: 0,
   };
   if (!repo || !shipmentRef) return empty;
 
@@ -86,7 +65,9 @@ export async function loadNoteData(
   let rows = await listWhere(repo, KIND_PNL_LINE, (l) => l?.shipment_ref === shipmentRef).catch(() => []);
   if (!rows?.length) rows = shipment.pnl_lines || [];
 
-  const lines = rows.map((l) => toNoteLine(l, noteType)).filter(Boolean);
+  // Line derivation (selling-side filter, unit_amount, total) and their sum live in wasm
+  // (flows_note_lines, note_lines.rs) — the figure printed on the page the customer receives.
+  const { lines, total } = deriveNoteLines(rows, noteType);
 
   const customer = shipment.customer
     ? await _resolveCustomer(repo, shipment.customer)
@@ -98,6 +79,7 @@ export async function loadNoteData(
     customer,
     currency: lines[0]?.currency || shipment.job_currency || DEFAULT_CURRENCY,
     noteNo:   noteNumberFor(shipmentRef, noteType, year),
+    total,
   };
 }
 

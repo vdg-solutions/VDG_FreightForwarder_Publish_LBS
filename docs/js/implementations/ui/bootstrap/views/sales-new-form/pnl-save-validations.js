@@ -1,75 +1,34 @@
-// pnl-save-validations.js — VR-02 (Σvnd invariant) + VR-03 (fx deviation) pure helpers (F-29-04)
-// Import-clean: only computeLineVnd from pnl-line-fx.js (chain → fx-lookup.js, both CDN-free).
-// See design.md §2/§6 — this module must stay importable under node:test without the
-// section-header.js -> cache/semantic-search.js CDN crash.
-import { computeLineVnd, DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
-
-// R-C named constants
-const VND_INVARIANT_EPSILON = 1;             // VND has no sub-unit; absorbs float noise from
-                                              // amount×fx_rate. 1-dong slack; real drift is thousands.
-export const FX_DEVIATION_THRESHOLD = 0.05;  // 5% band around reference rate — design.md §4
-
-const VND_CURRENCY = 'VND';
-const REASON_NON_POSITIVE = 'non_positive';
-const REASON_DEVIATION    = 'deviation';
+// pnl-save-validations.js — VR-02 (Σvnd invariant) + VR-03 (fx deviation) save gates (F-29-04).
+// The math lives in wasm (flows_pnl_vnd_invariant / flows_pnl_fx_deviation, pnl_gate.rs) — this
+// module only shapes state into the gate's request and returns its verdict, never recomputes it.
+// Import-clean: only DEFAULT_HEADER_CURRENCY from pnl-line-fx.js (chain → fx-lookup.js, both
+// CDN-free) plus the bound pnl-gate port. See design.md §2/§6 — this module must stay importable
+// under node:test without the section-header.js -> cache/semantic-search.js CDN crash.
+import { DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
+import { vndInvariant, fxDeviation } from '../../../core_abstractions/ports/flows/pnl-gate.js';
 
 /**
- * computeVndInvariant — VR-02: Σ(carried per-line VND) vs Σ(recomputed from raw inputs).
- * expected = Σ computeLineVnd(amount, currency, fx_rate) over every monetary side (truth).
- * actual   = Σ carried vnd_pay + vnd_collect + net_after_tax (what the state currently holds).
- * AC-01: match when |delta| <= epsilon; signed diff = expected - actual; empty state -> all zero.
+ * computeVndInvariant — VR-02: Σ(carried per-line VND) vs Σ(recomputed from raw inputs), decided
+ * by the wasm gate. AC-01: match when |delta| <= epsilon (named in Rust — pnl_gate.rs's
+ * VND_INVARIANT_EPSILON); empty state -> all zero.
+ * mục C VND is post-tax and re-derived live (collectCommission) — contributes equally to both
+ * sums in the gate, so a well-formed commission line never fabricates drift.
  */
-export function computeVndInvariant(state = {}, epsilon = VND_INVARIANT_EPSILON) {
-  const lines            = state.lines || [];
-  const commissionLines  = state.commission_lines || [];
-  const bookCurrency     = state.book_currency || DEFAULT_HEADER_CURRENCY;
-
-  let expected = 0;
-  let actual   = 0;
-
-  for (const l of lines) {
-    expected += computeLineVnd(l.buy_amt, l.buy_currency, l.buy_fx_rate, bookCurrency);
-    expected += computeLineVnd(l.sell_amt, l.sell_currency, l.sell_fx_rate, bookCurrency);
-    actual   += l.vnd_pay || 0;
-    actual   += l.vnd_collect || 0;
-  }
-
-  for (const l of commissionLines) {
-    // mục C VND is post-tax and re-derived live (collectCommission) — contributes equally
-    // to both sums, so a well-formed commission line never fabricates drift (AC-01).
-    const net = l.net_after_tax || 0;
-    expected += net;
-    actual   += net;
-  }
-
-  const delta = expected - actual;
-  return { match: Math.abs(delta) <= epsilon, expected, actual, delta };
+export function computeVndInvariant(state = {}) {
+  const lines = state.lines || [];
+  const commissionNetAfterTax = (state.commission_lines || []).map((l) => l.net_after_tax || 0);
+  const bookCurrency = state.book_currency || DEFAULT_HEADER_CURRENCY;
+  return vndInvariant(lines, commissionNetAfterTax, bookCurrency);
 }
 
 /**
- * detectFxDeviation — VR-03: pure per-line deviation check (reference rate resolved by caller).
- * fxRate <= 0 -> flagged 'non_positive' regardless of reference.
- * currency === VND -> never flagged (locked rate = 1).
- * referenceRate == null -> band check skipped, but the <=0 check still applies.
- * positive fxRate deviating from referenceRate by more than threshold -> flagged 'deviation'.
+ * detectFxDeviation — VR-03: per-line deviation check (reference rate resolved by caller),
+ * decided by the wasm gate. fxRate <= 0 -> flagged 'non_positive' regardless of reference.
+ * currency === VND -> never flagged (locked rate = 1). referenceRate == null -> band check
+ * skipped, but the <=0 check still applies.
  */
-export function detectFxDeviation({ currency, fxRate, referenceRate }, threshold = FX_DEVIATION_THRESHOLD) {
-  const rate = Number(fxRate);
-
-  if (currency === VND_CURRENCY) {
-    return { flagged: false, reason: null, deviation: null };
-  }
-  if (!(rate > 0)) {
-    return { flagged: true, reason: REASON_NON_POSITIVE, deviation: null };
-  }
-  if (referenceRate == null) {
-    return { flagged: false, reason: null, deviation: null };
-  }
-
-  const ref       = Number(referenceRate);
-  const deviation = ref !== 0 ? Math.abs(rate - ref) / ref : 0;
-  const flagged   = deviation > threshold;
-  return { flagged, reason: flagged ? REASON_DEVIATION : null, deviation };
+export function detectFxDeviation({ currency, fxRate, referenceRate }) {
+  return fxDeviation(currency, fxRate, referenceRate);
 }
 
 /**

@@ -74,7 +74,9 @@ function billedToBlock(type, customer) {
   `;
 }
 
-function lineTable(lines, currency) {
+// grandTotal is loadNoteData's own `total` (flows_note_lines, note_lines.rs) — not resummed here,
+// so this footer and the Debit Note tab (document-print-data.js) can never disagree.
+function lineTable(lines, currency, grandTotal) {
   const rows = lines.map((l) => `
     <tr class="border-b border-slate-100">
       <td class="py-2 pr-4">${l.description}</td>
@@ -84,8 +86,6 @@ function lineTable(lines, currency) {
       <td class="py-2 text-right w-28 font-medium">${l.total.toFixed(2)}</td>
     </tr>
   `).join('');
-
-  const grandTotal = lines.reduce((s, l) => s + l.total, 0);
 
   return `
     <table class="w-full text-sm mb-6">
@@ -202,7 +202,7 @@ export async function render(root, shipmentRef, type) {
         ${draftBanner()}
         ${noteHeader(data.noteNo, noteType, shipmentRef)}
         ${billedToBlock(noteType, data.customer)}
-        ${lineTable(data.lines, data.currency)}
+        ${lineTable(data.lines, data.currency, data.total)}
         ${paymentTerms()}
         ${signatureBlock()}
       </div>
