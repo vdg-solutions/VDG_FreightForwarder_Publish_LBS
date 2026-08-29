@@ -7,8 +7,6 @@
 // adapter touches the app's caches — that is what keeps a third adapter (gdrive-db, Firebase) a
 // one-file job.
 
-import { DRIVE_ERROR_KIND_FILE_PERMISSION } from './drive-error-classifier.js';
-
 /// Verdicts. `token` is the fork token the rest of the app keys on (MANAGER sentinel or the
 /// user's prefix upper-cased); `roles` the role names; `areas` the folder-id manifest an
 /// employee's data layer starts from ({ path, folder_id }[]).
@@ -23,8 +21,7 @@ export const VERDICT_NOT_PROVISIONED = 'not_provisioned';
 export class RoleUndeterminedError extends Error {
   constructor(reason) {
     super(`Role undetermined: ${reason}`);
-    this.name = 'RoleUndeterminedError';
-    this.driveErrorKind = DRIVE_ERROR_KIND_FILE_PERMISSION; // undecidable by construction — never cached as a role
+    this.name = 'RoleUndeterminedError'; // undecidable by construction — never cached as a role
   }
 }
 

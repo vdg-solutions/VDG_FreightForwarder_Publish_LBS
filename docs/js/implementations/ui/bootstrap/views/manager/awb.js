@@ -1,9 +1,6 @@
 // AWB admin grid — F-16-02
 // Route: /manager/awb
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }              from '../../router.js';
 import { t }                     from '../../../../kernel/core_abstractions/i18n/index.js';
 import { awbRepo }               from '../../../core_abstractions/ports/storage/awb-repo.js';
 
@@ -114,8 +111,6 @@ function renderGrid(container, entries, statusFilter) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   const ym   = new Date().toISOString().slice(0, 7);
   let entries = [];
   try {

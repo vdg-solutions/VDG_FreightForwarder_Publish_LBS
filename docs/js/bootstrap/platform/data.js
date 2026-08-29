@@ -19,10 +19,27 @@ function ioPort() {
   return window.__vdg_io || null;
 }
 
+// A caught ws_list_dir/ws_read_file failure must not collapse to "this fork holds nothing" the way
+// `.catch(() => null)` used to — a manager/CS reading a REP's fork is exactly the read Cedar's
+// per-role policy can now 403 (an answer: no such fork for this reader) or fail for real reasons
+// (401/429/5xx/transport: cannot tell). The rule is decided once, in Rust, by status — see
+// freight::core_abstractions::read_verdict — never re-derived here from the error's shape.
+function isAnsweredStatus(status) {
+  const wasm = window.__vdg_wasm;
+  if (!wasm?.governance_classify_read_status) return false; // cannot ask — undecidable by default
+  return wasm.governance_classify_read_status({ status: status ?? null }).decided;
+}
+
 async function readForkBundles(dir) {
   const io = ioPort();
   if (!io) return [];
-  const listing = await io.ws_list_dir(dir).catch(() => null);
+  let listing;
+  try {
+    listing = await io.ws_list_dir(dir);
+  } catch (err) {
+    if (isAnsweredStatus(err?.status)) return []; // never granted this fork — a real absence
+    throw err; // cannot tell — must not read as "this rep's job earned nothing"
+  }
   if (!listing?.files?.length) return [];
   const bodies = [];
   for (const file of listing.files) {
@@ -38,7 +55,13 @@ async function readForkBundles(dir) {
     } catch {
       break; // budget spent — stop asking rather than keep fanning out
     }
-    const res = await io.ws_read_file(dir, file.name).catch(() => null);
+    let res;
+    try {
+      res = await io.ws_read_file(dir, file.name);
+    } catch (err) {
+      if (isAnsweredStatus(err?.status)) continue; // this file's own refusal, not a fork-wide signal
+      throw err;
+    }
     if (!res?.found) continue;
     bodies.push(String(res.content));
   }
@@ -46,8 +69,9 @@ async function readForkBundles(dir) {
 }
 
 export const dataPlatform = {
-  /// Every *.jsonl body in one fork folder. A missing or unreadable folder yields [] — for a
-  /// reader who was never granted that fork, "no file" is the correct answer.
+  /// Every *.jsonl body in one fork folder. A folder this reader was never granted (403/404)
+  /// yields [] — "no file" is the correct answer. A folder that could not be READ (401/429/5xx/
+  /// transport) throws instead of yielding [] — see readForkBundles/isAnsweredStatus above.
   data_fork_read_jsonl: async (dir, ttlMs) => {
     const hit = _scans.get(dir);
     if (ttlMs > 0 && hit && Date.now() - hit.at < ttlMs) return hit.bodies;

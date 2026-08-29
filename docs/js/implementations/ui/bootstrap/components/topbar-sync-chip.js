@@ -133,11 +133,12 @@ export function renderSyncChip({
   html, state, pending, lastSyncMs, now, online,
   ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect, popupBlocked,
   serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
+  syncing = false, // vdg:sync-started (charter_event_bridge.rs) — a pass is in flight even with no backlog
 }) {
   const dotClass   = DOT_CLASS[state] ?? DOT_CLASS.green;
-  const isFlushing = state === 'yellow';
+  const isFlushing = state === 'yellow' || syncing;
   const hasPending = pending > 0;
-  const pulseClass = hasPending ? 'animate-pulse' : '';
+  const pulseClass = (hasPending || syncing) ? 'animate-pulse' : '';
   const ago        = formatLastSyncAgo(lastSyncMs, now);
   const titleText  = buildChipTitle({
     state, ago, lastError, t, user, online, authReconnect, popupBlocked,

@@ -2,11 +2,9 @@
 
 import '../../components/kanban-board.js';
 import { VALID_NEXT } from '../../components/kanban-board.js';
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }  from '../../router.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { currentUserEmail } from '../../../core_abstractions/ports/governance/route-guard.js';
 import { shipmentLane } from '../../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
@@ -96,7 +94,7 @@ function enrichShipments(list) {
 
 function mountGrid(container, filtered) {
   if (_gridApi) { try { _gridApi.destroy(); } catch { /* ignore */ } _gridApi = null; }
-  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  const currentUser = { email: currentUserEmail() };
   const rowData = filtered.map((s) => ({
     ...s,
     shipment_ref: s.shipment_ref || s.ShipmentRef || s.id,
@@ -161,8 +159,6 @@ async function saveViewMode(store, mode) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   if (_onEntity)     window.removeEventListener('vdg:entity-changed', _onEntity);
   if (_onFilter)     window.removeEventListener('vdg:filter-changed', _onFilter);
   if (_onModeChange) window.removeEventListener('vdg:mode-change',    _onModeChange);

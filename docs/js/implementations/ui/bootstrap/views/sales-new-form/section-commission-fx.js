@@ -1,7 +1,7 @@
 // section-commission-fx.js — per-line currency + fx markup/wiring for mục C commission
 // rows (F-29-02). Split out of section-commission.js (at the 350-line cap) — design.md §3.
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { lockFxIfVnd, prefillFxRate, currencySelectHtml } from './pnl-line-fx.js';
+import { lockFxIfVnd, prefillFxRate, currencySelectHtml, bookCurrencyOf } from './pnl-line-fx.js';
 
 const VND_CURRENCY = 'VND';
 // Mirrors section-commission.js's INPUT_CLS/RDONLY_CLS — kept in sync by hand to avoid a
@@ -11,9 +11,9 @@ const INPUT_CLS  = 'w-full border border-slate-200 rounded px-1 py-0.5 text-xs';
 const RDONLY_CLS = `${INPUT_CLS} bg-slate-50`;
 
 /** commFxCellsHtml — AC-01/03: currency + fx_rate + fx_date fields for one commission row */
-export function commFxCellsHtml(row = {}, headerCurrency) {
-  const currency          = row.currency || headerCurrency || VND_CURRENCY;
-  const { rate, locked }  = lockFxIfVnd(currency);
+export function commFxCellsHtml(row = {}, headerCurrency, bookCurrency) {
+  const currency          = row.currency || headerCurrency || bookCurrency || VND_CURRENCY;
+  const { rate, locked }  = lockFxIfVnd(currency, bookCurrency);
   const rateVal           = locked ? rate : (row.fx_rate ?? '');
   const rateCls           = locked ? RDONLY_CLS : INPUT_CLS;
   return `
@@ -74,7 +74,7 @@ async function _onCurrencyChange(panel, fxRepo) {
   if (!panel) return;
   const currencyEl = panel.querySelector('[name=comm_currency]');
   const rateEl     = panel.querySelector('[name=comm_fx_rate]');
-  const { rate, locked } = lockFxIfVnd(currencyEl?.value);
+  const { rate, locked } = lockFxIfVnd(currencyEl?.value, bookCurrencyOf(panel));
   if (rateEl) {
     rateEl.readOnly = locked;
     rateEl.classList.toggle('bg-slate-50', locked);

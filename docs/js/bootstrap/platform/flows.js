@@ -1,20 +1,31 @@
 // platform/flows.js — extra platform methods the Rust flows use-cases import (js_flows.rs extern
 // type). Raw passthrough: no decision lives here, only the browser/storage call the operator asked
 // for. Every method is async so a value and a promise can never answer the same call differently.
-import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
+import { apiFetch } from '../../implementations/storage/core_abstractions/backend.js';
+import { ApiError } from '../../implementations/storage/core_abstractions/api-error.js';
 import { ledgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import * as shipments from '../../implementations/ui/core_abstractions/ports/data/shipment-repo.js';
 import { todayLocal } from '../../implementations/kernel/core_abstractions/util/today-local.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
+import { currentUserEmail } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 
 const JSZIP_CDN         = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
 const ZIP_COMPRESSION   = 'DEFLATE';
 const ZIP_LEVEL         = 6;
 const HTTP_TRANSPORT_FAILURE = 0;
+const HTTP_NOT_FOUND    = 404;
+const HTTP_CONFLICT     = 409;
 
 function wasm() { return window.__vdg_wasm; }
 function repo()  { return window.__vdg_repo; }
+
+// jobno_lease.rs's `dir_id` used to be a Drive folder id; CharterDB has no folder tree, so it is
+// read here as a collection PATH instead — same reinterpretation server-io-adapters.js's
+// ws_read_file/ws_write_file already made for `dirPath`. Collapses to '' for a bare id.
+function normCollection(dirId) {
+  return String(dirId || '').replace(/^\/+|\/+$/g, '');
+}
 
 // The shipment repo speaks in TWO records (envelope + the rep's revenue half); the flows
 // use-cases reach it by op name so the split, the write gate and the audit stay in one place.
@@ -70,16 +81,39 @@ export const flowsPlatform = {
     return { ok: true };
   },
 
+  // Read-or-create a CharterDB record (jobno_lease.rs's per-rep-code counter file): `dirId` names
+  // the collection, `name` is the record id — the same `${collection}/${id}` addressing
+  // ws_read_file/ws_write_file already use, so the `id` handed back here round-trips through
+  // flows_cas_upload below. etag/content ride along too (the CAS loop's compare-and-swap target),
+  // captured straight from the GET/POST response instead of a separate getFile round trip. A 409
+  // on create just means another device seeded it first — the record is there either way, which is
+  // exactly what "get or create" asks for, but with no etag of its own to hand back: the caller's
+  // next CAS attempt re-reads and gets one then.
   flows_get_or_create_file: async (dirId, name, content) => {
-    const api = storageApi();
-    return api.getOrCreateFile(api.driveFetch, api.uploadFile, dirId, name, content);
+    const collection = normCollection(dirId);
+    try {
+      const existing = await apiFetch('GET', `/records/${encodeURIComponent(collection)}/${encodeURIComponent(name)}`);
+      return { id: `${collection}/${name}`, etag: existing.etag ?? null, content: existing.content ?? null };
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== HTTP_NOT_FOUND) throw err;
+    }
+    try {
+      const created = await apiFetch('POST', `/records/${encodeURIComponent(collection)}`, { id: name, owner: currentUserEmail(), content });
+      return { id: `${collection}/${name}`, etag: created.etag ?? null, content: created.content ?? content };
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== HTTP_CONFLICT) throw err;
+    }
+    return { id: `${collection}/${name}` };
   },
 
   // A lost CAS race (412) is an expected outcome of a counter claim, so it answers instead of
-  // throwing — the operator decides whether to retry.
+  // throwing — the operator decides whether to retry. `fileId` is the `${collection}/${name}` id
+  // flows_get_or_create_file above hands back; CharterDB's own If-Match does the compare-and-swap.
   flows_cas_upload: async (fileId, name, body, etag) => {
+    const suffix     = `/${name}`;
+    const collection = String(fileId || '').endsWith(suffix) ? fileId.slice(0, -suffix.length) : '';
     try {
-      await storageApi().uploadFile(fileId, name, body, etag, { isUpdate: true });
+      await apiFetch('PUT', `/records/${encodeURIComponent(collection)}/${encodeURIComponent(name)}`, { content: body }, { 'If-Match': etag });
       return { ok: true, status: HTTP_TRANSPORT_FAILURE };
     } catch (err) {
       return { ok: false, status: err?.status ?? HTTP_TRANSPORT_FAILURE };

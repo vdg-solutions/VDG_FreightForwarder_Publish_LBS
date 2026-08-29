@@ -17,7 +17,6 @@ export class WasmEntityRepo {
     awb_list_by_month(ym: string): Promise<any>;
     delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
-    fetch_older(kind: string, before: string): Promise<any>;
     /**
      * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
      */
@@ -58,6 +57,10 @@ export class WasmEntityRepo {
     lgr_append_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_append_log(file: string, record_json: string): Promise<any>;
     lgr_ensure_seed_file(file_name: string, content: string): Promise<any>;
+    /**
+     * F1: posted-index row (with entry_ids) for a dedup key, or null — powers reopen's reverse.
+     */
+    lgr_find_posted(posted_index: string): Promise<any>;
     lgr_get_balance(acc_code: string, as_of: string): Promise<any>;
     lgr_is_posted(posted_index: string): Promise<any>;
     lgr_last_log(file: string): Promise<any>;
@@ -65,12 +68,16 @@ export class WasmEntityRepo {
     lgr_list_legs(year: number, acc_code: string, from: string, to: string): Promise<any>;
     lgr_record_posted(posted_index: string, entry_ids_json: string): Promise<any>;
     /**
+     * F1: drop a posted-index row after its entries were reversed — see release_posted's doc.
+     */
+    lgr_release_posted(posted_index: string): Promise<any>;
+    /**
      * Orphan purge only — see LedgerStoreOperator::remove_entry for why this is not a general delete.
      */
     lgr_remove_entry(year: number, entry_id: string): Promise<any>;
     lgr_replace_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_set_chart(chart_json: string): void;
-    list(kind: string): Promise<any>;
+    list(kind: string, owner?: string | null): Promise<any>;
     mint_quote_ref(salt: string): Promise<any>;
     mint_shipment_ref(direction: string, salt: string): Promise<any>;
     /**
@@ -133,6 +140,12 @@ export function auth_has_role(req: any): any;
 
 export function auth_require_auth(req: any): Promise<any>;
 
+/**
+ * Boot's final principal resolution: JS hands over the signed-in email, this reads the staff
+ * table and republishes the whole principal — no role/fork decision left on the JS side.
+ */
+export function auth_resolve_principal(req: any): Promise<any>;
+
 export function auth_session_roles(req: any): any;
 
 export function auth_set_resolved_roles(req: any): any;
@@ -157,6 +170,27 @@ export function check_awb_doc_transition(from: string, event: string): boolean;
  * Returns true when `event` is a valid next event from `from_state` in FSM-04.
  */
 export function check_quotation_transition(from_state: string, event: string): boolean;
+
+/**
+ * Section C's prefilled TNCN pct before a manager edits a row (15, never enforced).
+ */
+export function commission_default_personal_tax_pct(): number;
+
+/**
+ * net_after_tax = gross - bank_charge - tax (Section C "Thực nhận").
+ */
+export function commission_net_after_tax(gross_vnd: number, bank_charge: number, tax_amount: number): number;
+
+/**
+ * TNCN withheld on a commission gross (whole VND, banker's rounding — see personal_tax.rs).
+ */
+export function commission_personal_tax(gross_vnd: number, tncn_pct_0_100: number): number;
+
+/**
+ * sales_share_pct precedence: shipment override > user config > workspace default (50).
+ * `None` (JS `null`/`undefined`) means "not set" at that tier.
+ */
+export function commission_resolve_sales_share_pct(override_pct?: number | null, user_config_pct?: number | null): number;
 
 /**
  * Single-source profit waterfall for the UI: margin → TNDN(20%) → net → sales/LBS split.
@@ -240,8 +274,6 @@ export function flows_customer_rep(req: any): any;
 
 export function flows_derive_sales_rep(req: any): any;
 
-export function flows_disable_user(req: any): Promise<any>;
-
 export function flows_edit_profile(req: any): Promise<any>;
 
 export function flows_ensure_rep_code(req: any): Promise<any>;
@@ -253,8 +285,6 @@ export function flows_export_workspace(req: any): Promise<any>;
 export function flows_format_job_no(req: any): any;
 
 export function flows_generate_quote_id(req: any): Promise<any>;
-
-export function flows_invite_sales(req: any): Promise<any>;
 
 export function flows_license_error_key(req: any): any;
 
@@ -271,8 +301,6 @@ export function flows_post_commission(req: any): Promise<any>;
 export function flows_post_reversal(req: any): Promise<any>;
 
 export function flows_post_shipment(req: any): Promise<any>;
-
-export function flows_promote_to_manager(req: any): Promise<any>;
 
 export function flows_quote_converted(req: any): Promise<any>;
 
@@ -316,10 +344,12 @@ export function fork_allocate(email: string, taken_json: string, seed: number): 
 export function freight_app_init(platform: any): void;
 
 /**
- * Look up cached FX rate. JS must ingest relevant months first.
- * Returns FxRateEntry as JsValue on success.
+ * Look up cached FX rate for one side of the quote. JS must ingest relevant months first, and
+ * must state a direction ("Buy"|"Sell") — Circular 200 values monetary assets at the buying
+ * rate and liabilities at the selling rate, so there is no default side to fall back to.
+ * Returns the resolved Decimal (as a JSON string) on success.
  */
-export function fx_rate_get(date_str: string, pair: string): any;
+export function fx_rate_get(date_str: string, pair: string, direction: string): any;
 
 /**
  * Push JSONL content for a month into WASM cache. `ym` = "YYYY-MM".
@@ -339,15 +369,17 @@ export function get_transition_log(entity_id: string): any;
 
 export function get_validation_errors(): any;
 
-export function governance_bootstrap_acl_folders(req: any): Promise<any>;
+export function governance_action_guard(req: any): any;
+
+export function governance_allowed_actions(req: any): any;
 
 export function governance_can_edit_default_currency(req: any): any;
+
+export function governance_classify_read_status(req: any): any;
 
 export function governance_close_period(req: any): Promise<any>;
 
 export function governance_close_records(req: any): Promise<any>;
-
-export function governance_ensure_workspace_root(req: any): Promise<any>;
 
 export function governance_error_records(req: any): Promise<any>;
 
@@ -355,21 +387,13 @@ export function governance_filter_sidebar(req: any): any;
 
 export function governance_find_lock(req: any): Promise<any>;
 
-export function governance_first_run_provision(req: any): Promise<any>;
-
 export function governance_home_route(req: any): any;
-
-export function governance_is_already_provisioned(req: any): Promise<any>;
 
 export function governance_load_settings(req: any): Promise<any>;
 
 export function governance_lock_period(req: any): Promise<any>;
 
 export function governance_locked_periods(req: any): Promise<any>;
-
-export function governance_merge_diff(req: any): any;
-
-export function governance_merge_records(req: any): any;
 
 export function governance_normalize_role(req: any): any;
 
@@ -384,8 +408,6 @@ export function governance_pre_close_checks(req: any): Promise<any>;
 export function governance_purge_error_month(req: any): Promise<any>;
 
 export function governance_reopen_period(req: any): Promise<any>;
-
-export function governance_repoint_refs(req: any): Promise<any>;
 
 export function governance_route_guard(req: any): any;
 
@@ -467,6 +489,8 @@ export function manager_ledger_balance_sheet(req: any): any;
 export function manager_ledger_chart_groups(req: any): any;
 
 export function manager_ledger_csv(req: any): any;
+
+export function manager_ledger_entry_totals(req: any): any;
 
 export function manager_ledger_filter_legs(req: any): any;
 
@@ -686,6 +710,7 @@ export interface InitOutput {
     readonly auth_detect_role: (a: number) => number;
     readonly auth_has_role: (a: number, b: number) => void;
     readonly auth_require_auth: (a: number) => number;
+    readonly auth_resolve_principal: (a: number) => number;
     readonly auth_session_roles: (a: number, b: number) => void;
     readonly auth_set_resolved_roles: (a: number, b: number) => void;
     readonly cache_bulk_put: (a: number) => number;
@@ -697,6 +722,10 @@ export interface InitOutput {
     readonly check_allocation_within_mgw: (a: number, b: number, c: number) => number;
     readonly check_awb_doc_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
+    readonly commission_default_personal_tax_pct: () => number;
+    readonly commission_net_after_tax: (a: number, b: number, c: number) => number;
+    readonly commission_personal_tax: (a: number, b: number) => number;
+    readonly commission_resolve_sales_share_pct: (a: number, b: number, c: number, d: number) => number;
     readonly commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly compute_dashboard_exceptions: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
@@ -735,14 +764,12 @@ export interface InitOutput {
     readonly flows_commit_pnl_report: (a: number) => number;
     readonly flows_customer_rep: (a: number, b: number) => void;
     readonly flows_derive_sales_rep: (a: number, b: number) => void;
-    readonly flows_disable_user: (a: number) => number;
     readonly flows_edit_profile: (a: number) => number;
     readonly flows_ensure_rep_code: (a: number) => number;
     readonly flows_ensure_state_aliases: (a: number) => number;
     readonly flows_export_workspace: (a: number) => number;
     readonly flows_format_job_no: (a: number, b: number) => void;
     readonly flows_generate_quote_id: (a: number) => number;
-    readonly flows_invite_sales: (a: number) => number;
     readonly flows_license_error_key: (a: number, b: number) => void;
     readonly flows_license_resolve: (a: number) => number;
     readonly flows_migrate_shipment_states: (a: number) => number;
@@ -751,7 +778,6 @@ export interface InitOutput {
     readonly flows_post_commission: (a: number) => number;
     readonly flows_post_reversal: (a: number) => number;
     readonly flows_post_shipment: (a: number) => number;
-    readonly flows_promote_to_manager: (a: number) => number;
     readonly flows_quote_converted: (a: number) => number;
     readonly flows_register_entity: (a: number) => number;
     readonly flows_rehydrate_fsm: (a: number) => number;
@@ -769,28 +795,25 @@ export interface InitOutput {
     readonly flows_void_plan: (a: number, b: number) => void;
     readonly fork_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly freight_app_init: (a: number) => void;
-    readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
-    readonly governance_bootstrap_acl_folders: (a: number) => number;
+    readonly governance_action_guard: (a: number, b: number) => void;
+    readonly governance_allowed_actions: (a: number, b: number) => void;
     readonly governance_can_edit_default_currency: (a: number, b: number) => void;
+    readonly governance_classify_read_status: (a: number, b: number) => void;
     readonly governance_close_period: (a: number) => number;
     readonly governance_close_records: (a: number) => number;
-    readonly governance_ensure_workspace_root: (a: number) => number;
     readonly governance_error_records: (a: number) => number;
     readonly governance_filter_sidebar: (a: number, b: number) => void;
     readonly governance_find_lock: (a: number) => number;
-    readonly governance_first_run_provision: (a: number) => number;
     readonly governance_home_route: (a: number, b: number) => void;
-    readonly governance_is_already_provisioned: (a: number) => number;
     readonly governance_load_settings: (a: number) => number;
     readonly governance_lock_period: (a: number) => number;
     readonly governance_locked_periods: (a: number) => number;
-    readonly governance_merge_diff: (a: number, b: number) => void;
-    readonly governance_merge_records: (a: number, b: number) => void;
     readonly governance_normalize_role: (a: number, b: number) => void;
     readonly governance_opening_balance: (a: number, b: number) => void;
     readonly governance_period_math: (a: number, b: number) => void;
@@ -798,7 +821,6 @@ export interface InitOutput {
     readonly governance_pre_close_checks: (a: number) => number;
     readonly governance_purge_error_month: (a: number) => number;
     readonly governance_reopen_period: (a: number) => number;
-    readonly governance_repoint_refs: (a: number) => number;
     readonly governance_route_guard: (a: number, b: number) => void;
     readonly governance_save_settings: (a: number) => number;
     readonly governance_unlock_period: (a: number) => number;
@@ -832,6 +854,7 @@ export interface InitOutput {
     readonly manager_ledger_balance_sheet: (a: number, b: number) => void;
     readonly manager_ledger_chart_groups: (a: number, b: number) => void;
     readonly manager_ledger_csv: (a: number, b: number) => void;
+    readonly manager_ledger_entry_totals: (a: number, b: number) => void;
     readonly manager_ledger_filter_legs: (a: number, b: number) => void;
     readonly manager_ledger_plan_repost: (a: number) => number;
     readonly manager_ledger_pnl: (a: number, b: number) => void;
@@ -904,7 +927,6 @@ export interface InitOutput {
     readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
-    readonly wasmentityrepo_fetch_older: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_fx_apply_writes: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_fx_delete_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_fx_invalidate_month: (a: number, b: number, c: number) => void;
@@ -919,16 +941,18 @@ export interface InitOutput {
     readonly wasmentityrepo_lgr_append_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_append_log: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_lgr_ensure_seed_file: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_find_posted: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_lgr_get_balance: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_lgr_is_posted: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_lgr_last_log: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_lgr_list_entry_legs: (a: number, b: number, c: number, d: number) => number;
     readonly wasmentityrepo_lgr_list_legs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly wasmentityrepo_lgr_record_posted: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_lgr_release_posted: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_lgr_remove_entry: (a: number, b: number, c: number, d: number) => number;
     readonly wasmentityrepo_lgr_replace_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_set_chart: (a: number, b: number, c: number, d: number) => void;
-    readonly wasmentityrepo_list: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_list: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_mint_quote_ref: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_mint_shipment_ref: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_network_rate_check: (a: number, b: number) => void;
@@ -960,9 +984,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15169: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15182: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12331: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13102: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13115: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9173: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -1,10 +1,8 @@
 // Manager Cash Flow & AR — F-14-05
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { composeAR, composeAP, composeTimeline, AR_CURRENT_DAYS, AR_BUCKET_31_60, AR_BUCKET_61_90, CREDIT_UTILIZATION_WARN_PCT, CREDIT_UTILIZATION_EXCEEDED_PCT }
   from '../../../core_abstractions/ports/manager/ar-composer.js';
-import { navigate } from '../../router.js';
+import { fetchClosingRatesBuy, renderFxRevalSummary } from './cash-flow-fx-reval.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 
@@ -229,7 +227,6 @@ async function showCreditAlert(root, customerName, newState) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
 
   try {
@@ -247,8 +244,9 @@ export async function render(root) {
     ]);
   }
 
-  const today   = Date.now();
-  const arData  = composeAR({ billingEntities: _billing, today });
+  const today       = Date.now();
+  const fxRatesBuy  = await fetchClosingRatesBuy(_billing);
+  const arData  = composeAR({ billingEntities: _billing, today, fxRatesBuy });
   const apData  = composeAP({ pnlLines: _pnlLines });
   const timeline= composeTimeline({ billingEntities: _billing, shipments: _shipments, today });
 
@@ -268,6 +266,7 @@ export async function render(root) {
       <div id="tab-content" class="bg-white rounded-xl border border-slate-200 p-5">
         <div id="ar-section">
           <div id="ar-grid-container"></div>
+          <div id="fx-reval-summary" class="text-sm mt-2"></div>
           <div class="mt-5">
             <div class="h-52"><canvas id="timeline-chart"></canvas></div>
           </div>
@@ -280,6 +279,7 @@ export async function render(root) {
 
   mountArGrid(root.querySelector('#ar-grid-container'), arData.rows);
   mountApGrid(root.querySelector('#ap-grid-container'), apData.rows);
+  renderFxRevalSummary(root, arData.totals.unrealized_fx_gain_loss);
   queueMicrotask(() => renderTimeline(root, timeline));
 
   root.addEventListener('click', async (e) => {
@@ -298,8 +298,10 @@ export async function render(root) {
     if (kind !== KIND_BILLING && kind !== KIND_CUSTOMER) return;
 
     if (repo) _billing = await repo.list(KIND_BILLING, null);
-    const fresh = composeAR({ billingEntities: _billing, today: Date.now() });
+    const freshRatesBuy = await fetchClosingRatesBuy(_billing);
+    const fresh = composeAR({ billingEntities: _billing, today: Date.now(), fxRatesBuy: freshRatesBuy });
     mountArGrid(root.querySelector('#ar-grid-container'), fresh.rows);
+    renderFxRevalSummary(root, fresh.totals.unrealized_fx_gain_loss);
 
     // Credit alert check
     if (kind === KIND_CUSTOMER || kind === KIND_BILLING) {

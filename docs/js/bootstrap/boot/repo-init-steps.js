@@ -1,14 +1,13 @@
-// Post-OAuth repo-init chain — "IDB-first, render-first, sync-later"
-// Critical path: IDB open → WASM init → repo build → license gate → RENDER
+// Post-OAuth repo-init chain — "render-first, sync-later"
+// Critical path: open store → WASM init → repo build → license gate → RENDER
 
-import { currentSalesRepId, currentRoles } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
-import { forkId } from '../../implementations/kernel/core_abstractions/util/fork-id.js';
-import { ROLE_READ_ONLY } from '../../implementations/ui/core_abstractions/roles.js';
+import { currentSalesRepId } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
 import { safeAwait } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
 import { createPlatform } from '../platform/index.js';
 import { composeUi } from '../compose-ui/index.js';
 import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
+import { bindLedgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 
 const SENTINEL_TOKEN = /^__.*__$/;
 
@@ -18,7 +17,6 @@ function _forkPrefixFromSession() {
 }
 
 import { setStoreScope, localStore } from '../../implementations/storage/core_abstractions/local-store.js';
-import { resolveUserRole } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { loadLocale } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { APP_VERSION } from '../../implementations/kernel/core_abstractions/version.js';
 import { runLicenseGate } from './license-boot-gate.js';
@@ -27,11 +25,11 @@ import { rehydrateFsmStates } from '../../implementations/ui/core_abstractions/p
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
 
-const IDB_OP_TIMEOUT_MS  = 8000;
+const CACHE_OP_TIMEOUT_MS = 8000;
 const PREFS_META_KEY     = 'preferences';
 const REPO_HANG_SEAM_KEY = 'vdg.test.repoHangMs';
 
-const STEP_OPEN_DB       = 'openVdgDb';
+const STEP_OPEN_DB       = 'open-store';
 const STEP_WASM_INIT     = 'wasm-init';
 const STEP_BUILD_REPO    = 'build-repo-stack';
 const STEP_LICENSE_GATE  = 'license-gate';
@@ -62,7 +60,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   const serverApi = storageApi(); // Use storageApi to get server API
   const ioPort = createIoPort(serverApi, user.email, _forkPrefixFromSession());
   
-  safeAwait(ioPort.cache_get_meta('__warm'), IDB_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm')
+  safeAwait(ioPort.cache_get_meta('__warm'), CACHE_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm')
     .then((r) => {
       if (!r.ok) window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { reason: 'sqlite-warm timeout' } }));
     });
@@ -73,35 +71,28 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   window.__vdg_store     = localStore();
   window.__vdg_io        = ioPort;
 
-  // 4. Initial user identity
-  const roles = currentRoles();
-  window.__vdg_current_user = {
-    email: user.email,
-    role:  roles[0] || ROLE_READ_ONLY,
-    roles,
-    fork:  forkId(user.email),
-  };
-
-  // 5. Attach Platform & Compose UI
-  wasmMod.freight_app_init(createPlatform({ repo, currentUser: () => window.__vdg_current_user || null }));
+  // 4. Attach Platform & Compose UI — the signed-in identity is the Rust principal
+  // (session_principal), already set by the ACL-probe's auth_set_resolved_roles; JS carries no
+  // mirror of it.
+  wasmMod.freight_app_init(createPlatform({ repo }));
   composeUi(wasmMod);
 
-  await safeAwait(rehydrateFsmStates(repo), IDB_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
+  await safeAwait(rehydrateFsmStates(repo), CACHE_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
 
-  // 6. License gate
+  // 5. License gate
   fsm.dispatch(BootEvent.REPO_BUILT);
   stepRef.value = STEP_LICENSE_GATE;
   const app  = document.getElementById('app');
   const gateResult = await runLicenseGate({ container: app });
   if (!gateResult.proceed) { fsm.dispatch(BootEvent.LICENSE_GATE); return null; }
 
-  // 7. RENDER
+  // 6. RENDER
   fsm.dispatch(BootEvent.LICENSE_OK);
   stepRef.value = STEP_BOOT_APP;
   bootFn(user, db);
   fsm.dispatch(BootEvent.RENDERED);
 
-  // 8. Deferred init
+  // 7. Deferred init
   _deferredInit(user, db, serverApi, repo);
 
   return { db, poller: null, auditLog: null };
@@ -113,7 +104,7 @@ async function _deferredInit(user, db, serverApi, repo) {
     if (store) {
       const prefsResult = await safeAwait(
         store.cache_get_meta(PREFS_META_KEY),
-        IDB_OP_TIMEOUT_MS, null, 'deferred:prefs',
+        CACHE_OP_TIMEOUT_MS, null, 'deferred:prefs',
       );
       const locale = prefsResult.ok ? (prefsResult.value?.locale || 'vi') : 'vi';
       if (locale !== 'vi') await loadLocale(locale);
@@ -135,19 +126,24 @@ async function _deferredInit(user, db, serverApi, repo) {
     const { startDueSoonChecker } = await import('../platform/sync-due-soon.js');
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
 
+    // Ledger repo — binds the io ports' ledger_* calls (outbox drain posting) and the
+    // window global the accounting views/close-period/repost-panel read.
+    const { LedgerStoreRepo } = await import('../../implementations/storage/implementations/repos/ledger-repo.js');
+    const ledgerRepo = new LedgerStoreRepo();
+    window.__vdg_ledger_repo = ledgerRepo;
+    bindLedgerRepo(ledgerRepo);
+
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
 
     const { UserStoreRepo: UserServerRepo } = await import('../../implementations/storage/implementations/repos/user-repo.js');
-    const userRepo = new UserServerRepo(userAuditLog);
-    window.__vdg_user_repo = userRepo;
+    window.__vdg_user_repo = new UserServerRepo(userAuditLog);
 
-    userRepo.get(user.email).then((record) => {
-      const resolved = (Array.isArray(record?.roles) ? record.roles : []).filter(Boolean);
-      window.__vdg_current_user.roles = resolved;
-      window.__vdg_current_user.role  = resolved[0] || resolveUserRole(record);
-      window.__vdg_current_user.fork  = record?.fork || forkId(user.email);
-    }).catch(() => {});
+    // The staff-table record is the final word on this session's principal, and it lands AFTER
+    // the ACL-probe snapshot auth_set_resolved_roles already wrote (it can disagree, and it wins).
+    // Rust reads the record, derives the roles and the fork, and republishes the whole principal —
+    // this call carries the email and nothing else.
+    wasm().auth_resolve_principal({ email: user.email }).catch(() => {});
 
   } catch (err) {
     console.warn('[VDG] deferred init error:', err.message);

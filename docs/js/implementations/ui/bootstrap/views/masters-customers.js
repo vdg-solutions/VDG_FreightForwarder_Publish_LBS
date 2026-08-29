@@ -1,9 +1,7 @@
 // F-12-11 — Master CRUD: Customers
 
-import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
-import { mergeRecords, repointRefs } from '../../core_abstractions/ports/governance/master-merge.js';
-import { openMergeModal } from './merge-modal.js';
+import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { boundedList, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
@@ -50,7 +48,7 @@ export async function render(root) {
   };
   window.addEventListener('vdg:locale-changed', _onLocale);
 
-  const isM  = hasRole(ROLE_MANAGER);
+  const canEdit  = canWriteMaster(KIND, currentRoles());
   const repo = window.__vdg_repo;
   let items  = [];
   let api    = null;
@@ -65,10 +63,7 @@ export async function render(root) {
     </div>`;
 
   function renderToolbar(total) {
-    const mergeBtn = isM
-      ? `<button id="btn-merge" disabled class="px-3 py-1.5 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed">${t('masters_customers.action.merge')}</button>`
-      : '';
-    const addBtn = isM
+    const addBtn = canEdit
       ? `<button id="btn-add" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('masters_customers.action.add')}</button>`
       : '';
     return `
@@ -82,7 +77,6 @@ export async function render(root) {
             <input id="grid-search" placeholder="${t('masters_customers.toolbar.search_placeholder')}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
           </div>
           <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('masters_customers.toolbar.export_csv')}</button>
-          ${mergeBtn}
           ${addBtn}
         </div>
       </div>`;
@@ -108,16 +102,6 @@ export async function render(root) {
 
   function buildColumnDefs() {
     const cols = [];
-    if (isM) {
-      cols.push({
-        headerCheckboxSelection: false,
-        checkboxSelection: true,
-        width: 45,
-        sortable: false,
-        filter: false,
-        resizable: false,
-      });
-    }
     cols.push(
       { headerName: t('masters_customers.col.name'),       field: 'name',           flex: 2, minWidth: 160 },
       { headerName: t('masters_customers.col.short_code'), field: 'short_code',     width: 110, cellClass: 'font-mono text-xs', valueGetter: (p) => p.data.short_code ?? '—' },
@@ -125,7 +109,7 @@ export async function render(root) {
       { headerName: t('masters_customers.col.tel'),        field: 'tel',            width: 130, valueGetter: (p) => p.data.tel ?? '—' },
       { headerName: t('masters_customers.col.sales_rep'),  field: 'sales_rep_id',   width: 100, cellClass: 'font-mono text-xs', valueGetter: (p) => p.data.sales_rep_id ?? '—' },
     );
-    if (isM) {
+    if (canEdit) {
       cols.push({ headerName: '', field: 'actions', width: 110, sortable: false, filter: false, cellRenderer: makeActionsRenderer(onEdit, onDelete) });
     }
     return cols;
@@ -156,13 +140,6 @@ export async function render(root) {
     wireToolbar();
   }
 
-  function updateMergeBtn() {
-    const btn = root.querySelector('#btn-merge');
-    if (!btn) return;
-    const sel = api?.getSelectedRows() || [];
-    btn.disabled = sel.length !== 2;
-  }
-
   async function handleAdd() {
     openModal(root, null, async (entity) => {
       await repo.put(KIND, entity.id, entity);
@@ -183,26 +160,12 @@ export async function render(root) {
       entity: t('masters_customers.empty.entity'),
       // CTA relies on the generic empty_state.filtered.create / first_run.create templates —
       // matches this view's own "+ Thêm mới" toolbar verb, so no per-view override is needed.
-      onCreate: isM ? handleAdd : undefined,
+      onCreate: canEdit ? handleAdd : undefined,
     });
     root.querySelector('#export-csv')?.addEventListener('click', () => {
       api?.exportDataAsCsv({ fileName: 'vdg_customers.csv' });
     });
     root.querySelector('#btn-add')?.addEventListener('click', handleAdd);
-    root.querySelector('#btn-merge')?.addEventListener('click', async () => {
-      const selected = api?.getSelectedRows() || [];
-      if (selected.length !== 2) return;
-      openMergeModal(root, KIND, selected, async (target, source, _label) => {
-        const merged = mergeRecords(target, source);
-        await repo.put(KIND, target.id, merged);
-        await repo.delete(KIND, source.id);
-        const n = await repointRefs(repo, KIND, source.id, target.id);
-        window.dispatchEvent(new CustomEvent('vdg:toast', {
-          detail: { type: 'success', message: `Merged ${source.name} → ${target.name}, ${n} refs updated` },
-        }));
-        await reload();
-      });
-    });
   }
 
   const headerDiv = root.querySelector('#grid-header');
@@ -214,10 +177,6 @@ export async function render(root) {
       columnDefs: buildColumnDefs(),
       rowData: [],
       defaultColDef: { sortable: true, resizable: true, filter: true },
-      rowSelection: isM ? 'multiple' : 'single',
-      rowMultiSelectWithClick: false,
-      suppressRowClickSelection: true,
-      onSelectionChanged: updateMergeBtn,
       rowHeight: 38,
       headerHeight: 36,
       localeText: agGridLocaleText(),

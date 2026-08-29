@@ -1,8 +1,6 @@
 // Manager Sales Performance & Commission — F-14-06
 
 import '../../components/sparkline.js';
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }            from '../../router.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import { KIND_SHIPMENT } from '../../../core_abstractions/ports/data/shipment-repo.js';
@@ -41,7 +39,7 @@ function fmtNum(n) { return Number(n ?? 0).toLocaleString('vi-VN'); }
 function currentPeriodKey() { return buildPeriodKey(_periodMode, _periodDate); }
 
 // Exported for the F-19-95 lane test (AC-10) — the pure render helpers, not private auth
-// state, are the lower-friction seam (design.md D6); hasRole(ROLE_MANAGER) gating stays in render().
+// state, are the lower-friction seam (design.md D6); the route table gates render() upstream.
 export function buildGridCols() {
   return [
     { field: 'sales',           headerName: t('mgr_sales.col.sales_rep'),    flex: 1 },
@@ -220,7 +218,6 @@ function exportCsv(rows, periodKey) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
 
   root.setAttribute('data-mgr-sales', '1');

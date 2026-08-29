@@ -14,5 +14,8 @@
   { "code": "641",  "name_vi": "Chi phí bán hàng",                   "name_en": "Selling expenses",                "account_type": "Expense",   "balance_side": "Debit" },
   { "code": "642",  "name_vi": "Chi phí quản lý doanh nghiệp",       "name_en": "General & admin expenses",        "account_type": "Expense",   "balance_side": "Debit" },
   { "code": "6414", "name_vi": "Chi phí bán hàng - hoa hồng",        "name_en": "Selling expense - commission",    "account_type": "Expense",   "balance_side": "Debit" },
-  { "code": "6428", "name_vi": "Chi phí bằng tiền khác - ngân hàng", "name_en": "Bank charges",                    "account_type": "Expense",   "balance_side": "Debit" }
+  { "code": "6428", "name_vi": "Chi phí bằng tiền khác - ngân hàng", "name_en": "Bank charges",                    "account_type": "Expense",   "balance_side": "Debit" },
+  { "code": "4131", "name_vi": "Chênh lệch tỷ giá hối đoái",        "name_en": "FX difference on revaluation",    "account_type": "Equity",    "balance_side": "Credit" },
+  { "code": "515",  "name_vi": "Doanh thu hoạt động tài chính",     "name_en": "Financial income",                "account_type": "Revenue",   "balance_side": "Credit" },
+  { "code": "635",  "name_vi": "Chi phí tài chính",                 "name_en": "Financial expense",               "account_type": "Expense",   "balance_side": "Debit" }
 ]

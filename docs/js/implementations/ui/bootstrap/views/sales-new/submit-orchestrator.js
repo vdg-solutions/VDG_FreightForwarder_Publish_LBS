@@ -169,7 +169,7 @@ async function _resolveJobNo(state, repo, salesRepId, priorJobNo = null, ownRef 
 }
 
 // #13 (owner 2026-08-08): shipment_ref = EX|IM-YYMMDD-{HASH8}, minted in WASM
-// (data_repo/ref_gen.rs) — entropy from (rep salt + time + nonce) plus a local same-id
+// (store/operators/ref_gen.rs) — entropy from (rep salt + time + nonce) plus a local same-id
 // regen guard. Replaces the counted sequence whose per-user cache made two reps mint the
 // same EX-YYMMDD-001 on the same day (the KNOWN LIMIT this comment block used to carry).
 async function _mintFreeShipmentRef(repo, dir, salesRepId) {

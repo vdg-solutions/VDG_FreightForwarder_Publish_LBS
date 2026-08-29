@@ -1,13 +1,11 @@
 // Service Worker — network-first same-origin app code, cache-first immutable assets,
-// SWR Drive metadata, auto-activate on deploy. Cache is the offline fallback, never the
+// auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-vcb53bcc8';
-// Build-hash-versioned like STATIC_CACHE, NOT a fixed 'v1'. A fixed name survives every deploy,
+const STATIC_CACHE     = 'vdg-static-va232d5f4';
+// Build-hash-versioned, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
-const DRIVE_META_CACHE = 'vdg-drive-meta-vcb53bcc8';
-const DRIVE_META_TTL_MS = 30_000;
 
 // F-34-01: main thread computes due-soon (wasm already loaded there); the SW only shows
 // OS notifications from a ready-made payload, or relays a wake to a live client. No import,
@@ -99,8 +97,6 @@ const BOOT_GRAPH = [
   'js/implementations/storage/core_abstractions/api-error.js',
   'js/implementations/storage/core_abstractions/backend.js',
   'js/implementations/storage/core_abstractions/drive-endpoints.js',
-  'js/implementations/storage/core_abstractions/drive-error-classifier.js',
-  'js/implementations/storage/core_abstractions/drive-errors.js',
   'js/implementations/storage/core_abstractions/events.js',
   'js/implementations/storage/core_abstractions/grant-file.js',
   'js/implementations/storage/core_abstractions/grant-reader.js',
@@ -134,10 +130,8 @@ const BOOT_GRAPH = [
   'js/implementations/storage/implementations/auth/window-open-guard.js',
   'js/implementations/storage/implementations/local/store-client.js',
   'js/implementations/storage/implementations/repos/awb-repo.js',
-  'js/implementations/storage/implementations/repos/file-retire.js',
   'js/implementations/storage/implementations/repos/fx-rate-repo.js',
   'js/implementations/storage/implementations/server/backend.js',
-  'js/implementations/storage/implementations/server/server-drive-shim.js',
   'js/implementations/storage/implementations/server/server-io-adapters.js',
   'js/implementations/storage/implementations/server/server-role.js',
   'js/implementations/storage/implementations/server/server-session.js',
@@ -153,6 +147,7 @@ const BOOT_GRAPH = [
   'js/implementations/ui/bootstrap/components/print-button.js',
   'js/implementations/ui/bootstrap/components/shipment-lifecycle-map.js',
   'js/implementations/ui/bootstrap/components/sidebar-collapse-state.js',
+  'js/implementations/ui/bootstrap/components/sidebar-items.js',
   'js/implementations/ui/bootstrap/components/sidebar.js',
   'js/implementations/ui/bootstrap/components/status-badge.js',
   'js/implementations/ui/bootstrap/components/timeline-entry.js',
@@ -161,6 +156,7 @@ const BOOT_GRAPH = [
   'js/implementations/ui/bootstrap/components/topbar-menus.js',
   'js/implementations/ui/bootstrap/components/topbar-mode-toggle.js',
   'js/implementations/ui/bootstrap/components/topbar-sync-chip.js',
+  'js/implementations/ui/bootstrap/components/topbar-sync-state.js',
   'js/implementations/ui/bootstrap/components/topbar.js',
   'js/implementations/ui/bootstrap/components/upload-zone.js',
   'js/implementations/ui/bootstrap/components/vdg-confirm-dialog.js',
@@ -206,15 +202,13 @@ const BOOT_GRAPH = [
   'js/implementations/ui/core_abstractions/ports/flows/shipment-state-migrator.js',
   'js/implementations/ui/core_abstractions/ports/flows/shipment-void-delete.js',
   'js/implementations/ui/core_abstractions/ports/flows/user-provisioning.js',
+  'js/implementations/ui/core_abstractions/ports/governance/action-guard.js',
   'js/implementations/ui/core_abstractions/ports/governance/default-currency-lock.js',
   'js/implementations/ui/core_abstractions/ports/governance/error-log-store.js',
-  'js/implementations/ui/core_abstractions/ports/governance/first-run-provision.js',
-  'js/implementations/ui/core_abstractions/ports/governance/master-merge.js',
   'js/implementations/ui/core_abstractions/ports/governance/period-close.js',
   'js/implementations/ui/core_abstractions/ports/governance/period-lock-registry.js',
   'js/implementations/ui/core_abstractions/ports/governance/period-opening-balance.js',
   'js/implementations/ui/core_abstractions/ports/governance/route-guard.js',
-  'js/implementations/ui/core_abstractions/ports/governance/workspace-bootstrap.js',
   'js/implementations/ui/core_abstractions/ports/governance/workspace-settings.js',
   'js/implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/ar-composer.js',
@@ -245,9 +239,6 @@ const BOOT_GRAPH = [
 
 const STATIC_ASSETS = [...SHELL_ASSETS, ...BOOT_GRAPH];
 
-const DRIVE_META_HOST  = 'https://www.googleapis.com/drive/v3/files';
-const DRIVE_CONTENT_RE = /\/drive\/v3\/files\/[^?]+\?alt=media/;
-
 // Real Google auth hosts — the only endpoints the pass-through is for. Host-anchored,
 // not path-anchored: a bare /token or /oauth2 substring also matches our own app files
 // (js/implementations/storage/implementations/drive/token-refresh.js), which is the r3 boot-hang regression (F-19-44 D-r3-1).
@@ -260,7 +251,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps cb53bcc8 → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps a232d5f4 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a
@@ -307,7 +298,7 @@ self.addEventListener('install', (ev) => {
 self.addEventListener('activate', (ev) => {
   ev.waitUntil(
     caches.keys().then(async (keys) => {
-      const validCaches = [STATIC_CACHE, DRIVE_META_CACHE];
+      const validCaches = [STATIC_CACHE];
       const hadOldGeneration = keys.some((k) => !validCaches.includes(k));
       await Promise.all(
         keys.filter((k) => !validCaches.includes(k)).map((k) => caches.delete(k))
@@ -380,18 +371,9 @@ self.addEventListener('fetch', (ev) => {
   // Pass through: real Google auth endpoints only (never same-origin app files)
   if (isGoogleAuthEndpoint(url)) return;
 
-  // Pass through: Drive file content (IDB is content cache)
-  if (DRIVE_CONTENT_RE.test(url)) return;
-
-  // Only GET responses are cacheable — a POST (Drive upload/create) must never reach _swr or
-  // _cacheFirst, where cache.put throws "Request method 'POST' is unsupported".
+  // Only GET responses are cacheable — a POST must never reach _cacheFirst, where
+  // cache.put throws "Request method 'POST' is unsupported".
   if (request.method !== 'GET') return;
-
-  // Stale-while-revalidate: Drive metadata
-  if (url.startsWith(DRIVE_META_HOST)) {
-    ev.respondWith(_swr(request));
-    return;
-  }
 
   // Cross-origin: the vdg-server API is dynamic data — caching it serves a stale workspace
   // (reads miss fresh writes, etag CAS 412s forever). Pass it through untouched. Only the
@@ -416,6 +398,9 @@ self.addEventListener('fetch', (ev) => {
   ev.respondWith(_networkFirst(request));
 });
 
+// Raw await, not safeAwait — this is a CLASSIC (non-module) worker script (see sw-register.js),
+// so `import` is a SyntaxError here and safeAwait cannot be reached. A rejected fetch is not an
+// oversight: it is the offline path, already modeled below (serve the cache, then 503).
 async function _cacheFirst(request) {
   const cache  = await caches.open(STATIC_CACHE);
   const cached = await cache.match(request);
@@ -429,6 +414,8 @@ async function _cacheFirst(request) {
   }
 }
 
+// Same classic-worker constraint as _cacheFirst above — a failed fetch here falls back to the
+// cached copy, then 503; that fallback IS the handled failure.
 async function _networkFirst(request) {
   const cache = await caches.open(STATIC_CACHE);
   try {
@@ -440,33 +427,4 @@ async function _networkFirst(request) {
     if (cached) return cached;
     return new Response('Offline', { status: 503 });
   }
-}
-
-async function _swr(request) {
-  const cache   = await caches.open(DRIVE_META_CACHE);
-  const cached  = await cache.match(request);
-  const now     = Date.now();
-
-  if (cached) {
-    const dateHeader = cached.headers.get('Date');
-    const cacheAge   = dateHeader ? now - new Date(dateHeader).getTime() : Infinity;
-    if (cacheAge < DRIVE_META_TTL_MS) {
-      _revalidateInBackground(cache, request);
-      return cached;
-    }
-    // Stale: revalidate and return stale while waiting
-    _revalidateInBackground(cache, request);
-    return cached;
-  }
-
-  // No cache — fetch network
-  const response = await fetch(request).catch(() => null);
-  if (response?.ok) cache.put(request, response.clone());
-  return response || new Response('Offline', { status: 503 });
-}
-
-function _revalidateInBackground(cache, request) {
-  fetch(request)
-    .then((res) => { if (res?.ok) cache.put(request, res); })
-    .catch(() => { /* network error during background revalidation — ignore */ });
 }

@@ -1,3 +1,7 @@
+import {
+  bindLedgerRepo,
+  ledgerRepo
+} from "./chunk-SLVNFTMX.js";
 import "./chunk-QCJ4CO74.js";
 import {
   bindLedgerComposer,
@@ -8,14 +12,10 @@ import {
 } from "./chunk-BRDPRF6R.js";
 import {
   bindLedgerAggregator
-} from "./chunk-KK2HSU44.js";
+} from "./chunk-FZUKIDAT.js";
 import {
   bindDefaultCurrencyLock
 } from "./chunk-CHLQ7LZW.js";
-import {
-  bindUserDirectory,
-  listUsers
-} from "./chunk-XVWG4BTC.js";
 import {
   bindUserAuditLogComposer
 } from "./chunk-GRBWOHUK.js";
@@ -26,11 +26,8 @@ import {
   bindShipmentStateMigrator
 } from "./chunk-NM5PQAZF.js";
 import {
-  bindMasterRegistry
-} from "./chunk-T2XEYG3A.js";
-import {
-  bindBackupExporter
-} from "./chunk-HNTJLHIX.js";
+  bindUserProvisioning
+} from "./chunk-RIGQBLAR.js";
 import {
   freshViewRoot,
   markViewSuperseded
@@ -38,9 +35,6 @@ import {
 import {
   bindAwbRepo
 } from "./chunk-LEXYJ5I6.js";
-import {
-  bindPeriodClose
-} from "./chunk-QL3VBJTQ.js";
 import {
   bindAuditLog
 } from "./chunk-VHCRHQI5.js";
@@ -67,25 +61,8 @@ import {
   bindErrorLogStore
 } from "./chunk-PGOTV4PU.js";
 import {
-  SecondWorkspaceForbiddenError,
-  adoptSessionToken,
-  apiFetch,
-  bindBackend,
-  bindFirstRunProvision,
-  isServerBackend,
-  rememberSessionToken
-} from "./chunk-AZPH7NAL.js";
-import {
-  bindStorageApi,
-  bindWorkspaceBootstrap,
-  findSharedFilesByNamePrefix,
-  forkId,
-  getFile,
-  storageApi
-} from "./chunk-VL7USYBE.js";
-import {
-  bindUserProvisioning
-} from "./chunk-LLUXTOR5.js";
+  bindBackupExporter
+} from "./chunk-HNTJLHIX.js";
 import {
   bindJobTracker
 } from "./chunk-T3Z2RENW.js";
@@ -105,6 +82,9 @@ import {
   bindArComposer
 } from "./chunk-64ESJPEU.js";
 import {
+  bindPeriodClose
+} from "./chunk-QL3VBJTQ.js";
+import {
   bindDueSoon
 } from "./chunk-REGXU2BV.js";
 import {
@@ -117,22 +97,15 @@ import {
   bindRepoQuery
 } from "./chunk-EPS4ANRF.js";
 import {
-  UNKNOWN_USER_ID,
-  bindRouteGuard,
-  currentUserRole,
-  currentUserRoles,
-  filterSidebarItems,
-  homeRouteForRole,
-  normalizeRole,
-  resolveUserRole,
-  routeGuard
-} from "./chunk-Z5J2LHCQ.js";
+  bindMasterDeduper
+} from "./chunk-ENSWK7L6.js";
+import {
+  bindUserDirectory,
+  listUsers
+} from "./chunk-XVWG4BTC.js";
 import {
   bindBillingPublish
 } from "./chunk-SXXIG76D.js";
-import {
-  bindFxRateRepo
-} from "./chunk-ZRBZYMV7.js";
 import {
   ROLE_CACHE_KEY,
   bindFsmAutoAdvance,
@@ -141,7 +114,6 @@ import {
   bindPnlCommit,
   bindPnlLineId,
   bindRepCodeRegistry,
-  bindSalesRepDerivation,
   bindWmaEngine,
   bindWmaStore,
   getCurrentUser,
@@ -152,13 +124,13 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-BEWNZGQM.js";
+} from "./chunk-QSNHEPQA.js";
+import {
+  bindUsersViewComposer
+} from "./chunk-IXBTUL5S.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
-import {
-  bindUsersViewComposer
-} from "./chunk-ABASRVXI.js";
 import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
@@ -167,15 +139,48 @@ import {
   todayLocal
 } from "./chunk-SWWKLW6A.js";
 import {
+  bindSalesRepDerivation
+} from "./chunk-BDMZBHS4.js";
+import {
   bindQuoteOrchestrator
 } from "./chunk-5UHUC2YB.js";
 import {
+  UNKNOWN_USER_ID,
+  bindRouteGuard,
+  currentUserEmail,
+  currentUserRole,
+  currentUserRoles,
+  filterSidebarItems,
+  homeRouteForRole,
+  normalizeRole,
+  routeGuard
+} from "./chunk-N4OX2LG4.js";
+import {
+  ROLES_RESOLVED_EVENT,
+  ROLE_ACCOUNTANT,
+  ROLE_AUDITOR,
+  ROLE_CUSTOMER_SERVICE,
+  ROLE_MANAGER,
+  ROLE_NAMES,
+  ROLE_READ_ONLY,
+  ROLE_SALES_MANAGER,
+  ROLE_SALES_REP
+} from "./chunk-V5JGKO5Q.js";
+import {
   bindShipmentVoidDelete
-} from "./chunk-NC4T7VZK.js";
+} from "./chunk-EI2CKD5H.js";
+import {
+  bindActionGuard,
+  can
+} from "./chunk-GOIBPTZO.js";
 import {
   bindFsmIngest,
   rehydrateFsmStates
 } from "./chunk-VTRTBWKI.js";
+import {
+  initRouter,
+  navigate
+} from "./chunk-H2H4WJDI.js";
 import {
   bindShipmentStateAliases
 } from "./chunk-FJ72A4AS.js";
@@ -189,7 +194,11 @@ import {
 import {
   API_BASE,
   activeWorkspaceName
-} from "./chunk-ORRSUUI4.js";
+} from "./chunk-O35WEKMP.js";
+import {
+  bindFxRateRepo,
+  fxRateRepo
+} from "./chunk-ZRBZYMV7.js";
 import {
   bindCustomer360Composer
 } from "./chunk-TE5ZYPE3.js";
@@ -214,34 +223,15 @@ import {
   stopInterval
 } from "./chunk-JAZY43GR.js";
 import {
-  bindMasterMerge
-} from "./chunk-AK6DJLS5.js";
-import {
-  bindMasterDeduper
-} from "./chunk-ENSWK7L6.js";
-import {
-  initRouter,
-  navigate
-} from "./chunk-H2H4WJDI.js";
-import "./chunk-OJHTNKBX.js";
-import {
-  ROLES_RESOLVED_EVENT
-} from "./chunk-EQL6UFHA.js";
-import {
-  ROLE_ACCOUNTANT,
-  ROLE_CUSTOMER_SERVICE,
-  ROLE_MANAGER,
-  ROLE_NAMES,
-  ROLE_READ_ONLY,
-  ROLE_SALES_MANAGER,
-  ROLE_SALES_REP
-} from "./chunk-KXTXGKNK.js";
+  bindMasterRegistry
+} from "./chunk-T2XEYG3A.js";
 import {
   bindSessionRoles,
   currentRoles,
   currentSalesRepId,
   hasRole
 } from "./chunk-B24LWBUG.js";
+import "./chunk-OJHTNKBX.js";
 import {
   bindAppEvents,
   bindClock,
@@ -291,15 +281,27 @@ function serializeDesktopCollapsed(collapsed) {
   return String(!!collapsed);
 }
 
-// output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
-var DRAWER_BREAKPOINT_PX = 768;
-var LOCALE_CHANGE_EVENT = "vdg:locale-changed";
-var CHEVRON_EXPANDED = "\u25BE";
-var CHEVRON_COLLAPSED = "\u25B8";
+// output/web/js.tmp/implementations/ui/bootstrap/components/sidebar-items.js
 var V1_ITEMS = [
   // #15: matches the /dashboard route-guard entry (nav-gates KEEP-CONSISTENT-WITH-route-guard)
   { group: "workspace", route: "/dashboard", labelKey: "nav.workspace.dashboard", icon: "grid", allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
-  { group: "workspace", route: "/shipments", labelKey: "nav.workspace.shipments", icon: "ship" },
+  // #57: matches the /shipments route-guard entry (nav-gates KEEP-CONSISTENT-WITH-route-guard).
+  // Was unrestricted here — Accountant/Auditor/ReadOnly all saw a menu item that access_policy.rs
+  // now denies them, the exact "visible item that always fails" shape F-57-01 already fixed once.
+  {
+    group: "workspace",
+    route: "/shipments",
+    labelKey: "nav.workspace.shipments",
+    icon: "ship",
+    allowRoles: [ROLE_CUSTOMER_SERVICE, ROLE_AUDITOR, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_MANAGER, ROLE_AUDITOR]
+  },
+  // F-14-09 (owner 2026-08-28, international-standard derivation): exception-driven ops is a
+  // daily screen in CargoWise/Magaya — past-ETD/missing-doc/overdue-milestone triage, the
+  // highest-value of the eight deferred Manager screens. Ordered above "create shipment" — a
+  // continuous triage view gets more daily touches than a per-job one-off action. No narrower
+  // rule exists for "/manager/exceptions" in access_policy.rs, so it falls to the broad "/manager"
+  // rule; allowRoles matches that exactly.
+  { group: "workspace", route: "/manager/exceptions", labelKey: "nav.manager.exceptions", icon: "alert", allowRoles: [ROLE_MANAGER] },
   // F-37-03: CS opens a job before a rep is named, so creating one is workspace work and sits with
   // the shipment list rather than in the Sales group. Its allowRoles is the /shipments reader set.
   {
@@ -317,46 +319,80 @@ var V1_ITEMS = [
   // F-42-06 (owner: "báo giá là chỉ sales làm nha"): the sales desk only — KEEP-CONSISTENT-WITH
   // access_policy.rs's "/sales/quote" rule. A Manager who also sells holds SalesRep on their user
   // record and gets the entry through that hat, not through being the manager.
-  { group: "sales", route: "/sales/quote", labelKey: "nav.sales.quotes", icon: "quote", allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER] },
+  { group: "sales", route: "/sales/quote", labelKey: "nav.sales.quotes", icon: "quote", allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_AUDITOR] },
+  // F-14-03 (owner 2026-08-28: "duyệt giá" must reach the UI) — price-override queue existed since
+  // E-14 (FSM + quote.rs OVERRIDE_THRESHOLD_PCT), URL-only. allowRoles = access_policy.rs's rule.
+  { group: "sales", route: "/manager/approvals", labelKey: "nav.manager.approvals", icon: "alert", allowRoles: [ROLE_SALES_MANAGER] },
+  // F-41 (owner 2026-08-28) — team leaderboard restricted to SalesManager+Accountant; never had a nav entry.
+  { group: "sales", route: "/sales/analytics", labelKey: "nav.sales.analytics", icon: "dollar", allowRoles: [ROLE_SALES_MANAGER, ROLE_ACCOUNTANT] },
   // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
-  // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
+  // ReadOnly — the view's own manager-only check then bounced them to /dashboard with no
   // explanation. A visible menu item that always fails. Now matches the /manager route-guard
   // prefix (nav-gates KEEP-CONSISTENT-WITH-route-guard).
   { group: "reports", route: "/manager/reports/pnl", labelKey: "nav.reports.pnl_report", icon: "dollar", managerOnly: true, allowRoles: [ROLE_MANAGER] },
   // F-23-04: accountant ledger browse — reuses the reports group (R-5 minimal change).
   // F-24-05: allowRoles opens this to Accountant too; managerOnly kept for the F-23-04
   // CDP button-count fixture (27-sidebar-v1-trim.js), superseded by allowRoles below.
-  { group: "reports", route: "/accounting/ledger", labelKey: "nav.reports.ledger", icon: "doc", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  { group: "reports", route: "/accounting/ledger", labelKey: "nav.reports.ledger", icon: "doc", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_AUDITOR] },
   // F-23-05: financial reports (TB/P&L/BS) — same reports group; F-24-05 opens to Accountant
-  { group: "reports", route: "/accounting/reports", labelKey: "nav.reports.financial", icon: "doc", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  { group: "reports", route: "/accounting/reports", labelKey: "nav.reports.financial", icon: "doc", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_AUDITOR] },
+  // F-14-05 / F1 (owner 2026-08-28) — AR/AP + FX revaluation summary had no nav entry; Manager only,
+  // matching the /manager route-guard prefix (Accountant gap flagged, out of scope tonight).
+  { group: "reports", route: "/manager/finance/cash-flow", labelKey: "nav.manager.cash_flow", icon: "dollar", allowRoles: [ROLE_MANAGER] },
+  // F-14-08 (owner 2026-08-28, international-standard derivation): commission accrues per
+  // shipment, then a monthly payout run settles it — standard practice. Ordered before period
+  // close: settlement runs, then the books lock. Owner doctrine (2026-08-29): settling posts to
+  // the ledger, so access_policy.rs's "/manager/finance/commissions" rule now also admits
+  // Accountant; allowRoles matches that exactly.
+  { group: "reports", route: "/manager/finance/commissions", labelKey: "nav.manager.commissions", icon: "check", allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
+  // F-14-11 (owner 2026-08-28, international-standard derivation): period close is a mandatory
+  // accounting function, and the F1 period-end FX revaluation hooks into exactly this operation —
+  // a feature with no way to reach it is not shipped. Ordered last in the monthly close workflow,
+  // after commission settlement. No narrower rule for "/manager/finance/close-period" — falls to
+  // the broad "/manager" rule; allowRoles matches that exactly.
+  { group: "reports", route: "/manager/finance/close-period", labelKey: "nav.manager.close_period", icon: "lock", allowRoles: [ROLE_MANAGER] },
   // #31: finance policy the ACCOUNTANT owns (default P&L currency). Not under /manager — that
   // prefix is Manager-only in access_policy.rs, which would lock out the very role that sets it.
   { group: "reports", route: "/accounting/settings", labelKey: "nav.accounting.settings", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
-  { group: "reports", route: "/manager/commission-rules", labelKey: "nav.reports.comm_rules", icon: "check", managerOnly: true, allowRoles: [ROLE_MANAGER] },
-  // F-24-04: manager-only user CRUD — same reports group (R-5 minimal change, precedent above)
-  { group: "reports", route: "/admin/users", labelKey: "nav.admin.users", icon: "db", managerOnly: true },
-  // Master data — customer list + future master entities. SalesRep is read-only in the
-  // page itself (masters-customers.js gates Add/Edit/Delete behind hasRole(ROLE_MANAGER)), so opening
-  // the nav to Sales just lets them find & browse; it doesn't grant CRUD.
-  { group: "masters", route: "/masters/customers", labelKey: "nav.masters.customers", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  { group: "masters", route: "/masters/local-charges", labelKey: "nav.masters.local_charges", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  { group: "masters", route: "/masters/units-of-measure", labelKey: "nav.masters.units", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  // E-26 F-26-04: ocean-carrier master, reachable from Danh mục like local-charges/units
-  { group: "masters", route: "/masters/ocean-carriers", labelKey: "nav.masters.ocean_carriers", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // Owner 2026-08-28: "masters" grouped these by CODE MODULE, not who uses them together — a rep
+  // checks a rate WHILE quoting, not "goes to do masters". Moved beside that workflow, collapsed
+  // by default (a lookup, not hourly); SalesRep stays read-only (writes still gated in-page).
+  { group: "sales_reference", route: "/masters/customers", labelKey: "nav.masters.customers", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  { group: "sales_reference", route: "/masters/local-charges", labelKey: "nav.masters.local_charges", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // E-26 F-26-04: ocean-carrier master, looked up when quoting like local-charges/units
+  { group: "sales_reference", route: "/masters/ocean-carriers", labelKey: "nav.masters.ocean_carriers", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
   // F-28-15: ocean-tariff priced kind, carrier-joined view — writers mirror ocean-carriers
-  { group: "masters", route: "/masters/ocean-tariff", labelKey: "nav.masters.ocean_tariff", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  // F-29-10: FX admin was route-only (no sidebar entry), so the AC-04 no-rate hint
-  // pointed nowhere — mirrors the units/ocean-carriers Danh mục entries, Manager-only.
-  { group: "masters", route: "/manager/fx-rates", labelKey: "nav.masters.fx_rates", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  { group: "sales_reference", route: "/masters/ocean-tariff", labelKey: "nav.masters.ocean_tariff", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  { group: "sales_reference", route: "/masters/units-of-measure", labelKey: "nav.masters.units", icon: "db", allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
+  // Manager-only config, touched rarely — administering the workspace (role.rs) is a different
+  // job from running or pricing the sales team above.
+  { group: "admin", route: "/manager/commission-rules", labelKey: "nav.reports.comm_rules", icon: "check", managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  // F-24-04: manager-only user CRUD
+  { group: "admin", route: "/admin/users", labelKey: "nav.admin.users", icon: "db", managerOnly: true },
+  // F-29-10: FX admin was route-only (no sidebar entry) — Manager-only config, not a sales lookup.
+  { group: "admin", route: "/manager/fx-rates", labelKey: "nav.masters.fx_rates", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] },
   // F-18-11: alias-editor only (writers manager-only, Q3) — no browse value for SalesRep.
-  { group: "masters", route: "/masters/shipment-states", labelKey: "nav.masters.shipment_states", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] }
+  { group: "admin", route: "/masters/shipment-states", labelKey: "nav.masters.shipment_states", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] },
+  // F-14-12 (owner 2026-08-28, international-standard derivation): standard compliance
+  // requirement, but low frequency — belongs behind the collapsed Administration group rather
+  // than competing with daily work, so it sits last. No narrower rule for "/manager/audit" in
+  // access_policy.rs — falls to the broad "/manager" rule; allowRoles matches that exactly.
+  { group: "admin", route: "/manager/audit", labelKey: "nav.manager.audit", icon: "doc", allowRoles: [ROLE_MANAGER] }
 ];
 var V1_GROUPS = [
   { key: "workspace", headingKey: "nav.group.workspace" },
   { key: "sales", headingKey: "nav.group.sales" },
-  { key: "masters", headingKey: "nav.group.masters" },
-  { key: "reports", headingKey: "nav.group.reports" }
+  { key: "sales_reference", headingKey: "nav.group.sales_reference" },
+  { key: "reports", headingKey: "nav.group.reports" },
+  { key: "admin", headingKey: "nav.group.admin" }
 ];
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
+var DRAWER_BREAKPOINT_PX = 768;
+var LOCALE_CHANGE_EVENT = "vdg:locale-changed";
+var CHEVRON_EXPANDED = "\u25BE";
+var CHEVRON_COLLAPSED = "\u25B8";
+var DEFAULT_COLLAPSED_GROUPS = ["sales_reference", "admin"];
 var ICONS = {
   grid: '<path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>',
   alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
@@ -394,7 +430,7 @@ var VdgSidebar = class extends LitElement {
     this.activeRoute = location.hash.slice(1) || "/dashboard";
     this._drawerOpen = false;
     this._mobile = window.innerWidth < DRAWER_BREAKPOINT_PX;
-    this._collapsed = /* @__PURE__ */ new Set();
+    this._collapsed = new Set(DEFAULT_COLLAPSED_GROUPS);
     this._desktopCollapsed = false;
     this._onNav = (e) => {
       this.activeRoute = e.detail.route;
@@ -438,9 +474,10 @@ var VdgSidebar = class extends LitElement {
     window.addEventListener(LOCALE_CHANGE_EVENT, this._onLocaleChanged);
     window.addEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
     try {
-      this._collapsed = parseCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY));
+      const raw = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+      this._collapsed = raw ? parseCollapsed(raw) : new Set(DEFAULT_COLLAPSED_GROUPS);
     } catch {
-      this._collapsed = /* @__PURE__ */ new Set();
+      this._collapsed = new Set(DEFAULT_COLLAPSED_GROUPS);
     }
     try {
       this._desktopCollapsed = parseDesktopCollapsed(localStorage.getItem(DESKTOP_COLLAPSED_KEY));
@@ -530,7 +567,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build cb53bcc8">v0.4.29 (cb53bcc8)</span>
+        <span class="font-mono whitespace-nowrap" title="build a232d5f4">v0.4.30 (a232d5f4)</span>
       </div>
     `;
   }
@@ -571,6 +608,20 @@ function _i() {
 }
 var readCachedProfile = (...a) => _i().readCachedProfile(...a);
 var writeCachedProfile = (...a) => _i().writeCachedProfile(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
+var _impl2 = null;
+function bindBackend(impl) {
+  _impl2 = impl;
+}
+function _i2() {
+  if (!_impl2) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
+  return _impl2;
+}
+var isServerBackend = (...a) => _i2().isServerBackend(...a);
+var apiFetch = (...a) => _i2().apiFetch(...a);
+var rememberSessionToken = (...a) => _i2().rememberSessionToken(...a);
+var adoptSessionToken = (...a) => _i2().adoptSessionToken(...a);
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/breadcrumb-resolver.js
 var I18N_ROUTES = [
@@ -766,12 +817,14 @@ function renderSyncChip({
   popupBlocked,
   serverBacklog = 0,
   serverOldestPendingAgeMs = null,
-  serverProvider = "Google Drive"
+  serverProvider = "Google Drive",
+  syncing = false
+  // vdg:sync-started (charter_event_bridge.rs) — a pass is in flight even with no backlog
 }) {
   const dotClass = DOT_CLASS[state] ?? DOT_CLASS.green;
-  const isFlushing = state === "yellow";
+  const isFlushing = state === "yellow" || syncing;
   const hasPending = pending > 0;
-  const pulseClass = hasPending ? "animate-pulse" : "";
+  const pulseClass = hasPending || syncing ? "animate-pulse" : "";
   const ago = formatLastSyncAgo(lastSyncMs, now);
   const titleText = buildChipTitle({
     state,
@@ -835,7 +888,7 @@ function renderBadge(label) {
   if (!label) return "";
   return html2`<span class="absolute top-0.5 right-0.5 min-w-[1rem] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold leading-none flex items-center justify-center ring-2 ring-white">${label}</span>`;
 }
-function idbSavePref(patch) {
+function savePref(patch) {
   const store = window.__vdg_store;
   if (!store) return;
   (async () => {
@@ -859,7 +912,8 @@ function renderAvatar(user) {
 import { html as html3 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
 function renderUserMenu(host, user, salesId) {
   if (!host._menuOpen) return html3``;
-  const roleLabel = hasRole(ROLE_MANAGER) ? t("topbar.role.manager") : salesId || t("topbar.role.sales");
+  const isManagerBadge = currentRoles().includes(ROLE_MANAGER);
+  const roleLabel = isManagerBadge ? t("topbar.role.manager") : salesId || t("topbar.role.sales");
   return html3`
     <div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 z-50 py-1"
          @click="${(e) => e.stopPropagation()}">
@@ -867,7 +921,7 @@ function renderUserMenu(host, user, salesId) {
         <div class="text-xs font-semibold text-slate-900 truncate">${user?.name || "\u2014"}</div>
         <div class="text-[11px] text-slate-500 truncate mt-0.5">${user?.email || ""}</div>
         <div class="mt-1.5 inline-flex px-2 py-0.5 rounded text-[10px] font-medium
-                    ${hasRole(ROLE_MANAGER) ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}">
+                    ${isManagerBadge ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}">
           ${roleLabel}
         </div>
       </div>
@@ -944,13 +998,83 @@ async function handleFileUpload(host, e) {
   host._menuOpen = false;
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/components/topbar-sync-state.js
+var STUCK_RECHECK_INTERVAL_MS = 3e4;
+function createSyncHandlers(host) {
+  return {
+    // vdg:sync-started (charter_event_bridge.rs: SyncEvent::SyncStarted/ResyncStarted) — a pass
+    // just began; cleared by whichever of sync-complete/sync-error ends it (below).
+    onSyncStarted: () => {
+      host._syncing = true;
+    },
+    onSyncComplete: (e) => {
+      host._lastSyncMs = e.detail?.ts ?? Date.now();
+      host._retryStreak = 0;
+      host._retrying = false;
+      host._lastError = null;
+      host._lastNotifiedStuckEpisode = 0;
+      host._syncing = false;
+    },
+    // Pull heartbeat only — must NOT clear retry/error state (those are push-side signals)
+    onDeltaSynced: (e) => {
+      host._lastPullMs = e.detail?.ts ?? Date.now();
+    },
+    onSyncError: (e) => {
+      host._retryStreak++;
+      host._retrying = true;
+      host._syncing = false;
+      host._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.reason === "rate_budget" ? t("topbar.sync.tooltip.rate_budget_reason") : e.detail?.error ?? null;
+    },
+    onServerHealth: (e) => {
+      if (e.detail?.backlog_depth !== void 0) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
+      if (e.detail?.oldest_pending_age_ms !== void 0) host._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
+      if (e.detail?.provider) host._serverProvider = e.detail.provider;
+      if (e.detail?.sync_tick_calls !== void 0) {
+        host._lastError = t("topbar.sync.tooltip.high_volume_reason", { n: e.detail.sync_tick_calls });
+      }
+      host.requestUpdate();
+    }
+  };
+}
+function recomputeAndMaybeNotify(host) {
+  const now = Date.now();
+  const perm = typeof Notification !== "undefined" ? Notification.permission : void 0;
+  if (shouldFireStuckNotification({
+    now,
+    lastSyncMs: host._lastSyncMs,
+    pending: host._outboxCount,
+    lastNotifiedStuckEpisode: host._lastNotifiedStuckEpisode,
+    permission: perm
+  })) {
+    const body = t("topbar.sync.stuck.body").replace("{n}", String(host._outboxCount));
+    new Notification(t("topbar.sync.stuck.title"), { body });
+    host._lastNotifiedStuckEpisode = host._lastSyncMs;
+  }
+  host.requestUpdate();
+}
+function attachSyncListeners(host) {
+  window.addEventListener("vdg:sync-started", host._syncHandlers.onSyncStarted);
+  window.addEventListener("vdg:sync-complete", host._syncHandlers.onSyncComplete);
+  window.addEventListener("vdg:delta-synced", host._syncHandlers.onDeltaSynced);
+  window.addEventListener("vdg:sync-error", host._syncHandlers.onSyncError);
+  window.addEventListener("vdg:server-health", host._syncHandlers.onServerHealth);
+  host._stuckTickId = setInterval(() => recomputeAndMaybeNotify(host), STUCK_RECHECK_INTERVAL_MS);
+}
+function detachSyncListeners(host) {
+  window.removeEventListener("vdg:sync-started", host._syncHandlers.onSyncStarted);
+  window.removeEventListener("vdg:sync-complete", host._syncHandlers.onSyncComplete);
+  window.removeEventListener("vdg:delta-synced", host._syncHandlers.onDeltaSynced);
+  window.removeEventListener("vdg:sync-error", host._syncHandlers.onSyncError);
+  window.removeEventListener("vdg:server-health", host._syncHandlers.onServerHealth);
+  clearInterval(host._stuckTickId);
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar.js
 function canQuote() {
-  return hasRole(ROLE_SALES_REP) || hasRole(ROLE_SALES_MANAGER);
+  return can("quote.create");
 }
 var SW_DISMISS_KEY = "vdg.sw.update.dismissed";
 var SUPPORTED_LOCALES = ["vi", "en"];
-var STUCK_RECHECK_INTERVAL_MS = 3e4;
 var VdgTopbar = class extends LitElement2 {
   static properties = {
     route: { type: String, state: true },
@@ -981,7 +1105,9 @@ var VdgTopbar = class extends LitElement2 {
     // F-49-01 ad-blocker hint + F-50-01 calm pending
     _serverBacklog: { type: Number, state: true },
     _serverOldestPendingAgeMs: { type: Number, state: true },
-    _serverProvider: { type: String, state: true }
+    _serverProvider: { type: String, state: true },
+    _syncing: { type: Boolean, state: true }
+    // vdg:sync-started (charter_event_bridge.rs)
   };
   createRenderRoot() {
     return this;
@@ -1016,33 +1142,11 @@ var VdgTopbar = class extends LitElement2 {
     this._serverBacklog = 0;
     this._serverOldestPendingAgeMs = null;
     this._serverProvider = "Google Drive";
+    this._syncing = false;
     this._onNav = (e) => {
       this.route = e.detail.route;
     };
-    this._onSyncComplete = (e) => {
-      this._lastSyncMs = e.detail?.ts ?? Date.now();
-      this._retryStreak = 0;
-      this._retrying = false;
-      this._lastError = null;
-      this._lastNotifiedStuckEpisode = 0;
-    };
-    this._onDeltaSynced = (e) => {
-      this._lastPullMs = e.detail?.ts ?? Date.now();
-    };
-    this._onSyncError = (e) => {
-      this._retryStreak++;
-      this._retrying = true;
-      this._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.reason === "rate_budget" ? t("topbar.sync.tooltip.rate_budget_reason") : e.detail?.error ?? null;
-    };
-    this._onServerHealth = (e) => {
-      if (e.detail?.backlog_depth !== void 0) this._serverBacklog = Number(e.detail.backlog_depth) || 0;
-      if (e.detail?.oldest_pending_age_ms !== void 0) this._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
-      if (e.detail?.provider) this._serverProvider = e.detail.provider;
-      if (e.detail?.sync_tick_calls !== void 0) {
-        this._lastError = t("topbar.sync.tooltip.high_volume_reason", { n: e.detail.sync_tick_calls });
-      }
-      this.requestUpdate();
-    };
+    this._syncHandlers = createSyncHandlers(this);
     this._onException = (e) => {
       this._exceptionCount = e.detail.count;
     };
@@ -1080,11 +1184,11 @@ var VdgTopbar = class extends LitElement2 {
     };
     this._onOnline = () => {
       this._online = true;
-      this._recomputeAndMaybeNotify();
+      recomputeAndMaybeNotify(this);
     };
     this._onOffline = () => {
       this._online = false;
-      this._recomputeAndMaybeNotify();
+      recomputeAndMaybeNotify(this);
     };
     this._onNeedsReconnect = () => {
       this._authReconnect = true;
@@ -1120,10 +1224,7 @@ var VdgTopbar = class extends LitElement2 {
     window.addEventListener("hashchange", this._onHashChange);
     window.addEventListener("vdg:breakpoint-changed", this._onBreakpt);
     window.addEventListener("vdg:quota-warning", this._onQuotaWarn);
-    window.addEventListener("vdg:sync-complete", this._onSyncComplete);
-    window.addEventListener("vdg:delta-synced", this._onDeltaSynced);
-    window.addEventListener("vdg:sync-error", this._onSyncError);
-    window.addEventListener("vdg:server-health", this._onServerHealth);
+    attachSyncListeners(this);
     window.addEventListener("online", this._onOnline);
     window.addEventListener("offline", this._onOffline);
     window.addEventListener("vdg:auth-needs-reconnect", this._onNeedsReconnect);
@@ -1131,7 +1232,6 @@ var VdgTopbar = class extends LitElement2 {
     window.addEventListener("vdg:auth-popup-blocked", this._onPopupBlocked);
     window.addEventListener("vdg:auth-refresh-pending", this._onAuthPending);
     document.addEventListener("click", this._onDocClick);
-    this._stuckTickId = setInterval(() => this._recomputeAndMaybeNotify(), STUCK_RECHECK_INTERVAL_MS);
     this._computeBreadcrumb();
   }
   disconnectedCallback() {
@@ -1148,10 +1248,7 @@ var VdgTopbar = class extends LitElement2 {
     window.removeEventListener("hashchange", this._onHashChange);
     window.removeEventListener("vdg:breakpoint-changed", this._onBreakpt);
     window.removeEventListener("vdg:quota-warning", this._onQuotaWarn);
-    window.removeEventListener("vdg:sync-complete", this._onSyncComplete);
-    window.removeEventListener("vdg:delta-synced", this._onDeltaSynced);
-    window.removeEventListener("vdg:sync-error", this._onSyncError);
-    window.removeEventListener("vdg:server-health", this._onServerHealth);
+    detachSyncListeners(this);
     window.removeEventListener("online", this._onOnline);
     window.removeEventListener("offline", this._onOffline);
     window.removeEventListener("vdg:auth-needs-reconnect", this._onNeedsReconnect);
@@ -1159,23 +1256,6 @@ var VdgTopbar = class extends LitElement2 {
     window.removeEventListener("vdg:auth-popup-blocked", this._onPopupBlocked);
     window.removeEventListener("vdg:auth-refresh-pending", this._onAuthPending);
     document.removeEventListener("click", this._onDocClick);
-    clearInterval(this._stuckTickId);
-  }
-  _recomputeAndMaybeNotify() {
-    const now = Date.now();
-    const perm = typeof Notification !== "undefined" ? Notification.permission : void 0;
-    if (shouldFireStuckNotification({
-      now,
-      lastSyncMs: this._lastSyncMs,
-      pending: this._outboxCount,
-      lastNotifiedStuckEpisode: this._lastNotifiedStuckEpisode,
-      permission: perm
-    })) {
-      const body = t("topbar.sync.stuck.body").replace("{n}", String(this._outboxCount));
-      new Notification(t("topbar.sync.stuck.title"), { body });
-      this._lastNotifiedStuckEpisode = this._lastSyncMs;
-    }
-    this.requestUpdate();
   }
   _handleSignOut() {
     window.__vdg_auth?.signOut?.();
@@ -1190,12 +1270,14 @@ var VdgTopbar = class extends LitElement2 {
   }
   _handleBellClick() {
     window.dispatchEvent(new CustomEvent("vdg:open-notif-drawer"));
-    navigate(hasRole(ROLE_MANAGER) ? "/manager/notifications" : "/sales/me");
+    const roles = currentRoles();
+    const dest = roles.includes(ROLE_MANAGER) ? "/manager/notifications" : roles.includes(ROLE_SALES_MANAGER) ? "/manager/approvals" : "/sales/me";
+    navigate(dest);
   }
   async _handleLocale(locale) {
     await loadLocale(locale);
     this._locale = locale;
-    idbSavePref({ locale });
+    savePref({ locale });
     window.dispatchEvent(new CustomEvent("vdg:locale-changed", { detail: { locale } }));
   }
   _handleHamburger() {
@@ -1245,10 +1327,9 @@ var VdgTopbar = class extends LitElement2 {
   render() {
     const badge = badgeLabel(this._exceptionCount + this._approvalCount);
     const notifBadge = badgeLabel(this._notifCount + this._dueSoonCount);
-    const cached2 = window.__vdg_current_user;
     const profile = readCachedProfile();
-    const user = window.__vdg_auth?.getCurrentUser?.() || (profile?.email || cached2?.email ? {
-      email: profile?.email || cached2.email,
+    const user = window.__vdg_auth?.getCurrentUser?.() || (profile?.email || currentUserEmail() ? {
+      email: profile?.email || currentUserEmail(),
       name: profile?.name || "",
       picture: profile?.picture || "",
       sub: "",
@@ -1309,9 +1390,11 @@ var VdgTopbar = class extends LitElement2 {
       serverBacklog: this._serverBacklog,
       serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
       serverProvider: this._serverProvider,
+      syncing: this._syncing,
       onSyncNow: () => this._onChipClick(state)
     })}
-          ${hasRole(ROLE_MANAGER) && this.route.startsWith("/manager/") ? renderModeToggle({ html: html4, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ""}
+          <!-- route-guard.js already restricts "/manager/*" to Manager — no second role check here. -->
+          ${this.route.startsWith("/manager/") ? renderModeToggle({ html: html4, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ""}
           ${canQuote() ? html4`
             <button @click="${() => navigate("/sales/quote/new")}"
                     class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1.5 px-3 text-[13px] font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition">
@@ -1640,8 +1723,8 @@ var VdgUploadZone = class extends LitElement7 {
   }
   _validateAndDispatch(file) {
     const name = file.name.toLowerCase();
-    const ok2 = name.endsWith(".xlsx") || name.endsWith(".xls");
-    if (!ok2) {
+    const ok = name.endsWith(".xlsx") || name.endsWith(".xls");
+    if (!ok) {
       this.dispatchEvent(new CustomEvent("vdg:file-rejected", {
         detail: { reason: "unsupported-format", name: file.name },
         bubbles: true,
@@ -2093,17 +2176,17 @@ var VdgCmdPalette = class extends LitElement9 {
 customElements.define("vdg-cmd-palette", VdgCmdPalette);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/oauth.js
-var _impl2 = null;
+var _impl3 = null;
 function bindOAuthProvider(impl) {
-  _impl2 = impl;
+  _impl3 = impl;
 }
-function _i2() {
-  if (!_impl2) throw new Error("storage/oauth: no adapter bound (the storage bootstrap binds it)");
-  return _impl2;
+function _i3() {
+  if (!_impl3) throw new Error("storage/oauth: no adapter bound (the storage bootstrap binds it)");
+  return _impl3;
 }
-var hydrateSessionFromToken = (...a) => _i2().hydrateSessionFromToken(...a);
-var initGoogleSignIn = (...a) => _i2().initGoogleSignIn(...a);
-var renderSignInButton = (...a) => _i2().renderSignInButton(...a);
+var hydrateSessionFromToken = (...a) => _i3().hydrateSessionFromToken(...a);
+var initGoogleSignIn = (...a) => _i3().initGoogleSignIn(...a);
+var renderSignInButton = (...a) => _i3().renderSignInButton(...a);
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/login.js
 function sessionExpiredMessage() {
@@ -2143,7 +2226,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.29 (cb53bcc8)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.30 (a232d5f4)</div>
         </div>
       </div>
     </div>`;
@@ -2195,17 +2278,28 @@ function localStore() {
   return _s();
 }
 
+// output/web/js.tmp/implementations/storage/core_abstractions/storage-api.js
+var _api = null;
+function bindStorageApi(api) {
+  _api = api;
+}
+function storageApi() {
+  if (!_api) throw new Error("storage/storage-api: no adapter bound (the storage bootstrap binds it)");
+  return _api;
+}
+var getFile = (...a) => storageApi().getFile(...a);
+var findSharedFilesByNamePrefix = (...a) => storageApi().findSharedFilesByNamePrefix(...a);
+
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
-var _impl3 = null;
+var _impl4 = null;
 function bindKeyValueStore(impl) {
-  _impl3 = impl;
+  _impl4 = impl;
 }
-function _i3() {
-  if (!_impl3) throw new Error("kernel/key-value: no adapter bound (the kernel bootstrap binds it)");
-  return _impl3;
+function _i4() {
+  if (!_impl4) throw new Error("kernel/key-value: no adapter bound (the kernel bootstrap binds it)");
+  return _impl4;
 }
-var kvGet = (...a) => _i3().getItem(...a);
-var kvSet = (...a) => _i3().setItem(...a);
+var kvSet = (...a) => _i4().setItem(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/grant-file.js
 var GRANT_FILE_TAG = "grant.";
@@ -2256,23 +2350,6 @@ function rememberGrantAreas(areas) {
   } catch {
   }
 }
-function recallGrantAreas() {
-  try {
-    return JSON.parse(kvGet(GRANT_AREAS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-// output/web/js.tmp/implementations/storage/core_abstractions/drive-error-classifier.js
-var DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT = "scope_insufficient";
-var DRIVE_ERROR_KIND_FILE_PERMISSION = "file_permission";
-function classifyDriveError(err) {
-  if (!err) return null;
-  if (err.status === 403) return DRIVE_ERROR_KIND_FILE_PERMISSION;
-  if (err.status === 401) return DRIVE_ERROR_KIND_SCOPE_INSUFFICIENT;
-  return null;
-}
 
 // output/web/js.tmp/implementations/storage/core_abstractions/workspace-authority.js
 var VERDICT_MANAGER = "manager";
@@ -2310,10 +2387,6 @@ function _readCache() {
   } catch {
     return null;
   }
-}
-function readCachedIdentityNow() {
-  const raw = _readCache();
-  return raw?.email && raw?.role ? { email: raw.email, role: raw.role, roles: Array.isArray(raw.roles) ? raw.roles : [] } : null;
 }
 var authPlatform = {
   auth_current_user: async () => getCurrentUser() ?? null,
@@ -2361,12 +2434,11 @@ var authPlatform = {
     } catch {
     }
   },
-  // F-42-05: the snapshot on every resolve (the route guard reads it directly, so a repeat resolve
-  // must not leave it stale); the announcement only on a real change, or the chrome flickers.
+  // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is
+  // announcement-only now — a real change fires the event, the chrome re-renders and re-reads.
   auth_publish_roles: (roles, changed) => {
-    const resolved = [...roles || []];
-    window.__vdg_session_roles = resolved;
-    if (changed) window.dispatchEvent(new CustomEvent(ROLES_RESOLVED_EVENT2, { detail: { roles: [...resolved] } }));
+    if (!changed) return;
+    window.dispatchEvent(new CustomEvent(ROLES_RESOLVED_EVENT2, { detail: { roles: [...roles || []] } }));
   }
 };
 var _renderLoginPage = null;
@@ -2416,11 +2488,6 @@ function toPricedEnvelope(id, row) {
   };
 }
 
-// output/web/js.tmp/implementations/storage/implementations/repos/file-retire.js
-async function retireFile(driveApi, fileId, parentId) {
-  return "trashed";
-}
-
 // output/web/js.tmp/bootstrap/platform/cache.js
 var repo = () => window.__vdg_repo;
 var io = () => window.__vdg_io;
@@ -2441,11 +2508,6 @@ var cachePlatform = {
     if (!ref) return null;
     return await bounded(ref.seedIfEmpty(records), `cache:priced-seed:${kind}`) ?? {};
   },
-  cache_workspace_root: () => bounded(storageApi().findWorkspaceRoot(activeWorkspaceName()), "cache:ws-root"),
-  cache_find_folder: (parentId, name) => bounded(storageApi().findFolder(parentId, name), `cache:find-folder:${name}`),
-  cache_list_children: (folderId) => bounded(storageApi().listChildren(folderId), "cache:list-children").then((r) => r || []),
-  cache_get_file: (fileId) => bounded(storageApi().getFile(fileId), "cache:get-file"),
-  cache_delete_file: (fileId) => bounded(storageApi().driveFetch("DELETE", `/files/${fileId}`), "cache:delete-file"),
   // A legacy job goes back through the SPLIT write path — a plain put would land the whole record,
   // revenue included, in the folder CS reads. Lines written before E-37 carry no line_id and the
   // split refuses a line without one, so they are stamped with the scheme the form uses.
@@ -2457,13 +2519,6 @@ var cachePlatform = {
   cache_ws_list_dir: (dir) => bounded(io().ws_list_dir(dir), `cache:ws-list:${dir}`),
   cache_ws_read_file: (dir, name) => bounded(io().ws_read_file(dir, name), `cache:ws-read:${dir}`),
   cache_ws_write_file: (dir, name, content, fileId) => bounded(io().ws_write_file(dir, name, content, fileId, ""), `cache:ws-write:${dir}`),
-  // Not a plain trash: the account that created a file owns it, and only an owner may trash. A
-  // non-owner detaches it from the folder instead.
-  cache_trash_file: (fileId, parentId) => bounded(retireFile(storageApi(), fileId, parentId || null), "cache:trash-file"),
-  cache_move_file: (fileId, addParent, removeParent) => bounded(
-    storageApi().driveFetch("PATCH", `/files/${fileId}?addParents=${addParent}&removeParents=${removeParent}`, {}),
-    "cache:move-file"
-  ),
   cache_local_date: (ms) => toLocalDateStr(ms)
 };
 
@@ -2474,10 +2529,21 @@ var _scans = /* @__PURE__ */ new Map();
 function ioPort() {
   return window.__vdg_io || null;
 }
+function isAnsweredStatus(status) {
+  const wasm3 = window.__vdg_wasm;
+  if (!wasm3?.governance_classify_read_status) return false;
+  return wasm3.governance_classify_read_status({ status: status ?? null }).decided;
+}
 async function readForkBundles(dir) {
   const io2 = ioPort();
   if (!io2) return [];
-  const listing = await io2.ws_list_dir(dir).catch(() => null);
+  let listing;
+  try {
+    listing = await io2.ws_list_dir(dir);
+  } catch (err) {
+    if (isAnsweredStatus(err?.status)) return [];
+    throw err;
+  }
   if (!listing?.files?.length) return [];
   const bodies = [];
   for (const file of listing.files) {
@@ -2487,15 +2553,22 @@ async function readForkBundles(dir) {
     } catch {
       break;
     }
-    const res = await io2.ws_read_file(dir, file.name).catch(() => null);
+    let res;
+    try {
+      res = await io2.ws_read_file(dir, file.name);
+    } catch (err) {
+      if (isAnsweredStatus(err?.status)) continue;
+      throw err;
+    }
     if (!res?.found) continue;
     bodies.push(String(res.content));
   }
   return bodies;
 }
 var dataPlatform = {
-  /// Every *.jsonl body in one fork folder. A missing or unreadable folder yields [] — for a
-  /// reader who was never granted that fork, "no file" is the correct answer.
+  /// Every *.jsonl body in one fork folder. A folder this reader was never granted (403/404)
+  /// yields [] — "no file" is the correct answer. A folder that could not be READ (401/429/5xx/
+  /// transport) throws instead of yielding [] — see readForkBundles/isAnsweredStatus above.
   data_fork_read_jsonl: async (dir, ttlMs) => {
     const hit = _scans.get(dir);
     if (ttlMs > 0 && hit && Date.now() - hit.at < ttlMs) return hit.bodies;
@@ -2554,23 +2627,16 @@ var syncPlatform = {
   sync_wma_get: async (key) => {
     const store = window.__vdg_store;
     if (!store) return null;
-    const { ok: ok2, value } = await safeAwait(store.cache_get_wma(key), WMA_STORE_TIMEOUT_MS, null, "wma:load");
-    return ok2 ? value ?? null : null;
+    const { ok, value } = await safeAwait(store.cache_get_wma(key), WMA_STORE_TIMEOUT_MS, null, "wma:load");
+    return ok ? value ?? null : null;
   },
   sync_wma_put: async (key, value) => {
     const store = window.__vdg_store;
     if (!store) return;
-    const { ok: ok2, error } = await safeAwait(store.cache_put_wma(key, value), WMA_STORE_TIMEOUT_MS, null, "wma:save");
-    if (!ok2) throw new Error(error?.message || "wma:save timed out");
+    const { ok, error } = await safeAwait(store.cache_put_wma(key, value), WMA_STORE_TIMEOUT_MS, null, "wma:save");
+    if (!ok) throw new Error(error?.message || "wma:save timed out");
   }
 };
-
-// output/web/js.tmp/implementations/storage/core_abstractions/ledger-repo.js
-var _repo = null;
-function ledgerRepo() {
-  if (!_repo) throw new Error("Ledger Repo not initialized");
-  return _repo;
-}
 
 // output/web/js.tmp/bootstrap/platform/manager.js
 var managerPlatform = {
@@ -2614,10 +2680,6 @@ async function workspaceTry(op2, args) {
 var governancePlatform = {
   governance_workspace_try: workspaceTry,
   governance_workspace_name: async () => activeWorkspaceName() || "",
-  governance_workspace_root: async () => {
-    const found = await workspaceTry("findWorkspaceRoot", [activeWorkspaceName()]);
-    return found.ok ? found.value : null;
-  },
   governance_users_list: async () => await userRepo()?.list() ?? [],
   governance_users_get: async (email) => await userRepo()?.get(email) ?? null,
   governance_users_upsert: async (record) => await userRepo()?.upsert(record) ?? record,
@@ -2636,9 +2698,17 @@ var governancePlatform = {
     if (!repo3) throw new Error("ledger repo not ready");
     return repo3.getBalance(account, asOf);
   },
-  governance_membership_evidence: async () => {
-    const cached2 = readCachedIdentityNow();
-    return { grant_area_count: recallGrantAreas().length, cached_role: cached2?.role ?? null };
+  // F1: reuses the same fx-rates domain island the FX admin screen and the sales-new P&L form
+  // resolve through — period close asks for a number the same way a P&L line does.
+  governance_fx_closing_rate: async (date, pair, direction) => fxRateRepo.getRate(date, pair, direction)
+};
+
+// output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
+var ApiError = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
   }
 };
 
@@ -2647,11 +2717,16 @@ var JSZIP_CDN = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 var ZIP_COMPRESSION = "DEFLATE";
 var ZIP_LEVEL = 6;
 var HTTP_TRANSPORT_FAILURE = 0;
+var HTTP_NOT_FOUND = 404;
+var HTTP_CONFLICT = 409;
 function wasm() {
   return window.__vdg_wasm;
 }
 function repo2() {
   return window.__vdg_repo;
+}
+function normCollection(dirId) {
+  return String(dirId || "").replace(/^\/+|\/+$/g, "");
 }
 var SHIPMENT_OPS = {
   putShipment: (shipment) => putShipment(repo2(), shipment),
@@ -2698,15 +2773,38 @@ var flowsPlatform = {
     URL.revokeObjectURL(url);
     return { ok: true };
   },
+  // Read-or-create a CharterDB record (jobno_lease.rs's per-rep-code counter file): `dirId` names
+  // the collection, `name` is the record id — the same `${collection}/${id}` addressing
+  // ws_read_file/ws_write_file already use, so the `id` handed back here round-trips through
+  // flows_cas_upload below. etag/content ride along too (the CAS loop's compare-and-swap target),
+  // captured straight from the GET/POST response instead of a separate getFile round trip. A 409
+  // on create just means another device seeded it first — the record is there either way, which is
+  // exactly what "get or create" asks for, but with no etag of its own to hand back: the caller's
+  // next CAS attempt re-reads and gets one then.
   flows_get_or_create_file: async (dirId, name, content) => {
-    const api = storageApi();
-    return api.getOrCreateFile(api.driveFetch, api.uploadFile, dirId, name, content);
+    const collection = normCollection(dirId);
+    try {
+      const existing = await apiFetch("GET", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(name)}`);
+      return { id: `${collection}/${name}`, etag: existing.etag ?? null, content: existing.content ?? null };
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== HTTP_NOT_FOUND) throw err;
+    }
+    try {
+      const created = await apiFetch("POST", `/records/${encodeURIComponent(collection)}`, { id: name, owner: currentUserEmail(), content });
+      return { id: `${collection}/${name}`, etag: created.etag ?? null, content: created.content ?? content };
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== HTTP_CONFLICT) throw err;
+    }
+    return { id: `${collection}/${name}` };
   },
   // A lost CAS race (412) is an expected outcome of a counter claim, so it answers instead of
-  // throwing — the operator decides whether to retry.
+  // throwing — the operator decides whether to retry. `fileId` is the `${collection}/${name}` id
+  // flows_get_or_create_file above hands back; CharterDB's own If-Match does the compare-and-swap.
   flows_cas_upload: async (fileId, name, body, etag) => {
+    const suffix = `/${name}`;
+    const collection = String(fileId || "").endsWith(suffix) ? fileId.slice(0, -suffix.length) : "";
     try {
-      await storageApi().uploadFile(fileId, name, body, etag, { isUpdate: true });
+      await apiFetch("PUT", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(name)}`, { content: body }, { "If-Match": etag });
       return { ok: true, status: HTTP_TRANSPORT_FAILURE };
     } catch (err) {
       return { ok: false, status: err?.status ?? HTTP_TRANSPORT_FAILURE };
@@ -2726,7 +2824,7 @@ var flowsPlatform = {
 
 // output/web/js.tmp/bootstrap/platform/index.js
 var PREFS_NS = "prefs";
-function createPlatform({ repo: repo3, currentUser }) {
+function createPlatform({ repo: repo3 }) {
   const base = {
     records_get: (kind, id) => repo3.get(kind, id),
     records_list: (kind) => repo3.list(kind),
@@ -2735,7 +2833,6 @@ function createPlatform({ repo: repo3, currentUser }) {
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     records_get_meta: (key) => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,
     records_put_meta: (key, body) => window.__vdg_io ? window.__vdg_io.cache_put_meta(key, body) : null,
-    session_current_user: async () => currentUser(),
     prefs_get: async (key) => {
       const v = localStorage.getItem(`${PREFS_NS}:${key}`);
       return v == null ? null : JSON.parse(v);
@@ -2756,7 +2853,13 @@ function createPlatform({ repo: repo3, currentUser }) {
       return api[op2](...Array.isArray(args) ? args : [args]);
     },
     http_json: async (method, url, body) => {
-      const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: method === "GET" ? void 0 : JSON.stringify(body) });
+      const { ok, value: res, error } = await safeAwait(
+        fetch(url, { method, headers: { "content-type": "application/json" }, body: method === "GET" ? void 0 : JSON.stringify(body) }),
+        SAFE_AWAIT_DEFAULT_MS,
+        void 0,
+        `http_json:${method}:${url}`
+      );
+      if (!ok) throw error;
       const text = await res.text();
       return { status: res.status, ok: res.ok, body: text ? JSON.parse(text) : null };
     },
@@ -2771,16 +2874,16 @@ var OUTCOME_DEGRADED = "degraded";
 var NEEDS_RECONNECT_EVENT = "vdg:auth-needs-reconnect";
 var SIGNIN_REQUEST_EVENT = "vdg:auth-signin-request";
 var _signinListenerWired = false;
-function composeAuth(wasm2) {
+function composeAuth(wasm3) {
   const sessionRoles = {
-    currentSalesRepId: () => wasm2.auth_session_roles({}).token ?? null,
-    currentRoles: () => wasm2.auth_session_roles({}).roles,
-    hasRole: (role) => wasm2.auth_has_role({ role }).has,
-    setResolvedRoles: (token, roles) => wasm2.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
+    currentSalesRepId: () => wasm3.auth_session_roles({}).token ?? null,
+    currentRoles: () => wasm3.auth_session_roles({}).roles,
+    hasRole: (role) => wasm3.auth_has_role({ role }).has,
+    setResolvedRoles: (token, roles) => wasm3.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
   };
   bindSessionRoles(sessionRoles);
   const detectRoleViaDrive = async (user, options = {}) => {
-    const reply = await wasm2.auth_detect_role({ user: user ?? null, force: !!options.force });
+    const reply = await wasm3.auth_detect_role({ user: user ?? null, force: !!options.force });
     if (!reply.ok) throw takeAuthError() || new Error(reply.error || "auth: the workspace authority did not answer");
     return reply.role;
   };
@@ -2790,12 +2893,12 @@ function composeAuth(wasm2) {
     return result.value;
   };
   const signIn = (onSignedIn) => mountLoginScreen(async (user) => {
-    await wasm2.auth_adopt_session({ email: user.email });
+    await wasm3.auth_adopt_session({ email: user.email });
     await detectOrThrow(user, "auth-gate:loginCb");
     onSignedIn(user);
   });
   const requireAuth2 = async (onSignedIn) => {
-    const verdict = await wasm2.auth_require_auth({});
+    const verdict = await wasm3.auth_require_auth({});
     if (verdict.outcome === OUTCOME_SIGNED_IN) {
       await detectOrThrow(verdict.user, "auth-gate:requireAuth");
       await onSignedIn(verdict.user);
@@ -2808,7 +2911,7 @@ function composeAuth(wasm2) {
     }
     signIn(onSignedIn);
   };
-  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaDrive, clearRoleCache: () => wasm2.auth_clear_role_cache({}) });
+  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaDrive, clearRoleCache: () => wasm3.auth_clear_role_cache({}) });
   if (!_signinListenerWired) {
     _signinListenerWired = true;
     window.addEventListener(SIGNIN_REQUEST_EVENT, () => signIn(() => location.reload()));
@@ -2817,83 +2920,75 @@ function composeAuth(wasm2) {
 
 // output/web/js.tmp/implementations/storage/core_abstractions/server-session.js
 var SERVER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
-var _impl4 = null;
-function bindServerSession(impl) {
-  _impl4 = impl;
-}
-function _i4() {
-  if (!_impl4) throw new Error("storage/server-session: no adapter bound (the storage bootstrap binds it)");
-  return _impl4;
-}
-var serverSessionIdentity = (...a) => _i4().serverSessionIdentity(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/popup-guard.js
 var _impl5 = null;
-function bindPopupGuard(impl) {
+function bindServerSession(impl) {
   _impl5 = impl;
 }
 function _i5() {
-  if (!_impl5) throw new Error("storage/popup-guard: no adapter bound (the storage bootstrap binds it)");
+  if (!_impl5) throw new Error("storage/server-session: no adapter bound (the storage bootstrap binds it)");
   return _impl5;
 }
-var ensureWindowOpen = (...a) => _i5().ensureWindowOpen(...a);
+var serverSessionIdentity = (...a) => _i5().serverSessionIdentity(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/popup-guard.js
+var _impl6 = null;
+function bindPopupGuard(impl) {
+  _impl6 = impl;
+}
+function _i6() {
+  if (!_impl6) throw new Error("storage/popup-guard: no adapter bound (the storage bootstrap binds it)");
+  return _impl6;
+}
+var ensureWindowOpen = (...a) => _i6().ensureWindowOpen(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/token-anchor.js
 var ANCHOR_EVT_POPUP_BLOCKED = "popup-blocked";
 var ANCHOR_EVT_SIGNIN_REQUIRED = "signin-required";
-var _impl6 = null;
-function bindTokenAnchorFactory(impl) {
-  _impl6 = impl;
-}
-function _i6() {
-  if (!_impl6) throw new Error("storage/token-anchor: no adapter bound (the storage bootstrap binds it)");
-  return _impl6;
-}
-var createTokenAnchor = (...a) => _i6().createTokenAnchor(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/token.js
-var ACCESS_TOKEN_ISSUED_KEY = "vdg.auth.access_token_issued";
 var _impl7 = null;
-function bindTokenAuthority(impl) {
+function bindTokenAnchorFactory(impl) {
   _impl7 = impl;
 }
 function _i7() {
-  if (!_impl7) throw new Error("storage/token: no adapter bound (the storage bootstrap binds it)");
+  if (!_impl7) throw new Error("storage/token-anchor: no adapter bound (the storage bootstrap binds it)");
   return _impl7;
 }
-var reconnectDriveInteractive = (...a) => _i7().reconnectDriveInteractive(...a);
+var createTokenAnchor = (...a) => _i7().createTokenAnchor(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/token.js
+var ACCESS_TOKEN_ISSUED_KEY = "vdg.auth.access_token_issued";
+var _impl8 = null;
+function bindTokenAuthority(impl) {
+  _impl8 = impl;
+}
+function _i8() {
+  if (!_impl8) throw new Error("storage/token: no adapter bound (the storage bootstrap binds it)");
+  return _impl8;
+}
+var reconnectDriveInteractive = (...a) => _i8().reconnectDriveInteractive(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/grant-reader.js
-var _impl8 = null;
+var _impl9 = null;
 function bindGrantReader(impl) {
-  _impl8 = impl;
+  _impl9 = impl;
 }
 
 // output/web/js.tmp/implementations/storage/core_abstractions/events.js
-var _impl9 = null;
+var _impl10 = null;
 function bindEventBus(impl) {
-  _impl9 = impl;
+  _impl10 = impl;
 }
-function _i8() {
-  if (!_impl9) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
-  return _impl9;
+function _i9() {
+  if (!_impl10) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
+  return _impl10;
 }
-var dispatchAppEvent = (...a) => _i8().dispatchAppEvent(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
-var ApiError = class extends Error {
-  constructor(status, message) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
-};
+var dispatchAppEvent = (...a) => _i9().dispatchAppEvent(...a);
 
 // output/web/js.tmp/implementations/storage/implementations/server/backend.js
 var HEALTH_PATH = "/api/health";
 var API_PREFIX = "/api";
 var CREDENTIALS_MODE = API_BASE ? "include" : "same-origin";
 var PROBE_TIMEOUT_MS = 1500;
+var TRANSPORT_SAFE_AWAIT_MARGIN_MS = 5e3;
 var BACKEND_SERVER = "server";
 var BACKEND_DRIVE = "drive";
 var SESSION_TOKEN_HEADER = "X-Vdg-Session";
@@ -2913,15 +3008,15 @@ async function detectBackend() {
   }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE });
-    const body = res.ok ? await res.json().catch(() => null) : null;
-    _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
-  } catch {
-    _backend = BACKEND_DRIVE;
-  } finally {
-    clearTimeout(timer);
-  }
+  const { ok, value: res } = await safeAwait(
+    fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE }),
+    PROBE_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
+    void 0,
+    "detectBackend:health"
+  );
+  clearTimeout(timer);
+  const body = ok && res.ok ? await res.json().catch(() => null) : null;
+  _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
   try {
     sessionStorage.setItem(BACKEND_KEY, _backend);
   } catch {
@@ -2987,17 +3082,19 @@ async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
   opts.signal = ctrl.signal;
   const reqId = `r${++_apiReqSeq}`;
   const startedAtMs = Date.now();
-  let res;
-  try {
-    console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
-    res = await fetch(url, opts);
-    console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
-  } catch (err) {
-    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, err);
-    throw new ApiError(0, `server unreachable: ${err.message}`);
-  } finally {
-    clearTimeout(timer);
+  console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
+  const { ok, value: res, error } = await safeAwait(
+    fetch(url, opts),
+    API_FETCH_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
+    void 0,
+    `apiFetch:${method}:${path}`
+  );
+  clearTimeout(timer);
+  if (!ok) {
+    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, error);
+    throw new ApiError(0, `server unreachable: ${error.message}`);
   }
+  console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
   const backlogHeader = res.headers?.get("x-replication-backlog");
   const providerHeader = res.headers?.get("x-secondary-provider") || res.headers?.get("x-replication-provider");
   if (backlogHeader !== null && backlogHeader !== void 0) {
@@ -3057,90 +3154,14 @@ async function patchUser(email, body) {
   return apiFetch("PATCH", `${USERS_PATH}/${encodeURIComponent(email)}`, body);
 }
 
-// output/web/js.tmp/implementations/storage/core_abstractions/drive-errors.js
-var DriveApiError = class extends Error {
-  constructor(status, message, driveErrorKind = null) {
-    super(message || `API error ${status}`);
-    this.name = "DriveApiError";
-    this.status = status;
-    this.driveErrorKind = driveErrorKind;
-  }
-};
-
-// output/web/js.tmp/implementations/storage/implementations/server/server-drive-shim.js
-var HTTP_OK = 200;
-var HTTP_NOT_FOUND = 404;
-var HTTP_BAD_REQUEST = 400;
-var SYNTHETIC_QUOTA = "1099511627776";
-var _me = null;
-async function _meCached() {
-  if (!_me) _me = await apiFetch("GET", "/me");
-  return _me;
+// output/web/js.tmp/implementations/kernel/core_abstractions/util/fork-id.js
+function forkId(email) {
+  return (email || "").trim().toLowerCase();
 }
-var ShimResponse = class {
-  constructor(status, body, headers = {}) {
-    this.status = status;
-    this.ok = status >= HTTP_OK && status < 300;
-    this.statusText = String(status);
-    this._body = body;
-    this._headers = headers;
-    this.headers = { get: (k) => this._headers[String(k).toLowerCase()] ?? null };
-  }
-  async text() {
-    return typeof this._body === "string" ? this._body : JSON.stringify(this._body ?? "");
-  }
-  async json() {
-    return typeof this._body === "string" ? JSON.parse(this._body) : this._body;
-  }
-};
-async function handle(method, path, body = void 0, extraHeaders = {}) {
-  const url = new URL(path.startsWith("http") ? path : `https://drive.local${path}`);
-  const p = url.pathname.replace(/^\/(upload\/)?drive\/v3/, "");
-  const seg = p.split("/").filter(Boolean);
-  try {
-    if (seg[0] === "about") {
-      const me = await _meCached();
-      return ok({ storageQuota: { limit: SYNTHETIC_QUOTA, usage: "0", usageInDrive: "0" }, user: { emailAddress: me.email } });
-    }
-    return fail(HTTP_BAD_REQUEST, `unsupported in native CharterDB mode: ${method} ${p}`);
-  } catch (err) {
-    if (err instanceof ApiError) {
-      return { status: err.status, body: { error: { code: err.status, message: err.message, errors: [{ message: err.message, reason: err.status === HTTP_NOT_FOUND ? "notFound" : "forbidden" }] } }, headers: {} };
-    }
-    throw err;
-  }
-}
-function ok(body, headers = {}) {
-  return { status: HTTP_OK, body, headers };
-}
-function fail(status, message) {
-  return { status, body: { error: { code: status, message } }, headers: {} };
-}
-async function fetchRaw(method, path, body, extraHeaders) {
-  const r = await handle(method, path, body, extraHeaders);
-  return new ShimResponse(r.status, r.body, { "content-type": typeof r.body === "string" ? "text/plain" : "application/json", ...r.headers });
-}
-var HTTP_UNAUTHORIZED = 401;
-async function driveFetch(method, path, body = void 0) {
-  const r = await handle(method, path, body);
-  if (r.status >= 200 && r.status < 300) return r.body === "" ? {} : r.body;
-  const error = new DriveApiError(r.status, `Drive API ${r.status}: ${JSON.stringify(r.body)}`);
-  if (r.status === HTTP_UNAUTHORIZED) window.dispatchEvent(new CustomEvent("vdg:auth-needs-reconnect"));
-  error.driveErrorKind = classifyDriveError(error);
-  throw error;
-}
-var driveFetchRaw = fetchRaw;
-var serverTransport = { driveFetch, driveFetchRaw };
 
 // output/web/js.tmp/implementations/storage/implementations/server/server-role.js
 async function probeRole(user, _wsName) {
-  let me;
-  try {
-    me = await apiFetch("GET", "/me");
-  } catch (err) {
-    if (err instanceof ApiError) throw new DriveApiError(err.status, err.message);
-    throw err;
-  }
+  const me = await apiFetch("GET", "/me");
   const roles = Array.isArray(me?.roles) ? me.roles.filter(Boolean) : [];
   const areas = Array.isArray(me?.areas) ? me.areas.map((a) => ({ path: a.path, folder_id: a.folder_id })) : [];
   if (me?.is_owner) return { kind: VERDICT_MANAGER };
@@ -3207,7 +3228,6 @@ var SharedIoPort = class {
 };
 
 // output/web/js.tmp/implementations/storage/core_abstractions/storage-layout.js
-var USERS_PATH2 = "users";
 var KIND_PATH_OVERRIDES = {
   error_log: "_shared/error-log",
   audit_log: "_shared/logs/audit-log"
@@ -3216,31 +3236,25 @@ var KIND_PATH_OVERRIDES = {
 // output/web/js.tmp/implementations/storage/implementations/server/server-io-adapters.js
 var HTTP_NOT_FOUND2 = 404;
 var HTTP_PRECONDITION = 412;
-var USER_AUDIT_LOG_KIND = "user_audit_log";
-var USER_AUDIT_LOG_FILE = "user-audit-log.jsonl";
-var BUNDLE_EXT = ".jsonl";
 var CAS_FAILED_MSG = "412 Precondition Failed";
-function asDriveError(err) {
-  if (err instanceof ApiError) {
-    return new DriveApiError(err.status, err.message);
-  }
-  return err;
-}
 var ServerIoPort = class extends SharedIoPort {
-  constructor(driveApi, userEmail, fork = null) {
+  // `fork` accepted for call-site compatibility (createIoPort passes one) but unused: it only
+  // ever fed document_collection_kind's users/{fork}/{kind} prefix-strip, which had no caller
+  // left once the change feed started reporting `collection` directly (CDB-CF-03) instead of a
+  // folder id needing that reverse lookup.
+  constructor(serverApi, userEmail, _fork = null) {
     super(userEmail);
-    this.driveApi = driveApi;
-    this._fork = fork || forkId(userEmail);
+    this.serverApi = serverApi;
   }
   // ── Native CharterDB API ──────────────────────────────────────────────────
   async record_read(collection, id) {
     try {
       const res = await apiFetch("GET", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
-      if (!res?.id) return { found: false, content: "", etag: null, version: null };
-      return { found: true, content: res.content ?? "", etag: res.etag ?? null, version: res.version };
+      if (!res?.id) return { found: false, content: "", etag: null, version: null, owner: null };
+      return { found: true, content: res.content ?? "", etag: res.etag ?? null, version: res.version, owner: res.owner ?? null };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) {
-        return { found: false, content: "", etag: null, version: null };
+        return { found: false, content: "", etag: null, version: null, owner: null };
       }
       throw err;
     }
@@ -3289,21 +3303,29 @@ var ServerIoPort = class extends SharedIoPort {
       throw err;
     }
   }
-  async record_list(collection, limit = 1e3, cursor = null) {
+  // CDB-Q-02, param order matches TransportPort::list_records(collection, owner, cursor, limit)
+  // 1:1 -- `ws_list_dir` below calls this with only `collection` (every default applies) so its
+  // own single-page, unfiltered listing is unaffected by this order.
+  async record_list(collection, owner = null, cursor = null, limit = 1e3) {
+    const path = this._normPath(collection);
     try {
-      let url = `/records/${encodeURIComponent(collection)}?limit=${limit}`;
+      let url = `/records/${encodeURIComponent(path)}?limit=${limit}`;
       if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
+      if (owner) url += `&owner=${encodeURIComponent(owner)}`;
       const res = await apiFetch("GET", url);
-      return { records: res?.records ?? [], next_cursor: res?.next_cursor };
+      return { records: res?.records ?? [], next_cursor: res?.next_cursor ?? null, has_more: res?.has_more ?? false };
     } catch (err) {
       if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) {
-        return { records: [], next_cursor: null };
+        return { records: [], next_cursor: null, has_more: false };
       }
       throw err;
     }
   }
-  async changes(since = "0") {
-    const res = await apiFetch("GET", `/changes?since=${encodeURIComponent(since)}`);
+  async changes(since = "0", limit = null, includeContent = false) {
+    let url = `/changes?since=${encodeURIComponent(since)}`;
+    if (limit) url += `&limit=${limit}`;
+    if (includeContent) url += "&include_content=true";
+    const res = await apiFetch("GET", url);
     return res;
   }
   async start_cursor() {
@@ -3337,55 +3359,16 @@ var ServerIoPort = class extends SharedIoPort {
   _normPath(path) {
     return String(path || "").replace(/^\/+|\/+$/g, "");
   }
-  // ── documents (period files) ────────────────────────────────────────────────
-  _bundleName(kind, period) {
-    return kind === USER_AUDIT_LOG_KIND ? USER_AUDIT_LOG_FILE : `${period}${BUNDLE_EXT}`;
-  }
-  async document_read(kind, period) {
-    const fileName = this._bundleName(kind, period);
-    const collection = this._kindPath(kind);
-    try {
-      const r = await this.record_read(collection, fileName);
-      if (!r.found) return { etag: null, content: "", fileId: null, folderId: collection, fileName };
-      return { etag: r.etag, content: r.content, fileId: `${collection}/${fileName}`, folderId: collection, fileName };
-    } catch (err) {
-      throw asDriveError(err);
-    }
-  }
-  async document_write(kind, period, newContent, etag) {
-    const fileName = this._bundleName(kind, period);
-    const collection = this._kindPath(kind);
-    try {
-      const r = await this.record_write(collection, fileName, newContent, etag);
-      return { etag: r.etag };
-    } catch (err) {
-      throw asDriveError(err);
-    }
-  }
-  async document_list(kind) {
-    const collection = this._kindPath(kind);
-    try {
-      const res = await this.record_list(collection);
-      const files = res.records.map((r) => ({ id: `${collection}/${r.id}`, name: r.id, version: String(r.version), modifiedTime: "" }));
-      return { folderId: collection, files };
-    } catch (err) {
-      throw asDriveError(err);
-    }
-  }
+  // document_read/document_write/document_list/document_read_file (the bundle grain's period-file
+  // API, and the per-record fetch that briefly replaced it) are gone with
+  // sync_bundle/pull_kind_by_listing and sync_delta.rs's move onto TransportPort (ws_read_file,
+  // via fetch_record) on the Rust side — every registered kind is per-record now
+  // (cache_policy::PER_RECORD_REGISTRY).
   _parseFileId(fileId) {
     const norm = String(fileId || "").replace(/\/+/g, "/");
     if (!norm.includes("/")) return { col: "", id: norm };
     const idx = norm.lastIndexOf("/");
     return { col: norm.slice(0, idx), id: norm.slice(idx + 1) };
-  }
-  async document_read_file(fileId) {
-    const { col, id } = this._parseFileId(fileId);
-    try {
-      const r = await this.record_read(col, id);
-      return { found: r.found, content: r.content, etag: r.etag };
-    } catch (err) {
-      throw asDriveError(err);
-    }
   }
   // F-58-02: poll_health() used to fire here too — once per Changes page, roughly doubling the
   // delta engine's HTTP volume for a signal nobody needed at that cadence. The read routes
@@ -3393,93 +3376,45 @@ var ServerIoPort = class extends SharedIoPort {
   // RecordUpdate stamp it — server/src/bootstrap/edge/dispatch.rs), so the read-only sync path
   // never saw it that way either. Health now polls on its own slow timer (sync-schedulers.js
   // startHealthPoll) instead of riding every page fetch.
-  async changes_feed(pageToken) {
-    try {
-      const res = await this.changes(pageToken || "0");
-      const changes = (res?.results ?? []).map((c) => {
-        const name = c.id.endsWith(".json") ? c.id : `${c.id}.json`;
-        return {
-          file: {
-            id: `${c.collection}/${c.id}`,
-            name,
-            version: String(c.version),
-            parents: [c.collection]
-          },
-          removed: c.event === "removed",
-          fileId: `${c.collection}/${c.id}`,
-          changeType: "file",
-          time: ""
-        };
-      });
-      return { newStartPageToken: res?.next_cursor || pageToken || "0", changes };
-    } catch (err) {
-      throw asDriveError(err);
-    }
+  // CDB-CF-03/CF-15: CharterDB already reports collection/id/owner/version/event and (per
+  // CDB-CF-15) whether the caller has caught up on every /changes page — passed straight through,
+  // raw, so TransportPort::fetch_changes (charter_transport_bridge.rs) does the one real shaping
+  // this deserves, not a JS-side re-derivation that used to collapse the event into a bare
+  // `removed` boolean and drop `owner` entirely.
+  async changes_feed(pageToken, limit, includeContent) {
+    return this.changes(pageToken || "0", limit, includeContent);
   }
   async changes_cursor() {
-    try {
-      const token = await this.start_cursor();
-      return { startPageToken: token };
-    } catch (err) {
-      throw asDriveError(err);
-    }
-  }
-  async document_collection_kind(folderId) {
-    for (const [k, p] of Object.entries(KIND_PATH_OVERRIDES)) {
-      if (p === folderId) return k;
-    }
-    const prefix = `${USERS_PATH2}/${this._fork}/`;
-    if (folderId.startsWith(prefix)) return folderId.slice(prefix.length);
-    return null;
-  }
-  async document_target(kind, period) {
-    return { folderId: this._kindPath(kind), fileName: this._bundleName(kind, period) };
+    const cursor = await this.start_cursor();
+    return { cursor };
   }
   // ── path-addressed workspace files ────────────────────────────────────────
   async ws_list_dir(dirPath) {
     const collection = this._normPath(dirPath);
-    try {
-      const res = await this.record_list(collection);
-      return {
-        folderId: collection,
-        files: res.records.map((r) => ({
-          id: `${collection}/${r.id}`,
-          name: r.id,
-          version: String(r.version),
-          mimeType: ""
-        }))
-      };
-    } catch (err) {
-      throw asDriveError(err);
-    }
+    const res = await this.record_list(collection);
+    return {
+      files: res.records.map((r) => ({
+        id: `${collection}/${r.id}`,
+        name: r.id,
+        version: String(r.version)
+      }))
+    };
   }
   async ws_read_file(dirPath, fileName) {
     const collection = this._normPath(dirPath);
-    try {
-      const r = await this.record_read(collection, fileName);
-      if (!r.found) return { found: false, id: null, etag: null, content: "" };
-      return { found: true, id: `${collection}/${fileName}`, etag: r.etag, content: r.content };
-    } catch (err) {
-      throw asDriveError(err);
-    }
+    const r = await this.record_read(collection, fileName);
+    if (!r.found) return { found: false, id: null, etag: null, version: null, owner: null, content: "" };
+    return { found: true, id: `${collection}/${fileName}`, etag: r.etag, version: r.version, owner: r.owner, content: r.content };
   }
   async ws_write_file(dirPath, fileName, content, fileId, etag) {
     const collection = this._normPath(dirPath);
-    try {
-      const r = await this.record_write(collection, fileName, content, etag);
-      return { id: fileName, etag: r.etag };
-    } catch (err) {
-      throw asDriveError(err);
-    }
+    const r = await this.record_write(collection, fileName, content, etag);
+    return { id: fileName, etag: r.etag, version: r.version };
   }
   async ws_delete_file(fileId) {
     const { col, id } = this._parseFileId(fileId);
-    try {
-      await this.record_delete(col, id);
-      return null;
-    } catch (err) {
-      throw asDriveError(err);
-    }
+    await this.record_delete(col, id);
+    return null;
   }
 };
 
@@ -3688,16 +3623,16 @@ function createTokenAnchor2({
 var tokenAnchorFactory = { createTokenAnchor: createTokenAnchor2 };
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/base64.js
-var _impl10 = null;
+var _impl11 = null;
 function bindBase64(impl) {
-  _impl10 = impl;
+  _impl11 = impl;
 }
-function _i9() {
-  if (!_impl10) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
-  return _impl10;
+function _i10() {
+  if (!_impl11) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
+  return _impl11;
 }
-var b64Decode = (...a) => _i9().decode(...a);
-var b64Encode = (...a) => _i9().encode(...a);
+var b64Decode = (...a) => _i10().decode(...a);
+var b64Encode = (...a) => _i10().encode(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/id-token.js
 var TOKEN_KEY = "vdg.auth.id_token";
@@ -4160,13 +4095,13 @@ var _seq2 = 0;
 var _pending = /* @__PURE__ */ new Map();
 var _injected = null;
 function _deliver(payload) {
-  const { rid, ok: ok2, result, err } = payload || {};
+  const { rid, ok, result, err } = payload || {};
   const p = _pending.get(rid);
   if (!p) return;
   _pending.delete(rid);
   clearTimeout(p.timer);
   _followerTimeouts = 0;
-  if (ok2) p.resolve(result);
+  if (ok) p.resolve(result);
   else {
     _announceLockedIf(err);
     p.reject(new SqliteUnavailableError(err || "sqlite worker error"));
@@ -4193,11 +4128,11 @@ function _spawnEngine() {
       _ready = null;
       return;
     }
-    const { rid, ok: ok2, result, err } = ev.data || {};
+    const { rid, ok, result, err } = ev.data || {};
     const sep = String(rid).indexOf(RID_SEP);
     const tab = String(rid).slice(0, sep);
     const orig = Number(String(rid).slice(sep + 1));
-    const payload = { rid: orig, ok: ok2, result, err };
+    const payload = { rid: orig, ok, result, err };
     if (tab === _tabId) _deliver(payload);
     else _bus.postMessage({ t: "res", tab, m: payload });
   };
@@ -4350,25 +4285,25 @@ bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new Cust
 bindUserDirectory({ listUsers: listUsers2, createUser, patchUser });
 async function composeStorage() {
   const backendKind = await backend.detectBackend();
-  bindStorageApi(serverTransport);
+  bindStorageApi({});
   bindWorkspaceAuthority(serverWorkspaceAuthority);
   return backendKind;
 }
-function createIoPort(driveApi, userEmail, forkPrefix) {
-  return new ServerIoPort(driveApi, userEmail, forkPrefix);
+function createIoPort(serverApi, userEmail, forkPrefix) {
+  return new ServerIoPort(serverApi, userEmail, forkPrefix);
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/visibility.js
-var _impl11 = null;
+var _impl12 = null;
 function bindVisibility(impl) {
-  _impl11 = impl;
+  _impl12 = impl;
 }
-function _i10() {
-  if (!_impl11) throw new Error("kernel/visibility: no adapter bound (the kernel bootstrap binds it)");
-  return _impl11;
+function _i11() {
+  if (!_impl12) throw new Error("kernel/visibility: no adapter bound (the kernel bootstrap binds it)");
+  return _impl12;
 }
-var isPageVisible = (...a) => _i10().isPageVisible(...a);
-var onVisibilityChange = (...a) => _i10().onVisibilityChange(...a);
+var isPageVisible = (...a) => _i11().isPageVisible(...a);
+var onVisibilityChange = (...a) => _i11().onVisibilityChange(...a);
 
 // output/web/js.tmp/implementations/kernel/implementations/browser-platform.js
 var browserClock = {
@@ -4378,9 +4313,9 @@ var browserClock = {
 };
 var browserTimer = {
   startTimer: (fn, ms) => setTimeout(fn, ms),
-  stopTimer: (handle2) => clearTimeout(handle2),
+  stopTimer: (handle) => clearTimeout(handle),
   startInterval: (fn, ms) => setInterval(fn, ms),
-  stopInterval: (handle2) => clearInterval(handle2)
+  stopInterval: (handle) => clearInterval(handle)
 };
 var consoleLog = {
   warn: (...args) => console.warn(...args)
@@ -4393,12 +4328,12 @@ var localStorageKv = {
 };
 var fetchHttp = {
   fetchJson: async (url) => {
-    const resp = await fetch(url);
-    return resp.ok ? resp.json() : null;
+    const { ok, value: resp } = await safeAwait(fetch(url), SAFE_AWAIT_DEFAULT_MS, void 0, `fetchJson:${url}`);
+    return ok && resp.ok ? resp.json() : null;
   },
   fetchText: async (url) => {
-    const resp = await fetch(url);
-    return resp.ok ? resp.text() : null;
+    const { ok, value: resp } = await safeAwait(fetch(url), SAFE_AWAIT_DEFAULT_MS, void 0, `fetchText:${url}`);
+    return ok && resp.ok ? resp.text() : null;
   }
 };
 var windowEvents = {
@@ -4494,23 +4429,23 @@ function renderServerAccessGateScreen(container, { reason, actionFailed = false,
 
 // output/web/js.tmp/bootstrap/boot/server-gate.js
 var SERVER_ERROR_NAME = "ServerApiError";
-var HTTP_UNAUTHORIZED2 = 401;
+var HTTP_UNAUTHORIZED = 401;
 var EVT_RECONNECT_REQUEST = "vdg:auth-reconnect-request";
 var EVT_RECONNECTED = "vdg:auth-reconnected";
 var EVT_NEEDS_RECONNECT = "vdg:auth-needs-reconnect";
 function serverGateReason(err) {
   if (err?.name !== SERVER_ERROR_NAME) return null;
-  if (err.status === HTTP_UNAUTHORIZED2) return SERVER_ACCESS_REASON_SESSION;
+  if (err.status === HTTP_UNAUTHORIZED) return SERVER_ACCESS_REASON_SESSION;
   return SERVER_ACCESS_REASON_TRANSIENT;
 }
 function requestReconnect(onSettled, win = window) {
   let settled = false;
-  const finish = (ok2) => {
+  const finish = (ok) => {
     if (settled) return;
     settled = true;
     win.removeEventListener(EVT_RECONNECTED, onOk);
     win.removeEventListener(EVT_NEEDS_RECONNECT, onFail);
-    onSettled(ok2);
+    onSettled(ok);
   };
   const onOk = () => finish(true);
   const onFail = () => finish(false);
@@ -4529,7 +4464,7 @@ function renderServerGate(mount, err, { onReconnected, onSignIn, serverBackend =
     const render = (actionFailed) => renderServerAccessGateScreen(mount, {
       reason,
       actionFailed,
-      onAction: () => requestReconnect((ok2) => ok2 ? onReconnected?.() : render(true), win)
+      onAction: () => requestReconnect((ok) => ok ? onReconnected?.() : render(true), win)
     });
     render(false);
     return true;
@@ -4559,7 +4494,7 @@ function renderViewFallback(root, route, reason = "timeout") {
   });
 }
 async function healOrReloadViaServiceWorker() {
-  const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
+  const reg = typeof navigator !== "undefined" ? await navigator.serviceWorker?.getRegistration?.().catch(() => null) : null;
   if (reg?.waiting) {
     window.dispatchEvent(new CustomEvent("vdg:sw-update-accept"));
   } else {
@@ -4631,7 +4566,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-W3F3GGJC.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-EGNQPJEH.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4639,7 +4574,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-4YFYP4HZ.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-DEFO5QS3.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4647,14 +4582,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-CHXAKY7N.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-63MFRNHQ.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-CHXAKY7N.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-63MFRNHQ.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4756,7 +4691,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.29 (cb53bcc8)";
+var APP_VERSION = "v0.4.30 (a232d5f4)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4975,7 +4910,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-BF45SC2G.js"),
-  "/shipments": () => import("./shipments-AMIFMACH.js"),
+  "/shipments": () => import("./shipments-RYDQ2XFJ.js"),
   "/upload": () => import("./upload-6OLVB33H.js"),
   "/documents": () => import("./documents-G4ZYYEJ4.js"),
   "/finance": () => import("./finance-dashboard-MOS6ENJQ.js"),
@@ -4983,96 +4918,96 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-W54IXCMN.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-YVK7RZID.js"),
+  "/sales/me": () => import("./sales-me-JSGQEQEV.js"),
   "/sales/analytics": () => import("./sales-analytics-JWO3PH63.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-VT77RYUX.js"),
-  "/sales/quote": () => import("./sales-quote-list-EJXZ7JMK.js"),
-  "/masters/customers": () => import("./masters-customers-R5FT3OJN.js"),
-  "/masters/carriers": () => import("./masters-carriers-GRF3C5WU.js"),
-  "/masters/services": () => import("./masters-services-NAVQRX2E.js"),
-  "/help": () => import("./help-K56VAV5V.js"),
-  "/pending-access": () => import("./pending-access-PPUBG66F.js"),
-  "/onboarding": () => import("./onboarding-wizard-D4SQW5JL.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-4WEU7Z57.js"),
+  "/sales/quote": () => import("./sales-quote-list-CIFZVLVP.js"),
+  "/masters/customers": () => import("./masters-customers-IWZNO7VJ.js"),
+  "/masters/carriers": () => import("./masters-carriers-JWYPVHIN.js"),
+  "/masters/services": () => import("./masters-services-GKCPG3TJ.js"),
+  "/help": () => import("./help-P4YWHS5I.js"),
+  "/pending-access": () => import("./pending-access-NMS2R6QL.js"),
   "/background-jobs": () => import("./background-jobs-TEPHLQEZ.js"),
   // Manager Workspace — E-14
-  "/manager/dashboard": () => import("./dashboard-3M7TEQLW.js"),
-  "/manager/pipeline": () => import("./pipeline-OZ7VBDQA.js"),
-  "/manager/approvals": () => import("./approvals-VPPUGAXZ.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-ORNLMMVK.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-AYYQBLJ6.js"),
-  "/manager/finance/close-period": () => import("./close-period-6O7OWZDR.js"),
-  "/manager/audit": () => import("./audit-HEJCEE7H.js"),
-  "/manager/notifications": () => import("./notifications-CKPT5WWF.js"),
+  "/manager/dashboard": () => import("./dashboard-Z6REVVR2.js"),
+  "/manager/pipeline": () => import("./pipeline-EUHZFO5V.js"),
+  "/manager/approvals": () => import("./approvals-FJOY6GVC.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-QAYE7VOB.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-KWEIULZU.js"),
+  "/manager/finance/close-period": () => import("./close-period-ZHIFQNHD.js"),
+  "/manager/audit": () => import("./audit-XWEANZSS.js"),
+  "/manager/notifications": () => import("./notifications-IR5TYITQ.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-4JWB5R6T.js"),
-  "/manager/finance/commissions": () => import("./commissions-VW72YJW6.js"),
-  "/manager/commission-rules": () => import("./commission-rules-7ZOYXOQQ.js"),
-  "/manager/exceptions": () => import("./exceptions-CYTPJSXK.js"),
+  "/manager/sales": () => import("./sales-VUJAYQPO.js"),
+  "/manager/finance/commissions": () => import("./commissions-C7XVD2KI.js"),
+  "/manager/commission-rules": () => import("./commission-rules-ILNLJT2H.js"),
+  "/manager/exceptions": () => import("./exceptions-4GK2NFA7.js"),
   // E-15
-  "/manager/errors": () => import("./errors-DVRTLA2M.js"),
-  "/manager/backup": () => import("./backup-VXHGNFJB.js"),
-  "/manager/users": () => import("./users-3PTCIJFT.js"),
+  "/manager/errors": () => import("./errors-HQCL7NYA.js"),
+  "/manager/backup": () => import("./backup-P5Y7NPYC.js"),
+  "/manager/users": () => import("./users-GAJIG5VD.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-NYEYRFZL.js"),
-  "/manager/settings": () => import("./settings-IDKPA22W.js"),
+  "/manager/fx-rates": () => import("./fx-rates-YWBICKCM.js"),
+  "/manager/settings": () => import("./settings-4WMK674F.js"),
   // E-16 F-16-02
-  "/manager/awb": () => import("./awb-AVFFFILI.js"),
+  "/manager/awb": () => import("./awb-K5YGXCCT.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-SSMRLUB2.js"),
-  "/masters/flights": () => import("./flights-7GBGG4GF.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-GTL7A7UT.js"),
+  "/masters/airports": () => import("./airports-4NEVTSDB.js"),
+  "/masters/flights": () => import("./flights-NS3QU756.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-CIJVX3M3.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-5T2X4G34.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-VWF5JZGP.js"),
   // E-20 F-28-15
   "/masters/ocean-tariff": () => import("./ocean-tariff-RVENHIDF.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-OKCOPNZ7.js"),
+  "/masters/uld-types": () => import("./uld-types-FLKYRXLK.js"),
   "/manager/manifest": () => import("./manifest-CP7NHQBY.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-Q74U4FPV.js"),
+  "/masters/air-rates": () => import("./air-rates-X5VFBPLL.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-4F3MFDZT.js"),
-  "/masters/local-charges": () => import("./local-charges-7KJ2NHE6.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-D5KYWFDF.js"),
+  "/masters/local-charges": () => import("./local-charges-RFZ55OKD.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-HM7GMNEN.js"),
+  "/masters/shipment-states": () => import("./shipment-states-W5H5OAAU.js"),
   "/quotes/air-calc": () => import("./air-calc-NZ5P43PS.js"),
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-RYW455ZK.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-QYWNQBSM.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-LDXTVIDT.js"),
   // E-23 F-23-05
-  "/accounting/reports": () => import("./reports-SLBNL7VZ.js"),
-  "/accounting/settings": () => import("./settings-MUT3X62C.js"),
+  "/accounting/reports": () => import("./reports-NLPLAJFK.js"),
+  "/accounting/settings": () => import("./settings-KQN6K3YY.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-2CT2N3GL.js"),
+  "/admin/users": () => import("./users-view-5O4QUOGN.js"),
   // E-24 F-24-06
-  "/admin/users/audit-log": () => import("./user-audit-log-view-FYNXLIGR.js")
+  "/admin/users/audit-log": () => import("./user-audit-log-view-4JEB4RIZ.js")
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
-var _impl12 = null;
+var _impl13 = null;
 function bindRoutePrefetch(impl) {
-  _impl12 = impl;
+  _impl13 = impl;
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/cache.js
-function composeCache(wasm2) {
+function composeCache(wasm3) {
   bindBulkOrchestrator({
-    bulkPut: async (_repo2, kind, entities) => {
+    bulkPut: async (_repo, kind, entities) => {
       if (!entities?.length) return;
-      const res = await wasm2.cache_bulk_put({ kind, entities });
+      const res = await wasm3.cache_bulk_put({ kind, entities });
       if (!res.ok) throw new Error(res.error || `bulkPut(${kind}): stopped after ${res.written}`);
     }
   });
   bindMasterRegistry({
-    canWriteMaster: (kind, role) => wasm2.cache_can_write_master({ kind, role: role ?? null }).allowed
+    // A role set, not one role — a Manager+SalesRep is judged on the whole hand, not one hat.
+    canWriteMaster: (kind, roles) => wasm3.cache_can_write_master({ kind, roles: roles || [] }).allowed
   });
   bindMasterDeduper({
-    findMatch: (name, existing) => wasm2.cache_find_match({ name, existing: existing || [] })
+    findMatch: (name, existing) => wasm3.cache_find_match({ name, existing: existing || [] })
   });
   bindRoutePrefetch({
     prefetchDashboard: async () => {
-      await wasm2.cache_route_prefetch({});
+      await wasm3.cache_route_prefetch({});
     }
   });
 }
@@ -5109,39 +5044,39 @@ function stampRows(reply) {
 function applyPredicate(rows, predicate) {
   return typeof predicate === "function" ? rows.filter(predicate) : rows;
 }
-function composeData(wasm2) {
-  const joinLoaded = async (_repo2, envelopes) => stampRows(await wasm2.data_join_loaded({ envelopes: envelopes || [] }));
+function composeData(wasm3) {
+  const joinLoaded = async (_repo, envelopes) => stampRows(await wasm3.data_join_loaded({ envelopes: envelopes || [] }));
   bindShipmentRepo({
-    putShipment: async (_repo2, shipment) => {
-      const reply = throwIfRefused(await wasm2.data_put_shipment({ shipment }));
+    putShipment: async (_repo, shipment) => {
+      const reply = throwIfRefused(await wasm3.data_put_shipment({ shipment }));
       return { envelope: reply.envelope, revenue: reply.revenue };
     },
-    putEnvelope: async (_repo2, ref, shipmentLike) => {
-      const reply = throwIfRefused(await wasm2.data_put_envelope({ shipment_ref: ref, shipment: shipmentLike }));
+    putEnvelope: async (_repo, ref, shipmentLike) => {
+      const reply = throwIfRefused(await wasm3.data_put_envelope({ shipment_ref: ref, shipment: shipmentLike }));
       return reply.envelope;
     },
-    getEnvelope: async (_repo2, ref) => {
-      const reply = await wasm2.data_get_envelope({ shipment_ref: ref });
+    getEnvelope: async (_repo, ref) => {
+      const reply = await wasm3.data_get_envelope({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return reply.record;
     },
-    listEnvelopes: async (_repo2, predicate = null) => {
-      const reply = await wasm2.data_list_envelopes({});
+    listEnvelopes: async (_repo, predicate = null) => {
+      const reply = await wasm3.data_list_envelopes({});
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return applyPredicate(reply.rows, predicate);
     },
-    deleteShipment: async (_repo2, ref) => {
-      throwIfRefused(await wasm2.data_delete_shipment({ shipment_ref: ref }));
+    deleteShipment: async (_repo, ref) => {
+      throwIfRefused(await wasm3.data_delete_shipment({ shipment_ref: ref }));
     },
-    getShipment: async (_repo2, ref) => {
-      const reply = await wasm2.data_get_shipment({ shipment_ref: ref });
+    getShipment: async (_repo, ref) => {
+      const reply = await wasm3.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
     // Filter the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
     // cross-fork revenue read for everybody else's.
     listShipments: async (repo3, predicate = null) => {
-      const reply = await wasm2.data_list_envelopes({});
+      const reply = await wasm3.data_list_envelopes({});
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return joinLoaded(repo3, applyPredicate(reply.rows, predicate));
     },
@@ -5149,14 +5084,14 @@ function composeData(wasm2) {
     anyRevenueVisible: (rows) => (rows || []).some((row) => row?.[REVENUE_SEEN])
   });
   bindWriteGate({
-    assertWritable: async (_repo2, etd, kind = KIND_SHIPMENT) => {
-      const refusal = gateError(await wasm2.data_write_gate({ etd: etd ?? null, kind }));
+    assertWritable: async (_repo, etd, kind = KIND_SHIPMENT) => {
+      const refusal = gateError(await wasm3.data_write_gate({ etd: etd ?? null, kind }));
       if (refusal) throw refusal;
     }
   });
   bindBillingPublish({
-    publishBilling: async (_repo2, shipment, { publishedBy = null, publishedAt = null } = {}) => {
-      const reply = await wasm2.data_publish_billing({
+    publishBilling: async (_repo, shipment, { publishedBy = null, publishedAt = null } = {}) => {
+      const reply = await wasm3.data_publish_billing({
         shipment,
         published_by: publishedBy,
         published_at: publishedAt
@@ -5164,20 +5099,20 @@ function composeData(wasm2) {
       if (!reply.ok) throw new Error(reply.error || "publish failed");
       return reply.snapshot;
     },
-    readPublishedFor: async (_repo2, shipment) => (await wasm2.data_published_for({ shipment })).rows,
-    currentRevision: async (_repo2, shipment) => (await wasm2.data_current_revision({ shipment })).record
+    readPublishedFor: async (_repo, shipment) => (await wasm3.data_published_for({ shipment })).rows,
+    currentRevision: async (_repo, shipment) => (await wasm3.data_current_revision({ shipment })).record
   });
   bindRepoQuery({
-    listWhere: async (_repo2, kind, predicate = null) => {
-      const reply = await wasm2.data_list_where({ kind, column: null, equals: null, ignore_case: false });
+    listWhere: async (_repo, kind, predicate = null) => {
+      const reply = await wasm3.data_list_where({ kind, column: null, equals: null, ignore_case: false });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return applyPredicate(reply.rows, predicate);
     }
   });
   bindPnlLineId({
-    pnlLineId: (ref, index) => wasm2.data_pnl_line_id({ shipment_ref: ref, index }).id,
-    deletePnlLinesFor: async (_repo2, ref) => {
-      const reply = await wasm2.data_delete_pnl_lines({ shipment_ref: ref });
+    pnlLineId: (ref, index) => wasm3.data_pnl_line_id({ shipment_ref: ref, index }).id,
+    deletePnlLinesFor: async (_repo, ref) => {
+      const reply = await wasm3.data_delete_pnl_lines({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the cleanup failed");
       return reply.deleted;
     }
@@ -5194,36 +5129,36 @@ function _rowIdx(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 }
-function composeSync(wasm2) {
+function composeSync(wasm3) {
   bindAuditLog({
-    verifyAuditChain: async (rows) => (await wasm2.sync_audit_verify_chain({ rows: rows || [] })).problems
+    verifyAuditChain: async (rows) => (await wasm3.sync_audit_verify_chain({ rows: rows || [] })).problems
   });
   bindDueSoon({
-    computeDueSoonRows: async (salesId) => (await wasm2.sync_due_soon_rows({ sales_id: salesId ?? null })).rows
+    computeDueSoonRows: async (salesId) => (await wasm3.sync_due_soon_rows({ sales_id: salesId ?? null })).rows
   });
   bindJobTracker(jobTracker);
   bindWmaEngine({
     predict: (state, descriptionText, classifyKindFn) => {
       const descKind = descriptionText && descriptionText.trim() && classifyKindFn ? classifyKindFn(descriptionText) : null;
-      return wasm2.sync_wma_predict({ state, desc_kind: descKind }).kind;
+      return wasm3.sync_wma_predict({ state, desc_kind: descKind }).kind;
     },
     onEvent: (state, observed, predicted) => _absorb(
       state,
-      wasm2.sync_wma_on_event({ state, observed, predicted: predicted ?? null, now_ms: Date.now() }).state
+      wasm3.sync_wma_on_event({ state, observed, predicted: predicted ?? null, now_ms: Date.now() }).state
     ),
     dismissPrediction: (state, predictedKind) => _absorb(
       state,
-      wasm2.sync_wma_dismiss({ state, predicted_kind: predictedKind }).state
+      wasm3.sync_wma_dismiss({ state, predicted_kind: predictedKind }).state
     )
   });
   bindWmaStore({
-    loadKindWmaState: async (_store2, repId, rowIdx) => (await wasm2.sync_wma_load({
+    loadKindWmaState: async (_store2, repId, rowIdx) => (await wasm3.sync_wma_load({
       rep_id: String(repId ?? ""),
       row_idx: _rowIdx(rowIdx),
       now_ms: Date.now()
     })).state,
     saveKindWmaState: async (_store2, repId, rowIdx, state) => {
-      const reply = await wasm2.sync_wma_save({ rep_id: String(repId ?? ""), row_idx: _rowIdx(rowIdx), state });
+      const reply = await wasm3.sync_wma_save({ rep_id: String(repId ?? ""), row_idx: _rowIdx(rowIdx), state });
       if (!reply.ok) console.warn("[wma] save failed:", reply.error);
     }
   });
@@ -5238,9 +5173,8 @@ var WEEK_DATE_LOCALE = "vi-VN";
 var MARGIN_PCT_DIGITS = 1;
 var tz = () => -(/* @__PURE__ */ new Date()).getTimezoneOffset();
 function managerLabel() {
-  const user = typeof window !== "undefined" ? window.__vdg_current_user : null;
   const label = t(MANAGER_ROLE_LABEL_KEY);
-  return user?.name || user?.email || (label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label);
+  return currentUserEmail() || (label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label);
 }
 function monthLabels() {
   return Array.from({ length: MONTHS_PER_YEAR }, (_, m) => new Date(MONTH_SAMPLE_YEAR, m, 1).toLocaleString("default", { month: "short" }));
@@ -5257,10 +5191,10 @@ function trendWeekLabel(week) {
   const shown = new Date(week.start_ms).toLocaleDateString(WEEK_DATE_LOCALE, { day: "2-digit", month: "2-digit" });
   return `W${week.ordinal} (${shown})`;
 }
-function composeManager(wasm2) {
+function composeManager(wasm3) {
   bindPnlComposer({
     compose: ({ shipments = [], pnlLines = [], period = "", dims = [] } = {}) => {
-      const reply = wasm2.manager_pnl_pivot({
+      const reply = wasm3.manager_pnl_pivot({
         shipments,
         pnl_lines: pnlLines,
         period,
@@ -5272,8 +5206,8 @@ function composeManager(wasm2) {
       });
       return { rows: withDims(reply.rows), grandTotals: reply.grandTotals, groupedShipments: reply.groupedShipments };
     },
-    composeBuySellBreakdown: (pnlLines, refs) => wasm2.manager_pnl_buy_sell({ pnl_lines: pnlLines || [], refs: refs || [] }).rows,
-    filterByDims: (shipments, rowDims) => wasm2.manager_pnl_drill({
+    composeBuySellBreakdown: (pnlLines, refs) => wasm3.manager_pnl_buy_sell({ pnl_lines: pnlLines || [], refs: refs || [] }).rows,
+    filterByDims: (shipments, rowDims) => wasm3.manager_pnl_drill({
       shipments: shipments || [],
       row_dims: toPairs(rowDims),
       tz_offset_min: tz(),
@@ -5283,7 +5217,7 @@ function composeManager(wasm2) {
   });
   bindAirPnlComposer({
     composeAir: ({ shipments = [], pnlLines = [], dims = [] } = {}) => {
-      const reply = wasm2.manager_air_pnl({
+      const reply = wasm3.manager_air_pnl({
         shipments,
         pnl_lines: pnlLines,
         dims,
@@ -5295,10 +5229,13 @@ function composeManager(wasm2) {
     }
   });
   bindArComposer({
-    composeAR: ({ billingEntities = [], today } = {}) => wasm2.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz() }),
-    composeAP: ({ pnlLines = [] } = {}) => wasm2.manager_ap_payables({ pnl_lines: pnlLines, tz_offset_min: tz() }),
+    // F1: fxRatesBuy is currency -> buying closing rate for `today` (131 is an asset).
+    // cash-flow.js fetches it (fetchClosingRatesBuy) before calling this; an absent/empty map
+    // leaves every row's amount at its last-booked amount_vnd, same as before this landed.
+    composeAR: ({ billingEntities = [], today, fxRatesBuy = {} } = {}) => wasm3.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz(), fx_rates_buy: fxRatesBuy }),
+    composeAP: ({ pnlLines = [] } = {}) => wasm3.manager_ap_payables({ pnl_lines: pnlLines, tz_offset_min: tz() }),
     composeTimeline: ({ billingEntities = [], shipments = [], today } = {}) => {
-      const reply = wasm2.manager_ar_timeline({
+      const reply = wasm3.manager_ar_timeline({
         billing: billingEntities,
         shipments,
         today_ms: msOf(today),
@@ -5308,7 +5245,7 @@ function composeManager(wasm2) {
     }
   });
   bindCommissionCalculator({
-    computeCommissions: (shipments, pnlLines, rules, advanceLog, periodKey) => wasm2.manager_commissions({
+    computeCommissions: (shipments, pnlLines, rules, advanceLog, periodKey) => wasm3.manager_commissions({
       shipments: shipments || [],
       pnl_lines: pnlLines || [],
       rules: asArray(rules),
@@ -5317,7 +5254,7 @@ function composeManager(wasm2) {
       tz_offset_min: tz(),
       manager_label: managerLabel()
     }).rows,
-    computeSparkline: (shipments, pnlLines, salesId, monthCount) => wasm2.manager_commission_sparkline({
+    computeSparkline: (shipments, pnlLines, salesId, monthCount) => wasm3.manager_commission_sparkline({
       shipments: shipments || [],
       pnl_lines: pnlLines || [],
       sales_id: salesId || "",
@@ -5326,14 +5263,14 @@ function composeManager(wasm2) {
       tz_offset_min: tz(),
       manager_label: managerLabel()
     }).values,
-    buildPeriodKey: (mode, date) => wasm2.manager_period_key({ mode: mode || "month", at_ms: msOf(date), tz_offset_min: tz() }).key
+    buildPeriodKey: (mode, date) => wasm3.manager_period_key({ mode: mode || "month", at_ms: msOf(date), tz_offset_min: tz() }).key
   });
   bindCommissionComposer({
-    compose: async () => ({ rules: (await wasm2.manager_commission_rules({ all: true })).rules })
+    compose: async () => ({ rules: (await wasm3.manager_commission_rules({ all: true })).rules })
   });
   bindCustomer360Composer({
     compose: (customerId, customers, shipments, billing, exceptions) => {
-      const reply = wasm2.manager_customer360({
+      const reply = wasm3.manager_customer360({
         customer_id: customerId || "",
         customers: customers || [],
         shipments: shipments || [],
@@ -5359,10 +5296,10 @@ function composeManager(wasm2) {
         }))
       };
     },
-    compose360: (shipments) => wasm2.manager_customer_mode_mix({ shipments: shipments || [] })
+    compose360: (shipments) => wasm3.manager_customer_mode_mix({ shipments: shipments || [] })
   });
   bindDashboardComposer({
-    compose: (repo3, period, salesFilter, mode = "All") => wasm2.manager_dashboard({
+    compose: (repo3, period, salesFilter, mode = "All") => wasm3.manager_dashboard({
       period: period || "",
       sales_filter: salesFilter ?? null,
       mode,
@@ -5371,32 +5308,33 @@ function composeManager(wasm2) {
     })
   });
   bindExceptionComposer({
-    computeSortedExceptions: (exceptions) => wasm2.manager_exceptions_sorted({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).exceptions,
+    computeSortedExceptions: (exceptions) => wasm3.manager_exceptions_sorted({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).exceptions,
     computeTrends: (exceptions) => {
-      const reply = wasm2.manager_exception_trends({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() });
+      const reply = wasm3.manager_exception_trends({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() });
       return {
         weeks: reply.weeks.map(trendWeekLabel),
         datasets: reply.datasets.map((ds) => ({ label: ds.label_key ? t(ds.label_key) : ds.label, data: ds.data }))
       };
     },
-    computeMttr: (exceptions) => wasm2.manager_exception_mttr({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows.map((r) => ({ type: r.typeKey ? t(r.typeKey) : r.type, avgHours: r.avgHours })),
-    computePerSalesRate: (exceptions) => wasm2.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
-    computeEscalated: (severity) => wasm2.manager_exception_escalate({ severity: severity || "" }).severity
+    computeMttr: (exceptions) => wasm3.manager_exception_mttr({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows.map((r) => ({ type: r.typeKey ? t(r.typeKey) : r.type, avgHours: r.avgHours })),
+    computePerSalesRate: (exceptions) => wasm3.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
+    computeEscalated: (severity) => wasm3.manager_exception_escalate({ severity: severity || "" }).severity
   });
   bindLedgerAggregator({
-    trialBalance: (chart, legsByAccount, asOfDate) => wasm2.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }).rows,
-    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm2.manager_ledger_pnl({
+    trialBalance: (chart, legsByAccount, asOfDate) => wasm3.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
+    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm3.manager_ledger_pnl({
       chart: chart || [],
       legs_by_account: legsByAccount || {},
       date_from: dateFrom || "",
       date_to: dateTo || ""
     }),
-    pnlMonthlyBreakdown: (chart, legsByAccount, year) => wasm2.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
-    balanceSheet: (chart, legsByAccount, asOfDate) => wasm2.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" })
+    pnlMonthlyBreakdown: (chart, legsByAccount, year) => wasm3.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
+    balanceSheet: (chart, legsByAccount, asOfDate) => wasm3.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
+    entryTotals: (legs) => wasm3.manager_ledger_entry_totals({ legs: legs || [] })
   });
   bindLedgerComposer({
-    groupChartByType: (accounts) => wasm2.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
-    filterLegs: (legs, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "" } = {}) => wasm2.manager_ledger_filter_legs({
+    groupChartByType: (accounts) => wasm3.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
+    filterLegs: (legs, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "" } = {}) => wasm3.manager_ledger_filter_legs({
       legs: legs || [],
       date_from: dateFrom || "",
       date_to: dateTo || "",
@@ -5404,26 +5342,26 @@ function composeManager(wasm2) {
       max_amount: maxAmount === "" || maxAmount == null ? null : Number(maxAmount),
       search: search || ""
     }).legs,
-    computeRunningBalances: (legs, balanceSide, opening = 0) => wasm2.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || "", opening: Number(opening) || 0 }).legs,
-    buildLedgerCSV: (rows) => wasm2.manager_ledger_csv({ rows: rows || [] }).csv
+    computeRunningBalances: (legs, balanceSide, opening = 0) => wasm3.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || "", opening: Number(opening) || 0 }).legs,
+    buildLedgerCSV: (rows) => wasm3.manager_ledger_csv({ rows: rows || [] }).csv
   });
   bindLedgerReconciler({
-    runAndRecord: (_ledgerRepo, year) => wasm2.manager_ledger_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
+    runAndRecord: (_ledgerRepo, year) => wasm3.manager_ledger_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
     // Boot calls this unawaited: a reconciliation that cannot run must never wedge the boot.
     maybeAutoReconcile: (_ledgerRepo, year) => {
-      wasm2.manager_ledger_auto_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }).catch((err) => {
+      wasm3.manager_ledger_auto_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }).catch((err) => {
         console.error("[ledger-reconciler] auto-reconcile failed:", err);
       });
     }
   });
   bindLedgerRepost({
-    planRepost: (_entityRepo, _ledgerRepo, year) => wasm2.manager_ledger_plan_repost({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
-    applyRepost: (_ledgerRepo, plan) => wasm2.manager_ledger_apply_repost({ plan }),
-    purgeOrphans: (_ledgerRepo, plan, year) => wasm2.manager_ledger_purge_orphans({ plan, year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() })
+    planRepost: (_entityRepo, _ledgerRepo, year) => wasm3.manager_ledger_plan_repost({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
+    applyRepost: (_ledgerRepo, plan) => wasm3.manager_ledger_apply_repost({ plan }),
+    purgeOrphans: (_ledgerRepo, plan, year) => wasm3.manager_ledger_purge_orphans({ plan, year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() })
   });
   bindNotificationComposer({
     computeFromEvent: ({ kind = "", id = "" } = {}, entities) => {
-      const reply = wasm2.manager_notification_from_event({
+      const reply = wasm3.manager_notification_from_event({
         kind,
         id,
         entity: entities?.get?.(`${kind}::${id}`) ?? null,
@@ -5431,25 +5369,25 @@ function composeManager(wasm2) {
       });
       return reply.notification ? stampNotification(reply.notification) : null;
     },
-    computeTimeBased: (shipments, today) => wasm2.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
+    computeTimeBased: (shipments, today) => wasm3.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
   });
   bindUserAuditLogComposer({
-    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm2.manager_audit_log_range({ records: records || [], from, to }).records,
-    sortByTimestampDesc: (records) => wasm2.manager_audit_log_sort({ records: records || [] }).records,
-    buildAuditLogCsv: (records) => wasm2.manager_audit_log_csv({ records: records || [] }).csv
+    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm3.manager_audit_log_range({ records: records || [], from, to }).records,
+    sortByTimestampDesc: (records) => wasm3.manager_audit_log_sort({ records: records || [] }).records,
+    buildAuditLogCsv: (records) => wasm3.manager_audit_log_csv({ records: records || [] }).csv
   });
   bindUsersViewComposer({
-    deriveFork: (email) => wasm2.manager_fork({ email: email || "" }).fork,
+    deriveFork: (email) => wasm3.manager_fork({ email: email || "" }).fork,
     // Allocation itself is Rust (freight/core_abstractions/fork.rs); this only feeds it the forks
     // already in use and a random starting suffix, because randomness is the browser's.
-    allocateFork: (email, users) => wasm2.fork_allocate(
+    allocateFork: (email, users) => wasm3.fork_allocate(
       email,
       JSON.stringify((users || []).map((u) => u.fork).filter(Boolean)),
       Math.floor(Math.random() * PREFIX_SEED_RANGE)
     ),
-    isValidEmail: (email) => wasm2.manager_email_valid({ email: email || "" }).valid,
-    filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm2.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
-    sortUsersByEmail: (users) => wasm2.manager_users_sort({ users: users || [] }).users
+    isValidEmail: (email) => wasm3.manager_email_valid({ email: email || "" }).valid,
+    filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm3.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
+    sortUsersByEmail: (users) => wasm3.manager_users_sort({ users: users || [] }).users
   });
 }
 function stampNotification(draft) {
@@ -5472,69 +5410,71 @@ function raise(reply) {
 function roleList(roles) {
   return (Array.isArray(roles) ? roles : [roles]).filter(Boolean);
 }
-function composeGovernance(wasm2) {
+function composeGovernance(wasm3) {
   bindRouteGuard({
     routeGuard: (route, roles) => {
-      const verdict = wasm2.governance_route_guard({ route: route ?? "", roles: roleList(roles) });
+      const verdict = wasm3.governance_route_guard({ route: route ?? "", roles: roleList(roles) });
       return verdict.allow ? "allow" : { redirect: verdict.redirect, reason: verdict.reason };
     },
-    homeRouteForRole: (roles) => wasm2.governance_home_route({ roles: roleList(roles) }).route,
-    filterSidebarItems: (items, roles) => wasm2.governance_filter_sidebar({ items: items || [], roles: roleList(roles) }).items,
-    resolveUserRoles: (record) => wasm2.governance_user_roles({ record: record ?? null }).roles,
-    normalizeRole: (role) => wasm2.governance_normalize_role({ role: role ?? null }).role,
-    // The boot-populated snapshot. Sign-in resolves the roles from the staff table before repo-init
-    // exists — same source, earlier — so both mirrors are read.
-    currentUserRoles: () => {
-      const fromBoot = window.__vdg_current_user?.roles;
-      return fromBoot?.length ? fromBoot : window.__vdg_session_roles || [];
-    },
-    currentUserRole: () => window.__vdg_current_user?.role || ROLE_READ_ONLY,
-    currentUserId: () => window.__vdg_current_user?.fork || UNKNOWN_USER_ID
+    homeRouteForRole: (roles) => wasm3.governance_home_route({ roles: roleList(roles) }).route,
+    filterSidebarItems: (items, roles) => wasm3.governance_filter_sidebar({ items: items || [], roles: roleList(roles) }).items,
+    resolveUserRoles: (record) => wasm3.governance_user_roles({ record: record ?? null }).roles,
+    normalizeRole: (role) => wasm3.governance_normalize_role({ role: role ?? null }).role,
+    // The Rust principal (session_principal, via auth_session_roles) — ONE source, not a boot
+    // mirror plus a browser-memory fallback.
+    currentUserRoles: () => wasm3.auth_session_roles({}).roles,
+    currentUserRole: () => wasm3.auth_session_roles({}).roles[0] || ROLE_READ_ONLY,
+    currentUserId: () => wasm3.auth_session_roles({}).token || UNKNOWN_USER_ID,
+    currentUserEmail: () => wasm3.auth_session_roles({}).email || ""
+  });
+  bindActionGuard({
+    can: (action) => wasm3.governance_action_guard({ action, roles: [] }).allow,
+    allowedActions: () => wasm3.governance_allowed_actions({ roles: [] }).actions
   });
   bindWorkspaceSettings({
-    readSettings: async () => (await wasm2.governance_load_settings({ local_only: true })).settings,
-    loadWorkspaceSettings: async (_driveApi, wsName) => (await wasm2.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
-    saveWorkspaceSettings: async (_driveApi, _wsName, settings) => {
-      const saved = raise(await wasm2.governance_save_settings({ settings }));
+    readSettings: async () => (await wasm3.governance_load_settings({ local_only: true })).settings,
+    loadWorkspaceSettings: async (_api2, wsName) => (await wasm3.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
+    saveWorkspaceSettings: async (_api2, _wsName, settings) => {
+      const saved = raise(await wasm3.governance_save_settings({ settings }));
       window.__vdg_workspace_settings = saved.settings;
       return saved.settings;
     }
   });
   bindPeriodClose({
-    getCurrentPeriodLock: async (_repo2, period) => {
-      const lock = await wasm2.governance_find_lock({ period_key: period ?? null });
+    getCurrentPeriodLock: async (_repo, period) => {
+      const lock = await wasm3.governance_find_lock({ period_key: period ?? null });
       return lock.locked ? { locked: true, record: lock.record } : { locked: false };
     },
-    loadClosedPeriods: async () => (await wasm2.governance_locked_periods({})).keys,
-    listCloseRecords: async () => (await wasm2.governance_close_records({})).records,
-    runPreCloseChecks: async (_repo2, period) => raise(await wasm2.governance_pre_close_checks({ period })).checks,
-    closePeriod: async (_repo2, period, user, checklist, ledgerRepo3 = null) => raise(await wasm2.governance_close_period({
+    loadClosedPeriods: async () => (await wasm3.governance_locked_periods({})).keys,
+    listCloseRecords: async () => (await wasm3.governance_close_records({})).records,
+    runPreCloseChecks: async (_repo, period) => raise(await wasm3.governance_pre_close_checks({ period })).checks,
+    closePeriod: async (_repo, period, user, checklist, ledgerRepo3 = null) => raise(await wasm3.governance_close_period({
       period,
       user: user ?? null,
       checklist: checklist ?? [],
       with_ledger: !!ledgerRepo3
     })),
-    reopenPeriod: async (_repo2, period, reason, user) => raise(await wasm2.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
+    reopenPeriod: async (_repo, period, reason, user) => raise(await wasm3.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
   });
   bindPeriodLockRegistry({
-    readLockedPeriods: async () => (await wasm2.governance_locked_periods({})).locks,
-    lockedPeriodKeys: async () => (await wasm2.governance_locked_periods({})).keys,
-    findLock: async (_repo2, periodKey) => (await wasm2.governance_find_lock({ period_key: periodKey ?? null })).record ?? null,
-    lockPeriod: async (_repo2, periodKey, user) => raise(await wasm2.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
-    unlockPeriod: async (_repo2, periodKey) => raise(await wasm2.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
+    readLockedPeriods: async () => (await wasm3.governance_locked_periods({})).locks,
+    lockedPeriodKeys: async () => (await wasm3.governance_locked_periods({})).keys,
+    findLock: async (_repo, periodKey) => (await wasm3.governance_find_lock({ period_key: periodKey ?? null })).record ?? null,
+    lockPeriod: async (_repo, periodKey, user) => raise(await wasm3.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
+    unlockPeriod: async (_repo, periodKey) => raise(await wasm3.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
   });
   bindPeriodOpeningBalance({
-    previousPeriod: (period) => wasm2.governance_period_math({ period: period ?? null }).previous,
-    nextPeriod: (period) => wasm2.governance_period_math({ period: period ?? null }).next,
+    previousPeriod: (period) => wasm3.governance_period_math({ period: period ?? null }).previous,
+    nextPeriod: (period) => wasm3.governance_period_math({ period: period ?? null }).next,
     periodBounds: (period) => {
-      const math = wasm2.governance_period_math({ period: period ?? null });
+      const math = wasm3.governance_period_math({ period: period ?? null });
       return math.bounds_start ? { start: math.bounds_start, end: math.bounds_end } : null;
     },
-    dayBefore: (date) => wasm2.governance_period_math({ date: date ?? null }).day_before,
-    periodOfDate: (date) => wasm2.governance_period_math({ date: date ?? null }).period_of_date,
-    isPeriodStart: (date) => wasm2.governance_period_math({ date: date ?? null }).is_period_start,
+    dayBefore: (date) => wasm3.governance_period_math({ date: date ?? null }).day_before,
+    periodOfDate: (date) => wasm3.governance_period_math({ date: date ?? null }).period_of_date,
+    isPeriodStart: (date) => wasm3.governance_period_math({ date: date ?? null }).is_period_start,
     openingBalanceFor: (closeRecords, period, accountCode) => {
-      const found = wasm2.governance_opening_balance({
+      const found = wasm3.governance_opening_balance({
         close_records: closeRecords || [],
         period: period ?? null,
         account_code: accountCode ?? ""
@@ -5543,49 +5483,16 @@ function composeGovernance(wasm2) {
     }
   });
   bindDefaultCurrencyLock({
-    canEditDefaultCurrency: (shipments, period, periodClosed = false) => wasm2.governance_can_edit_default_currency({
+    canEditDefaultCurrency: (shipments, period, periodClosed = false) => wasm3.governance_can_edit_default_currency({
       shipments: shipments || [],
       period: period ?? null,
       period_closed: !!periodClosed
     }),
-    periodOf: (date) => wasm2.governance_period_of({ date: date == null ? null : String(date) }).period
+    periodOf: (date) => wasm3.governance_period_of({ date: date == null ? null : String(date) }).period
   });
   bindErrorLogStore({
-    listErrorRecords: async () => (await wasm2.governance_error_records({})).records,
-    purgeErrorMonth: async (_driveApi, month) => raise(await wasm2.governance_purge_error_month({ month }))
-  });
-  bindMasterMerge({
-    diffFields: (target, source) => wasm2.governance_merge_diff({ target, source }).diffs,
-    mergeRecords: (target, source) => wasm2.governance_merge_records({ target, source }).record,
-    repointRefs: async (_repo2, masterKind, sourceId, targetId) => raise(await wasm2.governance_repoint_refs({
-      master_kind: masterKind,
-      source_id: sourceId,
-      target_id: targetId
-    })).updated
-  });
-  bindWorkspaceBootstrap({
-    bootstrapAclTargetFolders: (_driveApi, wsRootId) => {
-      if (isServerBackend()) return Promise.resolve({ succeeded: 0, failed: 0, errors: [] });
-      return wasm2.governance_bootstrap_acl_folders({ root_id: wsRootId ?? "" });
-    }
-  });
-  bindFirstRunProvision({
-    isAlreadyProvisionedLocally: async () => {
-      if (isServerBackend()) return true;
-      return (await wasm2.governance_is_already_provisioned({})).provisioned;
-    },
-    ensureWorkspaceRoot: async (_driveApi, workspace) => {
-      if (isServerBackend()) return { rootId: "root", created: false };
-      const reply = await wasm2.governance_ensure_workspace_root({ workspace: workspace ?? "" });
-      if (reply.second_workspace_forbidden) throw new SecondWorkspaceForbiddenError(reply.evidence);
-      return { rootId: raise(reply).root_id, created: reply.created };
-    },
-    runFirstRunProvision: async (_driveApi, workspace) => {
-      if (isServerBackend()) return { rootId: "root" };
-      const reply = await wasm2.governance_first_run_provision({ workspace: workspace ?? "" });
-      if (reply.second_workspace_forbidden) throw new SecondWorkspaceForbiddenError(reply.evidence);
-      return { rootId: raise(reply).root_id };
-    }
+    listErrorRecords: async () => (await wasm3.governance_error_records({})).records,
+    purgeErrorMonth: async (_api2, month) => raise(await wasm3.governance_purge_error_month({ month }))
   });
 }
 
@@ -5595,16 +5502,16 @@ var LICENSE_STATE_INVALID = "invalid";
 var LICENSE_STATE_NETWORK = "network";
 var LICENSE_STATE_GRACE = "grace";
 var LICENSE_STATE_BLOCKED = "blocked";
-var _impl13 = null;
+var _impl14 = null;
 function bindLicenseGate(impl) {
-  _impl13 = impl;
+  _impl14 = impl;
 }
-function _i11() {
-  if (!_impl13) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
-  return _impl13;
+function _i12() {
+  if (!_impl14) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
+  return _impl14;
 }
-var resolveLicenseState = (...a) => _i11().resolveLicenseState(...a);
-var errorKindMessage = (...a) => _i11().errorKindMessage(...a);
+var resolveLicenseState = (...a) => _i12().resolveLicenseState(...a);
+var errorKindMessage = (...a) => _i12().errorKindMessage(...a);
 
 // output/web/js.tmp/bootstrap/compose-ui/flows-admin.js
 var BACKUP_PROGRESS_EVENT = "vdg:backup-progress";
@@ -5613,68 +5520,59 @@ function unwrap(reply, pick) {
   if (!reply.ok) throw new Error(t(reply.error));
   return pick(reply);
 }
-function composeFlowsAdmin(wasm2) {
+function composeFlowsAdmin(wasm3) {
   bindLicenseGate({
-    resolveLicenseState: () => wasm2.flows_license_resolve(EMPTY),
-    errorKindMessage: (kind, translate = t) => translate(wasm2.flows_license_error_key({ error_kind: kind ?? null }).key)
+    resolveLicenseState: () => wasm3.flows_license_resolve(EMPTY),
+    errorKindMessage: (kind, translate = t) => translate(wasm3.flows_license_error_key({ error_kind: kind ?? null }).key)
   });
   bindBackupExporter({
     // The operator emits progress as an i18n KEY plus its arguments; the translation is the ui's.
-    exportWorkspace: async (_repo2, _driveApi, onProgress = () => {
+    exportWorkspace: async (onProgress = () => {
     }) => {
       const relay = (e) => onProgress(e.detail.pct, t(e.detail.key, e.detail.args));
       window.addEventListener(BACKUP_PROGRESS_EVENT, relay);
       try {
-        return unwrap(await wasm2.flows_export_workspace(EMPTY), (r) => r.filename);
+        return unwrap(await wasm3.flows_export_workspace(EMPTY), (r) => r.filename);
       } finally {
         window.removeEventListener(BACKUP_PROGRESS_EVENT, relay);
       }
     }
   });
   bindUserProvisioning({
-    inviteSales: async (email, name, _driveApi, _repo2, workspaceRootId) => unwrap(
-      await wasm2.flows_invite_sales({ email, name: name ?? null, workspace_root_id: workspaceRootId ?? null }),
-      (r) => r.user
-    ),
-    promoteToManager: async (userId, _driveApi, _repo2, adminFolderId) => unwrap(
-      await wasm2.flows_promote_to_manager({ user_id: String(userId), admin_folder_id: adminFolderId ?? null }),
-      (r) => r.user
-    ),
-    disableUser: async (userId) => unwrap(await wasm2.flows_disable_user({ user_id: String(userId) }), (r) => r.user),
-    editProfile: async (userId, fields) => unwrap(await wasm2.flows_edit_profile({ user_id: String(userId), fields: fields || {} }), (r) => r.user)
+    editProfile: async (userId, fields) => unwrap(await wasm3.flows_edit_profile({ user_id: String(userId), fields: fields || {} }), (r) => r.user)
   });
   bindLedgerPoster({
     buildEntriesFromShipment: (shipment, chart, rules) => unwrap(
-      wasm2.flows_build_entries_from_shipment({ source: shipment || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
+      wasm3.flows_build_entries_from_shipment({ source: shipment || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
       (r) => r.entries
     ),
     buildEntriesFromCommission: (commissionEntry, chart, rules) => unwrap(
-      wasm2.flows_build_entries_from_commission({ source: commissionEntry || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
+      wasm3.flows_build_entries_from_commission({ source: commissionEntry || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
       (r) => r.entries
     ),
     buildReversalEntry: (legs, chart, actorId) => unwrap(
-      wasm2.flows_build_reversal_entry({ legs: legs || [], chart_of_accounts: chart || [], actor_id: actorId ?? null }),
+      wasm3.flows_build_reversal_entry({ legs: legs || [], chart_of_accounts: chart || [], actor_id: actorId ?? null }),
       (r) => r.entry
     ),
-    postShipment: async (shipment) => unwrap(await wasm2.flows_post_shipment({ shipment: shipment || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
-    postCommission: async (commissionEntry) => unwrap(await wasm2.flows_post_commission({ commission_entry: commissionEntry || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
+    postShipment: async (shipment) => unwrap(await wasm3.flows_post_shipment({ shipment: shipment || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
+    postCommission: async (commissionEntry) => unwrap(await wasm3.flows_post_commission({ commission_entry: commissionEntry || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
     postReversal: async (entryId, actorId) => unwrap(
-      await wasm2.flows_post_reversal({ entry_id: String(entryId), actor_id: actorId ?? null }),
+      await wasm3.flows_post_reversal({ entry_id: String(entryId), actor_id: actorId ?? null }),
       (r) => ({ posted: r.posted, entryIds: r.entry_ids })
     )
   });
   bindPnlCommit({
-    commitPnlReport: async (report) => unwrap(await wasm2.flows_commit_pnl_report({ report: report || {} }), (r) => ({
+    commitPnlReport: async (report) => unwrap(await wasm3.flows_commit_pnl_report({ report: report || {} }), (r) => ({
       created_shipments: r.created_shipments,
       created_lines: r.created_lines,
       new_customers: r.new_customers,
       new_carriers: r.new_carriers
     })),
     computeAndPersistSalesCommission: async (shipment, pnlLines) => unwrap(
-      await wasm2.flows_sales_commission({ shipment: shipment || {}, pnl_lines: pnlLines || [] }),
+      await wasm3.flows_sales_commission({ shipment: shipment || {}, pnl_lines: pnlLines || [] }),
       (r) => r.persisted
     ),
-    slugify: (text) => wasm2.flows_slugify({ text: text ?? null }).slug
+    slugify: (text) => wasm3.flows_slugify({ text: text ?? null }).slug
   });
 }
 
@@ -5683,44 +5581,44 @@ var ENTITY_CHANGED_EVENT = "vdg:entity-changed";
 var KIND_USER = "user";
 var REASON_CANCELLED = "cancelled";
 var EMPTY2 = {};
-function composeFlows(wasm2) {
+function composeFlows(wasm3) {
   bindSalesRepDerivation({
-    deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) => wasm2.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
-    selfRepCandidate: (roles, token) => wasm2.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
-    customerRepFor: (customerName, customers) => wasm2.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep
+    deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) => wasm3.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
+    selfRepCandidate: (roles, token) => wasm3.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
+    customerRepFor: (customerName, customers) => wasm3.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep
   });
   bindAirRateCalculator({
-    computeChargeableKg: (actual, l, w, h) => wasm2.flows_chargeable_kg({ actual, l, w, h }).chargeable_kg,
+    computeChargeableKg: (actual, l, w, h) => wasm3.flows_chargeable_kg({ actual, l, w, h }).chargeable_kg,
     computeFreight: (actual, l, w, h, breaks) => {
-      const r = wasm2.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
+      const r = wasm3.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
       return r.matched ? r.freight_total : null;
     },
     calcResult: (actual, l, w, h, breaks) => {
-      const r = wasm2.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
+      const r = wasm3.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
       return r.matched ? { chargeableKg: r.chargeable_kg, tier: r.tier, freightTotal: r.freight_total } : null;
     }
   });
   bindFsmIngest({
-    registerFsmEntity: (ref, state) => wasm2.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
-    rehydrateFsmStates: () => wasm2.flows_rehydrate_fsm(EMPTY2),
-    persistAdvancedState: (_repo2, ref, state) => wasm2.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null })
+    registerFsmEntity: (ref, state) => wasm3.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
+    rehydrateFsmStates: () => wasm3.flows_rehydrate_fsm(EMPTY2),
+    persistAdvancedState: (_repo, ref, state) => wasm3.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null })
   });
   bindFsmAutoAdvance({
-    autoAdvanceShipment: async (_repo2, shipment) => (await wasm2.flows_auto_advance({ shipment: shipment || {} })).advanced_to ?? null
+    autoAdvanceShipment: async (_repo, shipment) => (await wasm3.flows_auto_advance({ shipment: shipment || {} })).advanced_to ?? null
   });
   bindJobNoGen({
-    assignJobNo: async (_repo2, repCode) => (await wasm2.flows_assign_job_no({ rep_code: String(repCode || "") })).job_no,
-    formatJobNo: (repCode, localSeq) => wasm2.flows_format_job_no({ rep_code: String(repCode || ""), local_seq: Number(localSeq) || 0 }).job_no,
-    nextLocalSeq: async (_repo2, repCode) => (await wasm2.flows_next_local_seq({ rep_code: String(repCode || "") })).seq,
-    repoMaxSeq: async (_repo2, repCode) => (await wasm2.flows_repo_max_seq({ rep_code: String(repCode || "") })).seq
+    assignJobNo: async (_repo, repCode) => (await wasm3.flows_assign_job_no({ rep_code: String(repCode || "") })).job_no,
+    formatJobNo: (repCode, localSeq) => wasm3.flows_format_job_no({ rep_code: String(repCode || ""), local_seq: Number(localSeq) || 0 }).job_no,
+    nextLocalSeq: async (_repo, repCode) => (await wasm3.flows_next_local_seq({ rep_code: String(repCode || "") })).seq,
+    repoMaxSeq: async (_repo, repCode) => (await wasm3.flows_repo_max_seq({ rep_code: String(repCode || "") })).seq
   });
   bindRepCodeRegistry({
-    isValidRepCode: (code) => wasm2.flows_rep_code_valid({ code: code ?? null }).valid,
-    assignRepCode: async () => (await wasm2.flows_assign_rep_code(EMPTY2)).code,
-    ensureRepCode: async (user) => (await wasm2.flows_ensure_rep_code({ user: user || {} })).code,
+    isValidRepCode: (code) => wasm3.flows_rep_code_valid({ code: code ?? null }).valid,
+    assignRepCode: async () => (await wasm3.flows_assign_rep_code(EMPTY2)).code,
+    ensureRepCode: async (user) => (await wasm3.flows_ensure_rep_code({ user: user || {} })).code,
     // The form's existing contract is a throw carrying the message it shows.
     assertRepCodeAssignable: async (code, ownerId) => {
-      const verdict = await wasm2.flows_assert_rep_code({ code: code ?? null, owner_id: ownerId ?? null });
+      const verdict = await wasm3.flows_assert_rep_code({ code: code ?? null, owner_id: ownerId ?? null });
       if (!verdict.ok) throw new Error(t(verdict.error_key));
     }
   });
@@ -5730,15 +5628,15 @@ function composeFlows(wasm2) {
     // owns shaping, colour-hashing and the 5-minute cache.
     getActiveSalesReps: async () => {
       const { users } = await listUsers({ role: ROLE_SALES_REP });
-      return (await wasm2.flows_active_sales_reps({ rows: users || [], force: false })).reps;
+      return (await wasm3.flows_active_sales_reps({ rows: users || [], force: false })).reps;
     },
-    getSalesRepByPrefix: (reps, prefix) => wasm2.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
-    clearRegistryCache: () => wasm2.flows_clear_sales_registry(EMPTY2)
+    getSalesRepByPrefix: (reps, prefix) => wasm3.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
+    clearRegistryCache: () => wasm3.flows_clear_sales_registry(EMPTY2)
   });
   window.addEventListener(ENTITY_CHANGED_EVENT, (e) => {
-    if (e.detail?.kind === KIND_USER) wasm2.flows_clear_sales_registry(EMPTY2);
+    if (e.detail?.kind === KIND_USER) wasm3.flows_clear_sales_registry(EMPTY2);
   });
-  const analytics = (shipments, lines) => wasm2.flows_sales_analytics({ shipments: shipments || [], lines: lines || [] });
+  const analytics = (shipments, lines) => wasm3.flows_sales_analytics({ shipments: shipments || [], lines: lines || [] });
   bindSalesAnalyticsCompute({
     computeKpis: (shipments, lines) => analytics(shipments, lines).kpis,
     computeLeaderboard: (shipments, lines) => analytics(shipments, lines).leaderboard,
@@ -5751,51 +5649,54 @@ function composeFlows(wasm2) {
     commissionPct: analytics([], []).commission_pct
   });
   bindShipmentStateAliases({
-    ensureShipmentStateAliases: async () => (await wasm2.flows_ensure_state_aliases(EMPTY2)).rows
+    ensureShipmentStateAliases: async () => (await wasm3.flows_ensure_state_aliases(EMPTY2)).rows
   });
   bindShipmentStateMigrator({
-    migrateLegacyShipmentState: async (_repo2, aliasRows) => {
-      const r = await wasm2.flows_migrate_shipment_states({ alias_rows: aliasRows || [] });
+    migrateLegacyShipmentState: async (_repo, aliasRows) => {
+      const r = await wasm3.flows_migrate_shipment_states({ alias_rows: aliasRows || [] });
       return { found: r.found, migrated: r.migrated, skippedUnresolved: r.skipped_unresolved };
     }
   });
   bindShipmentVoidDelete({
-    chooseShipmentAffordance: (shipment) => wasm2.flows_shipment_affordance({ shipment: shipment || {} }).affordance,
-    // Two steps on purpose: Rust decides what the manager may do, the view asks, Rust acts.
-    runShipmentAffordance: async ({ shipment, isManager, confirm }) => {
-      const plan = wasm2.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(isManager) });
+    chooseShipmentAffordance: (shipment) => wasm3.flows_shipment_affordance({ shipment: shipment || {} }).affordance,
+    // Two steps on purpose: Rust decides what the caller may do, the view asks, Rust acts.
+    runShipmentAffordance: async ({ shipment, canVoid, confirm }) => {
+      const plan = wasm3.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(canVoid) });
       if (!plan.confirmable) return { mutated: false, reason: plan.reason };
-      const ok2 = await confirm(plan.affordance);
-      if (!ok2) return { mutated: false, reason: REASON_CANCELLED };
-      const applied = await wasm2.flows_void_apply({ shipment: shipment || {}, affordance: plan.affordance });
+      const ok = await confirm(plan.affordance);
+      if (!ok) return { mutated: false, reason: REASON_CANCELLED };
+      const applied = await wasm3.flows_void_apply({ shipment: shipment || {}, affordance: plan.affordance });
       if (!applied.ok) throw new Error(applied.error);
       return { mutated: true, affordance: plan.affordance };
     }
   });
   bindQuoteOrchestrator({
-    generateQuoteId: async (_repo2, salesRepId) => {
-      const r = await wasm2.flows_generate_quote_id({ sales_rep_id: salesRepId ?? null });
+    generateQuoteId: async (_repo, salesRepId) => {
+      const r = await wasm3.flows_generate_quote_id({ sales_rep_id: salesRepId ?? null });
       if (!r.ok) throw new Error(r.error);
       return r.id;
     },
-    saveDraft: async (_repo2, salesRepId, formData) => {
-      const r = await wasm2.flows_save_quote_draft({ sales_rep_id: salesRepId ?? null, form: formData || {} });
+    // F-41: actorId is provenance (created_by, nothing gates on it); salesRepId is the derived
+    // commercial owner (SalesRepDerivation) — the two diverge whenever someone other than the
+    // customer's assigned rep keys the quote in.
+    saveDraft: async (_repo, actorId, salesRepId, formData) => {
+      const r = await wasm3.flows_save_quote_draft({ actor_id: actorId ?? null, sales_rep_id: salesRepId ?? null, form: formData || {} });
       if (!r.ok) throw new Error(r.error);
       return { id: r.id, quote: r.quote, pending_manager_approval: r.pending_manager_approval };
     },
-    sendToCustomer: async (_repo2, quote) => {
-      const r = await wasm2.flows_send_quote({ quote: quote || {} });
+    sendToCustomer: async (_repo, quote) => {
+      const r = await wasm3.flows_send_quote({ quote: quote || {} });
       if (!r.ok) throw new Error(r.error);
       return r.quote;
     },
-    markAccepted: async (_repo2, quote) => {
-      const r = await wasm2.flows_accept_quote({ quote: quote || {} });
+    markAccepted: async (_repo, quote) => {
+      const r = await wasm3.flows_accept_quote({ quote: quote || {} });
       if (!r.ok) throw new Error(r.error);
       return r.quote;
     },
-    checkAlreadyConverted: async (_repo2, quoteId) => (await wasm2.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null
+    checkAlreadyConverted: async (_repo, quoteId) => (await wasm3.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null
   });
-  composeFlowsAdmin(wasm2);
+  composeFlowsAdmin(wasm3);
 }
 
 // output/web/js.tmp/implementations/storage/implementations/repos/fx-rate-repo.js
@@ -5806,20 +5707,22 @@ var FxRateStoreRepo = class {
     return repo3;
   }
   _wasm() {
-    const wasm2 = window.__vdg_wasm;
-    if (!wasm2?.fx_rate_get) throw new Error("WASM not ready");
-    return wasm2;
+    const wasm3 = window.__vdg_wasm;
+    if (!wasm3?.fx_rate_get) throw new Error("WASM not ready");
+    return wasm3;
   }
   async _ensureAllMonthsLoaded() {
-    const wasm2 = this._wasm();
+    const wasm3 = this._wasm();
     for (const { ym, content } of await this._repo().fx_months_to_ingest()) {
-      wasm2.fx_rate_ingest_month(ym, content);
+      wasm3.fx_rate_ingest_month(ym, content);
     }
   }
-  async getRate(dateStr, pair) {
+  /** direction: 'Buy'|'Sell' — Circular 200 values assets at the buying rate and liabilities
+   *  at the selling rate; every caller states which side it wants. Returns the resolved rate. */
+  async getRate(dateStr, pair, direction) {
     await this._ensureAllMonthsLoaded();
     try {
-      return this._wasm().fx_rate_get(dateStr, pair);
+      return this._wasm().fx_rate_get(dateStr, pair, direction);
     } catch (err) {
       throw new Error(`FxRateNotFound: ${err.message}`);
     }
@@ -5912,8 +5815,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=cb53bcc8", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=cb53bcc8", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=a232d5f4", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=a232d5f4", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -5948,14 +5851,14 @@ function composePlatformUi() {
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/index.js
-function composeUi(wasm2) {
-  composeAuth(wasm2);
-  composeCache(wasm2);
-  composeData(wasm2);
-  composeSync(wasm2);
-  composeManager(wasm2);
-  composeGovernance(wasm2);
-  composeFlows(wasm2);
+function composeUi(wasm3) {
+  composeAuth(wasm3);
+  composeCache(wasm3);
+  composeData(wasm3);
+  composeSync(wasm3);
+  composeManager(wasm3);
+  composeGovernance(wasm3);
+  composeFlows(wasm3);
   composeStorageUi();
   composePlatformUi();
 }
@@ -6162,10 +6065,10 @@ function _forkPrefixFromSession() {
   const token = currentSalesRepId();
   return token && !SENTINEL_TOKEN.test(token) ? token.toLowerCase() : null;
 }
-var IDB_OP_TIMEOUT_MS = 8e3;
+var CACHE_OP_TIMEOUT_MS = 8e3;
 var PREFS_META_KEY2 = "preferences";
 var REPO_HANG_SEAM_KEY = "vdg.test.repoHangMs";
-var STEP_OPEN_DB = "openVdgDb";
+var STEP_OPEN_DB = "open-store";
 var STEP_WASM_INIT = "wasm-init";
 var STEP_BUILD_REPO = "build-repo-stack";
 var STEP_LICENSE_GATE = "license-gate";
@@ -6184,7 +6087,7 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   setStoreScope(user.email);
   const serverApi = storageApi();
   const ioPort2 = createIoPort(serverApi, user.email, _forkPrefixFromSession());
-  safeAwait(ioPort2.cache_get_meta("__warm"), IDB_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm").then((r) => {
+  safeAwait(ioPort2.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm").then((r) => {
     if (!r.ok) window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { reason: "sqlite-warm timeout" } }));
   });
   const repo3 = new wasmMod.WasmEntityRepo(ioPort2);
@@ -6192,16 +6095,9 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   window.__vdg_server_api = serverApi;
   window.__vdg_store = localStore();
   window.__vdg_io = ioPort2;
-  const roles = currentRoles();
-  window.__vdg_current_user = {
-    email: user.email,
-    role: roles[0] || ROLE_READ_ONLY,
-    roles,
-    fork: forkId(user.email)
-  };
-  wasmMod.freight_app_init(createPlatform({ repo: repo3, currentUser: () => window.__vdg_current_user || null }));
+  wasmMod.freight_app_init(createPlatform({ repo: repo3 }));
   composeUi(wasmMod);
-  await safeAwait(rehydrateFsmStates(repo3), IDB_OP_TIMEOUT_MS, null, "fsm-rehydrate");
+  await safeAwait(rehydrateFsmStates(repo3), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
   fsm.dispatch(BootEvent.REPO_BUILT);
   stepRef.value = STEP_LICENSE_GATE;
   const app = document.getElementById("app");
@@ -6223,7 +6119,7 @@ async function _deferredInit(user, db, serverApi, repo3) {
     if (store) {
       const prefsResult = await safeAwait(
         store.cache_get_meta(PREFS_META_KEY2),
-        IDB_OP_TIMEOUT_MS,
+        CACHE_OP_TIMEOUT_MS,
         null,
         "deferred:prefs"
       );
@@ -6242,21 +6138,22 @@ async function _deferredInit(user, db, serverApi, repo3) {
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
+    const { LedgerStoreRepo } = await import("./ledger-repo-37YKKRYR.js");
+    const ledgerRepo3 = new LedgerStoreRepo();
+    window.__vdg_ledger_repo = ledgerRepo3;
+    bindLedgerRepo(ledgerRepo3);
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
-    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-ZGFUCQZ3.js");
-    const userRepo2 = new UserServerRepo(userAuditLog);
-    window.__vdg_user_repo = userRepo2;
-    userRepo2.get(user.email).then((record) => {
-      const resolved = (Array.isArray(record?.roles) ? record.roles : []).filter(Boolean);
-      window.__vdg_current_user.roles = resolved;
-      window.__vdg_current_user.role = resolved[0] || resolveUserRole(record);
-      window.__vdg_current_user.fork = record?.fork || forkId(user.email);
-    }).catch(() => {
+    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-R7C7YGLU.js");
+    window.__vdg_user_repo = new UserServerRepo(userAuditLog);
+    wasm2().auth_resolve_principal({ email: user.email }).catch(() => {
     });
   } catch (err) {
     console.warn("[VDG] deferred init error:", err.message);
   }
+}
+function wasm2() {
+  return window.__vdg_wasm;
 }
 
 // output/web/js.tmp/bootstrap/boot/repo-diag.js
@@ -6478,11 +6375,11 @@ async function loadWasmModule() {
   } catch (err) {
     if (err instanceof WebAssembly.LinkError || err?.name === "LinkError" || String(err).includes("LinkError")) {
       console.warn("[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...");
-      if ("caches" in window) {
+      if (typeof window !== "undefined" && "caches" in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
-      if (navigator.serviceWorker) {
+      if (typeof navigator !== "undefined" && navigator.serviceWorker) {
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map((r) => r.unregister()));
       }
@@ -6578,7 +6475,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-4VAU2JBT.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-765JO3CQ.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6586,7 +6483,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-VT77RYUX.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-4WEU7Z57.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;
@@ -6636,8 +6533,7 @@ function bootApp(user, db) {
   initWmaListener();
   initConflictModal();
   initMergeToast();
-  const _repId = currentSalesRepId() || "";
-  const defaultRoute = !hasRole(ROLE_MANAGER) && _repId && _repId !== "NOT_PROVISIONED" && _repId !== "OTHER" ? "/shipments/new" : homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
+  const defaultRoute = homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);
   if (window.__vdg_wasm?.vdg_version) {
     console.log("[VDG] WASM version:", window.__vdg_wasm.vdg_version());
@@ -6674,10 +6570,10 @@ async function main() {
   }
   try {
     await composeStorage();
-    const wasm2 = await wasmReady;
-    wasm2.freight_app_init(createPlatform({ repo: null, currentUser: () => window.__vdg_current_user || null }));
+    const wasm3 = await wasmReady;
+    wasm3.freight_app_init(createPlatform({ repo: null }));
     configureAuthPlatform({ renderLoginPage });
-    composeAuth(wasm2);
+    composeAuth(wasm3);
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
     if (err?.name === "RoleProbeTimeoutError") {

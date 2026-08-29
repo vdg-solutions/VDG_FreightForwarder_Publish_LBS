@@ -1,7 +1,5 @@
 // storage-layout.js — where things live in the workspace tree, as every adapter agrees on it.
 
-export const FOLDER_MIME = 'application/vnd.google-apps.folder';
-
 // F-37-02: the revenue audit trail is deliberately NOT here. A log inherits the ACL of the thing
 // it describes, and revenue history describes a record CS was never granted — listing it as a
 // shared log would move `selling_amount: 1000 -> 1200` into the folder CS reads, undoing the split
@@ -9,7 +7,6 @@ export const FOLDER_MIME = 'application/vnd.google-apps.folder';
 // The store names are freight_app/core_abstractions/audit_stores.rs; adding the revenue one here
 // is the one edit that silently undoes the split, so it gets read carefully.
 export const LOG_KINDS  = ['error_log', 'audit_log'];
-export const USERS_PATH = 'users';
 
 // Only the kinds whose home is neither this user's fork nor the storage registry. Every table
 // with a registry row (cache_policy::PER_RECORD_REGISTRY) is addressed by PATH through the

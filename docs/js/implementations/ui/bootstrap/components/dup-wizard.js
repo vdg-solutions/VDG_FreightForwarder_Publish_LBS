@@ -44,15 +44,6 @@ class VdgDupWizard extends LitElement {
     this._clusters = this._clusters.filter((c) => c !== pair);
   }
 
-  async _merge(pair) {
-    // Delegate to masters-customers openMergeModal
-    try {
-      const { openMergeModal } = await import('../views/masters-customers.js');
-      openMergeModal(pair.a, pair.b, this.repo);
-    } catch { /* masters-customers may not export this */ }
-    this._clusters = this._clusters.filter((c) => c !== pair);
-  }
-
   _close() {
     this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true }));
     this.remove();
@@ -89,10 +80,6 @@ class VdgDupWizard extends LitElement {
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <button @click="${() => this._merge(pair)}"
-                          class="flex-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    ${t('dup_wizard.action.merge')}
-                  </button>
                   <button @click="${() => this._suppress(pair)}"
                           class="flex-1 px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition">
                     ${t('dup_wizard.action.not_duplicate')}

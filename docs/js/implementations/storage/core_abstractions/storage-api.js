@@ -1,15 +1,24 @@
-// storage-api.js — port: the file-tree API the app's operators may drive directly (a workspace
-// root, folders by name, a file's bytes with its etag, create-or-update, sharing). It is
-// Drive-shaped because that is the contract every store above the IoPort was written against;
-// the storage bootstrap binds the object — the Drive REST transport or vdg-server's shim under
-// the same tree helpers. Operators import THIS, never an adapter.
+// storage-api.js — port: the leftover file-tree API a couple of pre-wasm callers still import
+// directly. It used to front the Drive REST transport or vdg-server's server-drive-shim.js under
+// the same tree helpers; both are gone now that CharterDB is the only backend. Operators import
+// THIS, never an adapter.
+//
+// CharterDB has no folder tree: findWorkspaceRoot/findFolder/createFolder/getOrCreateFolder(Path)/
+// listChildren/findSharedSubfolder/listChildFolder/renameFolder/moveToParent/globalOwnerQuery/
+// ownsWorkspaceRoot/resetWorkspaceRootCache/driveFetchRaw/driveFetch/uploadFile/getOrCreateFile all
+// threw "unsupported in native CharterDB mode" (or, after server-drive-shim.js's removal, plain
+// "not a function") — every caller was a folder/ACL walk this redesign deleted (backup_export.rs's
+// tree walk, the four user-access views' Drive ACL calls, the jobno-lease CAS counter which now
+// speaks CharterDB directly from platform/flows.js). Deleted here too rather than left as dead
+// re-exports nothing calls: a bound export nobody imports is not a smaller footprint, it is a
+// second, silent invitation to call something that throws.
 
 let _api = null;
 
-/// The bootstrap registers { driveFetch, driveFetchRaw, findFolder, createFolder, getOrCreateFolder,
-/// getOrCreateFolderPath, listChildren, getFile, uploadFile, findWorkspaceRoot, ownsWorkspaceRoot,
-/// resetWorkspaceRootCache, findSharedSubfolder, findSharedFilesByNamePrefix, listChildFolder,
-/// renameFolder, moveToParent, globalOwnerQuery, getOrCreateFile } once.
+/// The bootstrap binds an object here once — today it binds nothing (`{}`), because the Drive
+/// REST transport this port fronted is gone. `getFile`/`findSharedFilesByNamePrefix` below still
+/// resolve against whatever is bound, for the one remaining caller (the pre-wasm grant-file
+/// reader) that has not been ported to a CharterDB record read.
 export function bindStorageApi(api) { _api = api; }
 
 /// The bound adapter, for callers that pass the whole api object around (`driveApi`).
@@ -18,25 +27,8 @@ export function storageApi() {
   return _api;
 }
 
-export const driveFetch = (...a) => storageApi().driveFetch(...a);
-export const driveFetchRaw = (...a) => storageApi().driveFetchRaw(...a);
-export const findFolder = (...a) => storageApi().findFolder(...a);
-export const createFolder = (...a) => storageApi().createFolder(...a);
-export const getOrCreateFolder = (...a) => storageApi().getOrCreateFolder(...a);
-export const getOrCreateFolderPath = (...a) => storageApi().getOrCreateFolderPath(...a);
-export const listChildren = (...a) => storageApi().listChildren(...a);
 export const getFile = (...a) => storageApi().getFile(...a);
-export const uploadFile = (...a) => storageApi().uploadFile(...a);
-export const findWorkspaceRoot = (...a) => storageApi().findWorkspaceRoot(...a);
-export const findSharedSubfolder = (...a) => storageApi().findSharedSubfolder(...a);
 export const findSharedFilesByNamePrefix = (...a) => storageApi().findSharedFilesByNamePrefix(...a);
-export const listChildFolder = (...a) => storageApi().listChildFolder(...a);
-export const renameFolder = (...a) => storageApi().renameFolder(...a);
-export const moveToParent = (...a) => storageApi().moveToParent(...a);
-export const globalOwnerQuery = (...a) => storageApi().globalOwnerQuery(...a);
-export const getOrCreateFile = (...a) => storageApi().getOrCreateFile(...a);
-export const ownsWorkspaceRoot = (...a) => storageApi().ownsWorkspaceRoot(...a);
-export const resetWorkspaceRootCache = (...a) => storageApi().resetWorkspaceRootCache(...a);
 
 /// Test seam.
 export function _resetStorageApi() { _api = null; }

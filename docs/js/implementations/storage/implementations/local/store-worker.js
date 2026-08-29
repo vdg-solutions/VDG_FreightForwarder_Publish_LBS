@@ -1,14 +1,14 @@
 // store-worker.js — the SQLite engine worker. Loads the RUST engine (vdg_freight wasm) and relays
 // postMessage ops to its store fns. This JS is ONLY the bootstrap + transport: import the wasm, init
 // the sahpool VFS (worker-only), dispatch each op to Rust. Every query, the schema, and all storage
-// logic live in Rust (data_repo/sqlite_engine.rs + sqlite_store.rs) — there is no SQL in JS.
+// logic live in Rust (store/implementations/sqlite/engine.rs + store.rs) — there is no SQL in JS.
 //
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: cb53bcc8 is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: a232d5f4 is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=cb53bcc8', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=a232d5f4', import.meta.url).href;
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.

@@ -10,13 +10,8 @@ import {
   renderLicenseGateScreen, licenseGateReasonForState,
 } from '../../implementations/ui/bootstrap/views/license/license-gate-screen.js';
 
-// First-run provisioning (root + ACL folders, second-workspace guard) is a Rust use-case
-// (governance/first_run_provision.rs); re-exported here for the callers that took it here.
-export { DRIVE_ROOT_PARENT_ID, SecondWorkspaceForbiddenError, isAlreadyProvisionedLocally, ensureWorkspaceRoot, runFirstRunProvision }
-  from '../../implementations/ui/core_abstractions/ports/governance/first-run-provision.js';
-
 // AC-01..07: resolve licence state once, render the single outcome screen on any non-valid
-// state. Enforcement and the screen are identical for every role — no hasRole(ROLE_MANAGER) branch here.
+// state. Enforcement and the screen are identical for every role — no per-role branch here.
 //
 // F-20-11: grace boots the app READ-ONLY. The verdict is stamped on window.__vdg_license_status —
 // the write-gate (data/write-gate.js) reads can_write from there, so the read-only claim has

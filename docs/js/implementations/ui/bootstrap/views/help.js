@@ -1,9 +1,10 @@
 // F-33-01 — In-app user guide, 3 role pages (manager / accountant / sales)
 
-import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP } from '../../../ui/core_abstractions/roles.js';
 import { currentUserRole } from '../../core_abstractions/ports/governance/route-guard.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { mdToHtml } from './help-md.js';
 
 const TABS = ['manager', 'accountant', 'sales'];
@@ -26,10 +27,10 @@ const TAB_ACTIVE_CLASSES   = ['border-blue-600', 'text-blue-700'];
 const TAB_INACTIVE_CLASSES = ['border-transparent', 'text-slate-500', 'hover:text-slate-700'];
 const TAB_STATE_CLASSES_RE = /border-blue-600 text-blue-700|border-transparent text-slate-500 hover:text-slate-700/g;
 
-// role-correct default: hasRole(ROLE_MANAGER) (Drive-ACL role) wins first, then the boot-snapshot role
+// role-correct default: the held role SET (Drive-ACL roles) wins first, then the boot-snapshot role
 // (currentUserRole()) — Accountant/SalesRep/anything else falls back to sales.
 function resolveDefaultTab() {
-  if (hasRole(ROLE_MANAGER)) return 'manager';
+  if (currentRoles().includes(ROLE_MANAGER)) return 'manager';
   const role = currentUserRole();
   if (role === ROLE_MANAGER) return 'manager';
   if (role === ROLE_ACCOUNTANT) return 'accountant';
@@ -46,14 +47,14 @@ export function resolveGuideUrl(baseURI, docPath) {
   return new URL(docPath, baseURI).href;
 }
 
+// No AbortController/timeout here before — a stalled connection left the tab spinning forever
+// instead of rendering the error markdown below. safeAwait bounds it: a timeout renders the
+// same way a rejection already did.
 async function fetchDoc(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return `_Could not load ${url} (${res.status})_`;
-    return res.text();
-  } catch (err) {
-    return `_Error loading doc: ${err.message}_`;
-  }
+  const { ok, value: res, error } = await safeAwait(fetch(url), SAFE_AWAIT_DEFAULT_MS, undefined, `help:fetchDoc:${url}`);
+  if (!ok) return `_Error loading doc: ${error.message}_`;
+  if (!res.ok) return `_Could not load ${url} (${res.status})_`;
+  return res.text();
 }
 
 // ── entry point ───────────────────────────────────────────────────────────────

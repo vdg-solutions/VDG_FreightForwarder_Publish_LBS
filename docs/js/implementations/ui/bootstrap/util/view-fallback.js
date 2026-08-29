@@ -34,7 +34,15 @@ export function renderViewFallback(root, route, reason = 'timeout') {
 // entry-loader.js (index.html's pre-app.js bootstrapper) deliberately does NOT import this — see
 // its own header comment for why.
 export async function healOrReloadViaServiceWorker() {
-  const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
+  // Same guard as renderViewFallback's `offline` above: `navigator` itself is not guaranteed to
+  // exist (this function is exercised by wasm-boot-loader.test.mjs under plain Node, which has no
+  // such global on some versions and a serviceWorker-less shim on others -- `?.` only protects a
+  // PROPERTY read, not a bare identifier reference, so the old line threw ReferenceError on any
+  // runtime without the global at all). Guarding here makes every runtime agree, rather than one
+  // Node version passing by the accident of a partial shim and another failing outright.
+  const reg = typeof navigator !== 'undefined'
+    ? await navigator.serviceWorker?.getRegistration?.().catch(() => null)
+    : null;
   if (reg?.waiting) {
     window.dispatchEvent(new CustomEvent('vdg:sw-update-accept'));
   } else {

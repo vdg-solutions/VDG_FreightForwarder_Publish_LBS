@@ -17,22 +17,44 @@ export const LINE_CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 // against another in the line cells and called every cell a mismatch. Hand-sync rule as above.
 export const DEFAULT_HEADER_CURRENCY = 'VND';
 
-/** computeLineVnd — AC-02: vnd_amount = amount × fx_rate, VND passthrough */
-export function computeLineVnd(amount, currency, fxRate) {
+/** computeLineVnd — AC-02: vnd_amount = amount × fx_rate, book-currency passthrough */
+export function computeLineVnd(amount, currency, fxRate, bookCurrency) {
   const amt = Number(amount) || 0;
-  if (currency === VND_CURRENCY) return amt;
+  if (currency === bookCurrency) return amt;
   return amt * (Number(fxRate) || 0);
 }
 
-/** lockFxIfVnd — AC-03: currency VND locks fx_rate at 1 */
-export function lockFxIfVnd(currency) {
-  return currency === VND_CURRENCY ? { rate: 1, locked: true } : { rate: null, locked: false };
+/** lockFxIfVnd — AC-03: currency matching the workspace's book currency locks fx_rate at 1.
+ *  Named for the case that's true today (book = VND); read bookCurrency, not the name. */
+export function lockFxIfVnd(currency, bookCurrency) {
+  return currency === bookCurrency ? { rate: 1, locked: true } : { rate: null, locked: false };
 }
 
+/// Thin call into the Rust rule (boundary/workspace_config.rs::header_currency). The bridge is up
+/// by the time a view renders; DEFAULT_HEADER_CURRENCY is the same literal Rust falls back to, so
+/// a missing bridge yields the identical answer rather than a JS-side decision.
+export function resolveHeaderCurrency(saved, configuredDefault) {
+  const bridge = window.workspace_header_currency;
+  if (typeof bridge !== 'function') return saved || configuredDefault || DEFAULT_HEADER_CURRENCY;
+  return bridge(saved || '', configuredDefault || '');
+}
+
+/// bookCurrencyOf — the workspace book currency for the form `el` sits in, read off the hidden
+/// `book_currency` field sales-new-form.js stamps once per render (same source everywhere, per
+/// default_currency_lock.rs — no second resolution path).
+export function bookCurrencyOf(el) {
+  return el?.closest('form')?.querySelector('[name=book_currency]')?.value || DEFAULT_HEADER_CURRENCY;
+}
+
+// side -> FX direction (Circular 200): a 'buy' row is a cost the company owes/pays out (a
+// payable-like flow), valued at the bank's SELLING rate; a 'sell' row is revenue the company
+// collects (a receivable-like flow), valued at the bank's BUYING rate.
+const SIDE_DIRECTION = { buy: 'Sell', sell: 'Buy' };
+
 /** prefillFxRate — AC-04: thin wrapper over the (currency-generic) fx-rates lookup */
-export async function prefillFxRate(fxRepo, currency, fxDate) {
+export async function prefillFxRate(fxRepo, currency, fxDate, side) {
   if (!fxRepo || !fxDate || !currency || currency === VND_CURRENCY) return null;
-  return getRateForDate(fxRepo, fxDate, currency);
+  return getRateForDate(fxRepo, fxDate, currency, SIDE_DIRECTION[side]);
 }
 
 // F-29-02: exported with optional cls so mục C's detail-panel widget can reuse the same
@@ -44,9 +66,9 @@ export function currencySelectHtml(name, selected, cls = `w-16 ${FX_CELL_CLS}`) 
 }
 
 /** fxCellsHtml — AC-01/03/04/06: currency + fx_rate + fx_date cells for one side ('buy'|'sell') */
-export function fxCellsHtml(side, line = {}, headerCurrency) {
-  const currency        = line[`${side}_currency`] || headerCurrency || VND_CURRENCY;
-  const { rate, locked } = lockFxIfVnd(currency);
+export function fxCellsHtml(side, line = {}, headerCurrency, bookCurrency) {
+  const currency        = line[`${side}_currency`] || headerCurrency || bookCurrency || VND_CURRENCY;
+  const { rate, locked } = lockFxIfVnd(currency, bookCurrency);
   const rateVal          = locked ? rate : (line[`${side}_fx_rate`] ?? '');
   const rateCls          = locked ? RO_CELL_CLS : FX_CELL_CLS;
   return `
@@ -66,12 +88,12 @@ function fmtVndNum(val) {
   return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-/** vndCellHtml — AC-02: readonly derived VND Chi/Thu cell (replaces the old free-input cell) */
-export function vndCellHtml(side, line = {}) {
+/** vndCellHtml — AC-02: readonly derived book-currency Chi/Thu cell (replaces the old free-input cell) */
+export function vndCellHtml(side, line = {}, bookCurrency) {
   const amt      = side === 'buy' ? line.buy_amt : line.sell_amt;
-  const currency = line[`${side}_currency`] || VND_CURRENCY;
+  const currency = line[`${side}_currency`] || bookCurrency || VND_CURRENCY;
   const fxRate   = side === 'buy' ? line.buy_fx_rate : line.sell_fx_rate;
-  const vnd      = computeLineVnd(amt, currency, fxRate);
+  const vnd      = computeLineVnd(amt, currency, fxRate, bookCurrency);
   const fieldName = side === 'buy' ? 'vnd_pay' : 'vnd_collect';
   const colorCls  = side === 'buy' ? 'text-blue-700 bg-blue-50/40' : 'text-emerald-700 bg-emerald-50/40';
   return `<td class="px-1 py-1">
@@ -123,7 +145,7 @@ function _recomputeVndCell(row, side) {
   const rateEl = row.querySelector(`[name=${side}_fx_rate]`);
   const vndEl  = row.querySelector(`[name=${side === 'buy' ? 'vnd_pay' : 'vnd_collect'}]`);
   if (!vndEl) return;
-  const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value);
+  const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrencyOf(row));
   vndEl.value = fmtVndNum(vnd);
 }
 
@@ -145,7 +167,7 @@ export async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}
   // new lookup comes back null the cell ends empty instead of retaining a stale rate
   // (foreign→foreign switch, or a date change into a no-rate day)
   if (overwrite && rateEl) rateEl.value = '';
-  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value);
+  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value, side);
   if (rateEl && rateEl.dataset.manuallySet !== 'true' && (fetched != null || overwrite)) {
     if (fetched != null) rateEl.value = fetched;
     _recomputeVndCell(row, side);
@@ -158,7 +180,7 @@ async function _onCurrencyChange(row, side, fxRepo) {
   if (!row) return;
   const currencyEl = row.querySelector(`[name=${side}_currency]`);
   const rateEl     = row.querySelector(`[name=${side}_fx_rate]`);
-  const { rate, locked } = lockFxIfVnd(currencyEl?.value);
+  const { rate, locked } = lockFxIfVnd(currencyEl?.value, bookCurrencyOf(row));
   if (rateEl) {
     rateEl.readOnly = locked;
     rateEl.classList.toggle('bg-slate-50', locked);

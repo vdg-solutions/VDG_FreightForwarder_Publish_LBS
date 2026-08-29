@@ -1,10 +1,13 @@
-// ledger-repost-panel.js — F-29-24: manager-only stale-ledger repost trigger.
-// Mounted only when hasRole(ROLE_MANAGER) (checked by the caller, ledger-viewer.js) — mirrors
-// views/manager/masters/shipment-states.js's canWrite()-gated migration section.
+// ledger-repost-panel.js — F-29-24: stale-ledger repost trigger.
+// Mounted only when can('ledger.repost') admits it (checked by the caller, ledger-viewer.js) —
+// mirrors views/manager/masters/shipment-states.js's canWrite()-gated migration section. The
+// purge-orphans button carries its own separate ledger.purgeOrphans check (F-19-101): repost and
+// purge are two different decisions even though they share this panel.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { planRepost, applyRepost, purgeOrphans } from '../../../core_abstractions/ports/manager/ledger-repost.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
 
 const REPOST_YEAR = new Date().getFullYear();
 const MAX_REASON_ROWS_SHOWN = 50; // D3: bound the flagged/orphan row list, never render unbounded
@@ -38,9 +41,9 @@ function shellHtml() {
           <button id="btn-repost-apply" disabled title="${t('ledger.repost.button_hint')}"
             class="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40"
             aria-label="${t('ledger.repost.button')}">${t('ledger.repost.button')}</button>
-          <button id="btn-purge-orphans" disabled title="${t('ledger.repost.purge_hint')}"
+          ${can('ledger.purgeOrphans') ? `<button id="btn-purge-orphans" disabled title="${t('ledger.repost.purge_hint')}"
             class="px-3 py-1.5 text-xs rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:opacity-40"
-            aria-label="${t('ledger.repost.purge_button')}">${t('ledger.repost.purge_button')}</button>
+            aria-label="${t('ledger.repost.purge_button')}">${t('ledger.repost.purge_button')}</button>` : ''}
         </div>
       </div>
       <div id="repost-preview-list" class="text-xs"></div>
@@ -81,13 +84,13 @@ function reasonRowsHtml(label, rows) {
 function renderPreview(root, plan) {
   const list = root.querySelector('#repost-preview-list');
   const applyBtn = root.querySelector('#btn-repost-apply');
-  const purgeBtn = root.querySelector('#btn-purge-orphans');
-  if (!plan) { list.innerHTML = ''; applyBtn.disabled = true; purgeBtn.disabled = true; return; }
+  const purgeBtn = root.querySelector('#btn-purge-orphans'); // absent when ledger.purgeOrphans denies
+  if (!plan) { list.innerHTML = ''; applyBtn.disabled = true; if (purgeBtn) purgeBtn.disabled = true; return; }
 
   const total = plan.replacements.length + plan.unchanged_count + plan.flagged.length + plan.orphans.length;
   applyBtn.disabled = plan.replacements.length === 0;
   // Orphans only. `flagged` entries still have a live source — those are a repost problem.
-  purgeBtn.disabled = plan.orphans.length === 0;
+  if (purgeBtn) purgeBtn.disabled = plan.orphans.length === 0;
 
   if (!total) { list.innerHTML = `<div class="text-slate-400">${t('ledger.repost.none_found')}</div>`; return; }
 
@@ -178,7 +181,7 @@ export async function mountRepostPanel(root, { ledgerRepo, entityRepo }) {
     }
   });
 
-  root.querySelector('#btn-purge-orphans').addEventListener('click', async () => {
+  root.querySelector('#btn-purge-orphans')?.addEventListener('click', async () => {
     if (!lastPlan || !lastPlan.orphans.length) return;
     const ok = await showConfirm({
       title: t('ledger.repost.purge_confirm_title'),

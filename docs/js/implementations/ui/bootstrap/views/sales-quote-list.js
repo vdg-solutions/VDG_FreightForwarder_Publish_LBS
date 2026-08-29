@@ -1,7 +1,7 @@
 // F-12-10 — Quotation list view (all states, role-filtered)
 
-import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
+import { currentSalesRepId } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
 import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
@@ -48,22 +48,42 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
   return function quoteActionsRenderer(params) {
     const q = params.data;
     if (!q) return document.createTextNode('—');
-    const isM = hasRole(ROLE_MANAGER);
+    // F-63: an auditor reads the pipeline, it does not send/accept/convert a quote — none of
+    // these buttons check role at all otherwise, so Auditor gets a status label in their place.
+    if (!can('quote.send')) {
+      const span = document.createElement('span');
+      span.className = 'text-xs text-slate-400';
+      span.textContent = t('quote.status.' + effectiveState(q));
+      return span;
+    }
+    // F-14-03: the override sits on the sales desk, not the workspace administrator.
+    const canDecideOverride = can('approval.decide');
     const ds = effectiveState(q);
 
     const wrap = document.createElement('div');
     wrap.className = 'flex items-center gap-1 h-full';
 
-    if (ds === 'Draft') {
-      const blocked = q.pending_manager_approval && !isM;
-      if (blocked) {
-        const span = document.createElement('span');
-        span.className = 'text-xs text-slate-400';
-        span.title = t('quote_list.pending_title');
-        span.textContent = t('quote_list.pending_chip');
-        wrap.appendChild(span);
+    if (ds === 'Draft' && q.pending_manager_approval) {
+      // F-14-03 (owner 2026-08-28): a SalesManager used to fall through to the same "Send" button
+      // as everyone else here — nothing stopped them sending an over-threshold quote without ever
+      // deciding the override. Route them to the real decision screen instead of offering Send.
+      if (canDecideOverride) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-review-override text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200';
+        btn.textContent = t('quote_list.action.review_override');
+        btn.addEventListener('click', (e) => { e.stopPropagation(); navigate('/manager/approvals'); });
+        wrap.appendChild(btn);
         return wrap;
       }
+      const span = document.createElement('span');
+      span.className = 'text-xs text-slate-400';
+      span.title = t('quote_list.pending_title');
+      span.textContent = t('quote_list.pending_chip');
+      wrap.appendChild(span);
+      return wrap;
+    }
+
+    if (ds === 'Draft') {
       const btn = document.createElement('button');
       btn.className = 'btn-send text-xs px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700';
       btn.textContent = t('quote_list.action.send');
@@ -108,7 +128,8 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
             pol: q.pol || '',
             pod: q.pod || '',
             container: q.container_type || '',
-            sales: q.created_by || '',
+            // F-41: route the converted job at the quote's commercial owner, not its typist.
+            sales: q.sales_rep_id || '',
           });
           navigate(`/shipments/new?${qs.toString()}`);
         }
@@ -124,8 +145,15 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
 
 // ── load & render ─────────────────────────────────────────────────────────────
 
-async function loadQuotes(repo, salesId, isM) {
-  const filter = isM ? null : (q) => (q.created_by || '').toLowerCase() === salesId.toLowerCase();
+async function loadQuotes(repo, salesId, seesAllQuotes) {
+  // F-41: gated on sales_rep_id — the commercial owner, not created_by (who happened to key it
+  // in). A plain SalesRep (or a Manager who also holds the SalesRep hat) sees quotes for THEIR
+  // customers even when CS or a covering rep typed one in; the SalesManager team view is
+  // unfiltered. access_policy.rs still owns the real server-side read gate (Record.owner) — this
+  // is the client-side scope for what a list renders.
+  // F-63: Auditor reads the whole book too — same unfiltered branch as SalesManager, never the
+  // per-rep filter (an auditor has no sales_rep_id of their own to filter on).
+  const filter = seesAllQuotes ? null : (q) => (q.sales_rep_id || '').toLowerCase() === salesId.toLowerCase();
   return listWhere(repo, KIND_QUOTATIONS, filter).catch(() => []);
 }
 
@@ -143,7 +171,8 @@ export async function render(root) {
   window.addEventListener('vdg:locale-changed', _onLocale);
 
   const salesId = currentSalesRepId();
-  const isM = hasRole(ROLE_MANAGER);
+  const canCreateQuote = can('quote.create');
+  const canDecideOverride = can('approval.decide');
   const repo = window.__vdg_repo;
   let items = [];
   let api = null;
@@ -167,10 +196,10 @@ export async function render(root) {
             <input id="grid-search" placeholder="${t('quote_list.toolbar.search_placeholder')}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
           </div>
           <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('quote_list.toolbar.export_csv')}</button>
-          <a href="#/sales/quote/new"
+          ${canCreateQuote ? `<a href="#/sales/quote/new"
              class="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition inline-block">
             ${t('quote_list.new')}
-          </a>
+          </a>` : ''}
         </div>
       </div>`;
   }
@@ -199,7 +228,8 @@ export async function render(root) {
       searchSelector: '#grid-search',
       getTotal: () => items.length,
       entity: t('quote_list.empty.entity'),
-      onCreate: () => navigate('/sales/quote/new'),
+      // F-63: omit entirely when the session may not create a quote (Auditor).
+      onCreate: canCreateQuote ? () => navigate('/sales/quote/new') : undefined,
       filteredCreateLabel: t('quote_list.empty.create_action'),
       // first-run CTA relies on the generic empty_state.first_run.create template — "Tạo báo
       // giá đầu tiên" reads naturally even though this view's own toolbar carries no verb.
@@ -214,7 +244,12 @@ export async function render(root) {
     return;
   }
 
-  items = await loadQuotes(repo, salesId, isM);
+  // No action id in the guard covers "reads every rep's quotes" directly (SalesManager team view
+  // + Auditor's read-broad access, F-63) — approval.decide is SalesManager-only and quote.create
+  // is false only for Auditor among the three roles this route admits, so the two already-fetched
+  // verdicts recombine into the same set without a raw role compare. Flagged for Lane A: a real
+  // action id (e.g. quote.readAll) would replace this instead of leaning on the coincidence.
+  items = await loadQuotes(repo, salesId, canDecideOverride || !canCreateQuote);
   root.querySelector('#qt-loading').textContent = '';
 
   const headerDiv = root.querySelector('#grid-header');

@@ -4,8 +4,7 @@
 // that draws or acts on a single ROW lives here.
 
 import { t, fmtNumber } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
+import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { chooseShipmentAffordance, runShipmentAffordance } from '../../../core_abstractions/ports/flows/shipment-void-delete.js';
 
@@ -69,7 +68,7 @@ async function handleRowAffordance(row, api, reload) {
   const result = await runShipmentAffordance({
     repo: window.__vdg_repo,
     shipment: row,
-    isManager: hasRole(ROLE_MANAGER),
+    canVoid: can('shipment.void'),
     confirm: confirmAffordance,
   });
   if (!result.mutated) return;

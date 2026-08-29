@@ -4,13 +4,18 @@
 // so a stalled call REJECTS ("could not tell", retried next boot) while a real absence resolves to
 // null. Keeping those two apart is what stops a stalled read from being read as an empty folder and
 // deleting the only copy of a row. Nothing here decides anything — the decisions are in Rust.
+//
+// cache_get_file/cache_delete_file/cache_trash_file/cache_move_file (the old per-user Drive path —
+// js_cache.rs's own CacheStore comment already called it out as dead: "the folder resolver no
+// longer points there") are gone with server-drive-shim.js: CacheStore::get_file/delete_file/
+// trash_file/move_file have zero callers anywhere in freight_app (only route_prefetch.rs holds a
+// `dyn CacheStore`, and it only calls `.list`/`.local_date`) — confirmed dead, not just unused.
+// cache_move_file in particular had no CharterDB equivalent to convert to: addParents/removeParents
+// is folder membership, and CharterDB records have no folder to be a member of.
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { toLocalDateStr } from '../../implementations/kernel/core_abstractions/util/today-local.js';
-import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
-import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { toPricedEnvelope } from '../../implementations/storage/core_abstractions/priced-envelope.js';
-import { retireFile } from '../../implementations/storage/implementations/repos/file-retire.js';
 import { putShipment } from '../../implementations/ui/core_abstractions/ports/data/shipment-repo.js';
 import { pnlLineId } from '../../implementations/ui/core_abstractions/ports/data/pnl-line-id.js';
 
@@ -38,12 +43,6 @@ export const cachePlatform = {
     return (await bounded(ref.seedIfEmpty(records), `cache:priced-seed:${kind}`)) ?? {};
   },
 
-  cache_workspace_root: () => bounded(storageApi().findWorkspaceRoot(activeWorkspaceName()), 'cache:ws-root'),
-  cache_find_folder:    (parentId, name) => bounded(storageApi().findFolder(parentId, name), `cache:find-folder:${name}`),
-  cache_list_children:  (folderId) => bounded(storageApi().listChildren(folderId), 'cache:list-children').then((r) => r || []),
-  cache_get_file:       (fileId) => bounded(storageApi().getFile(fileId), 'cache:get-file'),
-  cache_delete_file:    (fileId) => bounded(storageApi().driveFetch('DELETE', `/files/${fileId}`), 'cache:delete-file'),
-
   // A legacy job goes back through the SPLIT write path — a plain put would land the whole record,
   // revenue included, in the folder CS reads. Lines written before E-37 carry no line_id and the
   // split refuses a line without one, so they are stamped with the scheme the form uses.
@@ -57,14 +56,6 @@ export const cachePlatform = {
   cache_ws_read_file: (dir, name)  => bounded(io().ws_read_file(dir, name), `cache:ws-read:${dir}`),
   cache_ws_write_file: (dir, name, content, fileId) =>
     bounded(io().ws_write_file(dir, name, content, fileId, ''), `cache:ws-write:${dir}`),
-
-  // Not a plain trash: the account that created a file owns it, and only an owner may trash. A
-  // non-owner detaches it from the folder instead.
-  cache_trash_file: (fileId, parentId) => bounded(retireFile(storageApi(), fileId, parentId || null), 'cache:trash-file'),
-  cache_move_file:  (fileId, addParent, removeParent) => bounded(
-    storageApi().driveFetch('PATCH', `/files/${fileId}?addParents=${addParent}&removeParents=${removeParent}`, {}),
-    'cache:move-file',
-  ),
 
   cache_local_date: (ms) => toLocalDateStr(ms),
 };

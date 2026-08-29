@@ -2,6 +2,7 @@
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
+import { currentUserRoles } from '../../core_abstractions/ports/governance/route-guard.js';
 import { saveDraft } from './sales-new/draft-manager.js';
 import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.js';
 export { shipmentToDraft } from './sales-new-form/pnl-vertical-autofill.js';
@@ -19,19 +20,9 @@ import { docsExtHtml, DOCS_EXT_FIELDS, wireCargoItemsTable, collectCargoItems,
 import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
-import { resolveSalesSharePct } from './sales-new-form/waterfall-math.js';
-import { summarizeLineCurrencies, DEFAULT_HEADER_CURRENCY } from './sales-new-form/pnl-line-fx.js';
+import { summarizeLineCurrencies, resolveHeaderCurrency } from './sales-new-form/pnl-line-fx.js';
 
 const AUTOSAVE_DELAY_MS = 1500;
-
-/// Thin call into the Rust rule. The bridge is up by the time a view renders (repo-init awaits
-/// wasm); DEFAULT_HEADER_CURRENCY is the same literal workspace_config.rs falls back to, so a
-/// missing bridge yields the identical answer rather than a JS-side decision.
-function resolveHeaderCurrency(saved, configuredDefault) {
-  const bridge = window.workspace_header_currency;
-  if (typeof bridge !== 'function') return saved || configuredDefault || DEFAULT_HEADER_CURRENCY;
-  return bridge(saved || '', configuredDefault || '');
-}
 
 export async function renderForm(root, opts = {}) {
   const { customers = [], salesRepId = '', userConfig = null, draft = null,
@@ -43,7 +34,7 @@ export async function renderForm(root, opts = {}) {
   const docDate   = draft?.transaction_date || todayLocal();
   // #28: display toggle (which waterfall rows to show), reading the SET the auth gate resolved —
   // not a single-field string compare, and not an authority gate (route-guard owns those).
-  const isManager = (window.__vdg_current_user?.roles || []).includes(ROLE_MANAGER);
+  const isManager = currentUserRoles().includes(ROLE_MANAGER);
   // F-37-06: `revenueVisible` comes from the CALLER, which is the thing that did the read - the
   // receipt is non-enumerable on purpose (it must never be persisted), so it does not survive
   // the spread into a draft. Passing it explicitly is also the honest shape: this module is
@@ -63,6 +54,12 @@ export async function renderForm(root, opts = {}) {
   // B renders, because the rows seed their currency cells off this same value — passing '' here
   // sent them down their own VND fallback while the header select showed USD.
   d.currency = resolveHeaderCurrency(d.currency, defaultCurrency);
+  // Book currency (owner correction, 2026-08-28): the workspace's book currency, not a
+  // hardcoded VND — no per-document memory, always today's accounting default (period-scoped
+  // freezing is a separate, larger design, not this fix). Every mục-B/mục-C passthrough check
+  // compares against THIS, not against d.currency (a saved job may show one currency while the
+  // book books another).
+  d.book_currency = resolveHeaderCurrency(null, defaultCurrency);
 
   // F-32-01 AC-01/AC-07: Job No is resolved by the caller (render()'s bounded personalization
   // load, same PERSONALIZATION_LOAD_TIMEOUT_MS ceiling as customers/userConfig — F-19-29) and
@@ -95,6 +92,7 @@ export async function renderForm(root, opts = {}) {
       </div>
       <div id="phase-timeline"></div>
       <form id="shipment-form" class="space-y-4" novalidate>
+        <input type="hidden" name="book_currency" value="${d.book_currency}" />
         ${sectionAHtml(d, customers, reps, { carriers, shipments, weightUnits })}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ''}
@@ -197,6 +195,7 @@ export function collectFormState(root) {
     roe_buying:       g('roe_buying'),
     roe_selling:      g('roe_selling'),
     currency:         g('currency'),
+    book_currency:    g('book_currency'),
     // air fields
     weight_actual:    g('weight_actual'),
     weight_uom:       g('weight_uom'),
@@ -289,7 +288,7 @@ function _recomputeWaterfall(root, userConfig) {
   // AC-07: sum all commission rows' net_after_tax
   const cat = commissionLines.reduce((s, l) => s + (l.net_after_tax || 0), 0);
 
-  const share = resolveSalesSharePct(
+  const share = window.__vdg_wasm.commission_resolve_sales_share_pct(
     overrides.sales_share_pct_override,
     userConfig?.sales_share_pct ?? null
   );

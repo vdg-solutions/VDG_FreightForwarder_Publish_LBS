@@ -2,118 +2,19 @@ import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+e
 import { navigate } from '../router.js';
 import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
+import { ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
 import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole } from '../../core_abstractions/ports/governance/route-guard.js';
 import { SIDEBAR_COLLAPSED_KEY, parseCollapsed, serializeCollapsed, toggleCollapsed, isGroupCollapsed, activeGroupKey, DESKTOP_COLLAPSED_KEY, parseDesktopCollapsed, serializeDesktopCollapsed } from './sidebar-collapse-state.js';
+import { V1_ITEMS, V1_GROUPS } from './sidebar-items.js';
 
 const DRAWER_BREAKPOINT_PX = 768;
-const V1_BUTTON_COUNT      = 5;   // AC-01/02 invariant
-const V1_GROUP_COUNT       = 3;   // AC-01 invariant
 const LOCALE_CHANGE_EVENT  = 'vdg:locale-changed';
 const CHEVRON_EXPANDED     = '▾';
 const CHEVRON_COLLAPSED    = '▸';
 
-// Active v1 menu — 5 items, labelKey resolved via t() at render time.
-const V1_ITEMS = [
-  // #15: matches the /dashboard route-guard entry (nav-gates KEEP-CONSISTENT-WITH-route-guard)
-  { group: 'workspace', route: '/dashboard',           labelKey: 'nav.workspace.dashboard',    icon: 'grid',   allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
-  { group: 'workspace', route: '/shipments',           labelKey: 'nav.workspace.shipments',    icon: 'ship'   },
-  // F-37-03: CS opens a job before a rep is named, so creating one is workspace work and sits with
-  // the shipment list rather than in the Sales group. Its allowRoles is the /shipments reader set.
-  { group: 'workspace', route: '/shipments/new',       labelKey: 'nav.sales.create_shipment',  icon: 'tag',
-    allowRoles: [ROLE_CUSTOMER_SERVICE, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_MANAGER] },
-
-  // F-24-09: allowRoles matches route-guard's /sales prefix map (SalesRep | Manager).
-  { group: 'sales',     route: '/sales/me',            labelKey: 'nav.sales.my_shipments',           icon: 'doc',    allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  // F-42-04: the quote list had no nav entry at all — the topbar's "new quote" button created
-  // deals that only a typed URL could find again, and step 1 of the sales flow (quote -> job)
-  // was a one-way street. Owner 2026-08-15, on being shown the gap: "không có".
-  // F-42-06 (owner: "báo giá là chỉ sales làm nha"): the sales desk only — KEEP-CONSISTENT-WITH
-  // access_policy.rs's "/sales/quote" rule. A Manager who also sells holds SalesRep on their user
-  // record and gets the entry through that hat, not through being the manager.
-  { group: 'sales',     route: '/sales/quote',         labelKey: 'nav.sales.quotes',                 icon: 'quote',  allowRoles: [ROLE_SALES_REP, ROLE_SALES_MANAGER] },
-  // F-57-01: was ungated, so filterSidebarItems showed "P&L Report" to every role including
-  // ReadOnly — the view's own hasRole(ROLE_MANAGER) check then bounced them to /dashboard with no
-  // explanation. A visible menu item that always fails. Now matches the /manager route-guard
-  // prefix (nav-gates KEEP-CONSISTENT-WITH-route-guard).
-  { group: 'reports',   route: '/manager/reports/pnl', labelKey: 'nav.reports.pnl_report',     icon: 'dollar', managerOnly: true, allowRoles: [ROLE_MANAGER] },
-  // F-23-04: accountant ledger browse — reuses the reports group (R-5 minimal change).
-  // F-24-05: allowRoles opens this to Accountant too; managerOnly kept for the F-23-04
-  // CDP button-count fixture (27-sidebar-v1-trim.js), superseded by allowRoles below.
-  { group: 'reports',   route: '/accounting/ledger',   labelKey: 'nav.reports.ledger',    icon: 'doc', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
-  // F-23-05: financial reports (TB/P&L/BS) — same reports group; F-24-05 opens to Accountant
-  { group: 'reports',   route: '/accounting/reports',  labelKey: 'nav.reports.financial', icon: 'doc', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
-  // #31: finance policy the ACCOUNTANT owns (default P&L currency). Not under /manager — that
-  // prefix is Manager-only in access_policy.rs, which would lock out the very role that sets it.
-  { group: 'reports',   route: '/accounting/settings', labelKey: 'nav.accounting.settings', icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },
-  { group: 'reports',   route: '/manager/commission-rules', labelKey: 'nav.reports.comm_rules', icon: 'check', managerOnly: true, allowRoles: [ROLE_MANAGER] },
-  // F-24-04: manager-only user CRUD — same reports group (R-5 minimal change, precedent above)
-  { group: 'reports',   route: '/admin/users',         labelKey: 'nav.admin.users',       icon: 'db',  managerOnly: true },
-  // Master data — customer list + future master entities. SalesRep is read-only in the
-  // page itself (masters-customers.js gates Add/Edit/Delete behind hasRole(ROLE_MANAGER)), so opening
-  // the nav to Sales just lets them find & browse; it doesn't grant CRUD.
-  { group: 'masters',   route: '/masters/customers',   labelKey: 'nav.masters.customers', icon: 'db',  allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  { group: 'masters',   route: '/masters/local-charges',    labelKey: 'nav.masters.local_charges', icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  { group: 'masters',   route: '/masters/units-of-measure', labelKey: 'nav.masters.units',         icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  // E-26 F-26-04: ocean-carrier master, reachable from Danh mục like local-charges/units
-  { group: 'masters',   route: '/masters/ocean-carriers',   labelKey: 'nav.masters.ocean_carriers', icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  // F-28-15: ocean-tariff priced kind, carrier-joined view — writers mirror ocean-carriers
-  { group: 'masters',   route: '/masters/ocean-tariff',     labelKey: 'nav.masters.ocean_tariff',   icon: 'db', allowRoles: [ROLE_SALES_REP, ROLE_MANAGER] },
-  // F-29-10: FX admin was route-only (no sidebar entry), so the AC-04 no-rate hint
-  // pointed nowhere — mirrors the units/ocean-carriers Danh mục entries, Manager-only.
-  { group: 'masters',   route: '/manager/fx-rates',         labelKey: 'nav.masters.fx_rates',       icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER] },
-  // F-18-11: alias-editor only (writers manager-only, Q3) — no browse value for SalesRep.
-  { group: 'masters',   route: '/masters/shipment-states',  labelKey: 'nav.masters.shipment_states', icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER] },
-];
-
-const V1_GROUPS = [
-  { key: 'workspace', headingKey: 'nav.group.workspace' },
-  { key: 'sales',     headingKey: 'nav.group.sales'     },
-  { key: 'masters',   headingKey: 'nav.group.masters'   },
-  { key: 'reports',   headingKey: 'nav.group.reports'   },
-];
-
-// F-15-46 v2-restore: original WORKSPACE non-v1 entries
-// const HIDDEN_WORKSPACE_V2 = [
-//   { route: '/upload',    label: 'Excel Import', icon: 'upload' },
-//   { route: '/documents', label: 'Documents',    icon: 'doc'    },
-// ];
-
-// F-15-46 v2-restore: original SALES non-v1 entries
-// const HIDDEN_SALES_V2 = [
-//   (quote list promoted to V1_ITEMS by F-42-04 — no longer hidden)
-//   { route: '/sales/me',        label: 'My Workspace', icon: 'tag',   disabled: true },
-//   { route: '/sales/analytics', label: 'Analytics',    icon: 'dollar', disabled: true },
-// ];
-
-// F-15-46 v2-restore: original MANAGER block (minus P&L Report, promoted to v1)
-// const HIDDEN_MANAGER_V2 = [
-//   { route: '/manager/dashboard',            label: 'Dashboard',          icon: 'grid'   },
-//   { route: '/manager/pipeline',             label: 'Pipeline',           icon: 'ship',   sub: true },
-//   { route: '/manager/approvals',            label: 'Approvals',          icon: 'alert',  sub: true },
-//   { route: '/manager/finance/cash-flow',    label: 'Cash Flow & AR',     icon: 'dollar', sub: true },
-//   { route: '/manager/sales',                label: 'Sales & Commission', icon: 'dollar', sub: true },
-//   { route: '/manager/finance/commissions',  label: 'Commission Settle',  icon: 'check',  sub: true },
-//   { route: '/manager/exceptions',           label: 'Exceptions',         icon: 'alert',  sub: true },
-//   { route: '/manager/masters/customers',    label: 'Masters',            icon: 'grid',   sub: true },
-//   { route: '/manager/finance/close-period', label: 'Period Close',       icon: 'lock',   sub: true },
-//   { route: '/manager/audit',                label: 'Audit Log',          icon: 'doc',    sub: true },
-//   { route: '/manager/notifications',        label: 'Notifications',      icon: 'bell',   sub: true },
-//   { route: '/manager/errors',               label: 'Error Log',          icon: 'alert',  sub: true },
-//   { route: '/manager/backup',               label: 'Backup / DR',        icon: 'doc',    sub: true },
-//   { route: '/manager/users',                label: 'Người dùng',         icon: 'db',     sub: true },
-// ];
-
-// F-15-46 v2-restore: original FINANCE/SECONDARY group
-// const HIDDEN_SECONDARY_V2 = [
-//   { route: '/finance',           label: 'Finance',  icon: 'dollar' },
-//   { route: '/finance/credit',    label: 'Credit',   icon: 'dollar', sub: true },
-//   { route: '/finance/demdet',    label: 'DEM/DET',  icon: 'dollar', sub: true },
-//   { route: '/masters/customers', label: 'Masters',  icon: 'db',     managerOnly: true },
-//   { route: '/masters/carriers',  label: 'Carriers', icon: 'ship',   sub: true, managerOnly: true },
-//   { route: '/masters/services',  label: 'Services', icon: 'doc',    sub: true, managerOnly: true },
-//   { route: '/help',              label: 'Help',     icon: 'help'   },
-// ];
+// Owner 2026-08-28: lookup tables + rare config, real but not hourly — collapsed on first visit
+// only; any saved pref (incl. all-expanded) wins over this.
+const DEFAULT_COLLAPSED_GROUPS = ['sales_reference', 'admin'];
 
 const ICONS = {
   grid:   '<path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/>',
@@ -152,7 +53,7 @@ class VdgSidebar extends LitElement {
     this.activeRoute = location.hash.slice(1) || '/dashboard';
     this._drawerOpen = false;
     this._mobile     = window.innerWidth < DRAWER_BREAKPOINT_PX;
-    this._collapsed  = new Set();
+    this._collapsed  = new Set(DEFAULT_COLLAPSED_GROUPS);
     this._desktopCollapsed = false;
 
     this._onNav           = (e) => { this.activeRoute = e.detail.route; if (this._mobile) this._drawerOpen = false; this.requestUpdate(); };
@@ -183,8 +84,11 @@ class VdgSidebar extends LitElement {
     window.addEventListener('vdg:sidebar-toggle',     this._onToggle);
     window.addEventListener(LOCALE_CHANGE_EVENT,      this._onLocaleChanged);
     window.addEventListener(ROLES_RESOLVED_EVENT,     this._onRolesResolved);
-    try { this._collapsed = parseCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY)); }
-    catch { /* storage disabled: default all-expanded */ this._collapsed = new Set(); }
+    try { // no saved pref (first visit) -> tidy default; any saved value, incl. all-expanded, wins
+      const raw = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+      this._collapsed = raw ? parseCollapsed(raw) : new Set(DEFAULT_COLLAPSED_GROUPS);
+    }
+    catch { /* storage disabled: fall back to the tidy default */ this._collapsed = new Set(DEFAULT_COLLAPSED_GROUPS); }
     try { this._desktopCollapsed = parseDesktopCollapsed(localStorage.getItem(DESKTOP_COLLAPSED_KEY)); }
     catch { /* storage disabled: default expanded */ this._desktopCollapsed = false; }
   }
@@ -279,7 +183,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build cb53bcc8">v0.4.29 (cb53bcc8)</span>
+        <span class="font-mono whitespace-nowrap" title="build a232d5f4">v0.4.30 (a232d5f4)</span>
       </div>
     `;
   }
@@ -311,7 +215,9 @@ customElements.define('vdg-sidebar', VdgSidebar);
 window._vdgSidebarTest = { v1Items: V1_ITEMS, hasRole };
 
 // F-15-46 v2-restore: previous group blocks rendered inside _renderNav (Finance + Manager).
-// Kept verbatim so v2 can re-introduce these groups by unwrapping the comment.
+// Kept verbatim so v2 can re-introduce these groups by unwrapping the comment. No role wrapper
+// here on purpose: MANAGER_ITEMS carries its own allowRoles, filterSidebarItems already filters
+// it in wasm, and _renderNav's empty-group skip (line 165) hides the header when nothing is left.
 // HIDDEN_MANAGER_V2 — admin-only, not in v1 nav (F-15-36)
 // { route: '/manager/fx-rates', label: 'FX Rates', icon: 'dollar', sub: true },
 // { route: '/manager/settings', label: 'Settings',  icon: 'grid',   sub: true },
@@ -320,10 +226,8 @@ window._vdgSidebarTest = { v1Items: V1_ITEMS, hasRole };
   <div class="px-4 pt-6 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Finance</div>
   ${SECONDARY.map((i) => this._renderItem(i))}
 </div>
-${hasRole(ROLE_MANAGER) ? html`
-  <div data-nav-group="manager">
-    <div class="px-4 pt-6 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Manager</div>
-    ${MANAGER_ITEMS.map((i) => this._renderItem(i))}
-  </div>
-` : ''}
+<div data-nav-group="manager">
+  <div class="px-4 pt-6 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Manager</div>
+  ${MANAGER_ITEMS.map((i) => this._renderItem(i))}
+</div>
 */

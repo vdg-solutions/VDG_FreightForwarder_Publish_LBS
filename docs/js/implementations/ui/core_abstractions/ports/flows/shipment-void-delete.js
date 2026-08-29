@@ -16,5 +16,5 @@ function _i() {
 
 /// (shipment) -> 'delete' | 'void' | 'none'
 export const chooseShipmentAffordance = (...a) => _i().chooseShipmentAffordance(...a);
-/// ({ repo, shipment, isManager, confirm }) -> { mutated, affordance | reason }
+/// ({ repo, shipment, canVoid, confirm }) -> { mutated, affordance | reason }
 export const runShipmentAffordance = (...a) => _i().runShipmentAffordance(...a);

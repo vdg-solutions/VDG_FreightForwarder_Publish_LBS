@@ -4,7 +4,7 @@
 
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
-import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
+import { currentUserRole, currentUserRoles } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { openModal, statusLabels } from './local-charges-modal.js';
@@ -42,11 +42,12 @@ function uomLabel(u) {
   return currentLocale() === 'en' ? (u?.label_en || u?.label_vi || u?.code) : (u?.label_vi || u?.code);
 }
 
-// F-28-08/F-28-12: registry-driven writer gate, keyed off the single injectable role source
-// (window.__vdg_current_user.role via currentUserRole()) — QA simulates a non-maintainer by
-// overriding that one boot field, never the private auth-gate _resolvedRole.
-function canWrite(role) {
-  return canWriteMaster(KIND, role);
+// F-28-08/F-28-12: registry-driven writer gate — a role SET, not the single primary role (a
+// Manager+SalesRep is judged on the whole hand). QA simulates a non-maintainer by overriding the
+// roles the Rust principal resolves to (auth_set_resolved_roles), never the private auth-gate
+// _resolvedRole.
+function canWrite(roles) {
+  return canWriteMaster(KIND, roles);
 }
 
 function rowHtml(c, unitLabel, carrierLabel, isEditor) {
@@ -74,8 +75,8 @@ function rowHtml(c, unitLabel, carrierLabel, isEditor) {
 
 export async function render(root) {
   const repo       = window.__vdg_repo;
-  const role       = currentUserRole();
-  const isEditor   = canWrite(role);
+  const role       = currentUserRole(); // priced-governance-panel actor stamp — single role, not a set
+  const isEditor   = canWrite(currentUserRoles());
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
   // The four-eyes flag is a property of the priced refs as a set, not of air-rates: with it
   // wired only there, turning the workspace's second-eyes on left this tariff — the one a

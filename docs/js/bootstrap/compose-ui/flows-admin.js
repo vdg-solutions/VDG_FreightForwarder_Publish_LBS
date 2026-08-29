@@ -25,7 +25,7 @@ export function composeFlowsAdmin(wasm) {
 
   bindBackupExporter({
     // The operator emits progress as an i18n KEY plus its arguments; the translation is the ui's.
-    exportWorkspace: async (_repo, _driveApi, onProgress = () => {}) => {
+    exportWorkspace: async (onProgress = () => {}) => {
       const relay = (e) => onProgress(e.detail.pct, t(e.detail.key, e.detail.args));
       window.addEventListener(BACKUP_PROGRESS_EVENT, relay);
       try {
@@ -37,18 +37,6 @@ export function composeFlowsAdmin(wasm) {
   });
 
   bindUserProvisioning({
-    inviteSales: async (email, name, _driveApi, _repo, workspaceRootId) =>
-      unwrap(
-        await wasm.flows_invite_sales({ email, name: name ?? null, workspace_root_id: workspaceRootId ?? null }),
-        (r) => r.user,
-      ),
-    promoteToManager: async (userId, _driveApi, _repo, adminFolderId) =>
-      unwrap(
-        await wasm.flows_promote_to_manager({ user_id: String(userId), admin_folder_id: adminFolderId ?? null }),
-        (r) => r.user,
-      ),
-    disableUser: async (userId) =>
-      unwrap(await wasm.flows_disable_user({ user_id: String(userId) }), (r) => r.user),
     editProfile: async (userId, fields) =>
       unwrap(await wasm.flows_edit_profile({ user_id: String(userId), fields: fields || {} }), (r) => r.user),
   });

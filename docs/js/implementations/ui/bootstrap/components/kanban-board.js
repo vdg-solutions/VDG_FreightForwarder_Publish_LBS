@@ -4,6 +4,7 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { SHIPMENT_MAIN_PATH, NEXT_ON_PATH } from '../../../kernel/core_abstractions/util/shipment-phases.js';
 
 const KANBAN_STATES           = SHIPMENT_MAIN_PATH;
@@ -186,7 +187,7 @@ class VdgKanbanBoard extends LitElement {
     const pod       = s.pod          || s.POD          || '?';
     const etd       = s.etd          || s.ETD          || '';
     const eta       = s.eta          || s.ETA          || '';
-    const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+    const currentUser = { email: currentUserEmail() };
     const sales     = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t);
     const margin    = s.margin_pct   ?? null;
     const isAir     = s.mode === 'air'; // data compare, not UI text — off-template so detector-blind

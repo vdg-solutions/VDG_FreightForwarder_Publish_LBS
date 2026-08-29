@@ -36,6 +36,7 @@ export function applyQuoteSellRows(root, quoteLines, { fxRepo = null, docDate = 
     .every((n) => !(row.querySelector(`[name=${n}]`)?.value));
   const blanks = Array.from(tbody.querySelectorAll('tr[data-line]')).filter(isBlank);
   const headerCurrency = root.querySelector('[name=currency]')?.value || '';
+  const bookCurrency   = root.querySelector('[name=book_currency]')?.value || '';
 
   let applied = 0;
   for (const q of quoteLines) {
@@ -44,7 +45,7 @@ export function applyQuoteSellRows(root, quoteLines, { fxRepo = null, docDate = 
     if (!row) {
       const idx = tbody.querySelectorAll('tr[data-line]').length;
       const tmp = document.createElement('tbody');
-      tmp.innerHTML = lineRowHtml(idx, {}, headerCurrency);
+      tmp.innerHTML = lineRowHtml(idx, {}, headerCurrency, bookCurrency);
       row = tmp.firstElementChild;
       tbody.appendChild(row);
     }
@@ -105,11 +106,13 @@ async function _attach(root, quote, opts) {
   }
 
   applyQuoteSellRows(root, quote.lines, opts);
-  // The quote's creator IS the rep — fill the select when nothing picked one yet.
+  // F-41: sales_rep_id is the quote's commercial owner (SalesRepDerivation's verdict) — NOT
+  // created_by, which is only who happened to key the quote in and may be a different person
+  // entirely (CS, or a covering rep). Fill the select when nothing picked one yet.
   const repSel = root.querySelector('select[name=sales_rep]');
-  if (repSel && !repSel.value && quote.created_by
-      && [...repSel.options].some((o) => o.value === quote.created_by)) {
-    repSel.value = quote.created_by;
+  if (repSel && !repSel.value && quote.sales_rep_id
+      && [...repSel.options].some((o) => o.value === quote.sales_rep_id)) {
+    repSel.value = quote.sales_rep_id;
     repSel.dispatchEvent(new Event('change', { bubbles: true }));
   }
   _toast(t('sales_new.quote_attached').replace('{id}', quote.id), 'success');

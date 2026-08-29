@@ -154,6 +154,9 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
       kind:          l.kind          || 'Line',
       amount_fx:     l.amount_fx     || 0,
       currency:      l.currency      || 'USD',
+      // Rides to ledger_poster.rs::LedgerCommissionEntry.book_currency — the workspace book
+      // currency AT SAVE TIME, so commission_gross_vnd applies the SAME rule the rep saw.
+      book_currency: l.book_currency || state.book_currency || null,
       fx_rate:       l.fx_rate       || null,
       fx_date:       l.fx_date       || null,
       bank_fee:      l.bank_fee      || 0,

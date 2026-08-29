@@ -21,7 +21,7 @@ export const UNKNOWN_USER_ID = 'unknown';
 let _impl = null;
 
 /// Root bootstrap binds { routeGuard, homeRouteForRole, filterSidebarItems, resolveUserRoles,
-/// normalizeRole, currentUserRoles, currentUserRole, currentUserId } once.
+/// normalizeRole, currentUserRoles, currentUserRole, currentUserId, currentUserEmail } once.
 export function bindRouteGuard(impl) { _impl = impl; }
 
 /// (route, roles) -> 'allow' or { redirect, reason }
@@ -66,4 +66,9 @@ export function currentUserRole() {
 
 export function currentUserId() {
   return _impl ? _impl.currentUserId() : UNKNOWN_USER_ID;
+}
+
+/// The signed-in address — stamped on records ("who did this"), never consulted for authority.
+export function currentUserEmail() {
+  return _impl ? _impl.currentUserEmail() : '';
 }

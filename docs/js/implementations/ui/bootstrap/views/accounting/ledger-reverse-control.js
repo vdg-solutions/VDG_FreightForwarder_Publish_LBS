@@ -1,14 +1,13 @@
-// ledger-reverse-control.js — F-19-78: manager-only Reverse-entry affordance.
+// ledger-reverse-control.js — F-19-78: Reverse-entry affordance, gated on ledger.reverse.
 // Extracted from ledger-viewer.js for the 350-line cap (mirrors ledger-repost-panel.js split).
-// refreshReverseControl carries the ROLE_MANAGER + host-existence guard so the viewer's
-// #reverse-control-root (only present in the DOM for a manager, see shellHtml) stays the sole
-// call site (AC-07).
+// refreshReverseControl carries the can('ledger.reverse') + host-existence guard so the viewer's
+// #reverse-control-root (only present in the DOM when the guard admits it, see shellHtml) stays
+// the sole call site (AC-07).
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { postReversal } from '../../../core_abstractions/ports/flows/ledger-poster.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { currentUserRole } from '../../../core_abstractions/ports/governance/route-guard.js';
+import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
 
 const SOURCE_REVERSAL = 'reversal';
 
@@ -92,10 +91,10 @@ export function mountReverseControl(host, { selectedEntryId, selectedLeg, actorI
   });
 }
 
-/// AC-07: manager-only, re-invoked on every selection change. `root` is the view root (holds
+/// AC-07: re-invoked on every selection change. `root` is the view root (holds
 /// #reverse-control-root); `state` is forwarded to mountReverseControl.
 export function refreshReverseControl(root, state) {
-  if (currentUserRole() !== ROLE_MANAGER) return;
+  if (!can('ledger.reverse')) return;
   const host = root.querySelector('#reverse-control-root');
   if (host) mountReverseControl(host, state);
 }

@@ -2,7 +2,7 @@
 // Import-clean: only computeLineVnd from pnl-line-fx.js (chain → fx-lookup.js, both CDN-free).
 // See design.md §2/§6 — this module must stay importable under node:test without the
 // section-header.js -> cache/semantic-search.js CDN crash.
-import { computeLineVnd } from './pnl-line-fx.js';
+import { computeLineVnd, DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
 
 // R-C named constants
 const VND_INVARIANT_EPSILON = 1;             // VND has no sub-unit; absorbs float noise from
@@ -22,13 +22,14 @@ const REASON_DEVIATION    = 'deviation';
 export function computeVndInvariant(state = {}, epsilon = VND_INVARIANT_EPSILON) {
   const lines            = state.lines || [];
   const commissionLines  = state.commission_lines || [];
+  const bookCurrency     = state.book_currency || DEFAULT_HEADER_CURRENCY;
 
   let expected = 0;
   let actual   = 0;
 
   for (const l of lines) {
-    expected += computeLineVnd(l.buy_amt, l.buy_currency, l.buy_fx_rate);
-    expected += computeLineVnd(l.sell_amt, l.sell_currency, l.sell_fx_rate);
+    expected += computeLineVnd(l.buy_amt, l.buy_currency, l.buy_fx_rate, bookCurrency);
+    expected += computeLineVnd(l.sell_amt, l.sell_currency, l.sell_fx_rate, bookCurrency);
     actual   += l.vnd_pay || 0;
     actual   += l.vnd_collect || 0;
   }

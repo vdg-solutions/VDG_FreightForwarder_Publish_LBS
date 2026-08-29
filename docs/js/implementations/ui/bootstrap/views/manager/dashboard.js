@@ -1,9 +1,6 @@
 // Manager Dashboard — F-14-01
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { compose, LAYOUT_DEBOUNCE_MS, ACTIVITY_FEED_MAX, TOP_CUSTOMERS_MAX } from '../../../core_abstractions/ports/manager/dashboard-composer.js';
-import { navigate } from '../../router.js';
 import { getActiveSalesReps } from '../../../core_abstractions/ports/flows/sales-registry.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
@@ -203,8 +200,6 @@ async function _buildSalesBtns() {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   destroyCharts();
   if (_onEntityChanged) window.removeEventListener('vdg:entity-changed', _onEntityChanged);
   if (_onPeriodChanged) window.removeEventListener('vdg:period-changed', _onPeriodChanged);

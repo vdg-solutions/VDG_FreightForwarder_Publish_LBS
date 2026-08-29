@@ -1,6 +1,9 @@
 // F-12-10 — New quotation form (Draft creation)
 
-import { currentSalesRepId } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { can } from '../../core_abstractions/ports/governance/action-guard.js';
+import { selfRepCandidate, customerRepFor } from '../../../ui/core_abstractions/ports/flows/sales-rep-derivation.js';
+import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { saveDraft } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
 import { navigate } from '../router.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
@@ -21,9 +24,7 @@ export async function getContainerTypes(repo) {
         });
       }
     }
-  } catch {
-    // fallback to standard codes
-  }
+  } catch { /* fallback to standard codes */ }
   return [
     { code: '20DC', label: "20DC (Container 20' khô)" },
     { code: '40DC', label: "40DC (Container 40' khô)" },
@@ -61,7 +62,7 @@ function clearErrors(root) {
 
 // ── autocomplete dropdown ──────────────────────────────────────────────────────
 
-function attachAutocomplete(inputEl, items, labelKey) {
+function attachAutocomplete(inputEl, items, labelKey, onSelect) {
   if (!inputEl) return;
   const list = document.createElement('ul');
   list.className = 'absolute z-50 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto w-full';
@@ -82,9 +83,12 @@ function attachAutocomplete(inputEl, items, labelKey) {
   });
   list.addEventListener('mousedown', (e) => {
     const li = e.target.closest('li[data-val]');
-    if (li) { inputEl.value = li.dataset.val; list.style.display = 'none'; }
+    if (li) { inputEl.value = li.dataset.val; list.style.display = 'none'; onSelect?.(li.dataset.val); }
   });
-  inputEl.addEventListener('blur', () => setTimeout(() => { list.style.display = 'none'; }, 150));
+  inputEl.addEventListener('blur', () => {
+    onSelect?.(inputEl.value.trim());
+    setTimeout(() => { list.style.display = 'none'; }, 150);
+  });
 }
 
 // ── rate lines table ───────────────────────────────────────────────────────────
@@ -136,7 +140,23 @@ function renderLinesTable(root) {
 
 // ── form scaffold ─────────────────────────────────────────────────────────────
 
-function formHtml(presetSales, containerTypes = []) {
+// F-41: the label a rep option shows — mirrors sales-new-form/section-header.js's repOptionLabel.
+function repOptionLabel(r) {
+  return r.handle ? `${r.name} (${r.handle})` : r.name;
+}
+
+// F-41: SELECT over provisioned reps (value = fork prefix), never free text — this is the
+// commercial owner a quote defaults to, and it must stay overridable per document.
+function repSelectHtml(reps, selected) {
+  const opts = (reps || [])
+    .map((r) => `<option value="${escHtml(r.prefix)}"${r.prefix === selected ? ' selected' : ''}>${escHtml(repOptionLabel(r))}</option>`)
+    .join('');
+  return `<select id="f-sales-rep" name="sales_rep" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <option value="">${t('sales_new.select_placeholder')}</option>${opts}
+  </select>`;
+}
+
+function formHtml(presetSales, containerTypes = [], reps = []) {
   const ctOptions = containerTypes.map((ct) => `<option value="${escHtml(ct.code)}">${escHtml(ct.label)}</option>`).join('');
   return `
     <div class="p-6 max-w-3xl mx-auto">
@@ -166,6 +186,11 @@ function formHtml(presetSales, containerTypes = []) {
               <input id="f-carrier" type="text" autocomplete="off" placeholder="${t('quote_new.ph.carrier')}"
                      class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">${t('quote_new.field.sales_rep')} <span class="text-red-500">*</span></label>
+            ${repSelectHtml(reps, presetSales)}
+            <span id="err-sales_rep" class="field-err hidden text-xs text-red-600"></span>
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">${t('sales_new.field.pol')} <span class="text-red-500">*</span></label>
@@ -234,7 +259,8 @@ function formHtml(presetSales, containerTypes = []) {
 
 // ── entry point ───────────────────────────────────────────────────────────────
 
-export async function render(root) {
+export async function render(root, quoteId) {
+  if (!can(quoteId ? 'quote.edit' : 'quote.create')) { navigate('/sales/quote'); return; } // F-63: QUOTE_EDIT_RE has no access_policy.rs rule of its own
   _lines = [{ description: '', amount: '', currency: 'VND' }];
   const salesId = currentSalesRepId();
   if (!salesId) {
@@ -244,8 +270,13 @@ export async function render(root) {
 
   const repo = window.__vdg_repo;
   const containerTypes = await getContainerTypes(repo);
+  // F-41: same derivation chain the shipment form uses — self is a candidate default ONLY when
+  // the session actually holds a sales role; the customer autofill below can still override it,
+  // and the select always stays overridable per document.
+  const defaultRep = selfRepCandidate(currentRoles(), salesId);
+  const reps = await getActiveSalesReps(repo).catch(() => []);
 
-  root.innerHTML = formHtml(salesId, containerTypes);
+  root.innerHTML = formHtml(defaultRep, containerTypes, reps);
   renderLinesTable(root);
 
   // Load masters for autocomplete
@@ -256,7 +287,15 @@ export async function render(root) {
       repo.list('carriers', null).catch(() => []),
     ]);
   }
-  attachAutocomplete(root.querySelector('#f-customer'), customers, 'name');
+  const repSelect = root.querySelector('#f-sales-rep');
+  // F-41: the customer master's assigned rep wins over nothing-picked-yet, never over a rep
+  // already chosen — mirrors section-header-wiring.js's _autofillRep for shipments.
+  const autofillRep = (customerName) => {
+    if (!repSelect || repSelect.value) return;
+    const rep = customerRepFor(customerName, customers);
+    if (rep && [...repSelect.options].some((o) => o.value === rep)) repSelect.value = rep;
+  };
+  attachAutocomplete(root.querySelector('#f-customer'), customers, 'name', autofillRep);
   attachAutocomplete(root.querySelector('#f-carrier'),  carriers,  'name');
 
   root.querySelector('#btn-add-line')?.addEventListener('click', () => {
@@ -274,9 +313,13 @@ export async function render(root) {
     const container_type = root.querySelector('#f-container').value;
     const carrier   = root.querySelector('#f-carrier').value.trim();
     const notes     = root.querySelector('#f-notes').value.trim();
+    // F-41: the select is the final word — whatever the derivation chain defaulted it to, or
+    // whatever a manual pick overrode it with.
+    const salesRepFinal = repSelect?.value || '';
 
     let ok = true;
     if (!customer) { showError(root, 'customer', t('quote_new.val.customer')); ok = false; }
+    if (!salesRepFinal) { showError(root, 'sales_rep', t('quote_new.val.sales_rep')); ok = false; }
     if (!pol)      { showError(root, 'pol',      t('quote_new.val.pol'));      ok = false; }
     if (!pod)      { showError(root, 'pod',      t('quote_new.val.pod'));      ok = false; }
     if (!validity || Number(validity) < 1) { showError(root, 'validity', t('quote_new.val.validity')); ok = false; }
@@ -288,7 +331,9 @@ export async function render(root) {
     if (statusEl) statusEl.textContent = t('quote_new.status.saving');
 
     try {
-      const { id, pending_manager_approval } = await saveDraft(repo, salesId, {
+      // actorId (salesId, who is signed in) is provenance only; salesRepFinal is the commercial
+      // owner the draft is filed under — never the same field twice.
+      const { id, pending_manager_approval } = await saveDraft(repo, salesId, salesRepFinal, {
         customer, pol, pod, container_type, carrier, notes,
         lines: validLines, validity_days: Number(validity),
       });

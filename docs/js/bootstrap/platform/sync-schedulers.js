@@ -59,7 +59,7 @@ function _announce(jobState) {
 }
 
 // ── delta tick ────────────────────────────────────────────────────────────────
-// The 30s pull over data_repo's delta engine (repo.sync_delta). The hourly Drive-quota check
+// The 30s pull over store's delta engine (repo.sync_delta). The hourly Drive-quota check
 // rides one of these ticks — Rust says which.
 
 export function startDeltaTick({ getRepo = () => window.__vdg_repo } = {}) {

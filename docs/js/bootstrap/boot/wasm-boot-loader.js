@@ -18,11 +18,16 @@ export async function loadWasmModule() {
     // before, which threw ReferenceError on ANY rejection and skipped this whole recovery path.
     if (err instanceof WebAssembly.LinkError || err?.name === 'LinkError' || String(err).includes('LinkError')) {
       console.warn('[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...');
-      if ('caches' in window) {
+      // Same guard shape as view-fallback.js's healOrReloadViaServiceWorker (F-19-17 follow-up):
+      // `'x' in window` and a bare `navigator` reference both throw ReferenceError on any runtime
+      // with no such global at all, not just return false/undefined -- `in` and `?.` both protect
+      // a property lookup, never an undeclared identifier. This branch has no test today, but the
+      // fix is the same one that mattered elsewhere: don't depend on a runtime accident.
+      if (typeof window !== 'undefined' && 'caches' in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
-      if (navigator.serviceWorker) {
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map((r) => r.unregister()));
       }

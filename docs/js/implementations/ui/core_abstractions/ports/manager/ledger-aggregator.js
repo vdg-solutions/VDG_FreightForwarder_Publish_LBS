@@ -10,11 +10,13 @@ function _i() {
   return _impl;
 }
 
-/// (chart, legsByAccount, asOfDate) -> [{ acc_code, opening, dr, cr, closing }]
+/// (chart, legsByAccount, asOfDate) -> { rows: [{ acc_code, opening, dr, cr, closing }], total_dr, total_cr, balanced }
 export const trialBalance = (...a) => _i().trialBalance(...a);
-/// (chart, legsByAccount, dateFrom, dateTo) -> { revenue, expense, netIncome }
+/// (chart, legsByAccount, dateFrom, dateTo) -> { revenue, expense, netIncome, totalRevenue, totalExpense }
 export const pnl = (...a) => _i().pnl(...a);
 /// (chart, legsByAccount, year) -> [{ month, revenue, expense, netIncome }]
 export const pnlMonthlyBreakdown = (...a) => _i().pnlMonthlyBreakdown(...a);
-/// (chart, legsByAccount, asOfDate) -> { assets, liabilities, equity }
+/// (chart, legsByAccount, asOfDate) -> { assets, liabilities, equity, total_assets, total_liabilities, total_liab_equity, balanced }
 export const balanceSheet = (...a) => _i().balanceSheet(...a);
+/// (legs) -> { debitSum, creditSum, diff } — one journal entry's debit/credit totals (F-19-75 drill-through).
+export const entryTotals = (...a) => _i().entryTotals(...a);

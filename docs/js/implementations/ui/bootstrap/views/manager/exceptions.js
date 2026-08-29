@@ -1,8 +1,5 @@
 // Manager Exception Command Center — F-14-09
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate } from '../../router.js';
 import { bulkPut } from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
 import { getActiveSalesReps } from '../../../core_abstractions/ports/flows/sales-registry.js';
 import { computeSortedExceptions, computeTrends, computeMttr, computePerSalesRate, computeEscalated, KIND_EXCEPTION, SEVERITY_BADGE_CLS }
@@ -230,7 +227,6 @@ export function renderTrends(root, exceptions) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) { window.removeEventListener('vdg:entity-changed', _onEntity); _onEntity.cancel?.(); }
   if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
   _selectedIds.clear();

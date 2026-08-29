@@ -12,5 +12,5 @@ function _i() {
   return _impl;
 }
 
-/// (kind, role) -> boolean. An unregistered kind denies every role.
+/// (kind, roles) -> boolean. An unregistered kind denies every role.
 export const canWriteMaster = (...a) => _i().canWriteMaster(...a);

@@ -2,8 +2,7 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { guardMessage } from '../../../kernel/core_abstractions/util/guard-messages.js';
 import './timeline-entry.js';
 import { renderCommissionTab } from '../views/commission-tab.js';
-import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
+import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { CANCELLED_STATE, chooseShipmentAffordance, runShipmentAffordance } from '../../core_abstractions/ports/flows/shipment-void-delete.js';
@@ -247,6 +246,9 @@ class VdgDetailPanel extends LitElement {
 
   _renderButton(cur) {
     if (cur === 'Closed') return html`<button disabled class="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed">${t('shipment.detail.job_closed')}</button>`;
+    // F-63: an auditor reads the state, it does not advance it — this control had no role gate
+    // at all before (every desk role that reaches the panel is meant to run the job forward).
+    if (!can('shipment.transition')) return html``;
     const event = NEXT_EVENT[cur];
     if (!event) return html``;
     const offline = !navigator.onLine;
@@ -270,7 +272,7 @@ class VdgDetailPanel extends LitElement {
   // for the same shipment (F-19-77 rework D-1): a published shipment always offers Void here,
   // never Delete.
   _renderVoidDelete(cur) {
-    if (!hasRole(ROLE_MANAGER)) return html``;
+    if (!can('shipment.void')) return html``;
     const affordance = chooseShipmentAffordance({ ...this.shipment, state: cur });
     if (affordance === 'none') return html``;
     const label = affordance === 'delete' ? t('common.action.delete') : t('shipments.action.void');
@@ -289,7 +291,7 @@ class VdgDetailPanel extends LitElement {
     const result = await runShipmentAffordance({
       repo: window.__vdg_repo,
       shipment: this.shipment,
-      isManager: hasRole(ROLE_MANAGER),
+      canVoid: can('shipment.void'),
       confirm: (a) => showConfirm({
         destructive: true,
         title: t(a === 'delete' ? 'shipments.delete_confirm.title' : 'shipments.void_confirm.title'),

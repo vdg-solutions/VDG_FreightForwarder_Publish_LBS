@@ -48,6 +48,16 @@ export class LedgerStoreRepo extends LedgerRepo {
     return await this._repo().lgr_record_posted(postedIndex, JSON.stringify(entry_ids));
   }
 
+  /** F1: the posted-index row (with entry_ids) for a dedup key, or null. */
+  async findPosted(postedIndex) {
+    return await this._repo().lgr_find_posted(postedIndex);
+  }
+
+  /** F1: drop a posted-index row — only after its entries were reversed. */
+  async releasePosted(postedIndex) {
+    return await this._repo().lgr_release_posted(postedIndex);
+  }
+
   async appendReconciliationRecord(record) {
     return await this._repo().lgr_append_log(RECONCILIATION_LOG_FILE, JSON.stringify(record));
   }

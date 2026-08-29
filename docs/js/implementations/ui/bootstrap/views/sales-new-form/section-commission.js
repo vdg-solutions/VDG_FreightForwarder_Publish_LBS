@@ -2,8 +2,8 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { commFxCellsHtml, wireCommissionFx, applyCommFxDateDefaults, prefillPanelFx } from './section-commission-fx.js';
+import { bookCurrencyOf } from './pnl-line-fx.js';
 
-const DEFAULT_TNCN_PCT = 15;
 // # | Loai | Mo ta | Tong chi | Thuc nhan | toggle | delete
 const PARENT_COLSPAN   = 7;
 const INPUT_CLS        = 'w-full border border-slate-200 rounded px-1 py-0.5 text-xs';
@@ -60,10 +60,10 @@ function commParentRowHtml(idx, row = {}) {
 }
 
 // Detail panel (accordion body) — 6 inputs + auto/manual TNCN VND + breakdown display
-function commDetailPanelHtml(idx, row = {}, headerCurrency) {
+function commDetailPanelHtml(idx, row = {}, headerCurrency, bookCurrency) {
   const amountFx   = row.amount_fx   != null ? row.amount_fx   : '';
   const bankFee    = row.bank_fee    != null ? row.bank_fee    : '';
-  const tncnPct    = row.tncn_pct    != null ? row.tncn_pct    : DEFAULT_TNCN_PCT;
+  const tncnPct    = row.tncn_pct    != null ? row.tncn_pct    : window.__vdg_wasm.commission_default_personal_tax_pct();
   const tncnAmount = row.tncn_amount != null ? row.tncn_amount : '';
   const netVnd     = row.net_after_tax != null ? row.net_after_tax : '';
   const isManual   = row.tncn_manual || false;
@@ -79,7 +79,7 @@ function commDetailPanelHtml(idx, row = {}, headerCurrency) {
                 value="${amountFx}" placeholder="0"
                 class="${INPUT_CLS} text-right" />
             </label>
-            ${commFxCellsHtml(row, headerCurrency)}
+            ${commFxCellsHtml(row, headerCurrency, bookCurrency)}
             <label class="flex flex-col gap-0.5">
               <span class="text-slate-500">${t('commission.col.bank_fee')}</span>
               <input name="comm_bank_fee" type="number" step="any"
@@ -128,13 +128,14 @@ function commDetailPanelHtml(idx, row = {}, headerCurrency) {
 }
 
 // Combined parent + panel HTML for one entry (always starts collapsed)
-export function commEntryHtml(idx, row = {}, headerCurrency) {
-  return commParentRowHtml(idx, row) + commDetailPanelHtml(idx, row, headerCurrency);
+export function commEntryHtml(idx, row = {}, headerCurrency, bookCurrency) {
+  return commParentRowHtml(idx, row) + commDetailPanelHtml(idx, row, headerCurrency, bookCurrency);
 }
 
 export function sectionCHtml(draft = {}) {
   const headerCurrency = draft.currency || '';
-  const rows = (draft.commission_lines || []).map((r, i) => commEntryHtml(i, r, headerCurrency)).join('');
+  const bookCurrency   = draft.book_currency || '';
+  const rows = (draft.commission_lines || []).map((r, i) => commEntryHtml(i, r, headerCurrency, bookCurrency)).join('');
   return `
     <div id="sec-c-body" class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="flex items-center justify-between mb-3">
@@ -169,18 +170,22 @@ export function sectionCHtml(draft = {}) {
     </div>`;
 }
 
-// Pure formula helper — AC-04: exported for testability
-export function computeCommission({ amountFx, fxRate, bankFee, tncnPct, tncnManual, tncnAmtManual }) {
-  const grossVnd = amountFx * fxRate;
+// AC-04: exported for testability. currency/bookCurrency decide the passthrough, same rule as
+// computeLineVnd/ledger_poster.rs::commission_gross_vnd — a same-book-currency amount is never
+// re-multiplied by fx_rate. TNCN math lives in WASM (single source of truth, same as the
+// commission_waterfall TNDN split); JS only does the FX branch and renders what comes back.
+export function computeCommission({ amountFx, fxRate, bankFee, tncnPct, tncnManual, tncnAmtManual, currency, bookCurrency }) {
+  const grossVnd = currency === bookCurrency ? amountFx : amountFx * fxRate;
   const tncnAmt  = tncnManual
     ? tncnAmtManual
-    : Math.round(grossVnd * tncnPct / 100);
-  return { grossVnd, tncnAmt, netVnd: grossVnd - bankFee - tncnAmt };
+    : window.__vdg_wasm.commission_personal_tax(grossVnd, tncnPct);
+  return { grossVnd, tncnAmt, netVnd: window.__vdg_wasm.commission_net_after_tax(grossVnd, bankFee, tncnAmt) };
 }
 
 function recomputeEntry(panelEl) {
   const idx      = panelEl.dataset.commPanel;
   const amountFx = parseFloat(panelEl.querySelector('[name=comm_amount_fx]')?.value) || 0;
+  const currency = panelEl.querySelector('[name=comm_currency]')?.value || '';
   const fxRate   = parseFloat(panelEl.querySelector('[name=comm_fx_rate]')?.value)   || 0;
   const bankFee  = parseFloat(panelEl.querySelector('[name=comm_bank_fee]')?.value)  || 0;
   const tncnPct  = parseFloat(panelEl.querySelector('[name=comm_tncn_pct]')?.value)  || 0;
@@ -188,7 +193,7 @@ function recomputeEntry(panelEl) {
   const isManual = tncnEl?.dataset.tncnManual === 'true';
 
   const { grossVnd, tncnAmt, netVnd } = computeCommission({
-    amountFx, fxRate, bankFee, tncnPct,
+    amountFx, fxRate, bankFee, tncnPct, currency, bookCurrency: bookCurrencyOf(panelEl),
     tncnManual: isManual, tncnAmtManual: parseFloat(tncnEl?.value) || 0,
   });
 
@@ -238,8 +243,9 @@ export function wireCommissionSection(root, onChanged, fxRepo, docDate) {
   root.querySelector('#add-comm-btn')?.addEventListener('click', () => {
     const idx            = tbody.querySelectorAll('[data-comm-row]').length;
     const headerCurrency = root.querySelector('[name=currency]')?.value || '';
+    const bookCurrency   = root.querySelector('[name=book_currency]')?.value || '';
     const tmp = document.createElement('tbody');
-    tmp.innerHTML = commEntryHtml(idx, {}, headerCurrency);
+    tmp.innerHTML = commEntryHtml(idx, {}, headerCurrency, bookCurrency);
     while (tmp.firstElementChild) tbody.appendChild(tmp.firstElementChild);
     applyCommFxDateDefaults(tbody, docDate);   // design §3: new row defaults fx_date to doc date
     // F-29-10 AC-01 mục C: prefill blank fx_rate on add, recompute once the async lookup lands
@@ -312,6 +318,10 @@ export function wireCommissionSection(root, onChanged, fxRepo, docDate) {
 }
 
 export function collectCommission(root) {
+  // Stamped onto every row so ledger_poster.rs's build_entries_from_commission (fed straight
+  // from this persisted record — no second resolve at post time) applies the SAME rule the
+  // rep saw on screen (F-29-23-family fix).
+  const bookCurrency = root.querySelector('[name=book_currency]')?.value || '';
   return Array.from(root.querySelectorAll('#commission-tbody [data-comm-panel]')).map((panel) => {
     const idx    = panel.dataset.commPanel;
     const tbody  = panel.closest('tbody');
@@ -322,6 +332,7 @@ export function collectCommission(root) {
       description:   parent?.querySelector('[name=comm_desc]')?.value             || '',
       amount_fx:     parseFloat(panel.querySelector('[name=comm_amount_fx]')?.value) || 0,
       currency:      panel.querySelector('[name=comm_currency]')?.value             || '',
+      book_currency: bookCurrency,
       fx_rate:       parseFloat(panel.querySelector('[name=comm_fx_rate]')?.value)   || 0,
       fx_date:       panel.querySelector('[name=comm_fx_date]')?.value              || '',
       bank_fee:      parseFloat(panel.querySelector('[name=comm_bank_fee]')?.value)  || 0,

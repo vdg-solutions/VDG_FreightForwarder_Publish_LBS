@@ -19,7 +19,6 @@ export const VIEWS = {
   '/masters/services': () => import('../implementations/ui/bootstrap/views/masters-services.js'),
   '/help':             () => import('../implementations/ui/bootstrap/views/help.js'),
   '/pending-access':   () => import('../implementations/ui/bootstrap/views/pending-access.js'),
-  '/onboarding':       () => import('../implementations/ui/bootstrap/views/onboarding-wizard.js'),
   '/background-jobs':  () => import('../implementations/ui/bootstrap/views/background-jobs.js'),
   // Manager Workspace — E-14
   '/manager/dashboard':              () => import('../implementations/ui/bootstrap/views/manager/dashboard.js'),

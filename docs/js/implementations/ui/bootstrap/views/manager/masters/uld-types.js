@@ -1,8 +1,8 @@
 // ULD Types master CRUD grid — F-16-04
 // Route: /masters/uld-types
 
-import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
+import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }                            from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { validateUldCode, checkUldCodeUnique } from '../../../../../kernel/core_abstractions/util/uld-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
@@ -140,7 +140,7 @@ function rowHtml(e, isM) {
 }
 
 export async function render(root) {
-  const isM  = hasRole(ROLE_MANAGER);
+  const isM  = canWriteMaster(KIND, currentRoles());
   const repo = window.__vdg_repo;
   const actCol = isM ? `<th class="px-3 py-2 text-left w-28">${t('common.col.actions')}</th>` : '';
 

@@ -51,8 +51,9 @@ export function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
   root.querySelector('#add-line-btn')?.addEventListener('click', () => {
     const idx = tbody.querySelectorAll('tr[data-line]').length;
     const headerCurrency = root.querySelector('[name=currency]')?.value || '';
+    const bookCurrency   = root.querySelector('[name=book_currency]')?.value || '';
     const tmp = document.createElement('tbody');
-    tmp.innerHTML = lineRowHtml(idx, {}, headerCurrency);
+    tmp.innerHTML = lineRowHtml(idx, {}, headerCurrency, bookCurrency);
     const newRow = tmp.firstElementChild;
     tbody.appendChild(newRow);
     applyFxDateDefaults(newRow, docDate);
@@ -122,8 +123,9 @@ export function wireLinesSection(root, onChanged, repId, fxRepo, docDate) {
     e.preventDefault();
     const newIdx = rows.length;
     const headerCurrency = root.querySelector('[name=currency]')?.value || '';
+    const bookCurrency   = root.querySelector('[name=book_currency]')?.value || '';
     const tmp = document.createElement('tbody');
-    tmp.innerHTML = lineRowHtml(newIdx, {}, headerCurrency);
+    tmp.innerHTML = lineRowHtml(newIdx, {}, headerCurrency, bookCurrency);
     const newRow = tmp.firstElementChild;
     tbody.appendChild(newRow);
     applyFxDateDefaults(newRow, docDate);

@@ -16,7 +16,8 @@ export function composeCache(wasm) {
   });
 
   bindMasterRegistry({
-    canWriteMaster: (kind, role) => wasm.cache_can_write_master({ kind, role: role ?? null }).allowed,
+    // A role set, not one role — a Manager+SalesRep is judged on the whole hand, not one hat.
+    canWriteMaster: (kind, roles) => wasm.cache_can_write_master({ kind, roles: roles || [] }).allowed,
   });
 
   bindMasterDeduper({

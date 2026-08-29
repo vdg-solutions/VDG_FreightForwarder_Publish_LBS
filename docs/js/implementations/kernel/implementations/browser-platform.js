@@ -1,6 +1,8 @@
 // browser-platform.js — the browser behind the kernel's platform ports: Date, setTimeout, console,
 // localStorage, fetch and the window event bus. Bound once by kernel/bootstrap/compose.js.
 
+import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../core_abstractions/util/safe-await.js';
+
 export const browserClock = {
   nowMs:    () => Date.now(),
   nowDate:  () => new Date(),
@@ -24,14 +26,17 @@ export const localStorageKv = {
   removeItem: (key) => localStorage.removeItem(key),
 };
 
+// A network failure and a 404 already read the same way to every caller (i18n's loadLocale
+// throws "failed to load X" on either) — collapse both into the same null so a stalled
+// connection cannot hang boot instead of taking that same failure path.
 export const fetchHttp = {
   fetchJson: async (url) => {
-    const resp = await fetch(url);
-    return resp.ok ? resp.json() : null;
+    const { ok, value: resp } = await safeAwait(fetch(url), SAFE_AWAIT_DEFAULT_MS, undefined, `fetchJson:${url}`);
+    return ok && resp.ok ? resp.json() : null;
   },
   fetchText: async (url) => {
-    const resp = await fetch(url);
-    return resp.ok ? resp.text() : null;
+    const { ok, value: resp } = await safeAwait(fetch(url), SAFE_AWAIT_DEFAULT_MS, undefined, `fetchText:${url}`);
+    return ok && resp.ok ? resp.text() : null;
   },
 };
 

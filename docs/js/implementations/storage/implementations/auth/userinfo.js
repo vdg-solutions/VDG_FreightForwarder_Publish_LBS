@@ -20,6 +20,11 @@ export class UserinfoFetchTimeoutError extends Error {
 
 /// (accessToken) -> the userinfo body. Throws UserinfoFetchTimeoutError past the ceiling, and a
 /// plain Error on a non-200 — a 401 means the token is dead, never a profile to mint from.
+///
+/// Raw await, not safeAwait — this already IS the modeled failure: real cancellation via
+/// AbortController (safeAwait's race would leave the request in flight instead of aborting it),
+/// a typed timeout error the callers branch on, and a rethrow of anything else. Wrapping it would
+/// add a second, redundant timeout with weaker semantics, not a fix.
 export async function fetchUserinfo(accessToken) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), USERINFO_FETCH_TIMEOUT_MS);

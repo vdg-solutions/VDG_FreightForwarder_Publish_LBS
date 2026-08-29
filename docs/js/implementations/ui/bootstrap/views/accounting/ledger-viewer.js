@@ -8,8 +8,8 @@ import {
 } from '../../../core_abstractions/ports/manager/ledger-composer.js';
 import { renderReconcileStatus, runReconciliationNow } from './ledger-reconcile-control.js';
 import { loadOpeningBalance, openingRowHtml } from './ledger-opening-balance.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { currentUserRole } from '../../../core_abstractions/ports/governance/route-guard.js';
+import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
+import { currentUserEmail } from '../../../core_abstractions/ports/governance/route-guard.js';
 import { mountRepostPanelIfReady } from './ledger-repost-panel.js';
 import { refreshReverseControl, renderReversalBadge, bindLegRowInteractions } from './ledger-reverse-control.js';
 import { renderUnbalancedList } from './ledger-viewer-unbalanced.js';
@@ -96,11 +96,11 @@ function shellHtml() {
       </div>
       <div id="reconcile-unbalanced-list" class="mb-4"></div>
 
-      ${currentUserRole() === ROLE_MANAGER ? '<div id="repost-panel-root" class="mb-4"></div>' : ''}
+      ${can('ledger.repost') ? '<div id="repost-panel-root" class="mb-4"></div>' : ''}
 
       <div class="flex items-center justify-between flex-wrap gap-3 mb-2">
         <div id="closing-balance-banner" class="text-xs text-slate-500"></div>
-        ${currentUserRole() === ROLE_MANAGER ? '<div id="reverse-control-root"></div>' : ''}</div>
+        ${can('ledger.reverse') ? '<div id="reverse-control-root"></div>' : ''}</div>
 
       <div class="flex gap-4">
         <div id="chart-tree" class="w-64 shrink-0 border border-slate-200 rounded-lg p-2 h-[560px] overflow-y-auto"></div>
@@ -199,7 +199,7 @@ function renderLegsTable(root) {
 function updateReverseControl(root) {
   refreshReverseControl(root, {
     selectedEntryId: _selectedEntryId, selectedLeg: _selectedLeg,
-    actorId:         window.__vdg_current_user?.email, ledgerRepo: getLedgerRepo(),
+    actorId:         currentUserEmail(), ledgerRepo: getLedgerRepo(),
     onDone: () => {
       _selectedEntryId = null; _selectedLeg = null;
       if (_selectedAccount) selectAccount(root, _selectedAccount);
@@ -315,10 +315,10 @@ export async function render(root) {
 
   await loadInitial(root, repo);
 
-  // F-29-24: manager-only repost trigger — never boot-wired, only mounted here on demand.
-  // route-guard.js's role check, not auth-gate.js's legacy inline gate (F-24-09 AC-01: this
-  // view must not reintroduce the check route-guard.js already superseded).
-  if (currentUserRole() === ROLE_MANAGER) {
+  // F-29-24: repost trigger — never boot-wired, only mounted here on demand. The action guard's
+  // own verdict, not auth-gate.js's legacy inline gate (F-24-09 AC-01: this view must not
+  // reintroduce the check route-guard.js already superseded).
+  if (can('ledger.repost')) {
     const panelRoot = root.querySelector('#repost-panel-root');
     await safeMasterLoad(() => mountRepostPanelIfReady(panelRoot), REPOST_TAG);
   }

@@ -11,5 +11,5 @@ function _i() {
   return _impl;
 }
 
-/// (repo, driveApi, onProgress) -> filename
+/// (onProgress) -> filename
 export const exportWorkspace = (...a) => _i().exportWorkspace(...a);

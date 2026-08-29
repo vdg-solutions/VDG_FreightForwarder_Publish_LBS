@@ -1,12 +1,7 @@
 // F-15-09 — Manager Backup / DR view — route /manager/backup
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { exportWorkspace } from '../../../core_abstractions/ports/flows/backup-exporter.js';
 import { t }               from '../../../../kernel/core_abstractions/i18n/index.js';
-
-function getRepo()     { return window.__vdg_repo; }
-function getDriveApi() { return window.__vdg_drive_api; }
 
 // ── HTML skeleton ─────────────────────────────────────────────────────────────
 
@@ -43,10 +38,8 @@ function _html() {
 
       <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 space-y-1">
         <div class="font-semibold">${t('backup.restore.title')}</div>
-        <p>${t('backup.restore.body_1')} <strong>${t('backup.restore.drive_trash')}</strong> ${t('backup.restore.body_2')}
-          <a href="https://drive.google.com/drive/trash" target="_blank" rel="noreferrer"
-                   class="underline">drive.google.com/drive/trash</a> ${t('backup.restore.body_3')} <code>LBS</code> folder.
-          ${t('backup.restore.body_4')} <code>docs/operations/disaster-recovery.md</code> ${t('backup.restore.body_5')}</p>
+        <p>${t('backup.restore.body_1')}</p>
+        <p>${t('backup.restore.body_2')}</p>
       </div>
     </div>`;
 }
@@ -54,11 +47,6 @@ function _html() {
 // ── wiring ────────────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) {
-    root.innerHTML = `<div class="p-8 text-sm text-slate-500">${t('nav.access.denied')}</div>`;
-    return;
-  }
-
   root.innerHTML = _html();
 
   const btnExport   = root.querySelector('#btn-export');
@@ -70,21 +58,13 @@ export async function render(root) {
   const errorEl     = root.querySelector('#backup-error');
 
   btnExport?.addEventListener('click', async () => {
-    const repo     = getRepo();
-    const driveApi = getDriveApi();
-    if (!repo || !driveApi) {
-      errorEl.textContent = t('backup.error.drive_not_initialized');
-      errorEl.classList.remove('hidden');
-      return;
-    }
-
     btnExport.disabled = true;
     progressEl.classList.remove('hidden');
     resultEl.classList.add('hidden');
     errorEl.classList.add('hidden');
 
     try {
-      const filename = await exportWorkspace(repo, driveApi, (pct, label) => {
+      const filename = await exportWorkspace((pct, label) => {
         barEl.style.width  = `${pct}%`;
         pctEl.textContent  = `${pct}%`;
         labelEl.textContent = label;

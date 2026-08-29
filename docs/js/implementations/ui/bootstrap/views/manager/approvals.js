@@ -2,9 +2,6 @@
 
 import '../../components/approval-card.js';
 import { APPROVAL_SLA_HOURS } from '../../components/approval-card.js';
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 
@@ -126,8 +123,6 @@ function updateBulkBar(root) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
   _selectedIds.clear();
 

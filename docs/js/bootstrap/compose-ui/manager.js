@@ -5,6 +5,7 @@
 // of the i18n keys the reports hand back. Rust decides the numbers; this file dresses them.
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
+import { currentUserEmail } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { bindAirPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js';
 import { bindArComposer } from '../../implementations/ui/core_abstractions/ports/manager/ar-composer.js';
 import { bindCommissionCalculator } from '../../implementations/ui/core_abstractions/ports/manager/commission-calculator.js';
@@ -33,9 +34,8 @@ const tz = () => -new Date().getTimezoneOffset();
 
 // What `__MANAGER__` displays as (F-19-66): the signed-in person, else the role's own label.
 function managerLabel() {
-  const user = typeof window !== 'undefined' ? window.__vdg_current_user : null;
   const label = t(MANAGER_ROLE_LABEL_KEY);
-  return user?.name || user?.email || (label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label);
+  return currentUserEmail() || (label === MANAGER_ROLE_LABEL_KEY ? ROLE_MANAGER : label);
 }
 
 // The `period` pivot dimension prints these; hard-coding English would rename every row bucket
@@ -88,8 +88,11 @@ export function composeManager(wasm) {
   });
 
   bindArComposer({
-    composeAR: ({ billingEntities = [], today } = {}) =>
-      wasm.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz() }),
+    // F1: fxRatesBuy is currency -> buying closing rate for `today` (131 is an asset).
+    // cash-flow.js fetches it (fetchClosingRatesBuy) before calling this; an absent/empty map
+    // leaves every row's amount at its last-booked amount_vnd, same as before this landed.
+    composeAR: ({ billingEntities = [], today, fxRatesBuy = {} } = {}) =>
+      wasm.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz(), fx_rates_buy: fxRatesBuy }),
     composeAP: ({ pnlLines = [] } = {}) => wasm.manager_ap_payables({ pnl_lines: pnlLines, tz_offset_min: tz() }),
     composeTimeline: ({ billingEntities = [], shipments = [], today } = {}) => {
       const reply = wasm.manager_ar_timeline({
@@ -167,7 +170,7 @@ export function composeManager(wasm) {
 
   bindLedgerAggregator({
     trialBalance: (chart, legsByAccount, asOfDate) =>
-      wasm.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || '' }).rows,
+      wasm.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || '' }),
     pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm.manager_ledger_pnl({
       chart: chart || [], legs_by_account: legsByAccount || {}, date_from: dateFrom || '', date_to: dateTo || '',
     }),
@@ -175,6 +178,7 @@ export function composeManager(wasm) {
       wasm.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
     balanceSheet: (chart, legsByAccount, asOfDate) =>
       wasm.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || '' }),
+    entryTotals: (legs) => wasm.manager_ledger_entry_totals({ legs: legs || [] }),
   });
 
   bindLedgerComposer({

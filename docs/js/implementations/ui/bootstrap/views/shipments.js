@@ -6,8 +6,7 @@ import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js'
 import { shipmentLane } from '../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
-import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
+import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
@@ -18,7 +17,6 @@ const SLIDE_DURATION_MS = 250;
 const NAV_HEIGHT_REM    = 3.5;
 const Z_PANEL           = 40;
 
-const GOOGLE_DRIVE_URL = '/data/10k_shipments.json';
 const FSM_LEGEND_CODE  = 'FSM-01'; // status-machine badge prefix, not translatable prose — same
                                     // class as the linter's FINANCE_ABBREVS carve-out (MTD/YTD)
 
@@ -73,8 +71,8 @@ export function buildColumnDefs(rows = null) {
     headerName: '', field: 'budget', width: 70, sortable: false, filter: false,
     cellRenderer: budgetLinkRenderer,
   });
-  // AC-05: only a manager gets the row action column at all.
-  if (hasRole(ROLE_MANAGER)) {
+  // AC-05: only someone who may void a shipment gets the row action column at all.
+  if (can('shipment.void')) {
     cols.push({
       headerName: '', field: 'actions', width: ACTIONS_COL_WIDTH, sortable: false, filter: false,
       cellRenderer: createActionsRenderer(loadRealData),
@@ -85,12 +83,12 @@ export function buildColumnDefs(rows = null) {
 
 const GRID_HEIGHT_PX = 560;
 
-export function toolbar(total, isLarge) {
+export function toolbar(total) {
   return `
     <div class="flex items-center justify-between mb-4">
       <div>
         <div class="text-xs text-slate-500">${FSM_LEGEND_CODE} · ${t('active_jobs')}</div>
-        <div class="text-base font-semibold text-slate-900">${total.toLocaleString()} ${t('shipments')}${isLarge ? ` <span class="text-xs font-normal text-amber-600 ml-1">${t('shipments.toolbar.virtual_scroll_demo')}</span>` : ''}</div>
+        <div class="text-base font-semibold text-slate-900">${total.toLocaleString()} ${t('shipments')}</div>
       </div>
       <div class="flex items-center gap-2">
         <div class="relative">
@@ -99,13 +97,12 @@ export function toolbar(total, isLarge) {
           </svg>
           <input id="grid-search" placeholder="${t('shipments.toolbar.search_placeholder')}" class="text-sm pl-8 pr-3 py-1.5 border border-slate-200 rounded-md w-72 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400" />
         </div>
-        <button id="toggle-large" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50" title="${t('shipments.toolbar.stress_test_title')}">
-          ${isLarge ? t('shipments.toolbar.normal_view') : t('shipments.toolbar.large_demo')}
-        </button>
         <button id="export-csv" class="text-xs px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:bg-slate-50">${t('shipments.toolbar.export_csv')}</button>
         <!-- F-37-03: creating a job starts here, where the jobs are. It used to live only under
              Sales, which said the job was a rep's before anyone had named one. -->
-        <button id="new-shipment" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('shipments.new')}</button>
+        <!-- F-63: Auditor reads this list but may not create a shipment — the button does not
+             render here at all when the decision comes back false. -->
+        ${can('shipment.create') ? `<button id="new-shipment" class="text-xs px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800">${t('shipments.new')}</button>` : ''}
       </div>
     </div>
   `;
@@ -182,8 +179,6 @@ export async function render(root) {
   if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
   if (_onEntityChanged) window.removeEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
 
-  const isLarge = location.hash.includes('large=1');
-
   root.innerHTML = `
     <div class="p-6 max-w-[1600px] mx-auto">
       <div id="grid-header">
@@ -193,18 +188,7 @@ export async function render(root) {
     </div>
   `;
 
-  let rowData = [];
-  if (isLarge) {
-    try {
-      const res = await fetch(GOOGLE_DRIVE_URL);
-      rowData = await res.json();
-    } catch (e) {
-      console.error('Failed to load 10K demo data', e); // DEV
-      rowData = [];
-    }
-  } else {
-    rowData = await loadRealData();
-  }
+  const rowData = await loadRealData();
 
   const gridDiv = document.getElementById('grid');
   let api = null;
@@ -215,7 +199,6 @@ export async function render(root) {
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowSelection: 'single',
       onRowClicked: (e) => { document.getElementById('detail-panel')?.open(e.data); },
-      animateRows: !isLarge,
       rowHeight: 38,
       headerHeight: 36,
       localeText: agGridLocaleText(),
@@ -224,7 +207,7 @@ export async function render(root) {
 
   const headerDiv = document.getElementById('grid-header');
   if (headerDiv) {
-    headerDiv.innerHTML = toolbar(rowData.length, isLarge);
+    headerDiv.innerHTML = toolbar(rowData.length);
 
     wireGridFilterEmptyState({
       root,
@@ -232,7 +215,8 @@ export async function render(root) {
       searchSelector: '#grid-search',
       getTotal: () => rowData.length,
       entity: t('shipments.empty.entity'),
-      onCreate: () => navigate('/shipments/new'),
+      // F-63: omit entirely when the session may not create a shipment.
+      onCreate: can('shipment.create') ? () => navigate('/shipments/new') : undefined,
       filteredCreateLabel: t('shipments.empty.create_action'),
       firstRunCreateLabel: t('shipments.empty.first_run_action'),
       firstRunBody: t('shipments.empty.first_run_body'),
@@ -244,12 +228,6 @@ export async function render(root) {
 
     document.getElementById('new-shipment')?.addEventListener('click', () => {
       navigate('/shipments/new');
-    });
-
-    document.getElementById('toggle-large')?.addEventListener('click', () => {
-      const next = isLarge ? '/shipments' : '/shipments?large=1';
-      window.dispatchEvent(new CustomEvent('vdg:navigate', { detail: { route: next } }));
-      location.hash = next;
     });
   }
 

@@ -14,11 +14,11 @@
 // freed with the dead tab, so the new leader's install succeeds). This module stays a thin async
 // client: correlate requests by rid, bound each op so a dead engine rejects instead of hanging,
 // and expose the store surface the Rust IO port (StoreIoPort) + window.__vdg_store consumers call. There is NO SQL here — every
-// query lives in Rust (data_repo/sqlite_store.rs). The worker's single message loop serializes every
+// query lives in Rust (store/implementations/sqlite/store.rs). The worker's single message loop serializes every
 // statement → the IndexedDB concurrent-transaction wedge class is gone by construction.
 //
-// Drive stays the source of truth (JSONL bundles); SQLite is the local materialized cache + query
-// engine. See backlog/wiki/sqlite-opfs-migration.md.
+// CharterDB (vdg-server) stays the source of truth; SQLite is the local materialized cache + query
+// engine. See backlog/wiki/sqlite-opfs-migration.md, client-server-pivot.md.
 
 // First op pays the cold cost (module fetch + wasm compile + VFS install); give it room. Every later
 // op is a local SQL call in Rust — milliseconds — so a short backstop is a dead-worker detector.
@@ -240,8 +240,8 @@ async function op(name, extra) {
 }
 
 // ── store surface — thin transport to the Rust worker; the Rust side owns all SQL + schema ────────
-// Method names are the Rust IO-port contract (idb_*) + the on-demand consumer contract; identical to
-// the old JS store's signatures so StoreIoPort and window.__vdg_store callers are untouched.
+// Method names are the Rust IO-port contract (cache_*) + the on-demand consumer contract; identical
+// to the old JS store's signatures so StoreIoPort and window.__vdg_store callers are untouched.
 export const sqliteStore = {
   cache_get:  (kind, id)       => (_injected ? _injected.cache_get(kind, id)       : op('get',    { kind, id })),
   cache_list: (kind)           => (_injected ? _injected.cache_list(kind)          : op('list',   { kind })),

@@ -52,8 +52,8 @@ function proposalCardHtml(proposal, currentRecord) {
     </div>`;
 }
 
-/// AC-01/02/03/05/06: role read by the host from window.__vdg_current_user.role
-/// (currentUserRole()), never the private auth-gate resolvedRole (QA simulability).
+/// AC-01/02/03/05/06: role read by the host through currentUserRole() (the Rust principal,
+/// session_principal), never the private auth-gate resolvedRole (QA simulability).
 /// `liveRepo` (optional, D-2) = window.__vdg_repo — lets Approve upsert the merged record
 /// into the store the master table actually reads, keyed by `refName` (== the repo `KIND`).
 export function createPricedGovernancePanel({ pricedRepo, refName, role, secondEyes = false, liveRepo = null }) {

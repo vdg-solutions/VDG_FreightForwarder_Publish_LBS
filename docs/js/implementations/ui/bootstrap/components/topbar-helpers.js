@@ -21,7 +21,7 @@ export function renderBadge(label) {
 }
 
 // Persist a preferences patch into the meta store. Non-critical → swallow errors.
-export function idbSavePref(patch) {
+export function savePref(patch) {
   const store = window.__vdg_store;
   if (!store) return;
   (async () => {

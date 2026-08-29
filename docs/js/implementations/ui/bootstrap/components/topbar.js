@@ -1,32 +1,34 @@
 // Topbar — route title, user avatar, sync chip, SW update banner
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
+import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
+import { can } from '../../core_abstractions/ports/governance/action-guard.js';
+import { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
 import { readCachedProfile } from '../../../storage/core_abstractions/profile-cache.js';
 import { isServerBackend } from '../../../storage/core_abstractions/backend.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
-import { computeChipState, shouldFireStuckNotification, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION, displayLastSyncMs } from './topbar-sync-chip.js';
+import { computeChipState, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION, displayLastSyncMs } from './topbar-sync-chip.js';
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
-import { renderAvatar, idbSavePref, badgeLabel, renderBadge } from './topbar-helpers.js';
+import { renderAvatar, savePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 import { renderUserMenu, renderSwBanner } from './topbar-menus.js';
 import { handleFileUpload } from './topbar-import.js';
+import { createSyncHandlers, attachSyncListeners, detachSyncListeners, recomputeAndMaybeNotify } from './topbar-sync-state.js';
 
 // F-42-06 (owner: "báo giá là chỉ sales làm nha", "theo thông lệ quốc tế"). The button used to
-// read `hasRole(ROLE_MANAGER) ? '' : button` — "everyone EXCEPT the manager", which handed a
+// gate on "not a Manager" — "everyone EXCEPT the manager", which handed a
 // quote shortcut to Accounting, Audit, CS and a not-yet-provisioned account alike. Quoting is the
 // sales desk's act: the rep who owns the account, and the sales manager who carries key accounts
 // of their own. KEEP-CONSISTENT-WITH access_policy.rs's "/sales/quote" rule — a route the user
 // cannot open must not be offered a button.
 function canQuote() {
-  return hasRole(ROLE_SALES_REP) || hasRole(ROLE_SALES_MANAGER);
+  return can('quote.create');
 }
 
 const SW_DISMISS_KEY            = 'vdg.sw.update.dismissed';
 const SUPPORTED_LOCALES         = ['vi', 'en'];
-const STUCK_RECHECK_INTERVAL_MS = 30_000;
 
 class VdgTopbar extends LitElement {
   static properties = {
@@ -55,6 +57,7 @@ class VdgTopbar extends LitElement {
     _serverBacklog:            { type: Number,  state: true },
     _serverOldestPendingAgeMs: { type: Number,  state: true },
     _serverProvider:           { type: String,  state: true },
+    _syncing:                  { type: Boolean, state: true }, // vdg:sync-started (charter_event_bridge.rs)
   };
 
   createRenderRoot() { return this; }
@@ -71,41 +74,12 @@ class VdgTopbar extends LitElement {
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
     this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
     this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = 'Google Drive';
+    this._syncing = false;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
-    this._onSyncComplete  = (e) => {
-      this._lastSyncMs = e.detail?.ts ?? Date.now(); this._retryStreak = 0;
-      this._retrying = false; this._lastError = null; this._lastNotifiedStuckEpisode = 0;
-    };
-    // Pull heartbeat only — must NOT clear retry/error state (those are push-side signals)
-    this._onDeltaSynced   = (e) => { this._lastPullMs = e.detail?.ts ?? Date.now(); };
-    this._onSyncError     = (e) => {
-      this._retryStreak++; this._retrying = true;
-      // F-19-20 / F-58-02: known reason codes get a localized string; raw error text otherwise.
-      // rate_budget is deliberately its own branch, not folded into the generic fallback — a
-      // reader must be able to tell "my own client is refusing calls" from an ordinary network
-      // blip, which is exactly the distinction that stayed invisible through the 2026-08-25
-      // incident (a console.warn nobody watches is not a report).
-      this._lastError = e.detail?.reason === 'max_retries'
-        ? t('topbar.sync.tooltip.max_retries_reason')
-        : e.detail?.reason === 'rate_budget'
-        ? t('topbar.sync.tooltip.rate_budget_reason')
-        : (e.detail?.error ?? null);
-    };
-    this._onServerHealth  = (e) => {
-      if (e.detail?.backlog_depth !== undefined) this._serverBacklog = Number(e.detail.backlog_depth) || 0;
-      if (e.detail?.oldest_pending_age_ms !== undefined) this._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
-      if (e.detail?.provider) this._serverProvider = e.detail.provider;
-      // F-58-02: sync_delta.rs only sends this field when one tick's own call count went above
-      // its stated steady-state budget — reusing vdg:server-health rather than a new channel. It
-      // rides the SAME visible tooltip vdg:sync-error already uses (topbar-sync-chip renders
-      // `_lastError`), not a devtools-only log — a "successful" but abnormally large tick must be
-      // as visible as an outright failure, which is exactly what stayed invisible on 2026-08-25.
-      if (e.detail?.sync_tick_calls !== undefined) {
-        this._lastError = t('topbar.sync.tooltip.high_volume_reason', { n: e.detail.sync_tick_calls });
-      }
-      this.requestUpdate();
-    };
+    // Sync-pipeline listeners (vdg:sync-started/complete/error, vdg:delta-synced,
+    // vdg:server-health) live in topbar-sync-state.js — this just builds the bound set once.
+    this._syncHandlers    = createSyncHandlers(this);
     this._onException     = (e) => { this._exceptionCount = e.detail.count; };
     this._onApproval      = (e) => { this._approvalCount  = e.detail?.count ?? 0; };
     this._onNotifCount    = (e) => { this._notifCount     = e.detail?.count ?? 0; };
@@ -119,8 +93,8 @@ class VdgTopbar extends LitElement {
     this._onHashChange    = () => { this._computeBreadcrumb(); };
     this._onBreakpt       = (e) => { this._mobile = e.detail.mobile; };
     this._onQuotaWarn     = () => { this._quotaWarn = true; };
-    this._onOnline        = () => { this._online = true;  this._recomputeAndMaybeNotify(); };
-    this._onOffline       = () => { this._online = false; this._recomputeAndMaybeNotify(); };
+    this._onOnline        = () => { this._online = true;  recomputeAndMaybeNotify(this); };
+    this._onOffline       = () => { this._online = false; recomputeAndMaybeNotify(this); };
     this._onNeedsReconnect = () => { this._authReconnect = true; this._authPending = false; }; this._onReconnected = () => { this._authReconnect = false; this._popupBlocked = false; this._authPending = false; };
     // F-49-01 — restore failed (ad-blocker nulled window.open): actionable hint replaces the dead reconnect (still red/clickable)
     this._onPopupBlocked = () => { this._popupBlocked = true; this._authReconnect = true; }; this._onAuthPending = () => { this._authPending = true; }; // F-50-01 AC-05/09
@@ -143,14 +117,10 @@ class VdgTopbar extends LitElement {
     window.addEventListener('hashchange',              this._onHashChange);
     window.addEventListener('vdg:breakpoint-changed',  this._onBreakpt);
     window.addEventListener('vdg:quota-warning',       this._onQuotaWarn);
-    window.addEventListener('vdg:sync-complete',       this._onSyncComplete);
-    window.addEventListener('vdg:delta-synced',        this._onDeltaSynced);
-    window.addEventListener('vdg:sync-error',          this._onSyncError);
-    window.addEventListener('vdg:server-health',       this._onServerHealth);
+    attachSyncListeners(this);
     window.addEventListener('online', this._onOnline); window.addEventListener('offline', this._onOffline);
     window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.addEventListener('vdg:auth-refresh-pending', this._onAuthPending);
     document.addEventListener('click', this._onDocClick);
-    this._stuckTickId = setInterval(() => this._recomputeAndMaybeNotify(), STUCK_RECHECK_INTERVAL_MS);
     this._computeBreadcrumb();
   }
 
@@ -167,29 +137,11 @@ class VdgTopbar extends LitElement {
     window.removeEventListener('hashchange',              this._onHashChange);
     window.removeEventListener('vdg:breakpoint-changed',  this._onBreakpt);
     window.removeEventListener('vdg:quota-warning',       this._onQuotaWarn);
-    window.removeEventListener('vdg:sync-complete',       this._onSyncComplete);
-    window.removeEventListener('vdg:delta-synced',        this._onDeltaSynced);
-    window.removeEventListener('vdg:sync-error',          this._onSyncError);
-    window.removeEventListener('vdg:server-health',       this._onServerHealth);
+    detachSyncListeners(this);
     window.removeEventListener('online', this._onOnline); window.removeEventListener('offline', this._onOffline);
     window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
     window.removeEventListener('vdg:auth-reconnected',     this._onReconnected); window.removeEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.removeEventListener('vdg:auth-refresh-pending', this._onAuthPending);
     document.removeEventListener('click', this._onDocClick);
-    clearInterval(this._stuckTickId);
-  }
-
-  _recomputeAndMaybeNotify() {
-    const now = Date.now();
-    const perm = (typeof Notification !== 'undefined') ? Notification.permission : undefined;
-    if (shouldFireStuckNotification({
-      now, lastSyncMs: this._lastSyncMs, pending: this._outboxCount,
-      lastNotifiedStuckEpisode: this._lastNotifiedStuckEpisode, permission: perm,
-    })) {
-      const body = t('topbar.sync.stuck.body').replace('{n}', String(this._outboxCount));
-      new Notification(t('topbar.sync.stuck.title'), { body }); // eslint-disable-line no-new
-      this._lastNotifiedStuckEpisode = this._lastSyncMs;
-    }
-    this.requestUpdate();
   }
 
   _handleSignOut() { window.__vdg_auth?.signOut?.(); location.reload(); }
@@ -197,11 +149,18 @@ class VdgTopbar extends LitElement {
   _dismissSwBanner() { sessionStorage.setItem(SW_DISMISS_KEY, '1'); this._swUpdate = false; }
   _handleBellClick() {
     window.dispatchEvent(new CustomEvent('vdg:open-notif-drawer'));
-    navigate(hasRole(ROLE_MANAGER) ? '/manager/notifications' : '/sales/me'); // F-48-01: non-manager has no notif-center route
+    // F-48-01: non-manager has no notif-center route. F-14-03 (owner 2026-08-28): the badge this
+    // bell shows a SalesManager IS the approval count (_onApproval) — sending them to /sales/me,
+    // a route they cannot even open, was a dead click once approvals.js started populating it.
+    const roles = currentRoles();
+    const dest = roles.includes(ROLE_MANAGER) ? '/manager/notifications'
+      : roles.includes(ROLE_SALES_MANAGER) ? '/manager/approvals'
+      : '/sales/me';
+    navigate(dest);
   }
   async _handleLocale(locale) {
     await loadLocale(locale);
-    this._locale = locale; idbSavePref({ locale });
+    this._locale = locale; savePref({ locale });
     window.dispatchEvent(new CustomEvent('vdg:locale-changed', { detail: { locale } }));
   }
   _handleHamburger() { window.dispatchEvent(new CustomEvent('vdg:sidebar-toggle')); }
@@ -237,14 +196,13 @@ class VdgTopbar extends LitElement {
     const notifBadge = badgeLabel(this._notifCount + this._dueSoonCount); // F-48-01: additive, independent sources
     // Degraded (expired-token) boot: getCurrentUser() is null but the person did not change.
     // The persisted display profile (vdg.auth.profile, written at hydrate) keeps the REAL name
-    // and avatar photo up; the repo-init mirror covers the email when even that is missing.
+    // and avatar photo up; the Rust principal covers the email when even that is missing.
     // Owner 2026-08-13: the photo silently flipping to an initials chip every hourly expiry
     // read as "mất cái icon".
-    const cached  = window.__vdg_current_user;
     const profile = readCachedProfile();
     const user = window.__vdg_auth?.getCurrentUser?.()
-      || ((profile?.email || cached?.email)
-        ? { email: profile?.email || cached.email, name: profile?.name || '',
+      || ((profile?.email || currentUserEmail())
+        ? { email: profile?.email || currentUserEmail(), name: profile?.name || '',
             picture: profile?.picture || '', sub: '', id_token: null }
         : null);
     const salesId = currentSalesRepId();
@@ -294,9 +252,11 @@ class VdgTopbar extends LitElement {
             serverBacklog: this._serverBacklog,
             serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
             serverProvider: this._serverProvider,
+            syncing: this._syncing,
             onSyncNow: () => this._onChipClick(state),
           })}
-          ${hasRole(ROLE_MANAGER) && this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}
+          <!-- route-guard.js already restricts "/manager/*" to Manager — no second role check here. -->
+          ${this.route.startsWith('/manager/') ? renderModeToggle({ html, currentMode: this._managerMode, t, onSelect: (m) => this._handleModeSelect(m) }) : ''}
           ${canQuote() ? html`
             <button @click="${() => navigate('/sales/quote/new')}"
                     class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1.5 px-3 text-[13px] font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 transition">

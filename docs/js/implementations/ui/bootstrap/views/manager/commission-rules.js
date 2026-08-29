@@ -1,6 +1,3 @@
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate } from '../../router.js';
 import { bulkPut } from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
@@ -117,8 +114,6 @@ function renderGrid(container) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   await loadData();
 
   root.innerHTML = `

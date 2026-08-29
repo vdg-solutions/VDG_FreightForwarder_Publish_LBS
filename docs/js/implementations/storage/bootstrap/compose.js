@@ -21,7 +21,6 @@ import { bindUserDirectory } from '../core_abstractions/user-directory.js';
 import { backend } from '../implementations/server/backend.js';
 import { serverSession } from '../implementations/server/server-session.js';
 import { createUser, listUsers, patchUser } from '../implementations/server/server-users.js';
-import { serverTransport } from '../implementations/server/server-drive-shim.js';
 import { serverWorkspaceAuthority } from '../implementations/server/server-role.js';
 import { ServerIoPort } from '../implementations/server/server-io-adapters.js';
 import { popupGuard } from '../implementations/auth/window-open-guard.js';
@@ -64,14 +63,19 @@ export function isMockMode() {
 /// Decide once, bind once. Never throws — an unreachable API is simply the Drive backend.
 export async function composeStorage() {
   const backendKind = await backend.detectBackend();
-  bindStorageApi(serverTransport);
+  // The Drive REST shim is gone: every live caller now speaks CharterDB directly (apiFetch, or
+  // the ws_* record API through ServerIoPort). Nothing implements this port anymore — bound empty
+  // so storageApi() still resolves for the handle repo-init-steps.js threads through unused, and
+  // the workspace_call/governance_workspace_try op dispatchers keep answering "unknown op" per call
+  // instead of the whole boot throwing at bind time.
+  bindStorageApi({});
   bindWorkspaceAuthority(serverWorkspaceAuthority);
   return backendKind;
 }
 
 /// The IoPort the wasm repo runs on: same contract either way, only where the bytes go differs.
-export function createIoPort(driveApi, userEmail, forkPrefix) {
-  return new ServerIoPort(driveApi, userEmail, forkPrefix);
+export function createIoPort(serverApi, userEmail, forkPrefix) {
+  return new ServerIoPort(serverApi, userEmail, forkPrefix);
 }
 
 

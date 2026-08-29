@@ -3,6 +3,7 @@
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 
 const COMPANY_NAME = 'VDG FREIGHT FORWARDER';
 
@@ -38,7 +39,7 @@ class VdgCommissionSlip extends LitElement {
   render() {
     const d    = this.data || {};
     const date = new Date().toLocaleDateString('vi-VN');
-    const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+    const currentUser = { email: currentUserEmail() };
     const salesRep = resolveSalesRepLabel(d.sales_rep || '', currentUser, t) || '—';
 
     return html`

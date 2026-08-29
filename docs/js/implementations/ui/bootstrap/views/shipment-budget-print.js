@@ -2,6 +2,7 @@
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.js';
 import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
@@ -45,7 +46,7 @@ function headerBlock(s) {
     </tr>`;
 
   const today = todayLocal();
-  const currentUser = typeof window !== 'undefined' ? window.__vdg_current_user : null;
+  const currentUser = { email: currentUserEmail() };
   // F-41-05: the record's field is sales_rep_id — the names read before never existed on it,
   // so the sheet printed '—' for the very person whose commission it feeds.
   const salesRep = resolveSalesRepLabel(s.sales_rep_id || s.sales_rep || '', currentUser, t) || '—';

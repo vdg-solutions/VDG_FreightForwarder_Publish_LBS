@@ -6,12 +6,12 @@ import { pushDiag, DIAG_KIND_REPO_INIT_OK, DIAG_KIND_REPO_INIT_TIMEOUT } from '.
 import { visibleDeadline } from '../../implementations/kernel/core_abstractions/util/visible-deadline.js';
 
 // Total budget for the render-critical boot chain. 8s was too tight: on a COLD cache the
-// wasm-init step downloads the ~2.1MB vdg_freight_bg.wasm and compiles it, then hits Drive for
+// wasm-init step downloads the ~2.1MB vdg_freight_bg.wasm and compiles it, then hits the server for
 // the first time — legitimately > 8s on a slow pilot link, so 8s rendered a FALSE "phản hồi
 // chậm, thử lại" over a boot that was merely downloading. The #view-loading spinner shows for the
 // whole wait, so a longer budget is honest, not a hang. Local/fast steps that SHOULD be quick
-// keep their own inner bounds (openVdgDb: IDB_OP_TIMEOUT_MS), so a real jam still fails fast — this
-// budget only needs to cover the one legitimately network-bound step.
+// keep their own inner bounds (repo-init-steps.js's CACHE_OP_TIMEOUT_MS), so a real jam still
+// fails fast — this budget only needs to cover the one legitimately network-bound step.
 export const REPO_INIT_TIMEOUT_MS = 30000; // AC-01: only occurrence of this magic number in boot/
 
 export class RepoInitTimeoutError extends Error {
@@ -26,7 +26,9 @@ export class RepoInitTimeoutError extends Error {
 // Module-level singleton registry — AC-06 idempotency
 const _singletons = { poller: null, flusher: null, auditLog: null, db: null };
 
-// AC-06: stop prior workers before retry. db is INTENTIONALLY retained (IDB reuse).
+// AC-06: stop prior workers before retry. `db` is dead weight from the deleted IndexedDB path —
+// repo-init-steps.js always hands back null now — kept threaded through so a future store handle
+// has somewhere to land without another signature change.
 function disposePriorSingletons() {
   try { _singletons.poller?.stop?.(); }
   catch (e) { console.warn('[repo-init] poller stop failed:', e); } // DEV
@@ -56,7 +58,8 @@ export async function runRepoInit(user, bootFn) {
   );
   const timeoutPromise = deadline.promise;
 
-  // AC-06: pass existing db so retry reuses open IDBDatabase; callback fires on first open
+  // AC-06: threads `db` through for a retry to reuse — a no-op today, since the store no longer
+  // opens one (see disposePriorSingletons above); the callback still fires once per call.
   const innerPromise = runRepoInitBounded(
     user, stepRef, bootFn, _singletons.db,
     (db) => { _singletons.db = db; },

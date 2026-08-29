@@ -13,7 +13,7 @@ function _i() {
 
 /// (repo, salesRepId) -> 'Q-YYMMDD-HASH8'
 export const generateQuoteId = (...a) => _i().generateQuoteId(...a);
-/// (repo, salesRepId, formData) -> { id, quote, pending_manager_approval }
+/// (repo, actorId, salesRepId, formData) -> { id, quote, pending_manager_approval }
 export const saveDraft = (...a) => _i().saveDraft(...a);
 /// (repo, quote) -> the updated quote
 export const sendToCustomer = (...a) => _i().sendToCustomer(...a);

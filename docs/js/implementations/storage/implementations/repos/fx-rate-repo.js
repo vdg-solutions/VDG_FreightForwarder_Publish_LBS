@@ -19,10 +19,12 @@ export class FxRateStoreRepo {
     }
   }
 
-  async getRate(dateStr, pair) {
+  /** direction: 'Buy'|'Sell' — Circular 200 values assets at the buying rate and liabilities
+   *  at the selling rate; every caller states which side it wants. Returns the resolved rate. */
+  async getRate(dateStr, pair, direction) {
     await this._ensureAllMonthsLoaded();
     try {
-      return this._wasm().fx_rate_get(dateStr, pair);
+      return this._wasm().fx_rate_get(dateStr, pair, direction);
     } catch (err) {
       throw new Error(`FxRateNotFound: ${err.message}`);
     }

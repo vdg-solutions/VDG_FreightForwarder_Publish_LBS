@@ -118,9 +118,9 @@ export function composeFlows(wasm) {
 
   bindShipmentVoidDelete({
     chooseShipmentAffordance: (shipment) => wasm.flows_shipment_affordance({ shipment: shipment || {} }).affordance,
-    // Two steps on purpose: Rust decides what the manager may do, the view asks, Rust acts.
-    runShipmentAffordance: async ({ shipment, isManager, confirm }) => {
-      const plan = wasm.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(isManager) });
+    // Two steps on purpose: Rust decides what the caller may do, the view asks, Rust acts.
+    runShipmentAffordance: async ({ shipment, canVoid, confirm }) => {
+      const plan = wasm.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(canVoid) });
       if (!plan.confirmable) return { mutated: false, reason: plan.reason };
       const ok = await confirm(plan.affordance);
       if (!ok) return { mutated: false, reason: REASON_CANCELLED };
@@ -136,8 +136,11 @@ export function composeFlows(wasm) {
       if (!r.ok) throw new Error(r.error);
       return r.id;
     },
-    saveDraft: async (_repo, salesRepId, formData) => {
-      const r = await wasm.flows_save_quote_draft({ sales_rep_id: salesRepId ?? null, form: formData || {} });
+    // F-41: actorId is provenance (created_by, nothing gates on it); salesRepId is the derived
+    // commercial owner (SalesRepDerivation) — the two diverge whenever someone other than the
+    // customer's assigned rep keys the quote in.
+    saveDraft: async (_repo, actorId, salesRepId, formData) => {
+      const r = await wasm.flows_save_quote_draft({ actor_id: actorId ?? null, sales_rep_id: salesRepId ?? null, form: formData || {} });
       if (!r.ok) throw new Error(r.error);
       return { id: r.id, quote: r.quote, pending_manager_approval: r.pending_manager_approval };
     },

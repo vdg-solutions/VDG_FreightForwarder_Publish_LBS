@@ -1,6 +1,8 @@
 // ledger-unbalanced-modal.js — drill-through modal for an unbalanced journal entry.
 // Extracted from ledger-viewer.js for the 350-line cap.
 
+import { entryTotals } from '../../../core_abstractions/ports/manager/ledger-aggregator.js';
+
 function fmtAmount(n) { return n ? Number(n).toLocaleString('vi-VN') : '—'; }
 
 // AC-08: resolve the entry's source shipment/commission and dispatch the same drill-through
@@ -14,8 +16,7 @@ export function jumpToUnbalancedEntry(entryId, legs) {
   }
 
   // Fallback / immediate view: display the legs in a modal to show exactly what is unbalanced
-  const debitSum = legs.reduce((sum, l) => sum + (l.debit || 0), 0);
-  const creditSum = legs.reduce((sum, l) => sum + (l.credit || 0), 0);
+  const { debitSum, creditSum, diff } = entryTotals(legs);
 
   const trs = legs.map(l => `
     <tr class="border-b border-slate-100">
@@ -55,7 +56,7 @@ export function jumpToUnbalancedEntry(entryId, legs) {
       </table>
       <div class="mt-4 text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 flex justify-between items-center font-semibold">
         <span>Lệch (Discrepancy):</span>
-        <span class="font-mono text-sm">${fmtAmount(Math.abs(debitSum - creditSum))}</span>
+        <span class="font-mono text-sm">${fmtAmount(diff)}</span>
       </div>
     </div>
   `;

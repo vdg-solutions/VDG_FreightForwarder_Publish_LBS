@@ -9,9 +9,6 @@
 // seeds each line's currency select. No arithmetic reads it — every conversion is per line and
 // every total is in VND — so this is a starting point, not a control over money.
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER, ROLE_ACCOUNTANT } from '../../../../ui/core_abstractions/roles.js';
-import { navigate } from '../../router.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
 import { loadWorkspaceSettings, saveWorkspaceSettings, DEFAULT_CURRENCY_FIELD } from '../../../core_abstractions/ports/governance/workspace-settings.js';
@@ -77,8 +74,6 @@ function formHtml(settings, lock) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_ACCOUNTANT) && !hasRole(ROLE_MANAGER)) { navigate('/pending-access'); return; }
-
   root.innerHTML = `<div class="p-6 max-w-2xl mx-auto"><div id="acct-settings-mount">${t('loading')}</div></div>`;
   const mount = root.querySelector('#acct-settings-mount');
 

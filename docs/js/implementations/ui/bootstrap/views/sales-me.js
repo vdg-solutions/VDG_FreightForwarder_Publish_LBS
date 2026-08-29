@@ -1,7 +1,7 @@
 // F-12-09 — Sales personal workspace (daily driver)
 // Identity: Google OAuth verified — no self-pick modal
 
-import { currentSalesRepId, hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
 import { dueSoonHtml } from './sales-me-due-soon.js';
@@ -25,7 +25,8 @@ function fmtVnd(n) {
 }
 
 function roleBadgeHtml(salesId) {
-  const isM  = hasRole(ROLE_MANAGER);
+  // Badge only — reads the resolved role, decides nothing (route-guard.js already gated the page).
+  const isM  = currentRoles().includes(ROLE_MANAGER);
   const cls  = isM
     ? 'bg-purple-100 text-purple-700 border-purple-200'
     : 'bg-blue-100 text-blue-700 border-blue-200';

@@ -9,7 +9,7 @@
 
 import { html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { navigate } from '../router.js';
 
@@ -17,7 +17,9 @@ import { navigate } from '../router.js';
 /// handler. Returns an empty template when closed so the caller can interpolate unconditionally.
 export function renderUserMenu(host, user, salesId) {
   if (!host._menuOpen) return html``;
-  const roleLabel = hasRole(ROLE_MANAGER) ? t('topbar.role.manager') : (salesId || t('topbar.role.sales'));
+  // Badge only — reads the resolved role, decides nothing (route-guard.js already gated the page).
+  const isManagerBadge = currentRoles().includes(ROLE_MANAGER);
+  const roleLabel = isManagerBadge ? t('topbar.role.manager') : (salesId || t('topbar.role.sales'));
   return html`
     <div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 z-50 py-1"
          @click="${(e) => e.stopPropagation()}">
@@ -25,7 +27,7 @@ export function renderUserMenu(host, user, salesId) {
         <div class="text-xs font-semibold text-slate-900 truncate">${user?.name || '—'}</div>
         <div class="text-[11px] text-slate-500 truncate mt-0.5">${user?.email || ''}</div>
         <div class="mt-1.5 inline-flex px-2 py-0.5 rounded text-[10px] font-medium
-                    ${hasRole(ROLE_MANAGER) ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                    ${isManagerBadge ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
           ${roleLabel}
         </div>
       </div>

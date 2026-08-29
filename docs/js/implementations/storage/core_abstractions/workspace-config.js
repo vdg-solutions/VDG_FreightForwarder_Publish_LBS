@@ -1,28 +1,19 @@
-// workspace-config.js — what the build was published FOR: the tenant's workspace name and, in a
-// bound build, the id of its actual root. Stamped into the bundle at publish time (make dist
-// substitutes the placeholders from tenants/<id>.json); an unsubstituted value is a dev build.
-
-// Legacy-only: used by onboarding's checkWorkspaceExists() to offer a one-time migrate/bind
-// prompt for a pre-license folder (greenfield rule — NOT a fallback for findWorkspaceRoot).
+// workspace-config.js — what the build was published FOR: the tenant's workspace name. Stamped
+// into the bundle at publish time (make dist substitutes the placeholder from tenants/<id>.json);
+// an unsubstituted value is a dev build.
+//
+// F-46-06: BUILD_ROOT_ID / isBoundBuild() are gone — they named the tenant's Drive folder id
+// (F-42-07's fix for a Drive-only bug: a build carrying just a NAME could resolve against a
+// signed-in account's OWN Drive folder of that name instead of the customer's). CharterDB has no
+// folder to bind to; grepping the whole frontend/js tree found zero callers of either export.
+// The Makefile/publish.sh still know how to stamp a 17hMgfvZLnPTfuB8A-HTSyk1t-ytxcVoU (client/tools/
+// publish.sh, client/Makefile's dist target) — that build-tooling half is untouched here; it is a
+// loud failure (`make dist` refuses a bound-tenant publish it can no longer substitute into
+// anything) rather than a silent one, and retiring it is a build-pipeline change, not a JS one.
 export const WORKSPACE_NAME = (() => {
   const raw = 'LBS';
   return raw.startsWith('WORKSPACE_NAME_') ? 'LBS' : raw;
 })();
-
-// F-42-07: the tenant's ACTUAL Drive folder, stamped into the bundle at publish time from
-// tenants/<id>.json. Until this existed a tenant build carried only a NAME, and every signed-in
-// account resolved that name against ITS OWN Drive, owner-first — so a user who happened to own a
-// folder called "LBS" was bound to their own private folder instead of the customer's workspace,
-// and the first-run rule ("admin/ not seeded → the creator is Manager") then made them Manager of
-// it. Observed live: sol.vdg01 opening the customer's published build landed in sol.vdg01's own
-// retired LBS folder. A name is a search term; identity is an id.
-export const BUILD_ROOT_ID = (() => {
-  const raw = '17hMgfvZLnPTfuB8A-HTSyk1t-ytxcVoU';
-  return raw.startsWith('WORKSPACE_ROOT_ID_') ? '' : raw; // unsubstituted = dev build, resolve by name
-})();
-
-/// A tenant build knows its root by id; a dev build resolves it by name.
-export function isBoundBuild() { return BUILD_ROOT_ID !== ''; }
 
 // The API origin the server adapter talks to. Empty (unsubstituted) = same origin as the page:
 // a localhost run of vdg-server serving its own bundle, or a serverless deploy where the health

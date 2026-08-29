@@ -46,7 +46,7 @@ function _body(reason, errorKind, daysPastExp) {
 }
 
 // AC-02/03/04/05/07: one render fn, no role branch, no textarea/upload — reload is the only
-// action. No hasRole(ROLE_MANAGER) check anywhere in this module or its caller (license-boot-gate.js).
+// action. No role check anywhere in this module or its caller (license-boot-gate.js).
 export function renderLicenseGateScreen(container, { reason, errorKind = null, daysPastExp = null } = {}) {
   if (!container) return;
   container.innerHTML = `

@@ -3,9 +3,6 @@
 // F-29-11: runtime FX auto-fetch retired. fx_source stays as the default
 // attribution label for a manually entered rate, not a fetch trigger.
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 import { activeWorkspaceName } from '../../../../storage/core_abstractions/workspace-registry.js';
 import { loadWorkspaceSettings, saveWorkspaceSettings, SECOND_EYES_FIELD } from '../../../core_abstractions/ports/governance/workspace-settings.js';
@@ -59,8 +56,6 @@ function settingsFormHtml(settings) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   root.innerHTML = `<div class="p-6 max-w-2xl mx-auto"><div id="settings-mount">${t('loading')}</div></div>`;
   const mount = root.querySelector('#settings-mount');
 

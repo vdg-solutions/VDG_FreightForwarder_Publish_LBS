@@ -1,12 +1,9 @@
 // platform/governance.js — extra platform methods the Rust governance use-cases import
 // (js_governance.rs extern type). Raw passthrough, no decisions: the workspace tree with its ERROR
-// detail intact, the staff table, the two audit trails, the ledger's balances, and the local
-// membership evidence a first-run decision rests on.
+// detail intact, the staff table, the two audit trails, and the ledger's balances.
 import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
-import { recallGrantAreas } from '../../implementations/storage/core_abstractions/grant-file.js';
-
-import { readCachedIdentityNow } from './auth.js';
+import { fxRateRepo } from '../../implementations/ui/core_abstractions/ports/storage/fx-rate-repo.js';
 
 const UNKNOWN_OP_MESSAGE = 'unknown workspace op';
 
@@ -38,10 +35,6 @@ async function workspaceTry(op, args) {
 export const governancePlatform = {
   governance_workspace_try: workspaceTry,
   governance_workspace_name: async () => activeWorkspaceName() || '',
-  governance_workspace_root: async () => {
-    const found = await workspaceTry('findWorkspaceRoot', [activeWorkspaceName()]);
-    return found.ok ? found.value : null;
-  },
 
   governance_users_list:   async ()       => (await userRepo()?.list()) ?? [],
   governance_users_get:    async (email)  => (await userRepo()?.get(email)) ?? null,
@@ -62,8 +55,7 @@ export const governancePlatform = {
     return repo.getBalance(account, asOf);
   },
 
-  governance_membership_evidence: async () => {
-    const cached = readCachedIdentityNow();
-    return { grant_area_count: recallGrantAreas().length, cached_role: cached?.role ?? null };
-  },
+  // F1: reuses the same fx-rates domain island the FX admin screen and the sales-new P&L form
+  // resolve through — period close asks for a number the same way a P&L line does.
+  governance_fx_closing_rate: async (date, pair, direction) => fxRateRepo.getRate(date, pair, direction),
 };

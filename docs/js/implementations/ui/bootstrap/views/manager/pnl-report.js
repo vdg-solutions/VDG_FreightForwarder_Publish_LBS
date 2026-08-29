@@ -1,15 +1,13 @@
 // Manager P&L Report — F-14-04 / F-16-07
 
 import '../../components/pivot-table.js';
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { compose, composeBuySellBreakdown, filterByDims, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../../core_abstractions/ports/manager/pnl-composer.js';
 import { composeAir, AIR_DEFAULT_DIMS } from '../../../core_abstractions/ports/manager/air-pnl-composer.js';
-import { navigate } from '../../router.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { kindI18nLabel } from '../../../../kernel/core_abstractions/util/kind-i18n.js';
 import { formatDrillDimDesc } from '../../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
+import { currentUserEmail } from '../../../core_abstractions/ports/governance/route-guard.js';
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
@@ -129,7 +127,7 @@ async function renderDrillPanel(container, rowDims) {
     state:        s.state || s.State || '—',
     etd:          s.etd || '—',
     margin_pct:   s.margin_pct != null ? `${Number(s.margin_pct).toFixed(1)}%` : '—',
-    sales_rep:    resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', window.__vdg_current_user, t) || '—',
+    sales_rep:    resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', { email: currentUserEmail() }, t) || '—',
   }));
 
   container.innerHTML = `
@@ -225,8 +223,6 @@ async function exportExcel() {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   if (_onPivotClick) window.removeEventListener('vdg:pivot-cell-click', _onPivotClick);
   if (_onPivotDims)  window.removeEventListener('vdg:pivot-dims-changed', _onPivotDims);
   if (_onLocale)     window.removeEventListener('vdg:locale-changed', _onLocale);

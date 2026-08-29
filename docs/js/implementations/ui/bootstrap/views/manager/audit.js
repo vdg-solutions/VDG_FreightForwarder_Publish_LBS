@@ -1,8 +1,5 @@
 // Manager Audit Log — F-14-12
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
@@ -171,8 +168,6 @@ function handleExportCsv() {
 // ── render ────────────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
   _gridApi   = null;
   _allRows   = [];

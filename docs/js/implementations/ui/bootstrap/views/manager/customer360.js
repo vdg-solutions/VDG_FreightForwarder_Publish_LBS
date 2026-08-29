@@ -1,8 +1,5 @@
 // Manager Customer 360 — F-14-07
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }                      from '../../router.js';
 import { compose, HEALTH_THRESHOLD_GOOD, HEALTH_THRESHOLD_WATCH, compose360 } from '../../../core_abstractions/ports/manager/customer360-composer.js';
 import { shipmentLane } from '../../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
@@ -266,7 +263,6 @@ function renderMultiModal(content, custShipments) {
 }
 
 export async function render(root, param) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
   if (_onEntity) window.removeEventListener('vdg:entity-changed', _onEntity);
   if (_chart) { _chart.destroy(); _chart = null; }
   _auditOffset = 0;

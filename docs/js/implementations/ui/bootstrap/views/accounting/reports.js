@@ -15,7 +15,6 @@ const TABS    = [
   { key: TAB_PNL, labelKey: 'reports.tab.pnl' },
   { key: TAB_BS,  labelKey: 'reports.tab.balance_sheet' },
 ];
-const INTEGRITY_TOLERANCE = 0.01; // float-safe equality for dr===cr / assets===liab+equity
 
 function today() { return todayLocal(); }
 
@@ -81,10 +80,7 @@ function integrityBadge(ok, okKey, mismatchKey) {
 async function renderTrialBalance(container) {
   const year = Number(_asOfDateTB.slice(0, 4));
   const legsByAccount = await loadYearLegs(year);
-  const rows = trialBalance(_chart, legsByAccount, _asOfDateTB);
-  const totalDr = rows.reduce((s, r) => s + r.dr, 0);
-  const totalCr = rows.reduce((s, r) => s + r.cr, 0);
-  const balanced = Math.abs(totalDr - totalCr) < INTEGRITY_TOLERANCE;
+  const { rows, total_dr: totalDr, total_cr: totalCr, balanced } = trialBalance(_chart, legsByAccount, _asOfDateTB);
 
   const trs = rows.map((r) => {
     const account = _chart.find((a) => a.code === r.acc_code);
@@ -181,8 +177,8 @@ async function renderPnl(container) {
         <tfoot>
           <tr class="border-t-2 border-slate-300 text-xs font-semibold">
             <td class="px-3 py-1.5">${t('reports.pnl.total_year')}</td>
-            <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(yearTotal.revenue.reduce((s, r) => s + r.amt, 0))}</td>
-            <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(yearTotal.expense.reduce((s, r) => s + r.amt, 0))}</td>
+            <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(yearTotal.totalRevenue)}</td>
+            <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(yearTotal.totalExpense)}</td>
             <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(yearTotal.netIncome)}</td>
             ${_comparePrevMonth ? '<td></td>' : ''}
           </tr>
@@ -205,11 +201,10 @@ async function renderPnl(container) {
 async function renderBalanceSheet(container) {
   const year = Number(_asOfDateBS.slice(0, 4));
   const legsByAccount = await loadYearLegs(year);
-  const { assets, liabilities, equity } = balanceSheet(_chart, legsByAccount, _asOfDateBS);
-  const totalAssets = assets.reduce((s, a) => s + a.amt, 0);
-  const totalLiab   = liabilities.reduce((s, l) => s + l.amt, 0);
-  const totalLiabEquity = totalLiab + equity;
-  const balanced = Math.abs(totalAssets - totalLiabEquity) < INTEGRITY_TOLERANCE;
+  const {
+    assets, liabilities, equity,
+    total_assets: totalAssets, total_liabilities: totalLiab, total_liab_equity: totalLiabEquity, balanced,
+  } = balanceSheet(_chart, legsByAccount, _asOfDateBS);
 
   const rowsFor = (list) => list.map((r) => {
     const account = _chart.find((a) => a.code === r.acc);

@@ -1,9 +1,6 @@
 // Manager Notifications Center — F-14-14
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { NOTIFICATION_TYPES } from '../../../core_abstractions/ports/manager/notification-composer.js';
-import { navigate }   from '../../router.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 const NOTIF_DRAWER_WIDTH_PX = 380;
@@ -118,8 +115,6 @@ function renderNotifList(container) {
 // ── main render ───────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   if (_onEntity)     window.removeEventListener('vdg:entity-changed', _onEntity);
   if (_onOpenDrawer) window.removeEventListener('vdg:open-notif-drawer', _onOpenDrawer);
 

@@ -59,7 +59,7 @@ function polPodOpts(selected) {
   ).join('');
 }
 
-export function lineRowHtml(idx, line = {}, headerCurrency) {
+export function lineRowHtml(idx, line = {}, headerCurrency, bookCurrency) {
   // AC-04/F-15-61: auto-classify when kind absent or not a recognised frontend value
   // Rust LineSubType variants (HandlingCost, SurchargeCost, …) are truthy but not in KIND_LIST
   const effectiveDesc = line.desc || line.description || '';
@@ -84,8 +84,8 @@ export function lineRowHtml(idx, line = {}, headerCurrency) {
       <td class="px-1 py-1 bg-blue-50/20">
         <input name="buy_amt" type="number" value="${line.buy_amt ?? ''}" placeholder="—"
           class="w-24 ${CELL_CLS} text-right font-mono" /></td>
-      ${fxCellsHtml('buy', line, headerCurrency)}
-      ${vndCellHtml('buy', line)}
+      ${fxCellsHtml('buy', line, headerCurrency, bookCurrency)}
+      ${vndCellHtml('buy', line, bookCurrency)}
       <td class="px-1 py-1 bg-emerald-50/20">
         <input name="sell_qty" type="number" value="${line.sell_qty ?? ''}" placeholder="${t('sales_new.ph_qty')}"
           class="w-14 ${CELL_CLS} text-right" /></td>
@@ -95,8 +95,8 @@ export function lineRowHtml(idx, line = {}, headerCurrency) {
       <td class="px-1 py-1 bg-emerald-50/20">
         <input name="sell_amt" type="number" value="${line.sell_amt ?? ''}" placeholder="—"
           class="w-24 ${CELL_CLS} text-right font-mono" /></td>
-      ${fxCellsHtml('sell', line, headerCurrency)}
-      ${vndCellHtml('sell', line)}
+      ${fxCellsHtml('sell', line, headerCurrency, bookCurrency)}
+      ${vndCellHtml('sell', line, bookCurrency)}
       <td class="px-1 py-1">
         <select name="pol_pod_side" class="w-16 ${CELL_CLS}">
           ${polPodOpts(line.pol_pod_side)}
@@ -112,10 +112,11 @@ export function sectionBHtml(draft = {}) {
   // Never '' — an empty header sends fxCellsHtml down its own VND fallback, which is a different
   // currency from the header select's USD fallback (see DEFAULT_HEADER_CURRENCY).
   const headerCurrency = draft.currency || DEFAULT_HEADER_CURRENCY;
+  const bookCurrency   = draft.book_currency || DEFAULT_HEADER_CURRENCY;
   const padded = lines.length >= INIT_ROWS
     ? lines
     : [...lines, ...Array(INIT_ROWS - lines.length).fill({})];
-  const rows = padded.map((l, i) => lineRowHtml(i, l, headerCurrency)).join('');
+  const rows = padded.map((l, i) => lineRowHtml(i, l, headerCurrency, bookCurrency)).join('');
   return `
     <div id="sec-b-body" class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="flex items-center justify-between mb-3">
@@ -187,6 +188,7 @@ export function sectionBHtml(draft = {}) {
 // (350-line cap) — mirrors the section-header.js / section-header-wiring.js split.
 
 export function collectLines(root) {
+  const bookCurrency = root.querySelector('[name=book_currency]')?.value || DEFAULT_HEADER_CURRENCY;
   return Array.from(root.querySelectorAll('#lines-tbody tr[data-line]')).map((row) => {
     const buy_amt      = parseFloat(row.querySelector('[name=buy_amt]')?.value)      || 0;
     const buy_currency  = row.querySelector('[name=buy_currency]')?.value  || '';
@@ -204,14 +206,14 @@ export function collectLines(root) {
       buy_fx_rate,
       buy_fx_date:  row.querySelector('[name=buy_fx_date]')?.value   || '',
       // AC-02: vnd_amount is DERIVED, not read off the (now-readonly) cell
-      vnd_pay:      computeLineVnd(buy_amt, buy_currency, buy_fx_rate),
+      vnd_pay:      computeLineVnd(buy_amt, buy_currency, buy_fx_rate, bookCurrency),
       sell_qty:     parseFloat(row.querySelector('[name=sell_qty]')?.value)     || 0,
       sell_unit:    row.querySelector('[name=sell_unit]')?.value     || '',
       sell_amt,
       sell_currency,
       sell_fx_rate,
       sell_fx_date: row.querySelector('[name=sell_fx_date]')?.value  || '',
-      vnd_collect:  computeLineVnd(sell_amt, sell_currency, sell_fx_rate),
+      vnd_collect:  computeLineVnd(sell_amt, sell_currency, sell_fx_rate, bookCurrency),
       pol_pod_side: row.querySelector('[name=pol_pod_side]')?.value  || 'N/A',
     };
   });

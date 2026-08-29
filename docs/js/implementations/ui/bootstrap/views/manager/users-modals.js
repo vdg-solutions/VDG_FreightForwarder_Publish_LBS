@@ -1,6 +1,7 @@
-// users-modals.js — edit-profile + invite-sales overlay dialogs for manager/users.js.
-// Split out to respect the 350-line/file cap; pure DOM builders, no repo/Drive calls of their
-// own beyond what's passed in via deps.
+// users-modals.js — edit-profile overlay dialog for manager/users.js.
+// F-46-04: openInviteModal is gone — inviting is a role grant (POST /api/users -> "grants"),
+// which belongs to /admin/users' Add User modal, not this profile-only screen. Pure DOM builder,
+// no repo/Drive calls of its own beyond what's passed in via deps.
 
 import { mountOverlay } from '../../helpers/mount-overlay.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
@@ -52,60 +53,6 @@ export function openEditModal(user, root, deps) {
     } catch (err) {
       overlay.querySelector('#ep-err').textContent = err.message;
       overlay.querySelector('#ep-err').classList.remove('hidden');
-    }
-  };
-}
-
-export function openInviteModal(root, deps) {
-  const { getRepo, getDriveApi, inviteSales, activeWorkspaceName, toast, reload } = deps;
-  const overlay = document.createElement('div');
-  overlay.className = 'fixed inset-0 z-50 bg-black/40 flex items-center justify-center';
-  overlay.innerHTML = `
-    <div class="bg-white rounded-xl shadow-xl p-6 w-96 space-y-4">
-      <div class="text-sm font-semibold text-slate-800">${t('users.invite.modal_title')}</div>
-      <div class="space-y-3">
-        <label class="block text-xs text-slate-600">${t('email')}
-          <input id="inv-email" type="email" placeholder="sales@company.com"
-                 class="mt-1 w-full border rounded px-3 py-1.5 text-xs" />
-        </label>
-        <label class="block text-xs text-slate-600">${t('admin.users.column.display_name')}
-          <input id="inv-name" placeholder="Nguyễn Văn A"
-                 class="mt-1 w-full border rounded px-3 py-1.5 text-xs" />
-        </label>
-      </div>
-      <div id="inv-err" class="text-xs text-red-600 hidden"></div>
-      <div class="flex gap-2 justify-end">
-        <button id="inv-cancel" class="px-3 py-1.5 text-xs rounded bg-slate-100 text-slate-600 hover:bg-slate-200">${t('common.action.cancel')}</button>
-        <button id="inv-send"   class="px-3 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700">${t('users.action.invite')}</button>
-      </div>
-    </div>`;
-
-  mountOverlay(overlay);
-  overlay.querySelector('#inv-cancel').onclick = () => overlay.remove();
-  overlay.querySelector('#inv-send').onclick   = async () => {
-    const email = overlay.querySelector('#inv-email').value.trim();
-    const name  = overlay.querySelector('#inv-name').value.trim();
-    if (!email) { overlay.querySelector('#inv-err').textContent = t('admin.users.error.email_required'); overlay.querySelector('#inv-err').classList.remove('hidden'); return; }
-
-    const repo     = getRepo();
-    const driveApi = getDriveApi();
-    const wsRoot   = driveApi ? await driveApi.findWorkspaceRoot(activeWorkspaceName()) : null;
-    if (!repo || !driveApi || !wsRoot) {
-      overlay.querySelector('#inv-err').textContent = t('users.error.workspace_not_ready');
-      overlay.querySelector('#inv-err').classList.remove('hidden');
-      return;
-    }
-
-    overlay.querySelector('#inv-send').disabled = true;
-    try {
-      await inviteSales(email, name, driveApi, repo, wsRoot);
-      overlay.remove();
-      toast('success', t('users.toast.invited', { email }));
-      await reload(root);
-    } catch (err) {
-      overlay.querySelector('#inv-err').textContent = err.message;
-      overlay.querySelector('#inv-err').classList.remove('hidden');
-      overlay.querySelector('#inv-send').disabled = false;
     }
   };
 }

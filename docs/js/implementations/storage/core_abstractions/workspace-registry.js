@@ -9,8 +9,9 @@ import { WORKSPACE_NAME } from './workspace-config.js';
 export const LS_WORKSPACES_KEY        = 'vdg.workspaces';
 export const LS_CURRENT_WORKSPACE_KEY = 'vdg.current_workspace'; // value = workspace_id
 
-// Module-level convenience: what every findWorkspaceRoot(name) caller passes.
-// One deployment = one company (build-injected), so this is no longer a registry lookup.
+// Module-level convenience: the workspace name every caller (auth, flows, governance, the
+// staff-table repo, the settings views) needs — a build-injected constant, not a Drive lookup.
+// One deployment = one company, so this is no longer a registry lookup either.
 export function activeWorkspaceName() {
   return WORKSPACE_NAME;
 }

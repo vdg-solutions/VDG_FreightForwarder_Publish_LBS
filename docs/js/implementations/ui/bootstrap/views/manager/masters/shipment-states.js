@@ -4,10 +4,8 @@
 // only aliases/label_vi/label_en are editable, mirrors units-of-measure.js structurally minus
 // the add/delete affordances. Manager-only writers (Q3) also gates the migration trigger below.
 
-import { hasRole } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
-import { ROLE_MANAGER } from '../../../../../ui/core_abstractions/roles.js';
-import { currentUserRole } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { migrateLegacyShipmentState } from '../../../../core_abstractions/ports/flows/shipment-state-migrator.js';
 import { SHIPMENT_STATES_KIND } from '../../../../core_abstractions/ports/flows/shipment-state-aliases.js';
@@ -27,8 +25,7 @@ function escHtml(s) {
 
 // F-18-11 AC-04: registry-driven writer gate — mirrors units-of-measure.js/local-charges.js.
 function canWrite() {
-  const role = hasRole(ROLE_MANAGER) ? ROLE_MANAGER : currentUserRole();
-  return canWriteMaster(KIND, role);
+  return canWriteMaster(KIND, currentRoles());
 }
 
 async function loadStates(repo) {

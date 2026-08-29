@@ -2,8 +2,6 @@
 // Deactivate. F-46-03: reads/writes go straight to GET/POST/PATCH /api/users — no wasm-bound repo
 // to wait on, so the F-24-25 "cold-boot deep link" retry this view used to need is gone with it.
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 import { filterUsers, sortUsersByEmail } from '../../../core_abstractions/ports/manager/users-view-composer.js';
@@ -99,8 +97,6 @@ function bindFilterBar(root) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   _filter = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
   root.innerHTML = shellHtml();
   root.querySelector('#usr-filter-bar').innerHTML = filterBarHtml(_filter);

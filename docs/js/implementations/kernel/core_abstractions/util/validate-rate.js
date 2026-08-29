@@ -15,17 +15,28 @@ export function validateRate(rawValue) {
   return null;
 }
 
+// F1: the bank never buys for more than it sells — an inverted spread is a data-entry mistake,
+// not a rate a resolver should ever hand back.
+export function validateSpread(rateBuy, rateSell) {
+  if (Number(rateBuy) > Number(rateSell)) return 'fx.validation.bad_spread';
+  return null;
+}
+
 // Append a range entry through the write-gated path. Returns error i18n key on
 // a pure-input rejection, null on success (append errors propagate to the caller).
 // deleteFirst: old entry to remove before re-add (edit flow); null for new entry.
-export async function addRateEntry(repo, validFrom, validTo, pair, rate, source, role, deleteFirst) {
+// F1: entry captures BOTH sides of the quote — no single "rate" any more.
+export async function addRateEntry(repo, validFrom, validTo, pair, rateBuy, rateSell, source, role, deleteFirst) {
   if (validFrom > validTo) return 'fx.validation.bad_range';
   if (deleteFirst) {
     try { await repo.deleteEntry(deleteFirst.valid_from, deleteFirst.valid_to, deleteFirst.pair || pair); }
     catch { /* tolerate not-found on edit-delete */ }
   }
   await repo.appendRate(
-    JSON.stringify({ valid_from: validFrom, valid_to: validTo, pair, rate: Number(rate), source }),
+    JSON.stringify({
+      valid_from: validFrom, valid_to: validTo, pair,
+      rate_buy: Number(rateBuy), rate_sell: Number(rateSell), source,
+    }),
     role,
   );
   return null;

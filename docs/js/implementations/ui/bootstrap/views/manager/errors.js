@@ -1,8 +1,5 @@
 // F-15-07 — Error log viewer (/manager/errors)
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }  from '../../router.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 import { listErrorRecords, purgeErrorMonth } from '../../../core_abstractions/ports/governance/error-log-store.js';
@@ -64,8 +61,6 @@ function _showDetail(container, row) {
 // ── render ─────────────────────────────────────────────────────────────────────
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   root.innerHTML = `
     <div class="p-6 max-w-[1600px] mx-auto">
       <div class="flex items-center justify-between mb-4">

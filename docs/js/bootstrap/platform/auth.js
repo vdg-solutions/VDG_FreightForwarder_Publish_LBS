@@ -89,12 +89,11 @@ export const authPlatform = {
     try { localStorage.removeItem(GRANT_AREAS_KEY); } catch { /* nothing stored */ }
   },
 
-  // F-42-05: the snapshot on every resolve (the route guard reads it directly, so a repeat resolve
-  // must not leave it stale); the announcement only on a real change, or the chrome flickers.
+  // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is
+  // announcement-only now — a real change fires the event, the chrome re-renders and re-reads.
   auth_publish_roles: (roles, changed) => {
-    const resolved = [...(roles || [])];
-    window.__vdg_session_roles = resolved;
-    if (changed) window.dispatchEvent(new CustomEvent(ROLES_RESOLVED_EVENT, { detail: { roles: [...resolved] } }));
+    if (!changed) return;
+    window.dispatchEvent(new CustomEvent(ROLES_RESOLVED_EVENT, { detail: { roles: [...(roles || [])] } }));
   },
 };
 

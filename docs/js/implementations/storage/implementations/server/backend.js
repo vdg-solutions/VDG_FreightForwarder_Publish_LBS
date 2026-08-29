@@ -19,6 +19,9 @@ const PROBE_TIMEOUT_MS   = 1500;
 // stays), while a cold Durable Object answering /me in two seconds would otherwise be read as
 // "this browser blocks the cookie" on every sign-in.
 const COOKIE_PROBE_TIMEOUT_MS = 4000;
+// Backstop past the AbortController deadline below — only fires if abort() itself fails to
+// unblock a stuck fetch (browser bug territory), so this never races the real timeout.
+const TRANSPORT_SAFE_AWAIT_MARGIN_MS = 5000;
 const BACKEND_SERVER     = 'server';
 const BACKEND_DRIVE      = 'drive';
 const SESSION_TOKEN_HEADER = 'X-Vdg-Session';
@@ -50,15 +53,17 @@ async function detectBackend() {
   if (remembered) { _backend = remembered; return _backend; }
   const ctrl  = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
-  try {
-    const res  = await fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE });
-    const body = res.ok ? await res.json().catch(() => null) : null;
-    _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
-  } catch {
-    _backend = BACKEND_DRIVE; // no /api on this origin — the serverless build
-  } finally {
-    clearTimeout(timer);
-  }
+  const { ok, value: res } = await safeAwait(
+    fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE }),
+    PROBE_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
+    undefined,
+    'detectBackend:health',
+  );
+  clearTimeout(timer);
+  // unreachable/timed-out probe is a legitimate answer ("no /api here", the serverless build) —
+  // not a fault to propagate.
+  const body = ok && res.ok ? await res.json().catch(() => null) : null;
+  _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
   try { sessionStorage.setItem(BACKEND_KEY, _backend); } catch { /* storage-less context */ }
   return _backend;
 }
@@ -77,6 +82,7 @@ function _readRemembered() {
 function _resetBackend() { _backend = null; try { sessionStorage.removeItem(BACKEND_KEY); } catch { /* none */ } }
 
 import { ApiError } from '../../core_abstractions/api-error.js';
+import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 
 /// JSON in, JSON out, session cookie along. A non-2xx is an ApiError carrying the status the
 /// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) — the same numbers the Drive-era
@@ -133,17 +139,21 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
   opts.signal = ctrl.signal;
   const reqId = `r${++_apiReqSeq}`;
   const startedAtMs = Date.now();
-  let res;
-  try {
-    console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
-    res = await fetch(url, opts);
-    console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
-  } catch (err) {
-    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, err);
-    throw new ApiError(0, `server unreachable: ${err.message}`);
-  } finally {
-    clearTimeout(timer);
+  console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
+  const { ok, value: res, error } = await safeAwait(
+    fetch(url, opts),
+    API_FETCH_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
+    undefined,
+    `apiFetch:${method}:${path}`,
+  );
+  clearTimeout(timer);
+  if (!ok) {
+    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, error);
+    // status 0 — read_verdict::classify_status (Rust) reads this as UNDECIDABLE, never as a
+    // negative answer. Do not turn a dead network into "there is nothing here".
+    throw new ApiError(0, `server unreachable: ${error.message}`);
   }
+  console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
   const backlogHeader = res.headers?.get('x-replication-backlog');
   const providerHeader = res.headers?.get('x-secondary-provider') || res.headers?.get('x-replication-provider');
   if (backlogHeader !== null && backlogHeader !== undefined) {

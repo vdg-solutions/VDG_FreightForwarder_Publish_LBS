@@ -11,24 +11,27 @@ const VND_CURRENCY = 'VND';
 
 // currency VND is a locked self-pair (rate=1, no lookup needed); missing repo/date → no reference
 // (band check is skipped downstream, ≤0 check still applies) — mirrors pnl-line-fx.js's prefillFxRate.
-async function _resolveReference(fxRepo, fxDate, currency) {
+async function _resolveReference(fxRepo, fxDate, currency, direction) {
   if (currency === VND_CURRENCY) return 1;
   if (!fxRepo || !fxDate) return null;
-  return getRateForDate(fxRepo, fxDate, currency);
+  return getRateForDate(fxRepo, fxDate, currency, direction);
 }
 
 // Only check a side that actually carries an amount — an untouched/padding row has no fx data
 // to evaluate, same gating as validateShipmentForm's VR-01 hard-block (amount present → checks apply).
-async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate }) {
+async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }) {
   if (!amount || !currency) return;
-  const referenceRate = await _resolveReference(fxRepo, fxDate, currency);
+  const referenceRate = await _resolveReference(fxRepo, fxDate, currency, direction);
   const { flagged: isFlagged, reason } = detectFxDeviation({ currency, fxRate, referenceRate });
   if (isFlagged) {
     flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason });
   }
 }
 
-/** findFxDeviations — AC-04 wiring: scan mục B (buy/sell) + mục C lines for VR-03 flags. */
+/** findFxDeviations — AC-04 wiring: scan mục B (buy/sell) + mục C lines for VR-03 flags.
+ *  Direction mirrors pnl-line-fx.js's SIDE_DIRECTION: a buy/cost row (and a commission payout,
+ *  which is an expense to the company) checks against the SELLING rate; a sell/revenue row
+ *  checks against the BUYING rate. */
 export async function findFxDeviations(state = {}, fxRepo) {
   const flagged = [];
   const lines           = state.lines || [];
@@ -37,15 +40,15 @@ export async function findFxDeviations(state = {}, fxRepo) {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     await _checkSide(flagged, fxRepo, `${i}:buy:${l.desc || ''}`,
-      { amount: l.buy_amt, currency: l.buy_currency, fxRate: l.buy_fx_rate, fxDate: l.buy_fx_date });
+      { amount: l.buy_amt, currency: l.buy_currency, fxRate: l.buy_fx_rate, fxDate: l.buy_fx_date, direction: 'Sell' });
     await _checkSide(flagged, fxRepo, `${i}:sell:${l.desc || ''}`,
-      { amount: l.sell_amt, currency: l.sell_currency, fxRate: l.sell_fx_rate, fxDate: l.sell_fx_date });
+      { amount: l.sell_amt, currency: l.sell_currency, fxRate: l.sell_fx_rate, fxDate: l.sell_fx_date, direction: 'Buy' });
   }
 
   for (let i = 0; i < commissionLines.length; i++) {
     const l = commissionLines[i];
     await _checkSide(flagged, fxRepo, `C${i}:${l.kind || ''}`,
-      { amount: l.amount_fx, currency: l.currency, fxRate: l.fx_rate, fxDate: l.fx_date });
+      { amount: l.amount_fx, currency: l.currency, fxRate: l.fx_rate, fxDate: l.fx_date, direction: 'Sell' });
   }
 
   return flagged;

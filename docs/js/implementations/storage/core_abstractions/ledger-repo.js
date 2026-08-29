@@ -30,6 +30,12 @@ export class LedgerRepo {
   /** @returns {Promise<void>} F-23-03: record entry_ids written for this dedup key */
   async recordPosted(postedIndex, entry_ids) { throw new Error('abstract'); }
 
+  /** @returns {Promise<object|null>} F1: the posted-index row for this dedup key, or null */
+  async findPosted(postedIndex) { throw new Error('abstract'); }
+
+  /** @returns {Promise<void>} F1: drop a posted-index row (only after reversing its entries) */
+  async releasePosted(postedIndex) { throw new Error('abstract'); }
+
   /** F-29-24: overwrite a persisted leg in place, keyed on (entry_id, leg_idx). Repost-only —
    *  never invents a leg: throws if no persisted leg matches (entry_id, leg_idx). Same (year,
    *  acc_code, leg) shape as appendLeg for symmetry; single-leg granularity (not a whole-file

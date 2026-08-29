@@ -1,12 +1,9 @@
 // FX Rates admin grid — F-15-36 / F-29-11 (explicit valid_from/valid_to ranges)
 // Route: /manager/fx-rates
 
-import { hasRole } from '../../../../ui/core_abstractions/ports/auth/session-roles.js';
-import { ROLE_MANAGER } from '../../../../ui/core_abstractions/roles.js';
-import { navigate }                                from '../../router.js';
 import { t }                                       from '../../../../kernel/core_abstractions/i18n/index.js';
 import { fxRateRepo }                              from '../../../core_abstractions/ports/storage/fx-rate-repo.js';
-import { validateRate, addRateEntry, FX_PAIR_DEFAULT } from '../../../../kernel/core_abstractions/util/validate-rate.js';
+import { validateRate, validateSpread, addRateEntry, FX_PAIR_DEFAULT } from '../../../../kernel/core_abstractions/util/validate-rate.js';
 import { clearRateCache }                          from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { currentUserRole }                         from '../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../kernel/core_abstractions/util/master-load.js';
@@ -49,7 +46,10 @@ function renderGrid(container, entries, onEdit, onDelete) {
       <td class="px-3 py-2 text-sm">${e.valid_to || '—'}</td>
       <td class="px-3 py-2 text-sm">${e.pair || FX_PAIR_DEFAULT}</td>
       <td class="px-3 py-2 text-sm font-mono text-right">${
-        e.rate != null ? Number(e.rate).toLocaleString('vi-VN') : '—'
+        e.rate_buy != null ? Number(e.rate_buy).toLocaleString('vi-VN') : '—'
+      }</td>
+      <td class="px-3 py-2 text-sm font-mono text-right">${
+        e.rate_sell != null ? Number(e.rate_sell).toLocaleString('vi-VN') : '—'
       }</td>
       <td class="px-3 py-2 text-sm">${sourceLabel(e.source)}</td>
       <td class="px-3 py-2 text-xs flex gap-2">
@@ -65,7 +65,8 @@ function renderGrid(container, entries, onEdit, onDelete) {
             <th class="px-3 py-2">${t('fx.admin.col_valid_from')}</th>
             <th class="px-3 py-2">${t('fx.admin.col_valid_to')}</th>
             <th class="px-3 py-2">${t('fx.admin.col_pair')}</th>
-            <th class="px-3 py-2 text-right">${t('fx.admin.col_rate')}</th>
+            <th class="px-3 py-2 text-right">${t('fx.admin.col_rate_buy')}</th>
+            <th class="px-3 py-2 text-right">${t('fx.admin.col_rate_sell')}</th>
             <th class="px-3 py-2">${t('fx.admin.col_source')}</th>
             <th class="px-3 py-2"></th>
           </tr>
@@ -98,8 +99,13 @@ function addFormHtml(defaultSource, prefill = {}) {
           class="border border-slate-200 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
       </div>
       <div class="flex flex-col gap-1">
-        <label class="text-[11px] font-medium text-slate-500 uppercase">${t('fx.admin.col_rate')} (${FX_PAIR_DEFAULT})</label>
-        <input name="rate" type="number" value="${prefill.rate || ''}" required placeholder="26460"
+        <label class="text-[11px] font-medium text-slate-500 uppercase">${t('fx.admin.col_rate_buy')} (${FX_PAIR_DEFAULT})</label>
+        <input name="rate_buy" type="number" value="${prefill.rate_buy || ''}" required placeholder="26430"
+          class="border border-slate-200 rounded px-2.5 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-[11px] font-medium text-slate-500 uppercase">${t('fx.admin.col_rate_sell')} (${FX_PAIR_DEFAULT})</label>
+        <input name="rate_sell" type="number" value="${prefill.rate_sell || ''}" required placeholder="26460"
           class="border border-slate-200 rounded px-2.5 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-blue-100" />
       </div>
       <div class="flex flex-col gap-1">
@@ -118,8 +124,6 @@ function addFormHtml(defaultSource, prefill = {}) {
 }
 
 export async function render(root) {
-  if (!hasRole(ROLE_MANAGER)) { navigate('/dashboard'); return; }
-
   let entries = [], defSrc = 'Manual';
 
   // Paint shell first — before any Drive await — so a stalled load degrades to an inline
@@ -161,7 +165,7 @@ export async function render(root) {
   function onEdit(entry) {
     formWrap.innerHTML = addFormHtml(defSrc, {
       valid_from: entry.valid_from, valid_to: entry.valid_to,
-      rate: entry.rate, source: entry.source, _deleteFirst: entry,
+      rate_buy: entry.rate_buy, rate_sell: entry.rate_sell, source: entry.source, _deleteFirst: entry,
     });
     wireForm(entry);
   }
@@ -187,13 +191,14 @@ export async function render(root) {
       const fd        = new FormData(form);
       const validFrom = fd.get('valid_from') || '';
       const validTo   = fd.get('valid_to')   || '';
-      const rate      = fd.get('rate')       || '';
+      const rateBuy   = fd.get('rate_buy')   || '';
+      const rateSell  = fd.get('rate_sell')  || '';
       const source    = fd.get('source')     || 'Manual';
-      const validErr = validateRate(rate);
+      const validErr = validateRate(rateBuy) || validateRate(rateSell) || validateSpread(rateBuy, rateSell);
       if (validErr) { errEl.textContent = t(validErr); return; }
       try {
         const entryErr = await addRateEntry(
-          fxRateRepo, validFrom, validTo, FX_PAIR_DEFAULT, rate, source, currentUserRole(), deleteFirst,
+          fxRateRepo, validFrom, validTo, FX_PAIR_DEFAULT, rateBuy, rateSell, source, currentUserRole(), deleteFirst,
         );
         if (entryErr) { errEl.textContent = t(entryErr); return; }
         clearRateCache(); // drop stale lookups so an open PNL form sees the new rate

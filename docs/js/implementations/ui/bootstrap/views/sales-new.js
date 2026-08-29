@@ -3,6 +3,7 @@
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { navigate } from '../router.js';
 import { currentSalesRepId, currentRoles } from '../../core_abstractions/ports/auth/session-roles.js';
+import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { selfRepCandidate, customerRepFor } from '../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
@@ -136,9 +137,10 @@ export async function render(root, opts = {}) {
         repo.list('shipments').catch(() => []),
         salesRepId ? repo.get('user', `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
         salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
-        // Accounting's default header currency — a LOCAL store read (workspace_settings kind),
-        // not a Drive fetch: the delta tick is what keeps it current, not this render.
-        isEdit ? Promise.resolve(null) : readSettings(repo),
+        // Accounting's default currency — a LOCAL store read (workspace_settings kind), not a
+        // Drive fetch. Read on edit too now: it doubles as the book currency the form's live
+        // commission/line math compares against, not only the new-header seed.
+        readSettings(repo),
         // F-41-01: the rep select's options — a master-kind read, same 5-min registry cache.
         getActiveSalesReps(repo).catch(() => []),
         // Weight-unit select's options — same registry read pattern as getContainerTypes()
@@ -302,7 +304,7 @@ export async function render(root, opts = {}) {
       const flagged = await findFxDeviations(state, fxRepo);
       if (flagged.length) {
         const { proceed, overrides } = await confirmFxDeviations(
-          flagged, { confirmedBy: window.__vdg_current_user?.email || 'unknown' });
+          flagged, { confirmedBy: currentUserEmail() || 'unknown' });
         if (!proceed) return;
         state._fx_overrides = overrides;
       }
