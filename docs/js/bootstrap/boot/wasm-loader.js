@@ -31,6 +31,7 @@ export const BRIDGE_EXPORTS = [
   'proposal_reject',            // AC-04: reject round-trip needs the global bridge
   'priced_ref_resolve_on_date',
   'compute_due_soon',           // F-48-01: payment-due-soon 4-tier ladder shared compute
+  'fmt_date_display',           // F4-d: the one date-display convention, decided in Rust
 ];
 
 // Binds every BRIDGE_EXPORTS name present as a function on `mod` onto `window`.
@@ -63,8 +64,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL('pkg/vdg_freight.js?v=7a0bfd76', document.baseURI).href);
-      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=7a0bfd76', document.baseURI).href;
+      const mod = await import(new URL('pkg/vdg_freight.js?v=bb39df77', document.baseURI).href);
+      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=bb39df77', document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

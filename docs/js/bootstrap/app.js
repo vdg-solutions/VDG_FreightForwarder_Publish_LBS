@@ -5,7 +5,7 @@ import {
 import {
   bindNoteLines
 } from "./chunk-SZYDA4BO.js";
-import "./chunk-PIJJMCOY.js";
+import "./chunk-7UJHQGVW.js";
 import {
   bindLedgerComposer,
   bindLedgerPoster,
@@ -92,7 +92,7 @@ import {
 } from "./chunk-REGXU2BV.js";
 import {
   statusBadgeLabel
-} from "./chunk-ENF2VYJ6.js";
+} from "./chunk-77ST6KHY.js";
 import {
   bindSalesAnalyticsCompute
 } from "./chunk-7472JIPV.js";
@@ -134,7 +134,7 @@ import {
 } from "./chunk-53TPUVAF.js";
 import {
   bindUsersViewComposer
-} from "./chunk-IXBTUL5S.js";
+} from "./chunk-5OE4W62S.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
@@ -144,7 +144,7 @@ import {
 import {
   toLocalDateStr,
   todayLocal
-} from "./chunk-TZM24DL6.js";
+} from "./chunk-AOY7E6UF.js";
 import {
   bindSalesRepDerivation
 } from "./chunk-BDMZBHS4.js";
@@ -161,21 +161,20 @@ import {
   homeRouteForRole,
   normalizeRole,
   routeGuard
-} from "./chunk-N4OX2LG4.js";
+} from "./chunk-U7A2KJSA.js";
 import {
   ROLES_RESOLVED_EVENT,
   ROLE_ACCOUNTANT,
   ROLE_AUDITOR,
   ROLE_CUSTOMER_SERVICE,
   ROLE_MANAGER,
-  ROLE_NAMES,
   ROLE_READ_ONLY,
   ROLE_SALES_MANAGER,
   ROLE_SALES_REP
-} from "./chunk-V5JGKO5Q.js";
+} from "./chunk-CTHPHM7D.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-5RV6MYXX.js";
+} from "./chunk-LDIK5V6E.js";
 import {
   bindActionGuard,
   can
@@ -235,19 +234,21 @@ import {
 import {
   bindSessionRoles,
   currentRoles,
+  currentRolesResolved,
   currentSalesRepId,
   hasRole
-} from "./chunk-B24LWBUG.js";
-import "./chunk-Z2PGQJIS.js";
+} from "./chunk-NQTRREKJ.js";
+import "./chunk-FKMZGXJK.js";
 import {
   bindAppEvents,
   bindClock,
   bindHttp,
   currentLocale,
+  fmtDate,
   loadLocale,
   nowMs,
   t
-} from "./chunk-YMZ4K7MJ.js";
+} from "./chunk-NJFDQATX.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
 import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
@@ -549,6 +550,10 @@ var VdgSidebar = class extends LitElement {
       <nav class="flex-1 flex flex-col gap-0.5 overflow-y-auto pb-4">
         ${(() => {
       const visible = filterSidebarItems(V1_ITEMS, this._effectiveRoles());
+      if (visible.length === 0) {
+        const msgKey = currentRolesResolved() ? "nav.access.denied" : "nav.access.unreachable";
+        return html`<div class="px-4 py-3 text-xs text-slate-400" role="status">${t(msgKey)}</div>`;
+      }
       const activeGroup = activeGroupKey(visible, this.activeRoute);
       let shown = 0;
       return V1_GROUPS.map((g) => {
@@ -574,7 +579,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 7a0bfd76">v0.4.33 (7a0bfd76)</span>
+        <span class="font-mono whitespace-nowrap" title="build bb39df77">v0.4.34 (bb39df77)</span>
       </div>
     `;
   }
@@ -2266,7 +2271,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.33 (7a0bfd76)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.34 (bb39df77)</div>
         </div>
       </div>
     </div>`;
@@ -2327,8 +2332,6 @@ function storageApi() {
   if (!_api) throw new Error("storage/storage-api: no adapter bound (the storage bootstrap binds it)");
   return _api;
 }
-var getFile = (...a) => storageApi().getFile(...a);
-var findSharedFilesByNamePrefix = (...a) => storageApi().findSharedFilesByNamePrefix(...a);
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
 var _impl4 = null;
@@ -2342,46 +2345,6 @@ function _i4() {
 var kvSet = (...a) => _i4().setItem(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/grant-file.js
-var GRANT_FILE_TAG = "grant.";
-var NAME_SEPARATOR = ".";
-function grantFileName(workspace, fork) {
-  return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${fork}`;
-}
-function grantSearchKey(workspace, emailBase) {
-  return grantFileName(workspace, emailBase);
-}
-function forkFromGrantName(name, workspace) {
-  const head = grantFileName(workspace, "");
-  if (typeof name !== "string" || !name.startsWith(head)) return null;
-  return name.slice(head.length) || null;
-}
-function parseGrant(json, email, workspace) {
-  let grant;
-  try {
-    grant = JSON.parse(json);
-  } catch {
-    return [];
-  }
-  if (!grant || typeof grant.email !== "string" || typeof grant.fork !== "string" || !grant.fork || !Array.isArray(grant.roles)) return [];
-  if (grant.email.toLowerCase() !== String(email || "").toLowerCase()) return [];
-  if (String(grant.workspace || "").toLowerCase() !== String(workspace || "").toLowerCase()) return [];
-  if (grant.roles.length === 0) return [];
-  if (!grant.roles.every((r) => ROLE_NAMES.includes(r))) return [];
-  return [...grant.roles];
-}
-function parseGrantAreas(json, email, workspace) {
-  let grant;
-  try {
-    grant = JSON.parse(json);
-  } catch {
-    return [];
-  }
-  if (!grant || typeof grant.email !== "string") return [];
-  if (grant.email.toLowerCase() !== String(email || "").toLowerCase()) return [];
-  if (String(grant.workspace || "").toLowerCase() !== String(workspace || "").toLowerCase()) return [];
-  if (!Array.isArray(grant.areas)) return [];
-  return grant.areas.filter((a) => a && typeof a.path === "string" && typeof a.folder_id === "string");
-}
 var GRANT_AREAS_KEY = "vdg.grant.areas";
 function rememberGrantAreas(areas) {
   if (!Array.isArray(areas) || areas.length === 0) return;
@@ -2409,6 +2372,7 @@ var AUTH_PROBE_TIMEOUT_MS = 2e4;
 var ROLES_RESOLVED_EVENT2 = "vdg:roles-resolved";
 var LOGIN_ROOT_ID = "login-root";
 var LOGIN_OVERLAY_STYLE = "position:fixed;inset:0;z-index:50;background:#f8fafc;";
+var BOOT_PLACEHOLDER_ID = "view-loading";
 var RoleProbeTimeoutError = class extends Error {
   constructor() {
     super("Auth probe timeout");
@@ -2490,6 +2454,8 @@ function mountLoginScreen(onSignedIn) {
   if (_loginMounted) return;
   if (!_renderLoginPage) throw new Error("platform/auth: configureAuthPlatform({ renderLoginPage }) was not called by bootstrap");
   _loginMounted = true;
+  const placeholder = document.getElementById(BOOT_PLACEHOLDER_ID);
+  if (placeholder) placeholder.hidden = true;
   let loginRoot = document.getElementById(LOGIN_ROOT_ID);
   if (!loginRoot) {
     loginRoot = document.createElement("div");
@@ -2925,6 +2891,9 @@ function composeAuth(wasm3) {
   const sessionRoles = {
     currentSalesRepId: () => wasm3.auth_session_roles({}).token ?? null,
     currentRoles: () => wasm3.auth_session_roles({}).roles,
+    // session_principal.rs's own `resolved()` -- tells an empty currentRoles() apart from a
+    // probe that never got an answer (see session-roles.js's own doc comment).
+    currentRolesResolved: () => !!wasm3.auth_session_roles({}).resolved,
     hasRole: (role) => wasm3.auth_has_role({ role }).has,
     setResolvedRoles: (token, roles) => wasm3.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
   };
@@ -3013,20 +2982,14 @@ function _i8() {
 }
 var reconnectDriveInteractive = (...a) => _i8().reconnectDriveInteractive(...a);
 
-// output/web/js.tmp/implementations/storage/core_abstractions/grant-reader.js
+// output/web/js.tmp/implementations/storage/core_abstractions/events.js
 var _impl9 = null;
-function bindGrantReader(impl) {
+function bindEventBus(impl) {
   _impl9 = impl;
 }
-
-// output/web/js.tmp/implementations/storage/core_abstractions/events.js
-var _impl10 = null;
-function bindEventBus(impl) {
-  _impl10 = impl;
-}
 function _i9() {
-  if (!_impl10) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
-  return _impl10;
+  if (!_impl9) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
+  return _impl9;
 }
 var dispatchAppEvent = (...a) => _i9().dispatchAppEvent(...a);
 
@@ -3690,13 +3653,13 @@ function createTokenAnchor2({
 var tokenAnchorFactory = { createTokenAnchor: createTokenAnchor2 };
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/base64.js
-var _impl11 = null;
+var _impl10 = null;
 function bindBase64(impl) {
-  _impl11 = impl;
+  _impl10 = impl;
 }
 function _i10() {
-  if (!_impl11) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
-  return _impl11;
+  if (!_impl10) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
+  return _impl10;
 }
 var b64Decode = (...a) => _i10().decode(...a);
 var b64Encode = (...a) => _i10().encode(...a);
@@ -4326,21 +4289,6 @@ function sqlCountEntities2() {
 }
 var localStoreClient = { ...sqliteStore, setStoreScope: setStoreScope2, sqlCountEntities: sqlCountEntities2 };
 
-// output/web/js.tmp/implementations/storage/implementations/auth/grant-reader.js
-async function readGrant(workspace, emailBase, email) {
-  const candidates = await findSharedFilesByNamePrefix(grantSearchKey(workspace, emailBase));
-  for (const file of candidates) {
-    const fork = forkFromGrantName(file.name, workspace);
-    if (!fork) continue;
-    const res = await getFile(file.id);
-    const json = res?.content || "";
-    const roles = parseGrant(json, email, workspace);
-    if (roles.length > 0) return { fork, roles, areas: parseGrantAreas(json, email, workspace) };
-  }
-  return { fork: null, roles: [], areas: [] };
-}
-var grantReader = { readGrant };
-
 // output/web/js.tmp/implementations/storage/bootstrap/compose.js
 bindBackend(backend);
 bindServerSession(serverSession);
@@ -4351,7 +4299,6 @@ bindTokenAuthority(tokenAuthority);
 bindOAuthProvider(oauthProvider);
 bindIdentityProvider(identityProvider);
 bindLocalStore(localStoreClient);
-bindGrantReader(grantReader);
 bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })) });
 bindUserDirectory({ listUsers: listUsers2, createUser, patchUser });
 async function composeStorage() {
@@ -4365,13 +4312,13 @@ function createIoPort(serverApi, userEmail, forkPrefix) {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/visibility.js
-var _impl12 = null;
+var _impl11 = null;
 function bindVisibility(impl) {
-  _impl12 = impl;
+  _impl11 = impl;
 }
 function _i11() {
-  if (!_impl12) throw new Error("kernel/visibility: no adapter bound (the kernel bootstrap binds it)");
-  return _impl12;
+  if (!_impl11) throw new Error("kernel/visibility: no adapter bound (the kernel bootstrap binds it)");
+  return _impl11;
 }
 var isPageVisible = (...a) => _i11().isPageVisible(...a);
 var onVisibilityChange = (...a) => _i11().onVisibilityChange(...a);
@@ -4499,7 +4446,7 @@ function renderServerAccessGateScreen(container, { reason, actionFailed = false,
 }
 
 // output/web/js.tmp/bootstrap/boot/server-gate.js
-var SERVER_ERROR_NAME = "ServerApiError";
+var SERVER_ERROR_NAME = "ApiError";
 var HTTP_UNAUTHORIZED = 401;
 var EVT_RECONNECT_REQUEST = "vdg:auth-reconnect-request";
 var EVT_RECONNECTED = "vdg:auth-reconnected";
@@ -4637,7 +4584,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-J5VZ3CQC.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-AKJ4GCCU.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4645,7 +4592,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-2ILEZRKT.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-5JSGZMJ4.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4653,14 +4600,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-YHGQNKEO.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-QB2NGT6Y.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-YHGQNKEO.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-QB2NGT6Y.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4762,7 +4709,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.33 (7a0bfd76)";
+var APP_VERSION = "v0.4.34 (bb39df77)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4991,84 +4938,84 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-T3XIA7CE.js"),
-  "/shipments": () => import("./shipments-HJEQE7SM.js"),
-  "/upload": () => import("./upload-XABSD3TV.js"),
-  "/documents": () => import("./documents-UONG7CRK.js"),
-  "/finance": () => import("./finance-dashboard-QV4POJXB.js"),
-  "/finance/credit": () => import("./credit-dashboard-KTVTLPPW.js"),
-  "/finance/demdet": () => import("./demdet-U545E4XV.js"),
+  "/dashboard": () => import("./dashboard-R6NCWM4K.js"),
+  "/shipments": () => import("./shipments-HZJXNKU2.js"),
+  "/upload": () => import("./upload-JLH3W4I2.js"),
+  "/documents": () => import("./documents-ETCDCW4Q.js"),
+  "/finance": () => import("./finance-dashboard-PQZT6IQK.js"),
+  "/finance/credit": () => import("./credit-dashboard-JLSAGT2U.js"),
+  "/finance/demdet": () => import("./demdet-KVKZCSGX.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-UDZG4B33.js"),
-  "/sales/analytics": () => import("./sales-analytics-WPGPWCFD.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-UP3K5JH3.js"),
-  "/sales/quote": () => import("./sales-quote-list-KU2XOQMG.js"),
-  "/masters/customers": () => import("./masters-customers-F3KQHIRG.js"),
-  "/masters/carriers": () => import("./masters-carriers-5YMMVY3C.js"),
-  "/masters/services": () => import("./masters-services-LJU7FILV.js"),
-  "/help": () => import("./help-WRG4VWH4.js"),
-  "/pending-access": () => import("./pending-access-DYAYO64L.js"),
-  "/background-jobs": () => import("./background-jobs-BANPRH6C.js"),
+  "/sales/me": () => import("./sales-me-GMDZ4YJA.js"),
+  "/sales/analytics": () => import("./sales-analytics-S5IM6JY7.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-CCPT4PIZ.js"),
+  "/sales/quote": () => import("./sales-quote-list-WZTBL7MK.js"),
+  "/masters/customers": () => import("./masters-customers-B66X6SGZ.js"),
+  "/masters/carriers": () => import("./masters-carriers-5SKUS5DQ.js"),
+  "/masters/services": () => import("./masters-services-BEVPIAWJ.js"),
+  "/help": () => import("./help-IF5QMG7T.js"),
+  "/pending-access": () => import("./pending-access-73IQGY5M.js"),
+  "/background-jobs": () => import("./background-jobs-2REWR7B7.js"),
   // Manager Workspace — E-14
-  "/manager/dashboard": () => import("./dashboard-W2GCQOW6.js"),
-  "/manager/pipeline": () => import("./pipeline-TZEQECDH.js"),
-  "/manager/approvals": () => import("./approvals-5NAM5F3B.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-CUNC6EKC.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-WN6SJEFA.js"),
-  "/manager/finance/close-period": () => import("./close-period-BRZXALKB.js"),
-  "/manager/audit": () => import("./audit-YFFSYQ7P.js"),
-  "/manager/notifications": () => import("./notifications-KE33SBBZ.js"),
+  "/manager/dashboard": () => import("./dashboard-XZWLO2DJ.js"),
+  "/manager/pipeline": () => import("./pipeline-JEY5W6GS.js"),
+  "/manager/approvals": () => import("./approvals-VKNYSWE5.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-RCMFOYY2.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-WHUYRH4C.js"),
+  "/manager/finance/close-period": () => import("./close-period-7IKA5MOV.js"),
+  "/manager/audit": () => import("./audit-NSUDEOHA.js"),
+  "/manager/notifications": () => import("./notifications-FYG4EDJD.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-JZJ545GG.js"),
-  "/manager/finance/commissions": () => import("./commissions-5VX2F4LX.js"),
-  "/manager/commission-rules": () => import("./commission-rules-LEO4IDCZ.js"),
-  "/manager/exceptions": () => import("./exceptions-2KEGKSFK.js"),
+  "/manager/sales": () => import("./sales-6XPNLVOQ.js"),
+  "/manager/finance/commissions": () => import("./commissions-IAFFCAQJ.js"),
+  "/manager/commission-rules": () => import("./commission-rules-7C3XGTWK.js"),
+  "/manager/exceptions": () => import("./exceptions-7TZGCIDL.js"),
   // E-15
-  "/manager/errors": () => import("./errors-FG7ZEZQB.js"),
-  "/manager/backup": () => import("./backup-KLFTAZJO.js"),
-  "/manager/users": () => import("./users-DQXABL6E.js"),
+  "/manager/errors": () => import("./errors-2O3TUH62.js"),
+  "/manager/backup": () => import("./backup-ZICRZKDM.js"),
+  "/manager/users": () => import("./users-HKTM4OVL.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-D6HWV7MB.js"),
-  "/manager/settings": () => import("./settings-Y4ZMYJ53.js"),
+  "/manager/fx-rates": () => import("./fx-rates-TGDP65BV.js"),
+  "/manager/settings": () => import("./settings-ERY7CS4Z.js"),
   // E-16 F-16-02
-  "/manager/awb": () => import("./awb-N7NYEDEZ.js"),
+  "/manager/awb": () => import("./awb-CAB53J4L.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-A3OX4OKB.js"),
-  "/masters/flights": () => import("./flights-2SBKWIVY.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-PNPRQZ4K.js"),
+  "/masters/airports": () => import("./airports-YDAMTCRG.js"),
+  "/masters/flights": () => import("./flights-HSN4PNFI.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-CQVP57FH.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-6BOYIZJT.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-34OKSFBQ.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-527V2KC7.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-4BDKK7SJ.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-VMH3NIZS.js"),
-  "/manager/manifest": () => import("./manifest-MUM26JVU.js"),
+  "/masters/uld-types": () => import("./uld-types-GT5AJBBH.js"),
+  "/manager/manifest": () => import("./manifest-KZREUH7Y.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-JHRA3Q5I.js"),
+  "/masters/air-rates": () => import("./air-rates-YDQXJ3DW.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-3JWG56PY.js"),
-  "/masters/local-charges": () => import("./local-charges-2EFYPVSY.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-W7W2SBPA.js"),
+  "/masters/local-charges": () => import("./local-charges-NYOML6XT.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-SI34ZW6O.js"),
-  "/quotes/air-calc": () => import("./air-calc-63LTRHGC.js"),
+  "/masters/shipment-states": () => import("./shipment-states-DNPYUQAN.js"),
+  "/quotes/air-calc": () => import("./air-calc-2SAK72EE.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-V2623HQS.js"),
+  "/manager/air-invoice": () => import("./air-invoice-4GNGRSBN.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-5FFBEMW3.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-RUYZ4HGR.js"),
   // E-23 F-23-05
-  "/accounting/reports": () => import("./reports-6RDGQUQL.js"),
-  "/accounting/settings": () => import("./settings-2DBOUSZH.js"),
+  "/accounting/reports": () => import("./reports-LVNBQ7CU.js"),
+  "/accounting/settings": () => import("./settings-XLVNMKTJ.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-PX73M4BG.js"),
+  "/admin/users": () => import("./users-view-KJNDWQXY.js"),
   // E-24 F-24-06
-  "/admin/users/audit-log": () => import("./user-audit-log-view-YTHDYJ7R.js")
+  "/admin/users/audit-log": () => import("./user-audit-log-view-4CJH46LR.js")
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
-var _impl13 = null;
+var _impl12 = null;
 function bindRoutePrefetch(impl) {
-  _impl13 = impl;
+  _impl12 = impl;
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/cache.js
@@ -5251,7 +5198,6 @@ var MANAGER_ROLE_LABEL_KEY = "admin.users.role.manager";
 var MONTHS_PER_YEAR = 12;
 var MONTH_SAMPLE_YEAR = 2e3;
 var PREFIX_SEED_RANGE = 1e4;
-var WEEK_DATE_LOCALE = "vi-VN";
 var MARGIN_PCT_DIGITS = 1;
 var tz = () => -(/* @__PURE__ */ new Date()).getTimezoneOffset();
 function managerLabel() {
@@ -5265,13 +5211,8 @@ var withDims = (rows) => (rows || []).map((r) => ({ ...r, dims: Object.fromEntri
 var toPairs = (dims) => Object.entries(dims || {});
 var asArray = (rules) => rules instanceof Map ? [...rules.values()] : Object.values(rules || {});
 var msOf = (value) => value instanceof Date ? value.getTime() : Number(value ?? Date.now());
-function weekLabel(week) {
-  const fmt = new Intl.DateTimeFormat(WEEK_DATE_LOCALE, { day: "2-digit", month: "2-digit" });
-  return `W${week.index + 1} (${fmt.format(new Date(week.start_ms))})`;
-}
 function trendWeekLabel(week) {
-  const shown = new Date(week.start_ms).toLocaleDateString(WEEK_DATE_LOCALE, { day: "2-digit", month: "2-digit" });
-  return `W${week.ordinal} (${shown})`;
+  return `W${week.ordinal} (${fmtDate(new Date(week.start_ms))})`;
 }
 function composeManager(wasm3) {
   bindPnlComposer({
@@ -5584,13 +5525,13 @@ var LICENSE_STATE_INVALID = "invalid";
 var LICENSE_STATE_NETWORK = "network";
 var LICENSE_STATE_GRACE = "grace";
 var LICENSE_STATE_BLOCKED = "blocked";
-var _impl14 = null;
+var _impl13 = null;
 function bindLicenseGate(impl) {
-  _impl14 = impl;
+  _impl13 = impl;
 }
 function _i12() {
-  if (!_impl14) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
-  return _impl14;
+  if (!_impl13) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
+  return _impl13;
 }
 var resolveLicenseState = (...a) => _i12().resolveLicenseState(...a);
 var errorKindMessage = (...a) => _i12().errorKindMessage(...a);
@@ -5930,8 +5871,10 @@ var BRIDGE_EXPORTS = [
   "proposal_reject",
   // AC-04: reject round-trip needs the global bridge
   "priced_ref_resolve_on_date",
-  "compute_due_soon"
+  "compute_due_soon",
   // F-48-01: payment-due-soon 4-tier ladder shared compute
+  "fmt_date_display"
+  // F4-d: the one date-display convention, decided in Rust
 ];
 function globalizeBridgeExports(mod) {
   cached = mod;
@@ -5945,8 +5888,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=7a0bfd76", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=7a0bfd76", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=bb39df77", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=bb39df77", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6186,7 +6129,9 @@ function renderBootPhase(state) {
   const key = PHASE_KEY[state];
   if (!key) return;
   const el = document.getElementById(LOADING_EL_ID);
-  if (el) el.textContent = t(key);
+  if (!el) return;
+  el.textContent = t(key);
+  el.hidden = false;
 }
 
 // output/web/js.tmp/bootstrap/boot/repo-init-steps.js
@@ -6593,7 +6538,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-ZGDTVLXD.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-CCQODJR2.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6601,7 +6546,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-FHLI3VX2.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-U7OINMFO.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6609,7 +6554,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-AJ5VZDXF.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-6MZIU3B2.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6617,7 +6562,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-UP3K5JH3.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-CCPT4PIZ.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;
@@ -6656,7 +6601,7 @@ function bootApp(user, db) {
       <div class="flex-1 flex flex-col min-w-0">
         <vdg-topbar></vdg-topbar>
         <main id="view-root" class="flex-1 overflow-auto scrollbar-thin">
-          <div id="view-loading" class="p-6 text-slate-500 text-sm">Loading view\u2026</div>
+          <div id="view-loading" class="p-6 text-slate-500 text-sm">${t("loading")}</div>
         </main>
       </div>
       <vdg-cmd-palette></vdg-cmd-palette>`;
@@ -6711,7 +6656,7 @@ async function main() {
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
     if (err?.name === "RoleProbeTimeoutError") {
-      const { renderLoadingBanner } = await import("./auth-fallback-views-YXYLEC7Y.js");
+      const { renderLoadingBanner } = await import("./auth-fallback-views-BIPDGEJ7.js");
       renderLoadingBanner(document.getElementById("app"));
       return;
     }

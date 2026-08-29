@@ -1,74 +1,16 @@
-// grant-file.js — #30: pre-WASM read of the per-user grant file `grants/grant.{workspace}.{fork}`.
+// grant-file.js — the grant AREAS manifest cache (E-43): `[{path, folder_id}]` the manager
+// resolved when they granted, kept locally so the data layer can reach it without re-reading.
 //
-// The problem it fixes: resolve_grants never grants anything on `admin/`, so an employee could not
-// read the staff table and auth-gate inferred their role from the mere existence of their fork —
-// every Accountant, Auditor and Pricing holder resolved as SalesRep on their own machine.
-//
-// The grant file is that user's row and nothing else: `grants/` is granted to nobody (so it cannot
-// be listed), the file carries one reader permission for one email, and reader means the user
-// cannot edit their own roles.
-//
-// The auth gate runs before the wasm module loads, so boundary/grant_file.rs is unreachable here.
-// This is a deliberate, minimal mirror of parse_grant; f-30 asserts the two stay in step.
+// F1-b: the per-user grant FILE reader/parser that used to live here (`grants/grant.{workspace}.
+// {fork}`, a Drive-era convention read via sharedWithMe) is gone — vdg-server writes and reads the
+// grants collection keyed by the bare email (server/src/operators/users.rs,
+// server/src/implementations/freight_grants.rs), and this file's own `parseGrant` disagreed with
+// that shape (required a `workspace` field, addressed by `grant.{workspace}.{fork}`), which is
+// exactly what locked a signed-in, correctly-provisioned account onto pending-access. The areas
+// manifest below is unrelated to that contract and still has a live caller
+// (bootstrap/platform/auth.js's `auth_remember_grant_areas`).
 
 import { kvGet, kvSet, kvRemove } from '../../kernel/core_abstractions/ports/key-value.js';
-import { ROLE_NAMES } from '../../kernel/core_abstractions/roles.js';
-
-// Mirrors boundary/grant_file.rs.
-export const GRANTS_DIR     = 'grants';
-export const GRANT_FILE_TAG = 'grant.';
-const NAME_SEPARATOR        = '.';
-
-export function grantFileName(workspace, fork) {
-  return `${GRANT_FILE_TAG}${workspace}${NAME_SEPARATOR}${fork}`;
-}
-
-/// Search key: tag + workspace + the local-part of the user's own email. Their real prefix may
-/// carry 4 random digits from a collision, so the fork name is not knowable at sign-in.
-export function grantSearchKey(workspace, emailBase) {
-  return grantFileName(workspace, emailBase);
-}
-
-/// Fork name recovered from a grant file's name, for THIS workspace. A grant belonging to another
-/// company returns null — sharedWithMe spans the user's whole Drive.
-export function forkFromGrantName(name, workspace) {
-  const head = grantFileName(workspace, '');
-  if (typeof name !== 'string' || !name.startsWith(head)) return null;
-  return name.slice(head.length) || null;
-}
-
-/// Mirrors boundary/grant_file.rs::parse_grant. Returns the role array, or [] for anything that is
-/// not a valid grant addressed to `email` in `workspace`. Both checks matter: the address check
-/// because a shared file may not be ours, the workspace check because a user working for two
-/// companies is shared a grant from each.
-export function parseGrant(json, email, workspace) {
-  let grant;
-  try { grant = JSON.parse(json); } catch { return []; } // not our file — absence, not a failure
-  // fork is required, as it is on the Rust side: GrantFile has no default for it, so a file
-  // missing it is not a grant. Accepting one here handed out roles from a half-written file.
-  if (!grant || typeof grant.email !== 'string' || typeof grant.fork !== 'string'
-      || !grant.fork || !Array.isArray(grant.roles)) return [];
-  if (grant.email.toLowerCase() !== String(email || '').toLowerCase()) return [];
-  if (String(grant.workspace || '').toLowerCase() !== String(workspace || '').toLowerCase()) return [];
-  if (grant.roles.length === 0) return [];
-  if (!grant.roles.every((r) => ROLE_NAMES.includes(r))) return [];
-  return [...grant.roles];
-}
-
-/// E-43: the manifest half — `[{path, folder_id}]` the manager resolved when they granted. Same
-/// address and workspace checks as parseGrant, because a manifest from another company's grant
-/// would point this session at another company's folders. An older grant file carries no `areas`
-/// and yields [], which the caller reads as "fall back to the root walk".
-export function parseGrantAreas(json, email, workspace) {
-  let grant;
-  try { grant = JSON.parse(json); } catch { return []; }
-  if (!grant || typeof grant.email !== 'string') return [];
-  if (grant.email.toLowerCase() !== String(email || '').toLowerCase()) return [];
-  if (String(grant.workspace || '').toLowerCase() !== String(workspace || '').toLowerCase()) return [];
-  if (!Array.isArray(grant.areas)) return [];
-  return grant.areas.filter((a) => a && typeof a.path === 'string' && typeof a.folder_id === 'string');
-}
-
 
 /// Where the session keeps its manifest so the data layer can reach it without re-reading Drive.
 ///

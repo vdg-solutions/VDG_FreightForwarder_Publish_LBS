@@ -8,6 +8,7 @@ import { clearRateCache }                          from '../../../../kernel/core
 import { currentUserRole }                         from '../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../kernel/core_abstractions/util/master-load.js';
 import { isViewSuperseded }                        from '../../util/view-root.js';
+import { mountDateHints }                          from '../../util/date-input-hint.js';
 import { readSettings }                            from '../../../core_abstractions/ports/governance/workspace-settings.js';
 
 const SOURCE_OPTIONS  = ['Vietcombank', 'SBV', 'Manual'];
@@ -185,6 +186,7 @@ export async function render(root) {
     const form  = root.querySelector('#fx-add-form');
     const errEl = root.querySelector('#fx-form-err');
     if (!form) return;
+    mountDateHints(form);
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errEl.textContent = '';

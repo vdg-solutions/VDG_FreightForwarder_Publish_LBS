@@ -120,7 +120,13 @@
       <vdg-topbar></vdg-topbar>
 
       <main id="view-root" class="flex-1 overflow-auto scrollbar-thin">
-        <div id="view-loading" class="p-6 text-slate-500 text-sm">Loading view…</div>
+        <!-- boot-fsm-view.js overwrites this the moment a real boot phase fires (createBootFsm's
+             own onEnter runs synchronously at construction); it also un-hides the element, since
+             platform/auth.js's mountLoginScreen hides it for the signed-out window (F4-c) where
+             no boot FSM exists yet to repaint it. Pre-rendered Vietnamese, not built at runtime —
+             same reasoning as #entry-load-failed below: this markup runs before i18n loads.
+             Wording hand-mirrored from the "loading" key in vi.json. -->
+        <div id="view-loading" class="p-6 text-slate-500 text-sm">Đang tải…</div>
         <!-- entry-loader.js reveals this on a static-import-graph load failure (app.js itself,
              or a chunk it statically imports, 503/404ing — e.g. a GitHub Pages deploy-window
              race). Pre-rendered here, not built at runtime: see entry-loader.js for why. Wording

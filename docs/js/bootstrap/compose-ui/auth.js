@@ -18,6 +18,9 @@ export function composeAuth(wasm) {
   const sessionRoles = {
     currentSalesRepId: () => wasm.auth_session_roles({}).token ?? null,
     currentRoles:      () => wasm.auth_session_roles({}).roles,
+    // session_principal.rs's own `resolved()` -- tells an empty currentRoles() apart from a
+    // probe that never got an answer (see session-roles.js's own doc comment).
+    currentRolesResolved: () => !!wasm.auth_session_roles({}).resolved,
     hasRole:           (role) => wasm.auth_has_role({ role }).has,
     setResolvedRoles:  (token, roles) => wasm.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null,
   };

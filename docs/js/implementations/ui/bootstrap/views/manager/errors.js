@@ -2,6 +2,7 @@
 
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { listErrorRecords, purgeErrorMonth } from '../../../core_abstractions/ports/governance/error-log-store.js';
 
@@ -88,6 +89,7 @@ export async function render(root) {
       <div id="err-grid-container"></div>
       <div id="err-status" class="text-xs text-slate-400 mt-2">${t('loading')}</div>
     </div>`;
+  mountDateHints(root);
 
   const api = getApi();
 

@@ -402,6 +402,18 @@ export function flows_void_apply(req: any): Promise<any>;
 export function flows_void_plan(req: any): any;
 
 /**
+ * F4-d: the ONE date-display convention for the whole app, decided here rather than left to the
+ * browser's `Intl` -- that is what drifted in the first place: `Intl.DateTimeFormat('vi', ...)`
+ * picks a DIFFERENT separator for a day/month-only request than for a day/month/year one (proven
+ * live: the exceptions trend axis showed `12-07`, the ledger's own date display showed
+ * `12/07/2026`, same locale, same intent). A JS caller formatting a date is rendering; deciding
+ * the convention is a rule, so it lives here -- JS only inserts the string this returns.
+ * Accepts a bare `YYYY-MM-DD` (an `<input type="date">`'s `.value`, always this shape regardless
+ * of the browser's display locale) or a full ISO timestamp; returns `""` for anything else.
+ */
+export function fmt_date_display(iso: string): string;
+
+/**
  * `taken_json` is the JSON array of forks already in use; `seed` is a caller-supplied random
  * 0..9999 so two managers adding at once don't both pick the same suffix.
  */
@@ -885,6 +897,7 @@ export interface InitOutput {
     readonly flows_slugify: (a: number, b: number) => void;
     readonly flows_void_apply: (a: number) => number;
     readonly flows_void_plan: (a: number, b: number) => void;
+    readonly fmt_date_display: (a: number, b: number, c: number) => void;
     readonly fork_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly freight_app_init: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
@@ -1086,9 +1099,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13468: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13481: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9527: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13479: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13492: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9538: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

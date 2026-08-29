@@ -12,7 +12,6 @@ import { bindTokenAuthority } from '../core_abstractions/token.js';
 import { bindOAuthProvider } from '../core_abstractions/oauth.js';
 import { bindIdentityProvider } from '../core_abstractions/identity.js';
 import { bindLocalStore } from '../core_abstractions/local-store.js';
-import { bindGrantReader } from '../core_abstractions/grant-reader.js';
 import { bindEventBus } from '../core_abstractions/events.js';
 import { bindStorageApi } from '../core_abstractions/storage-api.js';
 import { bindWorkspaceAuthority } from '../core_abstractions/workspace-authority.js';
@@ -29,7 +28,6 @@ import { tokenAnchorFactory } from '../implementations/auth/token-anchor.js';
 import { tokenAuthority } from '../implementations/auth/access-token.js';
 import { identityProvider, oauthProvider } from '../implementations/auth/google-oauth.js';
 import { localStoreClient } from '../implementations/local/store-client.js';
-import { grantReader } from '../implementations/auth/grant-reader.js';
 
 export const BACKEND_SERVER = 'server';
 const MOCK_MODE_KEY   = 'vdg.driveMode';
@@ -47,7 +45,6 @@ bindTokenAuthority(tokenAuthority);
 bindOAuthProvider(oauthProvider);
 bindIdentityProvider(identityProvider);
 bindLocalStore(localStoreClient);
-bindGrantReader(grantReader);
 bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })) });
 // F-46-03: user management is server-only by design (owner 2026-08-21) — no Drive-mode branch.
 bindUserDirectory({ listUsers, createUser, patchUser });

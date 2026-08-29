@@ -12,7 +12,10 @@ import { currentUserEmail } from '../../../core_abstractions/ports/governance/ro
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
 import { exportExcel } from './pnl-report-export.js';
 
-const PERIODS = ['MTD', 'QTD', 'YTD', 'Last12M'];
+// F4-e: "Last12M" wasn't a real term in either language — TTM (trailing twelve months) is the
+// standard finance abbreviation for this window, same register as its three siblings, no
+// translation needed. The Rust side (pnl_pivot.rs's PERIOD_TTM) matches this string by value.
+const PERIODS = ['MTD', 'QTD', 'YTD', 'TTM'];
 
 const MODE_ALL = 'All';
 const MODE_SEA = 'Sea';

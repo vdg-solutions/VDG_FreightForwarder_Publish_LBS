@@ -3,7 +3,7 @@
 // Everything the Rust use-cases cannot know is supplied here: the browser's clock and UTC offset,
 // the locale's month names, the label a `__MANAGER__` rep token displays as, and the translation
 // of the i18n keys the reports hand back. Rust decides the numbers; this file dresses them.
-import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
+import { t, fmtDate } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
 import { currentUserEmail } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
 import { bindAirPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js';
@@ -26,7 +26,6 @@ const MANAGER_ROLE_LABEL_KEY = 'admin.users.role.manager';
 const MONTHS_PER_YEAR        = 12;
 const MONTH_SAMPLE_YEAR      = 2000;
 const PREFIX_SEED_RANGE      = 10000; // matches fork.rs SUFFIX_MODULO
-const WEEK_DATE_LOCALE       = 'vi-VN';
 const MARGIN_PCT_DIGITS      = 1;
 
 // Minutes EAST of UTC — getTimezoneOffset() counts the other way.
@@ -50,14 +49,13 @@ const toPairs  = (dims) => Object.entries(dims || {});
 const asArray  = (rules) => (rules instanceof Map ? [...rules.values()] : Object.values(rules || {}));
 const msOf     = (value) => (value instanceof Date ? value.getTime() : Number(value ?? Date.now()));
 
-function weekLabel(week) {
-  const fmt = new Intl.DateTimeFormat(WEEK_DATE_LOCALE, { day: '2-digit', month: '2-digit' });
-  return `W${week.index + 1} (${fmt.format(new Date(week.start_ms))})`;
-}
-
+// F4-d: one date convention app-wide — fmtDate (i18n/index.js), decided in Rust, not a private
+// Intl call here. This used to format with `{day, month}` only, which for 'vi-VN' picks a
+// DIFFERENT separator than fmtDate's own `{day, month, year}` request (same locale, same intent,
+// two renderings) — proven live as the exceptions trend axis reading `W8 (12-07)` while the
+// ledger read `12/07/2026`.
 function trendWeekLabel(week) {
-  const shown = new Date(week.start_ms).toLocaleDateString(WEEK_DATE_LOCALE, { day: '2-digit', month: '2-digit' });
-  return `W${week.ordinal} (${shown})`;
+  return `W${week.ordinal} (${fmtDate(new Date(week.start_ms))})`;
 }
 
 export function composeManager(wasm) {

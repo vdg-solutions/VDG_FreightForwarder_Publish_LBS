@@ -4,6 +4,9 @@ import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shi
 import { SHIPMENT_MAIN_PATH, phaseIndex } from '../../../kernel/core_abstractions/util/shipment-phases.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
+import { emptyStateHtml, bindEmptyStateActions, EMPTY_STATE_VARIANT } from '../components/empty-state.js';
+
+const KIND_SHIPMENT = 'shipment';
 
 const CLOSED_LIKE_STATES  = ['Closed', 'Delivered']; // F-18-11: KPI "active" excludes these
 // F-45-11: a shipment already InTransit has necessarily cleared its SI/CY cutoffs — only the
@@ -53,8 +56,20 @@ function distributionSection(distribution) {
 
 const DEFAULT_SEVERITY_COLOR = 'slate';
 
-function exceptionSection(exceptions) {
+// A read that came back empty because `shipment` never synced this session (`sync_failed_kinds()`
+// -- the SAME session-decided fact shipments.js/pnl-report.js/topbar.js already gate their own
+// LOAD_FAILED cards on, sync_health.rs's own FAILED_KINDS registry) must not render the identical
+// "nothing here" card a genuinely empty workspace earns -- an outage and an empty inbox are two
+// different facts and this project has already had to close this exact gap twice (outbox
+// quarantine, remote-skipped records). `emptyStateHtml`'s own LOAD_FAILED variant is the
+// established card for it; this view reuses it rather than inventing a third "sync failed" look.
+function emptySection(entity) {
+  return `<section class="bg-white rounded-xl border border-slate-200 p-5">${emptyStateHtml({ variant: EMPTY_STATE_VARIANT.LOAD_FAILED, entity })}</section>`;
+}
+
+function exceptionSection(exceptions, syncFailed) {
   const severityColor = { Critical: 'red', High: 'red', Medium: 'orange', Low: 'yellow' };
+  if (syncFailed && !exceptions.length) return emptySection(t('nav.workspace.shipments').toLowerCase());
   if (!exceptions.length) return `<section class="bg-white rounded-xl border border-slate-200 p-5"><div class="text-sm font-semibold text-slate-900">${t('dashboard.exceptions.empty')}</div></section>`;
   return `
     <section class="bg-white rounded-xl border border-slate-200 p-5">
@@ -87,7 +102,8 @@ function exceptionSection(exceptions) {
   `;
 }
 
-function cutoffSection(cutoffs) {
+function cutoffSection(cutoffs, syncFailed) {
+  if (syncFailed && !cutoffs.length) return emptySection(t('nav.workspace.shipments').toLowerCase());
   if (!cutoffs.length) return `<section class="bg-white rounded-xl border border-slate-200 p-5"><div class="text-sm font-semibold text-slate-900">${t('dashboard.cutoffs.empty')}</div></section>`;
   return `
     <section class="bg-white rounded-xl border border-slate-200 p-5">
@@ -201,10 +217,16 @@ export async function render(root) {
   const activeShipments = allShipments.filter((s) =>
     !CLOSED_LIKE_STATES.includes(resolveShipmentState(s.state || s.status, aliasRows)));
   const { exceptions, openCount } = computeOpenExceptions(allShipments, aliasRows);
+  // A total backend outage and a genuinely empty workspace both leave `allShipments` at [] --
+  // `sync_health.rs`'s own FAILED_KINDS registry (surfaced here the SAME way shipments.js/
+  // pnl-report.js/topbar.js already read it) is the ONE decided fact that tells them apart. Zero
+  // active/open-exception counts are only trustworthy when this is false.
+  const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).some((k) => k === KIND_SHIPMENT);
+  const kpiValue = (n) => (syncFailed ? '—' : n);
   const kpis = [
-    { label: t('dashboard.kpi.active_shipments'), value: activeShipments.length, delta: t('dashboard.kpi.total_active'), tone: 'blue', icon: 'ship' },
+    { label: t('dashboard.kpi.active_shipments'), value: kpiValue(activeShipments.length), delta: t('dashboard.kpi.total_active'), tone: 'blue', icon: 'ship' },
     { label: t('dashboard.kpi.pending_documents'), value: 0, delta: t('dashboard.kpi.real_data_na'), tone: 'amber', icon: 'doc' },
-    { label: t('open_exceptions'), value: openCount, delta: t('dashboard.exceptions.subtitle'), tone: 'red', icon: 'alert', tooltip: t('dashboard.exceptions.tooltip') },
+    { label: t('open_exceptions'), value: kpiValue(openCount), delta: syncFailed ? t('pivot.load_failed') : t('dashboard.exceptions.subtitle'), tone: syncFailed ? 'amber' : 'red', icon: 'alert', tooltip: t('dashboard.exceptions.tooltip') },
     { label: t('revenue_mtd'), value: 'N/A', delta: t('dashboard.kpi.requires_pnl_compute'), tone: 'green', icon: 'dollar' },
   ];
 
@@ -220,14 +242,15 @@ export async function render(root) {
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div class="xl:col-span-2 space-y-4">
           ${distributionSection(distribution)}
-          ${exceptionSection(exceptions)}
+          ${exceptionSection(exceptions, syncFailed)}
         </div>
         <div class="space-y-4">
           ${demExposureCard()}
-          ${cutoffSection(cutoffs)}
+          ${cutoffSection(cutoffs, syncFailed)}
         </div>
       </div>
     </div>
   `;
+  if (syncFailed) bindEmptyStateActions(root, { onRetry: () => render(root) });
   queueMicrotask(() => renderChart(distribution));
 }

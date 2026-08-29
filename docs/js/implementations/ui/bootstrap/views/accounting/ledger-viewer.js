@@ -15,6 +15,7 @@ import { refreshReverseControl, renderReversalBadge, bindLegRowInteractions } fr
 import { renderUnbalancedList } from './ledger-viewer-unbalanced.js';
 import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../kernel/core_abstractions/util/master-load.js';
 import { isViewSuperseded } from '../../util/view-root.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 
 const TYPE_LABEL_KEYS = {
   Asset: 'ledger.type.asset', Liability: 'ledger.type.liability',
@@ -307,6 +308,7 @@ export async function render(root) {
   // Paint shell first — before any Drive await — so a stalled load degrades to an inline
   // retry inside the painted shell instead of a pre-paint blank (AC-08).
   root.innerHTML = shellHtml();
+  mountDateHints(root);
   bindFilterInputs(root);
   root.querySelector('#btn-export-csv').addEventListener('click', exportCsv);
   root.querySelector('#btn-reconcile-now').addEventListener('click', async () => {

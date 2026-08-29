@@ -9,6 +9,7 @@ import { currentUserRole, currentUserRoles } from '../../../../core_abstractions
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
 import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
 import { isViewSuperseded } from '../../../util/view-root.js';
+import { mountDateHints } from '../../../util/date-input-hint.js';
 
 const KIND       = 'air-rates';
 
@@ -82,6 +83,7 @@ function openModal(root, entity, onSave, primaryLabel) {
   root.insertAdjacentHTML('beforeend', buildModal(entity, primaryLabel));
   const dialog = root.querySelector('#ar-modal');
   dialog.showModal();
+  mountDateHints(dialog);
   dialog.querySelector('#ar-cancel').addEventListener('click', () => dialog.close());
   dialog.querySelector('#ar-form').addEventListener('submit', async (ev) => {
     ev.preventDefault();

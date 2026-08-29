@@ -10,7 +10,12 @@ import {
   SERVER_ACCESS_REASON_TRANSIENT, SERVER_ACCESS_REASON_SESSION,
 } from '../../implementations/ui/bootstrap/views/auth/server-access-gate-screen.js';
 
-const SERVER_ERROR_NAME  = 'ServerApiError';
+// storage/core_abstractions/api-error.js's own ApiError.name -- this used to read 'ServerApiError',
+// a class nothing in this codebase throws, so serverGateReason() below always returned null for a
+// REAL ApiError (401 session death, or status 0 "server unreachable: ..."), and every boot-time
+// server failure fell through main()'s catch to the generic "unrecognized error" screen instead of
+// the reconnect/transient-outage screen this file exists to render.
+const SERVER_ERROR_NAME  = 'ApiError';
 const HTTP_UNAUTHORIZED = 401;
 
 // Same event the topbar reconnect chip fires

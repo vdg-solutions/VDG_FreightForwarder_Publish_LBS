@@ -1,6 +1,7 @@
 // Manager Audit Log — F-14-12
 
 import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import { changeLines, changesCell, renderChainStatus } from './audit-changes.js';
@@ -238,6 +239,8 @@ export async function render(root) {
     if (displayed === 0) _gridApi.showNoRowsOverlay(); else _gridApi.hideOverlay();
   }
   refreshEmptyState();
+
+  mountDateHints(root);
 
   // Filter inputs
   const FILTER_INPUT_IDS = ['f-kind', 'f-entity-id', 'f-actor', 'f-event', 'f-date-from', 'f-date-to'];

@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { navigate } from '../router.js';
-import { hasRole } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { hasRole, currentRolesResolved } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
 import { filterSidebarItems, currentUserRole, currentUserRoles, normalizeRole } from '../../core_abstractions/ports/governance/route-guard.js';
@@ -158,6 +158,16 @@ class VdgSidebar extends LitElement {
       <nav class="flex-1 flex flex-col gap-0.5 overflow-y-auto pb-4">
         ${(() => {
           const visible = filterSidebarItems(V1_ITEMS, this._effectiveRoles());
+          // No item survives the role filter -- the same fail-closed reading a user with no grant
+          // gets. But that reading and "the role probe never got an answer because the backend is
+          // unreachable" produce the IDENTICAL empty `visible` array; rendering nothing either way
+          // is the exact ambiguity that shipped with no message at all. `currentRolesResolved()`
+          // (session_principal.rs's own `resolved()`) is the Rust-decided fact that tells them
+          // apart -- never guessed here from a timer or a retry count.
+          if (visible.length === 0) {
+            const msgKey = currentRolesResolved() ? 'nav.access.denied' : 'nav.access.unreachable';
+            return html`<div class="px-4 py-3 text-xs text-slate-400" role="status">${t(msgKey)}</div>`;
+          }
           const activeGroup = activeGroupKey(visible, this.activeRoute); // AC-04
           let shown = 0;
           return V1_GROUPS.map((g) => {
@@ -183,7 +193,7 @@ class VdgSidebar extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 7a0bfd76">v0.4.33 (7a0bfd76)</span>
+        <span class="font-mono whitespace-nowrap" title="build bb39df77">v0.4.34 (bb39df77)</span>
       </div>
     `;
   }

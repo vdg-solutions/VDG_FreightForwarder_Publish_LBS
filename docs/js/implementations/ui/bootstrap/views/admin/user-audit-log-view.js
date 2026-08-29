@@ -3,6 +3,7 @@
 // sync/user-audit-log.js), same DI-off-window convention as users-view.js.
 
 import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
@@ -90,6 +91,7 @@ function handleExportCsv() {
 export async function render(root) {
   _range = { from: '', to: '' };
   root.innerHTML = shellHtml();
+  mountDateHints(root);
 
   const log = getUserAuditLog();
   _allRecords = log ? await log.readAll().catch(() => []) : [];

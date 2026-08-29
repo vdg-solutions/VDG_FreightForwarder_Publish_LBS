@@ -1,6 +1,7 @@
 // section-commission-fx.js — per-line currency + fx markup/wiring for mục C commission
 // rows (F-29-02). Split out of section-commission.js (at the 350-line cap) — design.md §3.
 import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 import { lockFxIfVnd, prefillFxRate, currencySelectHtml, bookCurrencyOf } from './pnl-line-fx.js';
 
 const VND_CURRENCY = 'VND';
@@ -94,6 +95,9 @@ export function wireCommissionFx(tbody, fxRepo, docDate) {
   if (!tbody) return;
 
   applyCommFxDateDefaults(tbody, docDate);
+  // After the defaults above (programmatic `.value` set, no input/change event) so a defaulted
+  // date shows a hint immediately, not only after the user's first interaction.
+  mountDateHints(tbody);
   // AC-02 mục-C parity: mount prefill for blank non-VND panels (persisted/typed rates preserved)
   tbody.querySelectorAll('[data-comm-panel]').forEach((panel) => prefillPanelFx(panel, fxRepo));
 

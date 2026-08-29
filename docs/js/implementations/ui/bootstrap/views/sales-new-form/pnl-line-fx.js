@@ -3,6 +3,7 @@
 import { getRateForDate } from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { lineVnd } from '../../../core_abstractions/ports/flows/pnl-gate.js';
 import { currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 
 const VND_CURRENCY = 'VND';
 const FX_CELL_CLS  = 'border border-slate-200 rounded px-1 py-0.5 text-xs';
@@ -209,6 +210,9 @@ export function wireLineFx(tbody, fxRepo, docDate) {
   if (!tbody) return;
 
   Array.from(tbody.querySelectorAll('tr[data-line]')).forEach((row) => applyFxDateDefaults(row, docDate));
+  // After the defaults above — applyFxDateDefaults sets `.value` directly (no input/change
+  // event), so the initial hint sync must run AFTER it or a defaulted date shows no hint at all.
+  mountDateHints(tbody);
 
   tbody.addEventListener('change', (e) => {
     const currencySide = _sideOf(e.target.name, '_currency');

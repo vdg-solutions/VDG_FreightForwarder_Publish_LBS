@@ -21,6 +21,7 @@ import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
 import { summarizeLineCurrencies, resolveHeaderCurrency } from './sales-new-form/pnl-line-fx.js';
+import { mountDateHints } from '../util/date-input-hint.js';
 
 const AUTOSAVE_DELAY_MS = 1500;
 
@@ -109,6 +110,7 @@ export async function renderForm(root, opts = {}) {
   // the whole form. The opening screen follows the phase the job is in (F-39-03).
   root.querySelector('#sec-a-body .grid')?.insertAdjacentHTML('beforeend', docsExtHtml(d));
   initPhaseScreens(root, { state: d.state || 'Created' });
+  mountDateHints(root);
 
   const onChanged = () => _recomputeWaterfall(root, userConfig);
 

@@ -204,7 +204,14 @@ export function renderTrends(root, exceptions) {
       _trendChart = new window.Chart(ctx, {
         type: 'line',
         data: chartData,
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } },
+        options: {
+          responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } },
+          // F4-e: an all-zero week (no exceptions at all) left min===max, and Chart.js's default
+          // linear-scale autorange synthesizes a symmetric -1..1 spread around a single value —
+          // a real week with zero exceptions read as if the axis went negative. Counts are never
+          // negative, so the floor is a fact about the data, not a cosmetic choice.
+          scales: { y: { min: 0, ticks: { precision: 0 } } },
+        },
       });
     }
   }

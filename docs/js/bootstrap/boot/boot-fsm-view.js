@@ -22,5 +22,11 @@ export function renderBootPhase(state) {
   const key = PHASE_KEY[state];
   if (!key) return; // READY / ERROR — leave the DOM to the real view / banner
   const el = document.getElementById(LOADING_EL_ID);
-  if (el) el.textContent = t(key);
+  if (!el) return;
+  el.textContent = t(key);
+  // F4-c: platform/auth.js's mountLoginScreen hides this placeholder for the signed-out window
+  // (nothing else clears it there). A real boot phase firing means sign-in just succeeded and
+  // the login overlay is already gone — this is the one place that owns repainting the
+  // placeholder, so it is also the one place that un-hides it.
+  el.hidden = false;
 }

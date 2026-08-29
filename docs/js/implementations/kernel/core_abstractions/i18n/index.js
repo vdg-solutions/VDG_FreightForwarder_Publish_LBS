@@ -32,7 +32,18 @@ export function t(key, args) {
 
 export function currentLocale() { return _locale; }
 
+// F4-d: the display convention (digit order, separator) is decided in Rust (fmt_date_display,
+// js_bridge.rs) — not by the browser's own Intl choice, which is what drifted here in the first
+// place (Intl.DateTimeFormat('vi', {...}) picks a DIFFERENT separator depending on whether `year`
+// is in the requested field set, proven live: 12/07/2026 here, 12-07 on the exceptions chart,
+// same locale). This function only renders whatever Rust returns.
 export function fmtDate(isoOrDate) {
+  const iso = isoOrDate instanceof Date ? isoOrDate.toISOString() : String(isoOrDate ?? '');
+  if (typeof window !== 'undefined' && typeof window.fmt_date_display === 'function') {
+    return window.fmt_date_display(iso);
+  }
+  // wasm not loaded yet (or a non-browser test importing this module directly) — same shape as
+  // the Rust rule, kept only as a bootstrap-order/test fallback, never the app's real decision.
   const d = isoOrDate instanceof Date ? isoOrDate : dateFrom(isoOrDate);
   return new Intl.DateTimeFormat(_locale, {
     day: '2-digit', month: '2-digit', year: 'numeric',

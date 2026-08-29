@@ -2,6 +2,7 @@
 // 3-tab accountant view: same data-tab pattern as manager/cash-flow.js.
 
 import { t, fmtNumber, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountDateHints } from '../../util/date-input-hint.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import {
   trialBalance, pnl, pnlMonthlyBreakdown, balanceSheet,
@@ -125,6 +126,7 @@ async function renderTrialBalance(container) {
       </table>
     </div>`;
 
+  mountDateHints(container);
   container.querySelector('#tb-as-of-date').addEventListener('change', async (e) => {
     _asOfDateTB = e.target.value;
     await renderTrialBalance(container);
@@ -253,6 +255,7 @@ async function renderBalanceSheet(container) {
       <div class="mt-3 text-right">${integrityBadge(balanced, 'reports.bs.balanced', 'reports.bs.unbalanced')}</div>
     </div>`;
 
+  mountDateHints(container);
   container.querySelector('#bs-as-of-date').addEventListener('change', async (e) => {
     _asOfDateBS = e.target.value;
     await renderBalanceSheet(container);

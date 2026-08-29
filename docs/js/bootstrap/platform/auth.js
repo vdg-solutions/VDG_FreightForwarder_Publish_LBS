@@ -16,6 +16,13 @@ const AUTH_PROBE_TIMEOUT_MS = 20000;           // F-15-19 AC-4: surface a banner
 const ROLES_RESOLVED_EVENT   = 'vdg:roles-resolved';
 const LOGIN_ROOT_ID          = 'login-root';
 const LOGIN_OVERLAY_STYLE    = 'position:fixed;inset:0;z-index:50;background:#f8fafc;';
+// F4-c: index.html's pre-rendered boot placeholder — visible by default, cleared only once a
+// route actually renders (view-root.js's freshViewRoot). A signed-out session never reaches that
+// render (this overlay is the whole story until sign-in), so without this the placeholder just
+// sits there, live, underneath the login card for as long as the user stays signed out — every
+// normal sign-out included, not just a slow/failed boot. boot-fsm-view.js un-hides it the moment
+// a real boot phase fires again.
+const BOOT_PLACEHOLDER_ID    = 'view-loading';
 
 export class RoleProbeTimeoutError extends Error {
   constructor() {
@@ -114,6 +121,8 @@ export function mountLoginScreen(onSignedIn) {
   if (_loginMounted) return;
   if (!_renderLoginPage) throw new Error('platform/auth: configureAuthPlatform({ renderLoginPage }) was not called by bootstrap');
   _loginMounted = true;
+  const placeholder = document.getElementById(BOOT_PLACEHOLDER_ID);
+  if (placeholder) placeholder.hidden = true;
   let loginRoot = document.getElementById(LOGIN_ROOT_ID);
   if (!loginRoot) {
     loginRoot = document.createElement('div');
