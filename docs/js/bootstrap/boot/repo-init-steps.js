@@ -35,6 +35,17 @@ const STEP_BUILD_REPO    = 'build-repo-stack';
 const STEP_LICENSE_GATE  = 'license-gate';
 const STEP_BOOT_APP      = 'bootApp';
 
+// A boot-critical store op timed out (repo-init:sqlite-warm / fsm-rehydrate) — stop the boot
+// pipeline here instead of continuing into a repo/FSM/render built on top of it (a silent-await
+// resolving to a stuck or misleading view is banned). This is deliberately NOT a lock diagnosis —
+// only store-client.js's classified sahpool-genuine-conflict error earns that message — so it
+// carries kind:'unresponsive', not the "close other tabs" wording, which would only be true for a
+// real second live tab.
+function _storeUnresponsive(tag) {
+  window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { kind: 'unresponsive', tag } }));
+  return null;
+}
+
 export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const _hangMs = parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || '0', 10);
   const fsm = createBootFsm(renderBootPhase);
@@ -54,17 +65,19 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
 
   if (_hangMs > 0) await new Promise((r) => setTimeout(r, _hangMs));
 
-  // 3. Build repo 
+  // 3. Build repo
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
   const serverApi = storageApi(); // Use storageApi to get server API
   const ioPort = createIoPort(serverApi, user.email, _forkPrefixFromSession());
-  
-  safeAwait(ioPort.cache_get_meta('__warm'), CACHE_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm')
-    .then((r) => {
-      if (!r.ok) window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { reason: 'sqlite-warm timeout' } }));
-    });
-    
+
+  // Boot-critical canary: fail fast, honestly, before sinking work into a repo/FSM/license-gate
+  // built on a store that can't answer. A timeout here is NOT evidence of a lock (that classified
+  // signal comes only from store-client.js's real sahpool-genuine-conflict error) — it just means
+  // the boot must stop instead of silently rendering on top of it (no silent-await to a stuck view).
+  const warmResult = await safeAwait(ioPort.cache_get_meta('__warm'), CACHE_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
+  if (!warmResult.ok) return _storeUnresponsive('repo-init:sqlite-warm');
+
   const repo = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo      = repo;
   window.__vdg_server_api = serverApi;
@@ -77,7 +90,8 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   wasmMod.freight_app_init(createPlatform({ repo }));
   composeUi(wasmMod);
 
-  await safeAwait(rehydrateFsmStates(repo), CACHE_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
+  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo), CACHE_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
+  if (!rehydrateResult.ok) return _storeUnresponsive('fsm-rehydrate');
 
   // 5. License gate
   fsm.dispatch(BootEvent.REPO_BUILT);

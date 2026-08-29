@@ -5,7 +5,7 @@ import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { shipmentLane } from '../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { navigate } from '../router.js';
@@ -205,7 +205,7 @@ export async function render(root) {
   const gridDiv = document.getElementById('grid');
   let api = null;
   if (window.agGrid) {
-    api = window.agGrid.createGrid(gridDiv, {
+    api = mountAgGrid(gridDiv, {
       columnDefs: buildColumnDefs(rowData),
       rowData,
       defaultColDef: { sortable: true, resizable: true, filter: true },
@@ -213,7 +213,6 @@ export async function render(root) {
       onRowClicked: (e) => { document.getElementById('detail-panel')?.open(e.data); },
       rowHeight: 38,
       headerHeight: 36,
-      localeText: agGridLocaleText(),
     });
   }
 

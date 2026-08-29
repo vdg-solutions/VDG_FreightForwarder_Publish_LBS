@@ -43,6 +43,17 @@ export function createSyncHandlers(host) {
         : e.detail?.reason === 'rate_budget'
         ? t('topbar.sync.tooltip.rate_budget_reason')
         : (e.detail?.error ?? null);
+      // D12: a remote-decode skip (event_bridge.rs's own "record_skipped" reason) never touches
+      // the outbox, so the vdg:outbox-changed/vdg:sync-complete events this chip already reads
+      // `_quarantinedCount` from may never fire again this session (a read-only session has no
+      // outbox activity at all) — re-read the Rust-decided snapshot right here instead of
+      // waiting on an outbox event that might never come. Still Rust's own count (outbox.rs's
+      // snapshot() now folds sync_health::skipped_len() in), not a count kept in JS.
+      if (e.detail?.reason === 'record_skipped') {
+        window.__vdg_repo?.outbox_snapshot?.()
+          .then((snap) => { if (snap) host._quarantinedCount = snap.quarantined ?? host._quarantinedCount; })
+          .catch(() => { /* best-effort — the next outbox event corrects it if this read fails */ });
+      }
     },
     onServerHealth: (e) => {
       if (e.detail?.backlog_depth !== undefined) host._serverBacklog = Number(e.detail.backlog_depth) || 0;

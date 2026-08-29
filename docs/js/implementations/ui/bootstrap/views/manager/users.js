@@ -12,6 +12,7 @@
 
 import { editProfile } from '../../../core_abstractions/ports/flows/user-provisioning.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { openEditModal } from './users-modals.js';
 
 const KIND_USER = 'user';
@@ -67,8 +68,7 @@ function mountGrid(container, rows, root) {
     rowData:       rows,
     defaultColDef: { sortable: true, resizable: true, filter: true },
   };
-  const g = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
-  _grid = g.gridOptions?.api || opts.api;
+  _grid = mountAgGrid(container.querySelector('.ag-theme-quartz'), opts);
 }
 
 // ── filter ────────────────────────────────────────────────────────────────────

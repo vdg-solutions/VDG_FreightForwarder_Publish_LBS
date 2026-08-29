@@ -2,6 +2,7 @@
 
 import '../../components/kanban-board.js';
 import { VALID_NEXT } from '../../components/kanban-board.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { readMode, DEFAULT_MODE } from '../../components/topbar-mode-toggle.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { currentUserEmail } from '../../../core_abstractions/ports/governance/route-guard.js';
@@ -124,8 +125,7 @@ function mountGrid(container, filtered) {
       }));
     },
   };
-  const grid = new agGrid.Grid(div, opts);
-  _gridApi = grid.gridOptions?.api || opts.api;
+  _gridApi = mountAgGrid(div, opts);
 }
 
 function updateBulkToolbar(root) {

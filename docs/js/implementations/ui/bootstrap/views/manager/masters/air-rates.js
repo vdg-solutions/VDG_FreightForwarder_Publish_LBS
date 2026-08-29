@@ -1,7 +1,7 @@
 // Air Rates master CRUD grid — F-16-05
 // Route: /masters/air-rates
 
-import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale } from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
@@ -53,12 +53,12 @@ function buildModal(entity, primaryLabel) {
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">${t('air_rate.field.valid_from')} <span class="text-red-500">*</span></label>
-            <input id="ar-from" type="date" value="${escHtml(e.valid_from)}" required
+            <input id="ar-from" type="date" value="${escHtml(e.valid_from)}" lang="${currentLocale()}" required
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">${t('air_rate.field.valid_to')} <span class="text-red-500">*</span></label>
-            <input id="ar-until" type="date" value="${escHtml(e.valid_to)}" required
+            <input id="ar-until" type="date" value="${escHtml(e.valid_to)}" lang="${currentLocale()}" required
                    class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>

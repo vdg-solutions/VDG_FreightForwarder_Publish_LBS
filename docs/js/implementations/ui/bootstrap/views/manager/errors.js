@@ -1,7 +1,8 @@
 // F-15-07 — Error log viewer (/manager/errors)
 
 import { showConfirm } from '../../helpers/show-confirm.js';
-import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { listErrorRecords, purgeErrorMonth } from '../../../core_abstractions/ports/governance/error-log-store.js';
 
 // raw technical tokens shown verbatim (mono diagnostic dump), same carve-out as row.kind below
@@ -44,8 +45,7 @@ function mountGrid(container, rows) {
     defaultColDef: { sortable: true, resizable: true, filter: true },
     onRowClicked:  (e) => _showDetail(container, e.data),
   };
-  const g = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
-  _grid = g.gridOptions?.api || opts.api;
+  _grid = mountAgGrid(container.querySelector('.ag-theme-quartz'), opts);
 }
 
 function _showDetail(container, row) {
@@ -75,7 +75,7 @@ export async function render(root) {
           <option value="">${t('errors.filter.all_kinds')}</option>
           ${KIND_OPTS.map((k) => `<option value="${k}">${k}</option>`).join('')}
         </select>
-        <input id="filter-date" type="date"
+        <input id="filter-date" type="date" lang="${currentLocale()}"
                class="border rounded-lg px-3 py-1.5 text-xs text-slate-700"
                title="${t('errors.filter.date_title')}" />
         <button id="btn-apply" class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700">

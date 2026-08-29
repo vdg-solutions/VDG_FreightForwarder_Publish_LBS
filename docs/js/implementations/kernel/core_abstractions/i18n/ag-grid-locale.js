@@ -20,7 +20,7 @@ export const AG_GRID_LOCALE_KEYS = [
 ];
 
 // Call sites: pass this into every agGrid.Grid(...)/createGrid(...) options object as
-// `localeText: agGridLocaleText()`. Wiring the 15 call sites is the area lanes' job (D2, PM scope).
+// `localeText: agGridLocaleText()`. Prefer mountAgGrid() below so a new grid can't omit it.
 export function agGridLocaleText() {
   return {
     noRowsToShow: t('grid.noRowsToShow'),
@@ -59,4 +59,15 @@ export function agGridLocaleText() {
     sortAscending: t('grid.sortAscending'),
     sortDescending: t('grid.sortDescending'),
   };
+}
+
+// F-19-93 (D14): shared factory so views can't stand up a grid without the locale. Handles
+// both the modern createGrid() and the legacy `new Grid()` API ag-grid-community 31.x still ships.
+export function mountAgGrid(container, gridOptions) {
+  const options = { ...gridOptions, localeText: agGridLocaleText() };
+  if (typeof window.agGrid?.createGrid === 'function') {
+    return window.agGrid.createGrid(container, options);
+  }
+  const grid = new window.agGrid.Grid(container, options);
+  return grid.gridOptions?.api || options.api;
 }

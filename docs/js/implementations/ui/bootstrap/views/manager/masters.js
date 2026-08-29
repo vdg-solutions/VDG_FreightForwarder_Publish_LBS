@@ -4,7 +4,7 @@ import '../../components/dup-wizard.js';
 import { findMatch }      from '../../../core_abstractions/ports/cache/master-deduper.js';
 import { showConfirm }    from '../../helpers/show-confirm.js';
 import { t }              from '../../../../kernel/core_abstractions/i18n/index.js';
-import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { patchUser }      from '../../../../storage/core_abstractions/user-directory.js';
 
 const MASTERS_RE               = /^\/manager\/masters\/([^/]+)$/;
@@ -63,8 +63,8 @@ function mountUserGrid(container, users) {
         return div;
       } },
   ];
-  const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), {
-    columnDefs: cols, rowData: users, defaultColDef: { sortable: true, resizable: true }, localeText: agGridLocaleText(),
+  const grid = mountAgGrid(container.querySelector('.ag-theme-quartz'), {
+    columnDefs: cols, rowData: users, defaultColDef: { sortable: true, resizable: true },
   });
   return grid;
 }

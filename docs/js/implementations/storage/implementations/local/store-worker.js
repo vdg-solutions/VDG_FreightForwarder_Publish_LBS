@@ -6,22 +6,30 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: f9309d2d is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: 7a0bfd76 is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=f9309d2d', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=7a0bfd76', import.meta.url).href;
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.
+// hasLockExclusivity is store-client.js's ONE fact about tab liveness (did Web Locks grant this
+// tab sole leadership?) — Rust uses it to classify a stale self-lock vs a genuine second tab
+// (sahpool_lock_policy.rs); this worker never guesses that itself.
 let _ready = null;
 let _mod   = null;
-function ready(scope) {
+function ready(scope, hasLockExclusivity) {
   if (_ready) return _ready;
   if (!scope) return Promise.reject(new Error('sqlite: missing store scope — the database is per-account'));
   const useOpfs = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
   _ready = (async () => {
     _mod = await import(WASM_URL);
     await _mod.default();
-    await _mod.sqlite_init(scope, useOpfs);
+    const mode = await _mod.sqlite_init(scope, useOpfs, !!hasLockExclusivity);
+    if (mode === 'memory-stale-self') {
+      // Self-healed: a dead context's OPFS handles hadn't let go yet, but Web Locks proved no
+      // LIVE tab holds them — degrade to :memory: for this session rather than surface anything.
+      console.warn('[store-worker] sahpool stale-self, running on :memory: this session');
+    }
   })().catch((e) => { _ready = null; _mod = null; throw e; });
   return _ready;
 }
@@ -63,9 +71,19 @@ function runOp(m) {
 
 self.onmessage = async (ev) => {
   const m = ev.data || {};
+  // pagehide lifecycle release (store-client.js): close the SQLite handle + pause the sahpool
+  // VFS synchronously, right before this worker is torn down, so the NEXT document's install
+  // doesn't have to wait on the browser's own worker-teardown GC for these handles to free up —
+  // that unbounded wait (observed at 60s+) is what bricked an ordinary reload. No rid: the page
+  // is unloading and nothing is waiting on a response.
+  if (m.op === 'release') {
+    try { _mod?.sqlite_release?.(); } catch (e) { console.error('[store-worker release]', e); }
+    self.close();
+    return;
+  }
   // rid = request-correlation id (m.id is the entity id in the payload; never use it to correlate).
   try {
-    await ready(m.scope);
+    await ready(m.scope, m.hasLockExclusivity);
     const result = runOp(m);
     self.postMessage({ rid: m.rid, ok: true, result });
   } catch (e) {

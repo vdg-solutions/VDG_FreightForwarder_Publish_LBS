@@ -1,0 +1,316 @@
+import {
+  ACTIVITY_FEED_MAX,
+  LAYOUT_DEBOUNCE_MS,
+  TOP_CUSTOMERS_MAX,
+  compose
+} from "./chunk-6Z6QDIFV.js";
+import {
+  DEFAULT_MODE,
+  readMode
+} from "./chunk-RE24EIGD.js";
+import {
+  todayLocal
+} from "./chunk-TZM24DL6.js";
+import {
+  getActiveSalesReps
+} from "./chunk-YFN2XPGT.js";
+import {
+  t
+} from "./chunk-YMZ4K7MJ.js";
+
+// output/web/js.tmp/implementations/ui/bootstrap/views/manager/dashboard.js
+var DEFAULT_WIDGET_LAYOUT = [
+  { id: "revenue-chart", span: 2 },
+  { id: "carrier-donut", span: 1 },
+  { id: "top-customers", span: 1 },
+  { id: "leaderboard", span: 2 },
+  { id: "heatmap", span: 2 },
+  { id: "exceptions", span: 1 },
+  { id: "cutoffs", span: 1 },
+  { id: "ar-buckets", span: 1 },
+  { id: "cash-forecast", span: 1 },
+  { id: "activity-feed", span: 1 }
+];
+var CHART_BAR_COLOR_REV = "rgba(59,130,246,0.7)";
+var CHART_BAR_COLOR_COST = "rgba(248,113,113,0.7)";
+var PERIODS = ["Today", "Week", "Month", "Quarter", "Year"];
+var PERIOD_LABEL_KEYS = {
+  Today: "sales_analytics.period.today",
+  Week: "sales_analytics.period.week",
+  Month: "sales_analytics.period.month",
+  Quarter: "sales_analytics.period.quarter",
+  Year: "sales_analytics.period.year"
+};
+var PREFS_META_KEY = "preferences";
+var _period = "Month";
+var _salesFilter = null;
+var _mode = DEFAULT_MODE;
+var _data = null;
+var _charts = {};
+var _store = null;
+var _debounce = null;
+var _feedEl = null;
+var _onEntityChanged;
+var _onPeriodChanged;
+var _onSyncError;
+var _onModeChange;
+function destroyCharts() {
+  Object.values(_charts).forEach((c) => c?.destroy?.());
+  _charts = {};
+}
+function fmtNum(n) {
+  if (!n && n !== 0) return "\u2014";
+  if (Math.abs(n) >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (Math.abs(n) >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+  return String(n);
+}
+function fmtPct(n) {
+  return `${Number(n || 0).toFixed(1)}%`;
+}
+function kpiCard(label, value, tone) {
+  return `<kpi-card label="${label}" value="${value}" tone="${tone}"></kpi-card>`;
+}
+function renderKpis(kpis) {
+  const pendTone = kpis.pendingApprovals > 0 ? "amber" : "blue";
+  const excTone = kpis.openExceptions > 0 ? "red" : "blue";
+  const arTone = kpis.arOverdue > 0 ? "red" : "blue";
+  const volLabel = t(kpis.volumeLabelKey ?? "manager.kpi.mixed");
+  const volValue = kpis.volumeValue !== null && kpis.volumeValue !== void 0 ? fmtNum(kpis.volumeValue) : "\u2014";
+  return [
+    kpiCard(t("revenue_mtd"), fmtNum(kpis.revenue), "blue"),
+    kpiCard(t("cost_mtd"), fmtNum(kpis.cost), "slate"),
+    kpiCard(t("margin_mtd"), fmtNum(kpis.margin), kpis.margin >= 0 ? "green" : "red"),
+    kpiCard(t("margin_pct"), fmtPct(kpis.marginPct), "green"),
+    kpiCard(t("active_jobs"), kpis.activeCount, "blue"),
+    kpiCard(t("pending_approvals"), kpis.pendingApprovals, pendTone),
+    kpiCard(t("open_exceptions"), kpis.openExceptions, excTone),
+    kpiCard(t("ar_overdue"), kpis.arOverdue, arTone),
+    kpiCard(volLabel, volValue, "blue")
+  ].join("");
+}
+function exportWidgetCsv(slug, rows, headers) {
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => r[h] ?? "").join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const date = todayLocal();
+  a.href = url;
+  a.download = `vdg-${slug}-${date}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5e3);
+}
+function handleExport(slug) {
+  if (!_data) return;
+  if (slug === "leaderboard") {
+    exportWidgetCsv(
+      "leaderboard",
+      _data.leaderboard,
+      ["sales", "shipments", "revenue", "margin", "marginPct"]
+    );
+  } else if (slug === "top-customers") {
+    exportWidgetCsv(
+      "top-customers",
+      _data.topCustomers.slice(0, TOP_CUSTOMERS_MAX),
+      ["customer", "revenue", "margin"]
+    );
+  } else if (slug === "revenue-chart") {
+    const rows = _data.monthly.labels.map((l, i) => ({
+      month: l,
+      revenue: _data.monthly.revenue[i],
+      cost: _data.monthly.cost[i]
+    }));
+    exportWidgetCsv("revenue-chart", rows, ["month", "revenue", "cost"]);
+  }
+}
+function renderRevenueChart(monthly) {
+  const ctx = document.getElementById("mgr-bar-chart");
+  if (!ctx || !window.Chart) return;
+  _charts.bar?.destroy();
+  _charts.bar = new window.Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: monthly.labels,
+      datasets: [
+        { label: t("revenue"), data: monthly.revenue, backgroundColor: CHART_BAR_COLOR_REV },
+        { label: t("cost"), data: monthly.cost, backgroundColor: CHART_BAR_COLOR_COST }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "top" } } }
+  });
+}
+function renderCarrierDonut(leaderboard) {
+  const ctx = document.getElementById("mgr-donut-chart");
+  if (!ctx || !window.Chart) return;
+  const DONUT_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  _charts.donut?.destroy();
+  _charts.donut = new window.Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: leaderboard.map((r) => r.sales),
+      datasets: [{ data: leaderboard.map((r) => r.revenue), backgroundColor: DONUT_COLORS, borderWidth: 0 }]
+    },
+    options: { cutout: "65%", plugins: { legend: { position: "right" } }, maintainAspectRatio: false }
+  });
+}
+function prependActivity(text) {
+  if (!_feedEl) return;
+  const li = document.createElement("li");
+  li.className = "py-1.5 text-xs text-slate-600 border-b border-slate-50";
+  li.textContent = `${(/* @__PURE__ */ new Date()).toLocaleTimeString()} \u2014 ${text}`;
+  _feedEl.prepend(li);
+  while (_feedEl.children.length > ACTIVITY_FEED_MAX) _feedEl.lastChild?.remove();
+}
+async function saveLayout(layout) {
+  if (!_store) return;
+  try {
+    const prefs = await _store.cache_get_meta(PREFS_META_KEY) || { key: PREFS_META_KEY };
+    await _store.cache_put_meta(PREFS_META_KEY, { ...prefs, widget_layout: layout });
+  } catch {
+  }
+}
+async function recompose(root) {
+  const repo = window.__vdg_repo;
+  if (!repo) return;
+  try {
+    _data = await compose(repo, _period, _salesFilter, _mode);
+    const kpiEl = root.querySelector("#mgr-kpi-row");
+    if (kpiEl) kpiEl.innerHTML = renderKpis(_data.kpis);
+    _feedEl = root.querySelector("#activity-feed");
+    queueMicrotask(() => {
+      renderRevenueChart(_data.monthly);
+      renderCarrierDonut(_data.leaderboard);
+    });
+  } catch (err) {
+    console.warn("[mgr-dashboard] compose error:", err.message);
+  }
+}
+function _esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+async function _buildSalesBtns() {
+  const repo = window.__vdg_repo;
+  const entries = [["", t("manager.mode.all")]];
+  if (repo) {
+    try {
+      const reps = await getActiveSalesReps(repo);
+      reps.forEach((r) => entries.push([r.prefix, r.name || r.prefix]));
+    } catch {
+    }
+  }
+  return entries.map(([val, label]) => {
+    const active = val === (_salesFilter || "");
+    return `<button data-sales="${_esc(val)}"
+      class="px-3 py-1.5 rounded-lg text-xs font-medium ${active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}"
+    >${_esc(label)}</button>`;
+  }).join("");
+}
+async function render(root) {
+  destroyCharts();
+  if (_onEntityChanged) window.removeEventListener("vdg:entity-changed", _onEntityChanged);
+  if (_onPeriodChanged) window.removeEventListener("vdg:period-changed", _onPeriodChanged);
+  if (_onSyncError) window.removeEventListener("vdg:sync-error", _onSyncError);
+  if (_onModeChange) window.removeEventListener("vdg:mode-change", _onModeChange);
+  _mode = readMode();
+  try {
+    _store = window.__vdg_store || null;
+  } catch {
+    _store = null;
+  }
+  let layout = DEFAULT_WIDGET_LAYOUT;
+  if (_store) {
+    try {
+      const prefs = await _store.cache_get_meta(PREFS_META_KEY);
+      if (prefs?.widget_layout) layout = prefs.widget_layout;
+    } catch {
+    }
+  }
+  const skeletonRow = Array.from({ length: 8 }, () => '<div class="h-20 rounded-xl bg-slate-200 animate-pulse"></div>').join("");
+  const periodBtns = PERIODS.map((p) => `<button data-period="${p}"
+      class="px-3 py-1.5 rounded-lg text-xs font-medium ${p === _period ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}"
+    >${t(PERIOD_LABEL_KEYS[p])}</button>`).join("");
+  const salesBtns = await _buildSalesBtns();
+  root.innerHTML = `
+    <div class="p-6 space-y-6 max-w-[1600px] mx-auto">
+      <div class="flex items-center flex-wrap gap-3 justify-between">
+        <div class="flex gap-1">${periodBtns}</div>
+        <div class="flex gap-1">${salesBtns}</div>
+      </div>
+      <section id="mgr-kpi-row" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+        ${skeletonRow}
+      </section>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-sm font-semibold text-slate-900">${t("dashboard.chart.revenue_vs_cost")}</div>
+            <button data-export="revenue-chart" class="text-xs text-blue-600 hover:underline">\u2B07 ${t("export")}</button>
+          </div>
+          <div class="h-56"><canvas id="mgr-bar-chart"></canvas></div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-sm font-semibold text-slate-900">${t("sales_analytics.rev_by_sales")}</div>
+            <button data-export="carrier-donut" class="text-xs text-blue-600 hover:underline">\u2B07 ${t("export")}</button>
+          </div>
+          <div class="h-56"><canvas id="mgr-donut-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100">
+          <div class="text-sm font-semibold text-slate-900">${t("dashboard.activity.recent")}</div>
+        </div>
+        <ul id="activity-feed" class="px-4 py-2 max-h-48 overflow-y-auto">
+          <li class="py-1.5 text-xs text-slate-400">${t("dashboard.activity.none")}</li>
+        </ul>
+      </div>
+    </div>`;
+  _feedEl = root.querySelector("#activity-feed");
+  root.addEventListener("click", (e) => {
+    const pBtn = e.target.closest("[data-period]");
+    if (pBtn) {
+      _period = pBtn.dataset.period;
+      root.querySelectorAll("[data-period]").forEach((b) => b.className = b.className.replace("bg-blue-600 text-white", "bg-slate-100 text-slate-600 hover:bg-slate-200"));
+      pBtn.className = pBtn.className.replace("bg-slate-100 text-slate-600 hover:bg-slate-200", "bg-blue-600 text-white");
+      recompose(root);
+    }
+    const sBtn = e.target.closest("[data-sales]");
+    if (sBtn) {
+      _salesFilter = sBtn.dataset.sales || null;
+      recompose(root);
+    }
+    const expBtn = e.target.closest("[data-export]");
+    if (expBtn) handleExport(expBtn.dataset.export);
+  });
+  _onModeChange = (e) => {
+    _mode = e.detail?.mode ?? DEFAULT_MODE;
+    recompose(root);
+  };
+  _onEntityChanged = (e) => {
+    const { kind, id } = e.detail || {};
+    prependActivity(t("dashboard.activity.entity_updated", { kind, id }));
+    if (kind === "user") {
+      _buildSalesBtns().then((html) => {
+        const el = root.querySelector(".flex.gap-1:last-child");
+        if (el) el.outerHTML = `<div class="flex gap-1">${html}</div>`;
+      }).catch(() => {
+      });
+    }
+    clearTimeout(_debounce);
+    _debounce = setTimeout(() => recompose(root), LAYOUT_DEBOUNCE_MS);
+  };
+  _onPeriodChanged = (e) => {
+    _period = e.detail?.period || _period;
+    recompose(root);
+  };
+  _onSyncError = () => prependActivity(t("dashboard.activity.sync_paused"));
+  window.addEventListener("vdg:entity-changed", _onEntityChanged);
+  window.addEventListener("vdg:period-changed", _onPeriodChanged);
+  window.addEventListener("vdg:sync-error", _onSyncError);
+  window.addEventListener("vdg:mode-change", _onModeChange);
+  await recompose(root);
+  if (_store) {
+    void saveLayout(layout);
+  }
+}
+export {
+  render
+};

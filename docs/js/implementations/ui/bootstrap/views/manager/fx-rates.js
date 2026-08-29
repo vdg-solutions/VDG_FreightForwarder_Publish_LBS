@@ -1,7 +1,7 @@
 // FX Rates admin grid — F-15-36 / F-29-11 (explicit valid_from/valid_to ranges)
 // Route: /manager/fx-rates
 
-import { t }                                       from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale }                        from '../../../../kernel/core_abstractions/i18n/index.js';
 import { fxRateRepo }                              from '../../../core_abstractions/ports/storage/fx-rate-repo.js';
 import { validateRate, validateSpread, addRateEntry, FX_PAIR_DEFAULT } from '../../../../kernel/core_abstractions/util/validate-rate.js';
 import { clearRateCache }                          from '../../../../kernel/core_abstractions/util/fx-lookup.js';
@@ -90,12 +90,12 @@ function addFormHtml(defaultSource, prefill = {}) {
     <form id="fx-add-form" class="flex flex-wrap gap-3 items-end mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
       <div class="flex flex-col gap-1">
         <label class="text-[11px] font-medium text-slate-500 uppercase">${t('fx.admin.col_valid_from')}</label>
-        <input name="valid_from" type="date" value="${prefill.valid_from || ''}" required
+        <input name="valid_from" type="date" value="${prefill.valid_from || ''}" lang="${currentLocale()}" required
           class="border border-slate-200 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
       </div>
       <div class="flex flex-col gap-1">
         <label class="text-[11px] font-medium text-slate-500 uppercase">${t('fx.admin.col_valid_to')}</label>
-        <input name="valid_to" type="date" value="${prefill.valid_to || ''}" required
+        <input name="valid_to" type="date" value="${prefill.valid_to || ''}" lang="${currentLocale()}" required
           class="border border-slate-200 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100" />
       </div>
       <div class="flex flex-col gap-1">

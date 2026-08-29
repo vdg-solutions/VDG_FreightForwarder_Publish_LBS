@@ -57,6 +57,8 @@
   "store_locked.title": "Local data is locked",
   "store_locked.body": "Another tab or window of this app (an older version) is holding the local database. Close every tab of this app, then press Retry.",
   "store_locked.retry": "Retry",
+  "store_unresponsive.title": "Local data is responding too slowly",
+  "store_unresponsive.body": "The local database can't be reached right now. Press Retry to reload the page.",
   "boot.rendering": "Opening view…",
   "migration.syncing": "Syncing data, please wait…",
   "no_data": "No data",

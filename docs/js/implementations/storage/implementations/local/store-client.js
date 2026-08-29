@@ -29,13 +29,17 @@ export class SqliteUnavailableError extends Error {
   constructor(msg) { super(msg); this.name = 'SqliteUnavailableError'; }
 }
 
-// OPFS sahpool handles are exclusive per context. Match strict lock errors only.
-const LOCKED_ERR_RE = /NoModificationAllowedError/i;
+// OPFS sahpool handles are exclusive per context. sahpool-genuine-conflict is Rust's own
+// classification (sahpool_lock_policy.rs): the retry budget was exhausted with NO Web Locks
+// exclusivity guarantee, so a live second tab is a real possibility — the only case this message
+// is honest. A raw NoModificationAllowedError is kept as a belt-and-suspenders match for whatever
+// slips past Rust unclassified (a browser DOMException surfacing untranslated).
+const LOCKED_ERR_RE = /sahpool-genuine-conflict|NoModificationAllowedError/i;
 let _lockedAnnounced = false;
 function _announceLockedIf(errMsg) {
   if (_lockedAnnounced || !errMsg || !LOCKED_ERR_RE.test(String(errMsg))) return;
   _lockedAnnounced = true;
-  window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { reason: String(errMsg) } }));
+  window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { kind: 'genuine-conflict', reason: String(errMsg) } }));
 }
 
 const BUS_NAME    = 'vdg-sqlite-bus';
@@ -161,11 +165,38 @@ function _resendPending() {
 
 function _lockName() { return `${LEADER_LOCK}:${_scope}`; }
 
+// The one fact Rust needs but cannot observe itself: did Web Locks grant this tab sole
+// leadership? When it did, Web Locks guarantees no OTHER live document holds the same lock, so a
+// sahpool install failure after Rust's retry budget is exhausted is a dead context's handles,
+// never a live tab (sahpool_lock_policy.rs::next_sahpool_step). Computed once — the API's presence
+// doesn't change mid-session.
+const HAS_LOCKS_API = typeof navigator !== 'undefined' && typeof navigator.locks?.request === 'function';
+
 function _becomeLeader() {
   _isLeader = true;
   _resendPending();                      // flush ops queued before the election settled
   _bus.postMessage({ t: 'leader' });
   return new Promise(() => { /* hold leadership until the tab dies */ });
+}
+
+// Ask a healthy engine to release its OPFS handles (sqlite_release) and close itself, instead of
+// a hard engine.terminate() that would leave those handles for the browser's own worker-teardown
+// GC — the actual defect behind an ordinary reload bricking the app (store-worker.js's 'release'
+// handler). Used both when this tab loses a lock steal (the new leader gets the handles promptly
+// instead of racing our GC) and on pagehide (below).
+function _releaseEngine() {
+  if (!_engine) return;
+  try { _engine.postMessage({ op: 'release' }); } catch { /* already gone */ }
+  _engine = null;
+  _ready  = null;
+}
+
+// A plain reload leaves the OLD document's engine worker (and its OPFS sahpool handles) to the
+// browser's own teardown GC unless something releases them first — that gap, not a live second
+// tab, is what a routine F5 bricked (repo-init-ok observed at 62533ms against a ~1s clean boot).
+// pagehide fires reliably before the new document's worker tries to install the same pool.
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('pagehide', _releaseEngine);
 }
 
 function ensureTransport() {
@@ -183,22 +214,15 @@ function ensureTransport() {
     // Held for the tab's whole life; on tab close the next waiter is granted and takes over
     // (the dead tab's sahpool handles are freed with it, so the new leader's install succeeds).
     navigator.locks.request(_lockName(), _becomeLeader).catch((err) => {
-      // AbortError = another tab's liveness failover stole it (#19). Stay a follower and drop the
-      // engine so its sahpool handles are freed for the new leader; anything else is a genuine
-      // Web Locks failure, where a per-tab engine is the only way to stay usable.
-      if (err?.name === 'AbortError') { _isLeader = false; _terminateEngine(); return; }
+      // AbortError = another tab's liveness failover stole it (#19). Stay a follower and release
+      // the engine so its sahpool handles are freed for the new leader; anything else is a
+      // genuine Web Locks failure, where a per-tab engine is the only way to stay usable.
+      if (err?.name === 'AbortError') { _isLeader = false; _releaseEngine(); return; }
       _isLeader = true;
     });
   } else {
     _isLeader = true; // no Web Locks API — single-engine guarantee unavailable, per-tab engine
   }
-}
-
-function _terminateEngine() {
-  if (!_engine) return;
-  try { _engine.terminate(); } catch { /* already gone */ }
-  _engine = null;
-  _ready  = null;
 }
 
 function _onOpTimeout() {
@@ -214,8 +238,8 @@ function send(op, extra, timeoutMs) {
   ensureTransport();
   const rid = ++_seq;
   // rid first, then op/extra: extra may carry an entity `id` — it must never overwrite `rid`.
-  // scope last so no payload key can shadow the account partition the worker opens under.
-  const msg = { rid, op, ...extra, scope: _scope };
+  // scope/hasLockExclusivity last so no payload key can shadow either.
+  const msg = { rid, op, ...extra, scope: _scope, hasLockExclusivity: HAS_LOCKS_API };
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       _pending.delete(rid);

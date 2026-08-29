@@ -4,7 +4,7 @@
 // purge-orphans button carries its own separate ledger.purgeOrphans check (F-19-101): repost and
 // purge are two different decisions even though they share this panel.
 
-import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, fmtDate } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { planRepost, applyRepost, purgeOrphans } from '../../../core_abstractions/ports/manager/ledger-repost.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
@@ -23,7 +23,8 @@ function toast(type, message) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message } }));
 }
 
-function fmtRunDate(runAt) { return runAt ? new Date(runAt).toLocaleDateString('vi-VN') : ''; }
+// D16: shared fmtDate() keeps this in step with every other date on the ledger screen.
+function fmtRunDate(runAt) { return runAt ? fmtDate(runAt) : ''; }
 
 function shellHtml() {
   return `

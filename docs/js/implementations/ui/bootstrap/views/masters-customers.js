@@ -5,15 +5,12 @@ import { canWriteMaster } from '../../core_abstractions/ports/cache/master-regis
 import { showConfirm } from '../helpers/show-confirm.js';
 import { boundedList, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
-import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { openModal } from './masters-customers-modal.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const KIND       = 'customers';
-
-const LOAD_ERROR_MSG   = t('masters.load_error');
-const LOAD_RETRY_LABEL = t('common.retry');
 
 // ── cell renderers ────────────────────────────────────────────────────────────
 
@@ -128,7 +125,7 @@ export async function render(root) {
     if (!listRes.ok) {
       items = [];
       api?.setGridOption('rowData', items);
-      renderMasterLoadRetryStatus(statusEl, LOAD_ERROR_MSG, LOAD_RETRY_LABEL, reload);
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.load.retry'), reload);
       return;
     }
 
@@ -173,13 +170,12 @@ export async function render(root) {
 
   const gridDiv = root.querySelector('#cust-grid');
   if (window.agGrid && gridDiv) {
-    api = window.agGrid.createGrid(gridDiv, {
+    api = mountAgGrid(gridDiv, {
       columnDefs: buildColumnDefs(),
       rowData: [],
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowHeight: 38,
       headerHeight: 36,
-      localeText: agGridLocaleText(),
     });
   }
 

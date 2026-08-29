@@ -35,10 +35,10 @@ class VdgPivotTable extends LitElement {
     // sync_health.rs's own verdict for this pivot's source kinds (shipment/pnl_line) — an empty
     // `rows` array must render this, never `pivot.no_data`, when the load itself failed.
     loadFailed:     { type: Boolean },
-    // Widened alongside empty-state.js's own LoadOutcome: a sibling read-side fix lets a
-    // collection load land as "N good, M skipped" instead of aborting on one bad record — 0
-    // today (pnl-report.js has no skip count to give yet), but the property exists so the caller
-    // never has to collapse that count back down to a boolean to reach this component.
+    // Widened alongside empty-state.js's own LoadOutcome: a collection load can land as "N good,
+    // M skipped" instead of aborting on one bad record (sync_health.rs's own per-kind remote-skip
+    // count, D13) — rendered even when `rows` is non-empty, so a partial load never presents as a
+    // complete one just because the good rows happened to be enough to fill the table.
     skippedCount:   { type: Number },
     _dim0:          { type: String, state: true },
     _dim1:          { type: String, state: true },
@@ -200,9 +200,16 @@ class VdgPivotTable extends LitElement {
 
   render() {
     const groups = this._grouped();
+    // D13: a partial load (some rows present, some skipped) must still warn — the empty-rows
+    // branch below already covers a total loss, but a skip riding alongside REAL data used to
+    // render as a plain, complete-looking table with no notice at all (the exact defect: real
+    // figures presented as complete when they were not).
+    const showPartialBanner = this.rows.length > 0 && this.skippedCount > 0;
     return html`
       <div>
         ${this._renderDimSelectors()}
+        ${showPartialBanner ? html`
+          <div class="text-xs text-amber-600 px-1 pb-2">${t('empty_state.load_failed.partial', { n: this.skippedCount })}</div>` : ''}
         <div class="overflow-x-auto border border-slate-200 rounded-xl">
           <table class="w-full border-collapse text-xs">
             <thead class="sticky top-0 z-10">${this._renderHeaderRow()}</thead>

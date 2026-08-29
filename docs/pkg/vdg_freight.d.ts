@@ -78,6 +78,11 @@ export class WasmEntityRepo {
     lgr_get_balance(acc_code: string, as_of: string): Promise<any>;
     lgr_is_posted(posted_index: string): Promise<any>;
     lgr_last_log(file: string): Promise<any>;
+    /**
+     * D17: which account codes have a file for this year — one listing so a repost scan skips
+     * reading (and 404ing) every chart code against an empty book.
+     */
+    lgr_list_account_codes(year: number): Promise<any>;
     lgr_list_entry_legs(year: number, entry_id: string): Promise<any>;
     lgr_list_legs(year: number, acc_code: string, from: string, to: string): Promise<any>;
     lgr_record_posted(posted_index: string, entry_ids_json: string): Promise<any>;
@@ -143,6 +148,18 @@ export class WasmEntityRepo {
      * comment for why one line, not the full per-kind list.
      */
     sync_failed_reason(): string | undefined;
+    /**
+     * Distinct records skipped for `kind` this session — the count a view's partial-data notice
+     * names (`empty_state.load_failed.partial` / `pivot-table.js`'s own `skippedCount`).
+     */
+    sync_skipped_count(kind: string): number;
+    /**
+     * Every kind with at least one remote-skipped record this session (`SyncEvent::
+     * RecordSkipped`, armed by `event_bridge.rs::emit`) — the same shape as `sync_failed_kinds`,
+     * so a view (pnl-report.js's own load-outcome check) reads both registries the same way
+     * instead of trusting an empty result as "no data for this period" (D13).
+     */
+    sync_skipped_kinds(): any;
     users_ensure_seeded(email: string, name: string, workspace: string): Promise<any>;
     users_get(email: string): Promise<any>;
     users_list(): Promise<any>;
@@ -662,9 +679,27 @@ export function shipment_phases(entity_id: string, shipment_json: string): strin
 /**
  * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
  * `scope` partitions the pool per account — an empty scope is refused rather than silently
- * falling back to a shared database.
+ * falling back to a shared database. `has_lock_exclusivity` is the one fact only JS can supply:
+ * did the Web Locks API grant this tab sole leadership of the sqlite engine? It decides how an
+ * exhausted retry budget is classified (sahpool_lock_policy::next_sahpool_step) — never guessed
+ * here from a raw browser error string.
+ *
+ * Returns which mode the store ended up in: "opfs" (normal), "memory-disabled" (OPFS turned off
+ * for this context), or "memory-stale-self" (a dead context's handles never let go in time, but
+ * Web Locks proved no LIVE tab is holding them — self-heals, no user action needed). A genuine
+ * conflict (no exclusivity guarantee, budget exhausted) is the one case returned as an Err —
+ * that is the only situation a "close the other tab" message would ever be true.
  */
-export function sqlite_init(scope: string, use_opfs: boolean): Promise<void>;
+export function sqlite_init(scope: string, use_opfs: boolean, has_lock_exclusivity: boolean): Promise<string>;
+
+/**
+ * Explicit lifecycle release — called from JS on `pagehide`, right before this document's worker
+ * is torn down, so the SAH handles are closed synchronously instead of left for the browser's own
+ * (slow, unpredictable) worker-teardown GC. That gap was the actual defect: the next document's
+ * install had nothing to wait on but GC, and GC does not run on the boot budget's clock. Safe to
+ * call more than once (both steps are no-ops once already released).
+ */
+export function sqlite_release(): void;
 
 export function store_count_entities(): any;
 
@@ -944,7 +979,8 @@ export interface InitOutput {
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly sqlite_init: (a: number, b: number, c: number) => number;
+    readonly sqlite_init: (a: number, b: number, c: number, d: number) => number;
+    readonly sqlite_release: () => void;
     readonly store_count_entities: (a: number) => void;
     readonly store_delete: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly store_delete_meta: (a: number, b: number, c: number) => void;
@@ -1004,6 +1040,7 @@ export interface InitOutput {
     readonly wasmentityrepo_lgr_get_balance: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_lgr_is_posted: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_lgr_last_log: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_lgr_list_account_codes: (a: number, b: number) => number;
     readonly wasmentityrepo_lgr_list_entry_legs: (a: number, b: number, c: number, d: number) => number;
     readonly wasmentityrepo_lgr_list_legs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly wasmentityrepo_lgr_record_posted: (a: number, b: number, c: number, d: number, e: number) => number;
@@ -1029,6 +1066,8 @@ export interface InitOutput {
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
     readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
+    readonly wasmentityrepo_sync_skipped_count: (a: number, b: number, c: number) => number;
+    readonly wasmentityrepo_sync_skipped_kinds: (a: number) => number;
     readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_list: (a: number) => number;
@@ -1047,9 +1086,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13389: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13402: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9449: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13468: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13481: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9527: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

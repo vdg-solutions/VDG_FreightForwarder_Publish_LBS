@@ -75,10 +75,10 @@ function shellHtml() {
 
       <div class="flex flex-wrap gap-2 bg-slate-50 rounded-lg px-4 py-3 border border-slate-200 mb-4">
         <label class="text-xs text-slate-500 flex items-center gap-1">${t('ledger.filter.date_from')}
-          <input id="f-date-from" type="date" value="${_filter.dateFrom}"
+          <input id="f-date-from" type="date" value="${_filter.dateFrom}" lang="${currentLocale()}"
             class="border border-slate-300 rounded px-2 py-1 text-xs"></label>
         <label class="text-xs text-slate-500 flex items-center gap-1">${t('ledger.filter.date_to')}
-          <input id="f-date-to" type="date" value="${_filter.dateTo}"
+          <input id="f-date-to" type="date" value="${_filter.dateTo}" lang="${currentLocale()}"
             class="border border-slate-300 rounded px-2 py-1 text-xs"></label>
         <input id="f-min-amount" type="number" placeholder="${t('ledger.filter.min_amount')}"
           class="border border-slate-300 rounded px-2 py-1 text-xs w-32">

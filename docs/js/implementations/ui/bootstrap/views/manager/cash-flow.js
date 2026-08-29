@@ -4,7 +4,7 @@ import { composeAR, composeAP, composeTimeline, AR_CURRENT_DAYS, AR_BUCKET_31_60
   from '../../../core_abstractions/ports/manager/ar-composer.js';
 import { fetchClosingRatesBuy, renderFxRevalSummary } from './cash-flow-fx-reval.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 
 const MAX_CREDIT_ALERTS   = 3;
 const PREFS_META_KEY      = 'preferences';
@@ -78,10 +78,8 @@ function mountArGrid(container, rows) {
     rowClassRules: rowClassRules(),
     defaultColDef: { sortable: true, resizable: true },
     onRowClicked:  (e) => showRowActions(container, e.data),
-    localeText:    agGridLocaleText(),
   };
-  const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
-  _arGrid = grid.gridOptions?.api || opts.api;
+  _arGrid = mountAgGrid(container.querySelector('.ag-theme-quartz'), opts);
 }
 
 function mountApGrid(container, rows) {
@@ -99,10 +97,8 @@ function mountApGrid(container, rows) {
     ],
     rowData: rows,
     defaultColDef: { sortable: true, resizable: true },
-    localeText: agGridLocaleText(),
   };
-  const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
-  _apGrid = grid.gridOptions?.api || opts.api;
+  _apGrid = mountAgGrid(container.querySelector('.ag-theme-quartz'), opts);
 }
 
 function showRowActions(container, row) {

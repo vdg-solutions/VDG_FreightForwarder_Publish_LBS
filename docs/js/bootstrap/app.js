@@ -1,11 +1,11 @@
 import {
   bindLedgerRepo,
   ledgerRepo
-} from "./chunk-SLVNFTMX.js";
+} from "./chunk-IBTSRPFB.js";
 import {
   bindNoteLines
 } from "./chunk-SZYDA4BO.js";
-import "./chunk-QCJ4CO74.js";
+import "./chunk-PIJJMCOY.js";
 import {
   bindLedgerComposer,
   bindLedgerPoster,
@@ -92,7 +92,7 @@ import {
 } from "./chunk-REGXU2BV.js";
 import {
   statusBadgeLabel
-} from "./chunk-RAC2QC4P.js";
+} from "./chunk-ENF2VYJ6.js";
 import {
   bindSalesAnalyticsCompute
 } from "./chunk-7472JIPV.js";
@@ -144,7 +144,7 @@ import {
 import {
   toLocalDateStr,
   todayLocal
-} from "./chunk-SWWKLW6A.js";
+} from "./chunk-TZM24DL6.js";
 import {
   bindSalesRepDerivation
 } from "./chunk-BDMZBHS4.js";
@@ -175,7 +175,7 @@ import {
 } from "./chunk-V5JGKO5Q.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-EI2CKD5H.js";
+} from "./chunk-5RV6MYXX.js";
 import {
   bindActionGuard,
   can
@@ -238,7 +238,7 @@ import {
   currentSalesRepId,
   hasRole
 } from "./chunk-B24LWBUG.js";
-import "./chunk-OJHTNKBX.js";
+import "./chunk-Z2PGQJIS.js";
 import {
   bindAppEvents,
   bindClock,
@@ -247,7 +247,7 @@ import {
   loadLocale,
   nowMs,
   t
-} from "./chunk-MGTH6QM4.js";
+} from "./chunk-YMZ4K7MJ.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
 import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
@@ -574,7 +574,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f9309d2d">v0.4.32 (f9309d2d)</span>
+        <span class="font-mono whitespace-nowrap" title="build 7a0bfd76">v0.4.33 (7a0bfd76)</span>
       </div>
     `;
   }
@@ -1046,6 +1046,12 @@ function createSyncHandlers(host) {
       host._retrying = true;
       host._syncing = false;
       host._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.reason === "rate_budget" ? t("topbar.sync.tooltip.rate_budget_reason") : e.detail?.error ?? null;
+      if (e.detail?.reason === "record_skipped") {
+        window.__vdg_repo?.outbox_snapshot?.().then((snap) => {
+          if (snap) host._quarantinedCount = snap.quarantined ?? host._quarantinedCount;
+        }).catch(() => {
+        });
+      }
     },
     onServerHealth: (e) => {
       if (e.detail?.backlog_depth !== void 0) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
@@ -2260,7 +2266,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.32 (f9309d2d)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.33 (7a0bfd76)</div>
         </div>
       </div>
     </div>`;
@@ -2676,6 +2682,7 @@ var syncPlatform = {
 var managerPlatform = {
   ledger_chart_of_accounts: () => ledgerRepo().chartOfAccounts(),
   ledger_posting_rules: () => ledgerRepo().postingRules(),
+  ledger_existing_account_codes: (year) => ledgerRepo().listAccountCodes(year),
   ledger_list_legs: (year, acc_code) => ledgerRepo().listLegs(year, acc_code, null, null),
   ledger_replace_leg: (year, acc_code, leg) => ledgerRepo().replaceLeg(year, acc_code, leg),
   ledger_remove_entry: (year, entry_id) => ledgerRepo().removeEntry(year, entry_id),
@@ -4120,12 +4127,12 @@ var SqliteUnavailableError = class extends Error {
     this.name = "SqliteUnavailableError";
   }
 };
-var LOCKED_ERR_RE = /NoModificationAllowedError/i;
+var LOCKED_ERR_RE = /sahpool-genuine-conflict|NoModificationAllowedError/i;
 var _lockedAnnounced = false;
 function _announceLockedIf(errMsg) {
   if (_lockedAnnounced || !errMsg || !LOCKED_ERR_RE.test(String(errMsg))) return;
   _lockedAnnounced = true;
-  window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { reason: String(errMsg) } }));
+  window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { kind: "genuine-conflict", reason: String(errMsg) } }));
 }
 var BUS_NAME = "vdg-sqlite-bus";
 var LEADER_LOCK = "vdg-sqlite-leader";
@@ -4222,12 +4229,25 @@ function _resendPending() {
 function _lockName() {
   return `${LEADER_LOCK}:${_scope}`;
 }
+var HAS_LOCKS_API = typeof navigator !== "undefined" && typeof navigator.locks?.request === "function";
 function _becomeLeader() {
   _isLeader = true;
   _resendPending();
   _bus.postMessage({ t: "leader" });
   return new Promise(() => {
   });
+}
+function _releaseEngine() {
+  if (!_engine) return;
+  try {
+    _engine.postMessage({ op: "release" });
+  } catch {
+  }
+  _engine = null;
+  _ready = null;
+}
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("pagehide", _releaseEngine);
 }
 function ensureTransport() {
   if (_bus) return;
@@ -4244,7 +4264,7 @@ function ensureTransport() {
     navigator.locks.request(_lockName(), _becomeLeader).catch((err) => {
       if (err?.name === "AbortError") {
         _isLeader = false;
-        _terminateEngine();
+        _releaseEngine();
         return;
       }
       _isLeader = true;
@@ -4252,15 +4272,6 @@ function ensureTransport() {
   } else {
     _isLeader = true;
   }
-}
-function _terminateEngine() {
-  if (!_engine) return;
-  try {
-    _engine.terminate();
-  } catch {
-  }
-  _engine = null;
-  _ready = null;
 }
 function _onOpTimeout() {
   if (_isLeader || _stealAttempted) return;
@@ -4274,7 +4285,7 @@ function _onOpTimeout() {
 function send(op2, extra, timeoutMs) {
   ensureTransport();
   const rid = ++_seq2;
-  const msg = { rid, op: op2, ...extra, scope: _scope };
+  const msg = { rid, op: op2, ...extra, scope: _scope, hasLockExclusivity: HAS_LOCKS_API };
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       _pending.delete(rid);
@@ -4626,7 +4637,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-EGNQPJEH.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-J5VZ3CQC.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4634,7 +4645,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-25CWGROT.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-2ILEZRKT.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4642,14 +4653,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-VC6FDEVK.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-YHGQNKEO.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-VC6FDEVK.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-YHGQNKEO.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4751,23 +4762,28 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.32 (f9309d2d)";
+var APP_VERSION = "v0.4.33 (7a0bfd76)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
 var BREAKPOINT_TABLET_PX = 768;
 var PREFS_META_KEY = "preferences";
+var STORE_LOCKED_COPY = {
+  "genuine-conflict": ["store_locked.title", "store_locked.body"],
+  unresponsive: ["store_unresponsive.title", "store_unresponsive.body"]
+};
 function initStoreLockedScreen() {
-  window.addEventListener("vdg:store-locked", () => {
+  window.addEventListener("vdg:store-locked", (ev) => {
     if (document.getElementById("vdg-store-locked")) return;
+    const [titleKey, bodyKey] = STORE_LOCKED_COPY[ev.detail?.kind] || STORE_LOCKED_COPY["genuine-conflict"];
     const el = document.createElement("div");
     el.id = "vdg-store-locked";
     el.className = "fixed inset-0 z-[100] bg-white/95 flex items-center justify-center p-6";
     el.innerHTML = `
       <div class="max-w-md w-full bg-white rounded-xl shadow-2xl border border-slate-200 p-6 text-center">
         <div class="text-3xl mb-3">\u{1F512}</div>
-        <div class="font-semibold text-slate-900 text-sm mb-2">${t("store_locked.title")}</div>
-        <div class="text-xs text-slate-600 leading-relaxed mb-4">${t("store_locked.body")}</div>
+        <div class="font-semibold text-slate-900 text-sm mb-2">${t(titleKey)}</div>
+        <div class="text-xs text-slate-600 leading-relaxed mb-4">${t(bodyKey)}</div>
         <div class="flex justify-center gap-3">
           <button id="store-locked-retry"
             class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("store_locked.retry")}</button>
@@ -4904,8 +4920,8 @@ async function checkVersionBanner(store) {
       banner.className = "fixed top-16 left-0 right-0 z-[8999] bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2";
     }
     banner.innerHTML = `
-      <span>What's new in ${APP_VERSION}
-        <button id="banner-see" class="ml-2 underline hover:no-underline">See changes</button>
+      <span>${t("whats_new")} ${APP_VERSION}
+        <button id="banner-see" class="ml-2 underline hover:no-underline">${t("see_changes")}</button>
       </span>
       <button id="banner-dismiss" class="ml-4 text-indigo-200 hover:text-white">\u2715</button>`;
     if (mount) mount.before(banner);
@@ -4975,78 +4991,78 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-BF45SC2G.js"),
-  "/shipments": () => import("./shipments-UGSBZWD5.js"),
-  "/upload": () => import("./upload-6OLVB33H.js"),
-  "/documents": () => import("./documents-G4ZYYEJ4.js"),
-  "/finance": () => import("./finance-dashboard-MOS6ENJQ.js"),
-  "/finance/credit": () => import("./credit-dashboard-E4FPG3UT.js"),
-  "/finance/demdet": () => import("./demdet-W54IXCMN.js"),
+  "/dashboard": () => import("./dashboard-T3XIA7CE.js"),
+  "/shipments": () => import("./shipments-HJEQE7SM.js"),
+  "/upload": () => import("./upload-XABSD3TV.js"),
+  "/documents": () => import("./documents-UONG7CRK.js"),
+  "/finance": () => import("./finance-dashboard-QV4POJXB.js"),
+  "/finance/credit": () => import("./credit-dashboard-KTVTLPPW.js"),
+  "/finance/demdet": () => import("./demdet-U545E4XV.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-IR7YQSWK.js"),
-  "/sales/analytics": () => import("./sales-analytics-JWO3PH63.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-4WEU7Z57.js"),
-  "/sales/quote": () => import("./sales-quote-list-6HUY6WXM.js"),
-  "/masters/customers": () => import("./masters-customers-H3WFKPEM.js"),
-  "/masters/carriers": () => import("./masters-carriers-7ZQZG5SK.js"),
-  "/masters/services": () => import("./masters-services-VEUFXKJU.js"),
-  "/help": () => import("./help-P4YWHS5I.js"),
-  "/pending-access": () => import("./pending-access-NMS2R6QL.js"),
-  "/background-jobs": () => import("./background-jobs-TEPHLQEZ.js"),
+  "/sales/me": () => import("./sales-me-UDZG4B33.js"),
+  "/sales/analytics": () => import("./sales-analytics-WPGPWCFD.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-UP3K5JH3.js"),
+  "/sales/quote": () => import("./sales-quote-list-KU2XOQMG.js"),
+  "/masters/customers": () => import("./masters-customers-F3KQHIRG.js"),
+  "/masters/carriers": () => import("./masters-carriers-5YMMVY3C.js"),
+  "/masters/services": () => import("./masters-services-LJU7FILV.js"),
+  "/help": () => import("./help-WRG4VWH4.js"),
+  "/pending-access": () => import("./pending-access-DYAYO64L.js"),
+  "/background-jobs": () => import("./background-jobs-BANPRH6C.js"),
   // Manager Workspace — E-14
-  "/manager/dashboard": () => import("./dashboard-Z6REVVR2.js"),
-  "/manager/pipeline": () => import("./pipeline-EUHZFO5V.js"),
-  "/manager/approvals": () => import("./approvals-FJOY6GVC.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-4BXDQKK2.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-QJIB7UNZ.js"),
-  "/manager/finance/close-period": () => import("./close-period-ZHIFQNHD.js"),
-  "/manager/audit": () => import("./audit-XNSYUZS4.js"),
-  "/manager/notifications": () => import("./notifications-IR5TYITQ.js"),
+  "/manager/dashboard": () => import("./dashboard-W2GCQOW6.js"),
+  "/manager/pipeline": () => import("./pipeline-TZEQECDH.js"),
+  "/manager/approvals": () => import("./approvals-5NAM5F3B.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-CUNC6EKC.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-WN6SJEFA.js"),
+  "/manager/finance/close-period": () => import("./close-period-BRZXALKB.js"),
+  "/manager/audit": () => import("./audit-YFFSYQ7P.js"),
+  "/manager/notifications": () => import("./notifications-KE33SBBZ.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-VUJAYQPO.js"),
-  "/manager/finance/commissions": () => import("./commissions-C7XVD2KI.js"),
-  "/manager/commission-rules": () => import("./commission-rules-ILNLJT2H.js"),
-  "/manager/exceptions": () => import("./exceptions-4GK2NFA7.js"),
+  "/manager/sales": () => import("./sales-JZJ545GG.js"),
+  "/manager/finance/commissions": () => import("./commissions-5VX2F4LX.js"),
+  "/manager/commission-rules": () => import("./commission-rules-LEO4IDCZ.js"),
+  "/manager/exceptions": () => import("./exceptions-2KEGKSFK.js"),
   // E-15
-  "/manager/errors": () => import("./errors-HQCL7NYA.js"),
-  "/manager/backup": () => import("./backup-P5Y7NPYC.js"),
-  "/manager/users": () => import("./users-GAJIG5VD.js"),
+  "/manager/errors": () => import("./errors-FG7ZEZQB.js"),
+  "/manager/backup": () => import("./backup-KLFTAZJO.js"),
+  "/manager/users": () => import("./users-DQXABL6E.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-YWBICKCM.js"),
-  "/manager/settings": () => import("./settings-4WMK674F.js"),
+  "/manager/fx-rates": () => import("./fx-rates-D6HWV7MB.js"),
+  "/manager/settings": () => import("./settings-Y4ZMYJ53.js"),
   // E-16 F-16-02
-  "/manager/awb": () => import("./awb-K5YGXCCT.js"),
+  "/manager/awb": () => import("./awb-N7NYEDEZ.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-4NEVTSDB.js"),
-  "/masters/flights": () => import("./flights-NS3QU756.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-CIJVX3M3.js"),
+  "/masters/airports": () => import("./airports-A3OX4OKB.js"),
+  "/masters/flights": () => import("./flights-2SBKWIVY.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-PNPRQZ4K.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-VWF5JZGP.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-6BOYIZJT.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-RVENHIDF.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-527V2KC7.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-FLKYRXLK.js"),
-  "/manager/manifest": () => import("./manifest-CP7NHQBY.js"),
+  "/masters/uld-types": () => import("./uld-types-VMH3NIZS.js"),
+  "/manager/manifest": () => import("./manifest-MUM26JVU.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-X5VFBPLL.js"),
+  "/masters/air-rates": () => import("./air-rates-JHRA3Q5I.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-D5KYWFDF.js"),
-  "/masters/local-charges": () => import("./local-charges-RFZ55OKD.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-3JWG56PY.js"),
+  "/masters/local-charges": () => import("./local-charges-2EFYPVSY.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-W5H5OAAU.js"),
-  "/quotes/air-calc": () => import("./air-calc-NZ5P43PS.js"),
+  "/masters/shipment-states": () => import("./shipment-states-SI34ZW6O.js"),
+  "/quotes/air-calc": () => import("./air-calc-63LTRHGC.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-RYW455ZK.js"),
+  "/manager/air-invoice": () => import("./air-invoice-V2623HQS.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-LDXTVIDT.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-5FFBEMW3.js"),
   // E-23 F-23-05
-  "/accounting/reports": () => import("./reports-NLPLAJFK.js"),
-  "/accounting/settings": () => import("./settings-V2QWWRV4.js"),
+  "/accounting/reports": () => import("./reports-6RDGQUQL.js"),
+  "/accounting/settings": () => import("./settings-2DBOUSZH.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-5O4QUOGN.js"),
+  "/admin/users": () => import("./users-view-PX73M4BG.js"),
   // E-24 F-24-06
-  "/admin/users/audit-log": () => import("./user-audit-log-view-4JEB4RIZ.js")
+  "/admin/users/audit-log": () => import("./user-audit-log-view-YTHDYJ7R.js")
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
@@ -5929,8 +5945,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=f9309d2d", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f9309d2d", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=7a0bfd76", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=7a0bfd76", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6187,6 +6203,10 @@ var STEP_WASM_INIT = "wasm-init";
 var STEP_BUILD_REPO = "build-repo-stack";
 var STEP_LICENSE_GATE = "license-gate";
 var STEP_BOOT_APP = "bootApp";
+function _storeUnresponsive(tag) {
+  window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { kind: "unresponsive", tag } }));
+  return null;
+}
 async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const _hangMs = parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || "0", 10);
   const fsm = createBootFsm(renderBootPhase);
@@ -6201,9 +6221,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   setStoreScope(user.email);
   const serverApi = storageApi();
   const ioPort2 = createIoPort(serverApi, user.email, _forkPrefixFromSession());
-  safeAwait(ioPort2.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm").then((r) => {
-    if (!r.ok) window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { reason: "sqlite-warm timeout" } }));
-  });
+  const warmResult = await safeAwait(ioPort2.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
+  if (!warmResult.ok) return _storeUnresponsive("repo-init:sqlite-warm");
   const repo3 = new wasmMod.WasmEntityRepo(ioPort2);
   window.__vdg_repo = repo3;
   window.__vdg_server_api = serverApi;
@@ -6211,7 +6230,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   window.__vdg_io = ioPort2;
   wasmMod.freight_app_init(createPlatform({ repo: repo3 }));
   composeUi(wasmMod);
-  await safeAwait(rehydrateFsmStates(repo3), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
+  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo3), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
+  if (!rehydrateResult.ok) return _storeUnresponsive("fsm-rehydrate");
   fsm.dispatch(BootEvent.REPO_BUILT);
   stepRef.value = STEP_LICENSE_GATE;
   const app = document.getElementById("app");
@@ -6252,7 +6272,7 @@ async function _deferredInit(user, db, serverApi, repo3) {
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
-    const { LedgerStoreRepo } = await import("./ledger-repo-37YKKRYR.js");
+    const { LedgerStoreRepo } = await import("./ledger-repo-2QISTPTZ.js");
     const ledgerRepo3 = new LedgerStoreRepo();
     window.__vdg_ledger_repo = ledgerRepo3;
     bindLedgerRepo(ledgerRepo3);
@@ -6573,7 +6593,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-J5FWMSCO.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-ZGDTVLXD.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6581,7 +6601,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-HEJQQHID.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-FHLI3VX2.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6589,7 +6609,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-765JO3CQ.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-AJ5VZDXF.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6597,7 +6617,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-4WEU7Z57.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-UP3K5JH3.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;
@@ -6691,7 +6711,7 @@ async function main() {
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
     if (err?.name === "RoleProbeTimeoutError") {
-      const { renderLoadingBanner } = await import("./auth-fallback-views-SBFYHRQT.js");
+      const { renderLoadingBanner } = await import("./auth-fallback-views-YXYLEC7Y.js");
       renderLoadingBanner(document.getElementById("app"));
       return;
     }

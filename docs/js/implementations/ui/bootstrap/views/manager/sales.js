@@ -7,7 +7,7 @@ import { KIND_SHIPMENT } from '../../../core_abstractions/ports/data/shipment-re
 import { computeCommissions, computeSparkline, buildPeriodKey, SPARKLINE_MONTHS, KIND_PNL_LINE } from '../../../core_abstractions/ports/manager/commission-calculator.js';
 import { compose as composeRules } from '../../../core_abstractions/ports/manager/commission-composer.js';
 import { t }                        from '../../../../kernel/core_abstractions/i18n/index.js';
-import { agGridLocaleText }         from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid }              from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
 
 const DEFAULT_PERIOD_MODE    = 'month';
@@ -94,10 +94,8 @@ function mountGrid(container, rows) {
     columnDefs:  buildGridCols(),
     rowData:     rows,
     defaultColDef: { sortable: true, resizable: true },
-    localeText: agGridLocaleText(),
   };
-  const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
-  _gridApi = grid.gridOptions?.api || opts.api;
+  _gridApi = mountAgGrid(container.querySelector('.ag-theme-quartz'), opts);
 }
 
 export function renderPreviewTable(container, rows, periodKey) {

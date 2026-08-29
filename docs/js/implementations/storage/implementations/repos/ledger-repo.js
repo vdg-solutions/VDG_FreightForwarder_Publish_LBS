@@ -87,6 +87,10 @@ export class LedgerStoreRepo extends LedgerRepo {
     return await this._repo().lgr_list_legs(year, acc_code, dateFrom || '', dateTo || '');
   }
 
+  async listAccountCodes(year) {
+    return await this._repo().lgr_list_account_codes(year);
+  }
+
   async listAllLegsInEntry(entry_id) {
     await this._loadChart();
     return await this._repo().lgr_list_entry_legs(new Date().getFullYear(), entry_id);

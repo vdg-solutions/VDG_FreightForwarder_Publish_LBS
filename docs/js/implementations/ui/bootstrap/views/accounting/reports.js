@@ -99,7 +99,7 @@ async function renderTrialBalance(container) {
     <div class="print-doc print-root" data-report-title="${t('reports.tab.trial_balance')}" data-print-date="${today()}">
       <div class="flex items-center gap-2 mb-3 no-print">
         <label class="text-xs text-slate-500 flex items-center gap-1">${t('reports.as_of_date')}
-          <input id="tb-as-of-date" type="date" value="${_asOfDateTB}"
+          <input id="tb-as-of-date" type="date" value="${_asOfDateTB}" lang="${currentLocale()}"
             class="border border-slate-300 rounded px-2 py-1 text-xs"></label>
       </div>
       <table class="w-full">
@@ -220,7 +220,7 @@ async function renderBalanceSheet(container) {
     <div class="print-doc print-root" data-report-title="${t('reports.tab.balance_sheet')}" data-print-date="${today()}">
       <div class="flex items-center gap-2 mb-3 no-print">
         <label class="text-xs text-slate-500 flex items-center gap-1">${t('reports.as_of_date')}
-          <input id="bs-as-of-date" type="date" value="${_asOfDateBS}"
+          <input id="bs-as-of-date" type="date" value="${_asOfDateBS}" lang="${currentLocale()}"
             class="border border-slate-300 rounded px-2 py-1 text-xs"></label>
       </div>
       <div class="grid grid-cols-2 gap-6">

@@ -9,6 +9,11 @@ export class LedgerRepo {
   /** @returns {Promise<object[]>} */
   async listLegs(year, acc_code, dateFrom, dateTo) { throw new Error('abstract'); }
 
+  /** D17: account codes that actually have a persisted file this year — one listing so a repost
+   *  scan never has to read (and 404) every chart code against an empty book.
+   *  @returns {Promise<string[]>} */
+  async listAccountCodes(year) { throw new Error('abstract'); }
+
   /** F-19-78: each returned leg carries its account_code (additive). @returns {Promise<object[]>} */
   async listAllLegsInEntry(entry_id) { throw new Error('abstract'); }
 

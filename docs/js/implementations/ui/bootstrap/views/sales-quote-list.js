@@ -4,9 +4,9 @@ import { currentSalesRepId } from '../../../ui/core_abstractions/ports/auth/sess
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
-import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { navigate } from '../router.js';
-import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { t, fmtDate } from '../../../kernel/core_abstractions/i18n/index.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const STATE_COLORS = {
@@ -21,9 +21,10 @@ const KIND_QUOTATIONS = 'quotations';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function fmtDate(ms) {
-  if (!ms) return '—';
-  return new Date(ms).toLocaleDateString('vi-VN');
+// D16: routes through the shared i18n fmtDate() — no more hardcoded 'vi-VN' disagreeing with
+// the app's active locale.
+function validUntilLabel(ms) {
+  return ms ? fmtDate(ms) : '—';
 }
 
 function effectiveState(q) {
@@ -216,7 +217,7 @@ export async function render(root) {
       { headerName: t('quote_list.col.route'),       field: 'route',          width: 140, cellClass: 'font-mono text-xs', valueGetter: (p) => `${p.data.pol || '—'} → ${p.data.pod || '—'}` },
       { headerName: t('quote_list.col.container'),   field: 'container_type', width: 110, valueGetter: (p) => p.data.container_type || '—' },
       { headerName: t('quote_list.col.state'),       field: 'state',          width: 110, cellRenderer: stateBadgeRenderer },
-      { headerName: t('quote_list.col.valid_until'), field: 'valid_until_ms', width: 120, cellClass: 'font-mono text-xs', valueGetter: (p) => fmtDate(p.data.valid_until_ms) },
+      { headerName: t('quote_list.col.valid_until'), field: 'valid_until_ms', width: 120, cellClass: 'font-mono text-xs', valueGetter: (p) => validUntilLabel(p.data.valid_until_ms) },
       { headerName: t('quote_list.col.actions'),     field: 'actions',        width: 140, sortable: false, filter: false, cellRenderer: makeQuoteActionsRenderer(repo, onQuoteUpdated) },
     ];
   }
@@ -257,14 +258,13 @@ export async function render(root) {
 
   const gridDiv = root.querySelector('#quote-grid');
   if (window.agGrid && gridDiv) {
-    api = window.agGrid.createGrid(gridDiv, {
+    api = mountAgGrid(gridDiv, {
       columnDefs: buildColumnDefs(),
       rowData: items,
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowSelection: 'single',
       rowHeight: 38,
       headerHeight: 36,
-      localeText: agGridLocaleText(),
     });
   }
 

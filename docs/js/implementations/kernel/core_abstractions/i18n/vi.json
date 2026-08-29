@@ -57,6 +57,8 @@
   "store_locked.title": "Không mở được dữ liệu trên máy",
   "store_locked.body": "Một tab hoặc cửa sổ khác của ứng dụng (phiên bản cũ) đang giữ cơ sở dữ liệu. Đóng tất cả tab của ứng dụng này rồi bấm Thử lại.",
   "store_locked.retry": "Thử lại",
+  "store_unresponsive.title": "Dữ liệu trên máy phản hồi quá chậm",
+  "store_unresponsive.body": "Không thể mở dữ liệu cục bộ lúc này. Bấm Thử lại để tải lại trang.",
   "boot.rendering": "Đang mở màn hình…",
   "migration.syncing": "Đang đồng bộ dữ liệu, vui lòng đợi…",
   "no_data": "Không có dữ liệu",

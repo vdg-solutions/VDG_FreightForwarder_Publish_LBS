@@ -1,6 +1,6 @@
 // section-commission-fx.js — per-line currency + fx markup/wiring for mục C commission
 // rows (F-29-02). Split out of section-commission.js (at the 350-line cap) — design.md §3.
-import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { lockFxIfVnd, prefillFxRate, currencySelectHtml, bookCurrencyOf } from './pnl-line-fx.js';
 
 const VND_CURRENCY = 'VND';
@@ -28,7 +28,7 @@ export function commFxCellsHtml(row = {}, headerCurrency, bookCurrency) {
             </label>
             <label class="flex flex-col gap-0.5">
               <span class="text-slate-500">${t('commission.col.fx_date')}</span>
-              <input name="comm_fx_date" type="date" value="${row.fx_date || ''}"
+              <input name="comm_fx_date" type="date" value="${row.fx_date || ''}" lang="${currentLocale()}"
                 class="${INPUT_CLS}" />
             </label>`;
 }

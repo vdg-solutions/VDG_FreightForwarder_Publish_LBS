@@ -2,6 +2,7 @@
 
 import { bulkPut } from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
 import { getActiveSalesReps } from '../../../core_abstractions/ports/flows/sales-registry.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { computeSortedExceptions, computeTrends, computeMttr, computePerSalesRate, computeEscalated, KIND_EXCEPTION, SEVERITY_BADGE_CLS }
   from '../../../core_abstractions/ports/manager/exception-composer.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
@@ -84,8 +85,7 @@ function mountGrid(container, rows) {
       updateBulkToolbar(container.closest('[data-mgr-exc]'));
     },
   };
-  const grid = new agGrid.Grid(container.querySelector('.ag-theme-quartz'), opts);
-  _gridApi = grid.gridOptions?.api || opts.api;
+  _gridApi = mountAgGrid(container.querySelector('.ag-theme-quartz'), opts);
 }
 
 function updateBulkToolbar(root) {

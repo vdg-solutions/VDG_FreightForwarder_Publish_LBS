@@ -2,6 +2,7 @@
 // Split out of section-lines.js (already at the 350-line cap) — see design.md §4.
 import { getRateForDate } from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { lineVnd } from '../../../core_abstractions/ports/flows/pnl-gate.js';
+import { currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 const VND_CURRENCY = 'VND';
 const FX_CELL_CLS  = 'border border-slate-200 rounded px-1 py-0.5 text-xs';
@@ -78,7 +79,7 @@ export function fxCellsHtml(side, line = {}, headerCurrency, bookCurrency) {
       <input name="${side}_fx_rate" type="number" step="any" value="${rateVal}"${locked ? ' readonly' : ''}
         class="w-16 ${rateCls} text-right" /></td>
     <td class="px-1 py-1">
-      <input name="${side}_fx_date" type="date" value="${line[`${side}_fx_date`] || ''}"
+      <input name="${side}_fx_date" type="date" value="${line[`${side}_fx_date`] || ''}" lang="${currentLocale()}"
         class="w-28 ${FX_CELL_CLS}" /></td>`;
 }
 

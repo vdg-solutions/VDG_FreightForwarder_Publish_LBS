@@ -1,5 +1,6 @@
 import { bulkPut } from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 
 const KIND_COMMISSION_RULES = 'commission_rules';
 const KIND_USERS            = 'user'; // F-39-01: canonical user-master kind (MASTER_REGISTRY)
@@ -105,12 +106,7 @@ function renderGrid(container) {
     onGridReady: (params) => { _gridApi = params.api; },
   };
 
-  if (typeof agGrid.createGrid === 'function') {
-    _gridApi = agGrid.createGrid(container.querySelector('.ag-theme-quartz'), gridOptions);
-  } else {
-    new agGrid.Grid(container.querySelector('.ag-theme-quartz'), gridOptions);
-    _gridApi = gridOptions.api;
-  }
+  _gridApi = mountAgGrid(container.querySelector('.ag-theme-quartz'), gridOptions);
 }
 
 export async function render(root) {

@@ -2,7 +2,7 @@
 // admin/user-audit-log.jsonl with date-range filter + CSV export. Wired to UserAuditLog (F-24-06
 // sync/user-audit-log.js), same DI-off-window convention as users-view.js.
 
-import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
@@ -21,8 +21,8 @@ function shellHtml() {
         </button>
       </div>
       <div class="flex gap-3 flex-wrap bg-slate-50 rounded-lg px-4 py-3 border border-slate-200">
-        <input id="aud-from" type="date" class="border border-slate-300 rounded px-2 py-1 text-xs" aria-label="${t('admin.users.audit_log.filter.date_from')}">
-        <input id="aud-to"   type="date" class="border border-slate-300 rounded px-2 py-1 text-xs" aria-label="${t('admin.users.audit_log.filter.date_to')}">
+        <input id="aud-from" type="date" lang="${currentLocale()}" class="border border-slate-300 rounded px-2 py-1 text-xs" aria-label="${t('admin.users.audit_log.filter.date_from')}">
+        <input id="aud-to"   type="date" lang="${currentLocale()}" class="border border-slate-300 rounded px-2 py-1 text-xs" aria-label="${t('admin.users.audit_log.filter.date_to')}">
         <span id="aud-count" class="text-xs text-slate-400 self-center"></span>
       </div>
       <div id="aud-table-wrap"></div>

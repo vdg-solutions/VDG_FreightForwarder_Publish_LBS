@@ -1,6 +1,6 @@
 // section-header.js — Section A: identity, parties, routing, commercial
 
-import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { isAccountId } from '../../../../kernel/core_abstractions/util/account-id.js';
 import { getCurrentUser } from '../../../../storage/core_abstractions/identity.js';
@@ -77,8 +77,10 @@ function roNum(name, val) {
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50" />`;
 }
 
+// D16: lang= steers the browser's native date-picker/display to the app's own locale instead
+// of whatever the browser happens to be set to — one convention, driven by currentLocale().
 export function dateInp(name, val) {
-  return `<input type="date" name="${name}" value="${val || ''}"
+  return `<input type="date" name="${name}" value="${val || ''}" lang="${currentLocale()}"
     class="w-full border border-slate-200 rounded px-2 py-1 text-xs" />`;
 }
 

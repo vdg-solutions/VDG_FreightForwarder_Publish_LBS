@@ -1,7 +1,7 @@
 // Manager Audit Log — F-14-12
 
-import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
-import { agGridLocaleText } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import { changeLines, changesCell, renderChainStatus } from './audit-changes.js';
 import { emptyStateHtml, EMPTY_STATE_VARIANT, bindEmptyStateActions } from '../../components/empty-state.js';
@@ -104,11 +104,10 @@ function initGrid(container, rows) {
   gridDiv.setAttribute('role', 'grid');
   container.appendChild(gridDiv);
 
-  new agGrid.Grid(gridDiv, {
+  mountAgGrid(gridDiv, {
     columnDefs: _colDefs(),
     rowData:    rows,
     rowHeight:  34,
-    localeText: agGridLocaleText(),
     onGridReady: (p) => { api = p.api; },
     onRowClicked: (ev) => {
       window.dispatchEvent(new CustomEvent('vdg:open-detail', {
@@ -187,8 +186,8 @@ export async function render(root) {
         <input id="f-entity-id" placeholder="${t('audit.filter.entity_id_placeholder')}"   class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.entity_id')}">
         <input id="f-actor"     placeholder="${t('audit.filter.actor_placeholder')}"        class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.actor')}">
         <input id="f-event"     placeholder="${t('audit.filter.event_placeholder')}"        class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.event')}">
-        <input id="f-date-from" type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_from')}">
-        <input id="f-date-to"   type="date" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_to')}">
+        <input id="f-date-from" type="date" lang="${currentLocale()}" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_from')}">
+        <input id="f-date-to"   type="date" lang="${currentLocale()}" class="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label="${t('audit.filter.aria.date_to')}">
       </div>
 
       <!-- F-37-02: whether the trail can still be trusted. Everyone who writes a shipment can

@@ -3,11 +3,13 @@
 // seam (F-42-02). Same split as ledger-reverse-control.js / ledger-viewer-unbalanced.js: one
 // control, its own file, the viewer owns only the state.
 
-import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, fmtDate } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { runAndRecord } from '../../../core_abstractions/ports/manager/ledger-reconciler.js';
 import { renderUnbalancedList } from './ledger-viewer-unbalanced.js';
 
-function fmtRunDate(runAt) { return runAt ? new Date(runAt).toLocaleDateString('vi-VN') : ''; }
+// D16: route through the shared i18n fmtDate() so this agrees with every other date on the
+// screen (including the native date-picker inputs) instead of a locale hardcoded to 'vi-VN'.
+function fmtRunDate(runAt) { return runAt ? fmtDate(runAt) : ''; }
 
 export function renderReconcileStatus(root, rec) {
   const status = root.querySelector('#reconcile-status');

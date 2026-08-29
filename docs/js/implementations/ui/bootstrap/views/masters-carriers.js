@@ -3,7 +3,7 @@
 import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
-import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
@@ -193,7 +193,7 @@ export async function render(root) {
     if (!listRes.ok) {
       items = [];
       api?.setGridOption('rowData', items);
-      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.retry'), reload);
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.load.retry'), reload);
       return;
     }
 
@@ -239,13 +239,12 @@ export async function render(root) {
 
   const gridDiv = root.querySelector('#carr-grid');
   if (window.agGrid && gridDiv) {
-    api = window.agGrid.createGrid(gridDiv, {
+    api = mountAgGrid(gridDiv, {
       columnDefs: buildColumnDefs(),
       rowData: [],
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowHeight: 38,
       headerHeight: 36,
-      localeText: agGridLocaleText(),
     });
   }
 

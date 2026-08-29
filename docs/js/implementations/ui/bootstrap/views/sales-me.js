@@ -6,7 +6,7 @@ import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
 import { dueSoonHtml } from './sales-me-due-soon.js';
 import { t, currentLocale } from '../../../kernel/core_abstractions/i18n/index.js';
-import { agGridLocaleText } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { statusBadgeLabel } from '../../../kernel/core_abstractions/util/status-i18n.js';
 import { loadMyData } from './sales-me-data.js';
@@ -252,7 +252,7 @@ async function populateView(root, salesId, user) {
 
     const gridDiv = root.querySelector('#active-shipments-grid');
     if (window.agGrid && gridDiv) {
-      const activeGridApi = window.agGrid.createGrid(gridDiv, {
+      const activeGridApi = mountAgGrid(gridDiv, {
         columnDefs: [
           {
             headerName: t('sales_me.grid.ref'),
@@ -311,7 +311,6 @@ async function populateView(root, salesId, user) {
         rowSelection: 'single',
         rowHeight: 38,
         headerHeight: 36,
-        localeText: agGridLocaleText(),
       });
 
       wireGridFilterEmptyState({

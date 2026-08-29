@@ -4,15 +4,15 @@ import '../../components/pivot-table.js';
 import { compose, composeBuySellBreakdown, filterByDims, BASE_CURRENCY, PNL_DEFAULT_ROW_DIMS } from '../../../core_abstractions/ports/manager/pnl-composer.js';
 import { composeAir, AIR_DEFAULT_DIMS } from '../../../core_abstractions/ports/manager/air-pnl-composer.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { kindI18nLabel } from '../../../../kernel/core_abstractions/util/kind-i18n.js';
 import { formatDrillDimDesc } from '../../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { currentUserEmail } from '../../../core_abstractions/ports/governance/route-guard.js';
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
-import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
+import { exportExcel } from './pnl-report-export.js';
 
 const PERIODS = ['MTD', 'QTD', 'YTD', 'Last12M'];
-const SHEETJS_CDN = 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js';
 
 const MODE_ALL = 'All';
 const MODE_SEA = 'Sea';
@@ -30,8 +30,7 @@ let _allPnlLines     = [];
 let _groupedShipments = [];
 let _dims            = [...PNL_DEFAULT_ROW_DIMS];
 let _airDims         = [...AIR_DEFAULT_DIMS];
-let _sheetJsLoaded   = false;
-let _loadOutcome     = { failed: false, skipped: 0 }; // LoadOutcome (empty-state.js) — sync_health.rs's shipment/pnl_line verdict, widened for a future per-record skip count
+let _loadOutcome     = { failed: false, skipped: 0 }; // LoadOutcome (empty-state.js) — sync_health.rs's shipment/pnl_line verdict + remote-skip count (D13)
 let _onPivotClick;
 let _onPivotDims;
 let _onPivotRetry;
@@ -167,7 +166,7 @@ async function renderDrillPanel(container, rowDims) {
     </div>`;
 
   if (window.agGrid) {
-    new agGrid.Grid(container.querySelector('#drill-grid'), {
+    mountAgGrid(container.querySelector('#drill-grid'), {
       columnDefs: buildDrillColumnDefs(),
       rowData: gridRows,
       rowHeight: 32,
@@ -178,50 +177,6 @@ async function renderDrillPanel(container, rowDims) {
       },
     });
   }
-}
-
-async function loadSheetJs() {
-  if (_sheetJsLoaded || window.XLSX) { _sheetJsLoaded = true; return; }
-  await new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = SHEETJS_CDN;
-    s.onload = res;
-    s.onerror = rej;
-    document.head.appendChild(s);
-  });
-  _sheetJsLoaded = true;
-}
-
-async function exportExcel() {
-  await loadSheetJs();
-  if (!window.XLSX) return;
-  const XLSX   = window.XLSX;
-  const header = ['Dims', 'Revenue VND', 'Cost VND', 'Margin VND', 'Margin %', '# Shipments'];
-  const wsData = [header, ..._pivotRows.map((r) => [
-    Object.values(r.dims).join(' · '),
-    r.revenue_vnd, r.cost_vnd, r.margin_vnd, r.margin_pct / 100, r.shipment_count,
-  ])];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  // Bold header + number formats
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let C = range.s.c; C <= range.e.c; C++) {
-    const addr = XLSX.utils.encode_cell({ r: 0, c: C });
-    if (!ws[addr]) continue;
-    ws[addr].s = { font: { bold: true } };
-  }
-  const fmtCols = [1, 2, 3]; // revenue, cost, margin
-  for (let R = 1; R <= _pivotRows.length; R++) {
-    for (const C of fmtCols) {
-      const addr = XLSX.utils.encode_cell({ r: R, c: C });
-      if (ws[addr]) ws[addr].z = '#,##0';
-    }
-    const pctAddr = XLSX.utils.encode_cell({ r: R, c: 4 });
-    if (ws[pctAddr]) ws[pctAddr].z = '0.0%';
-  }
-  const wb   = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'PnL Report');
-  const date = todayLocal();
-  XLSX.writeFile(wb, `vdg-pnl-${_period.toLowerCase()}-${date}.xlsx`);
 }
 
 export async function render(root) {
@@ -239,10 +194,12 @@ export async function render(root) {
     // Either source can silently degrade to a fresh-but-empty local cache when its background
     // bootstrap has not (yet) succeeded — sync_health.rs is Rust's own record of that, checked
     // here rather than trusting an empty array as "no data for this period" (AC: fix the type).
-    // `skipped` stays 0 until the read side reports a per-record count — see LoadOutcome's own
-    // doc comment (empty-state.js) for why this is a typed object, not a boolean.
-    const failedKinds = repo.sync_failed_kinds?.() ?? [];
-    _loadOutcome = { failed: failedKinds.includes('shipment') || failedKinds.includes('pnl_line'), skipped: 0 };
+    // D13: sync_skipped_kinds/sync_skipped_count is that registry's per-record twin.
+    const failedKinds  = repo.sync_failed_kinds?.() ?? [];
+    const skippedKinds = repo.sync_skipped_kinds?.() ?? [];
+    const relevantKinds = ['shipment', 'pnl_line'];
+    const skipped = relevantKinds.reduce((sum, k) => sum + (skippedKinds.includes(k) ? (repo.sync_skipped_count?.(k) ?? 0) : 0), 0);
+    _loadOutcome = { failed: relevantKinds.some((k) => failedKinds.includes(k)), skipped };
   }
 
   const periodBtns = PERIODS.map((p) =>
@@ -322,7 +279,7 @@ export async function render(root) {
     await refreshPivot();
   });
 
-  root.querySelector('#btn-export-xl').addEventListener('click', exportExcel);
+  root.querySelector('#btn-export-xl').addEventListener('click', () => exportExcel(_pivotRows, _period));
 
   _onPivotClick = (e) => { renderDrillPanel(drillContainer, e.detail.rowDims); };
   _onPivotDims  = async (e) => {
