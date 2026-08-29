@@ -28,7 +28,7 @@ import {
 } from "./chunk-JAZY43GR.js";
 import {
   wireGridFilterEmptyState
-} from "./chunk-V4VZIBTD.js";
+} from "./chunk-GFWI3YWX.js";
 import {
   agGridLocaleText
 } from "./chunk-IWVPLMJU.js";
@@ -249,6 +249,10 @@ async function render(root) {
     </div>
   `;
   const rowData = await loadRealData();
+  const loadOutcome = {
+    failed: (window.__vdg_repo?.sync_failed_kinds?.() ?? []).some((k) => k === KIND_SHIPMENT || k === "pnl_line"),
+    skipped: 0
+  };
   const gridDiv = document.getElementById("grid");
   let api = null;
   if (window.agGrid) {
@@ -273,6 +277,8 @@ async function render(root) {
       getApi: () => api,
       searchSelector: "#grid-search",
       getTotal: () => rowData.length,
+      getLoadOutcome: () => loadOutcome,
+      onRetry: () => render(root),
       entity: t("shipments.empty.entity"),
       // F-63: omit entirely when the session may not create a shipment.
       onCreate: can("shipment.create") ? () => navigate("/shipments/new") : void 0,

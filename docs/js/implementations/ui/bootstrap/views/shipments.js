@@ -189,6 +189,18 @@ export async function render(root) {
   `;
 
   const rowData = await loadRealData();
+  // Rust's own session registry (sync_health.rs) — a bootstrap failure on either source kind
+  // never touches loadRealData's own Promise.all (each source degrades to [] independently,
+  // see _bounded's own doc comment above), so an empty grid here can mean "genuinely no
+  // shipments yet" OR "the read failed and returned zero rows" with no other signal to tell
+  // them apart. Checked fresh on every render, not cached — see wireGridFilterEmptyState below.
+  // A LoadOutcome (empty-state.js), not a bare boolean: `skipped` is 0 here because
+  // sync_failed_kinds() only knows whole-kind bootstrap failure, not a per-record skip count —
+  // the type has room for that count once the read-side partial-load fix lands.
+  const loadOutcome = {
+    failed: (window.__vdg_repo?.sync_failed_kinds?.() ?? []).some((k) => k === KIND_SHIPMENT || k === 'pnl_line'),
+    skipped: 0,
+  };
 
   const gridDiv = document.getElementById('grid');
   let api = null;
@@ -214,6 +226,8 @@ export async function render(root) {
       getApi: () => api,
       searchSelector: '#grid-search',
       getTotal: () => rowData.length,
+      getLoadOutcome: () => loadOutcome,
+      onRetry: () => render(root),
       entity: t('shipments.empty.entity'),
       // F-63: omit entirely when the session may not create a shipment.
       onCreate: can('shipment.create') ? () => navigate('/shipments/new') : undefined,

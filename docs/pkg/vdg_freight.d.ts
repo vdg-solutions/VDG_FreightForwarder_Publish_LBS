@@ -106,6 +106,14 @@ export class WasmEntityRepo {
      */
     network_rate_check(): void;
     constructor(io: any);
+    /**
+     * (pending, quarantined) outbox row counts — the wasm boundary's initial-mount query so a
+     * page reload sees a pre-existing quarantine on the very first paint (`OutboxOperator::
+     * snapshot`'s own doc comment). Every LATER change already rides the existing
+     * `vdg:outbox-changed`/`vdg:sync-complete` events, which now carry the same `quarantined`
+     * field — this is only for the moment before either has fired yet this session.
+     */
+    outbox_snapshot(): Promise<any>;
     pref_get_state(ref_name: string): Promise<any>;
     pref_list_pending(ref_name: string): Promise<any>;
     pref_move_closed(ref_name: string, id: string, dto_json: string): Promise<any>;
@@ -122,6 +130,19 @@ export class WasmEntityRepo {
      */
     put_labeled(kind: string, id: string, body: any, labels: any): Promise<any>;
     sync_delta(): Promise<any>;
+    /**
+     * Every kind currently failing this session (`sync_health::mark_failed`, armed from both
+     * the pull side — `SyncDeltaOperator::bootstrap_once`/`run_delta` — and the push side —
+     * `OutboxOperator::emit_sync_error`). Synchronous: it is an in-memory thread_local read, no
+     * I/O, same shape as `network_rate_check` above — a view or the topbar can check it on
+     * every render without a Promise round trip.
+     */
+    sync_failed_kinds(): any;
+    /**
+     * One reason string for the chip tooltip — see `sync_health::first_failed_reason`'s own doc
+     * comment for why one line, not the full per-kind list.
+     */
+    sync_failed_reason(): string | undefined;
     users_ensure_seeded(email: string, name: string, workspace: string): Promise<any>;
     users_get(email: string): Promise<any>;
     users_list(): Promise<any>;
@@ -995,6 +1016,7 @@ export interface InitOutput {
     readonly wasmentityrepo_mint_shipment_ref: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_network_rate_check: (a: number, b: number) => void;
     readonly wasmentityrepo_new: (a: number) => number;
+    readonly wasmentityrepo_outbox_snapshot: (a: number) => number;
     readonly wasmentityrepo_pref_get_state: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_pref_list_pending: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_pref_move_closed: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
@@ -1005,6 +1027,8 @@ export interface InitOutput {
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_put_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
+    readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
+    readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
     readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_list: (a: number) => number;
@@ -1023,9 +1047,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13350: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13363: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9410: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13389: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13402: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9449: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

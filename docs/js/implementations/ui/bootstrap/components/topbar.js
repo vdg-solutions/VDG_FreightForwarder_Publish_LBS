@@ -58,6 +58,7 @@ class VdgTopbar extends LitElement {
     _serverOldestPendingAgeMs: { type: Number,  state: true },
     _serverProvider:           { type: String,  state: true },
     _syncing:                  { type: Boolean, state: true }, // vdg:sync-started (charter_event_bridge.rs)
+    _quarantinedCount:         { type: Number,  state: true }, // outbox.rs's own decided, permanent refusal count
   };
 
   createRenderRoot() { return this; }
@@ -75,6 +76,7 @@ class VdgTopbar extends LitElement {
     this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
     this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = 'Google Drive';
     this._syncing = false;
+    this._quarantinedCount = 0;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     // Sync-pipeline listeners (vdg:sync-started/complete/error, vdg:delta-synced,
@@ -84,7 +86,12 @@ class VdgTopbar extends LitElement {
     this._onApproval      = (e) => { this._approvalCount  = e.detail?.count ?? 0; };
     this._onNotifCount    = (e) => { this._notifCount     = e.detail?.count ?? 0; };
     this._onDueSoonCount  = (e) => { this._dueSoonCount   = e.detail?.count ?? 0; }; this._onDocClick = (e) => { if (!this.contains(e.target)) this._menuOpen = false; };
-    this._onOutbox        = (e) => { this._outboxCount = e.detail?.count ?? 0; };
+    // outbox.rs now carries `quarantined` on the SAME event so a decided, permanent refusal
+    // stays visible on every count change, not just the one moment it happened.
+    this._onOutbox        = (e) => {
+      this._outboxCount = e.detail?.count ?? 0;
+      if (e.detail?.quarantined !== undefined) this._quarantinedCount = e.detail.quarantined;
+    };
     this._onSwUpdate      = () => { if (!sessionStorage.getItem(SW_DISMISS_KEY)) this._swUpdate = true; };
     this._onLocaleChanged = (e) => { this._locale = e.detail?.locale ?? currentLocale(); this._computeBreadcrumb(); };
     // F-42-05: the quote button and the manager mode-toggle are role-gated, and this component
@@ -122,6 +129,11 @@ class VdgTopbar extends LitElement {
     window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.addEventListener('vdg:auth-refresh-pending', this._onAuthPending);
     document.addEventListener('click', this._onDocClick);
     this._computeBreadcrumb();
+    // A reload must not read as healthy for up to 30s just because nothing has drained/changed
+    // yet this session — a quarantine from a PRIOR session already sits in the outbox cache.
+    window.__vdg_repo?.outbox_snapshot?.()
+      .then((snap) => { if (snap) { this._quarantinedCount = snap.quarantined ?? 0; } })
+      .catch(() => { /* best-effort initial paint — the next outbox/sync event corrects it */ });
   }
 
   disconnectedCallback() {
@@ -207,8 +219,13 @@ class VdgTopbar extends LitElement {
         : null);
     const salesId = currentSalesRepId();
     const now = Date.now();
+    // Rust's own verdict (sync_health.rs) — a synchronous, in-memory read, no round trip. The
+    // chip's color/label decision must consult THIS, not a JS-tracked retry streak that a later,
+    // unrelated "complete" signal could silently reset (the exact bug that hid a quarantined row
+    // behind a green dot).
+    const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).length > 0;
     const state = computeChipState({
-      pending: this._outboxCount, retrying: this._retrying, retryStreak: this._retryStreak,
+      pending: this._outboxCount, syncFailed, quarantined: this._quarantinedCount > 0,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
       serverBacklog: this._serverBacklog,
@@ -223,6 +240,7 @@ class VdgTopbar extends LitElement {
       ? t(isServerBackend() ? 'topbar.sync.label.signin' : 'topbar.sync.label.reconnect')
       : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
       : (state === 'backing_up') ? t('topbar.sync.state.backing_up')
+      : (state === 'quarantined') ? t('topbar.sync.state.quarantined')
       : t('topbar.sync.label');
 
     return html`
@@ -249,6 +267,7 @@ class VdgTopbar extends LitElement {
             lastSyncMs: displayLastSyncMs(this._lastSyncMs, this._lastPullMs), now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
+            quarantinedCount: this._quarantinedCount,
             serverBacklog: this._serverBacklog,
             serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
             serverProvider: this._serverProvider,

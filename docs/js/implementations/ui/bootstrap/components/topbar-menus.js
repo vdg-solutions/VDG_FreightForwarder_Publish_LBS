@@ -61,10 +61,14 @@ export function renderUserMenu(host, user, salesId) {
 }
 
 /// Above the page, not inside the bar — a deploy landed and this client is still on the old code.
+/// In the normal document flow (never `fixed`) — vdg-topbar sits above `<main id="view-root">` in
+/// the outer flex column, so an in-flow banner here pushes the header + page content down instead
+/// of floating over them. A `fixed` banner covered the page toolbar underneath it and stacked
+/// on top of app.js's own version banner rather than below it (both bugs share this one root).
 export function renderSwBanner(host) {
   if (!host._swUpdate) return html``;
   return html`
-    <div class="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-xs flex items-center justify-between px-4 py-2">
+    <div class="w-full bg-blue-600 text-white text-xs flex items-center justify-between px-4 py-2">
       <span>${t('topbar.sw_update_body')}</span>
       <div class="flex gap-2">
         <button @click="${host._handleReloadForUpdate}"

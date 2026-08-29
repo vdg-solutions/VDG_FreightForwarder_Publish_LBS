@@ -23,6 +23,11 @@ export function createSyncHandlers(host) {
       host._lastSyncMs = e.detail?.ts ?? Date.now(); host._retryStreak = 0;
       host._retrying = false; host._lastError = null; host._lastNotifiedStuckEpisode = 0;
       host._syncing = false;
+      // outbox.rs's own drain-complete check is gated on PENDING rows only (a quarantined row is
+      // excluded on purpose, see outbox.rs::outbox_len) — this event can fire true while a
+      // quarantined row still sits in the outbox. Carrying the count here is what stops that
+      // from reading as "fully healthy" (topbar-sync-chip.js::computeChipState checks it first).
+      if (e.detail?.quarantined !== undefined) host._quarantinedCount = e.detail.quarantined;
     },
     // Pull heartbeat only — must NOT clear retry/error state (those are push-side signals)
     onDeltaSynced: (e) => { host._lastPullMs = e.detail?.ts ?? Date.now(); },

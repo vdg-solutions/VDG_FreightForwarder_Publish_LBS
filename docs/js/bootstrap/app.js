@@ -574,7 +574,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build d8daaae5">v0.4.31 (d8daaae5)</span>
+        <span class="font-mono whitespace-nowrap" title="build f9309d2d">v0.4.32 (f9309d2d)</span>
       </div>
     `;
   }
@@ -644,6 +644,10 @@ var I18N_ROUTES = [
   { pattern: /^#\/masters\/customers$/, group: "nav.group.masters", viewKey: "nav.masters.customers" },
   { pattern: /^#\/masters\/ocean-carriers$/, group: "nav.group.masters", viewKey: "nav.masters.ocean_carriers" },
   { pattern: /^#\/manager\/reports\/pnl$/, group: "nav.group.reports", viewKey: "nav.reports.pnl_report" },
+  // Same shape as the P&L route above (group 'nav.group.reports' = "Kế toán") — viewKey reuses
+  // ledger-viewer.js's own page-heading key rather than nav.reports.ledger, which is a single
+  // pre-combined "Kế toán / Sổ cái" string for the sidebar's one-line label, not a group/view pair.
+  { pattern: /^#\/accounting\/ledger$/, group: "nav.group.reports", viewKey: "ledger.title" },
   { pattern: /^#\/manager\/fx-rates$/, group: "nav.group.manager", viewKey: "nav.manager.fx_rates" },
   { pattern: /^#\/manager\/settings$/, group: "nav.group.manager", viewKey: "nav.manager.settings" },
   { pattern: /^#\/manager\/awb$/, group: "nav.group.manager", viewKey: "awb.admin.title" }
@@ -697,15 +701,18 @@ function resolveBreadcrumb(hash, _locale, t2) {
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar-sync-chip.js
 var SYNC_STUCK_NOTIFY_MS = 5 * 6e4;
-var SYNC_RETRY_PROMOTE_THRESHOLD = 2;
 var DOT_CLASS = {
   green: "bg-emerald-500",
   yellow: "bg-amber-400",
   backing_up: "bg-amber-400",
   orange: "bg-orange-500",
   red: "bg-red-500",
-  pending: "bg-slate-400"
+  pending: "bg-slate-400",
   // F-50-01 — calm, distinct from red: expected structural wait, not a failure
+  quarantined: "bg-rose-700"
+  // a decided, permanent refusal (outbox.rs::quarantine_group) —
+  // its own shade, never the plain 'red' used for an ordinary
+  // offline/reconnect wait that resolves on its own
 };
 var STATE_TO_LABEL_KEY = {
   green: "healthy",
@@ -713,8 +720,9 @@ var STATE_TO_LABEL_KEY = {
   backing_up: "backing_up",
   orange: "retrying",
   red: "offline",
-  pending: "auth_pending"
+  pending: "auth_pending",
   // F-50-01 AC-10 — distinct key, never reuses offline/healthy
+  quarantined: "quarantined"
 };
 function buildAriaLabel(state, outboxCount, t2, serverBacklog = 0) {
   const key = STATE_TO_LABEL_KEY[state] ?? "healthy";
@@ -728,8 +736,8 @@ function buildAriaLabel(state, outboxCount, t2, serverBacklog = 0) {
 }
 function computeChipState({
   pending,
-  retrying,
-  retryStreak,
+  syncFailed,
+  quarantined,
   backoff429,
   offline,
   signedOut,
@@ -744,12 +752,13 @@ function computeChipState({
   if (authReconnect) return "red";
   if (offline || signedOut) return "red";
   if (pending > 0 && lastSyncMs > 0 && now - lastSyncMs > SYNC_STUCK_NOTIFY_MS) return "red";
+  if (quarantined) return "quarantined";
   if (authPending) return "pending";
   if (serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== void 0 && serverOldestPendingAgeMs > 3e5) {
     return "orange";
   }
   if (backoff429) return "orange";
-  if (retrying) return retryStreak >= SYNC_RETRY_PROMOTE_THRESHOLD ? "orange" : "yellow";
+  if (syncFailed) return "orange";
   if (pending > 0 && lastSyncMs === 0) return "yellow";
   if (pending > 0) return "yellow";
   if (serverBacklog > 0) return "backing_up";
@@ -779,6 +788,7 @@ function buildChipTitle({
   online,
   authReconnect,
   popupBlocked,
+  quarantinedCount = 0,
   serverBacklog = 0,
   serverOldestPendingAgeMs = null,
   serverProvider = "Google Drive"
@@ -787,6 +797,7 @@ function buildChipTitle({
   if (state === "red" && authReconnect) return t2("topbar.sync.tooltip.reconnect");
   if (state === "red" && !user) return t2("topbar.sync.tooltip.click_to_signin");
   if (state === "red" && !online) return t2("topbar.sync.tooltip.waiting_network");
+  if (state === "quarantined") return t2("topbar.sync.tooltip.quarantined").replace("{n}", String(quarantinedCount));
   if (state === "pending") return t2("topbar.sync.tooltip.auth_pending");
   if (state === "backing_up") {
     return t2("topbar.sync.tooltip.backing_up").replace("{provider}", serverProvider || "Google Drive").replace("{n}", String(serverBacklog));
@@ -822,6 +833,7 @@ function renderSyncChip({
   user,
   authReconnect,
   popupBlocked,
+  quarantinedCount = 0,
   serverBacklog = 0,
   serverOldestPendingAgeMs = null,
   serverProvider = "Google Drive",
@@ -842,6 +854,7 @@ function renderSyncChip({
     online,
     authReconnect,
     popupBlocked,
+    quarantinedCount,
     serverBacklog,
     serverOldestPendingAgeMs,
     serverProvider
@@ -877,6 +890,7 @@ function decideChipAction({ state, user, online, lastError, authReconnect, serve
   if (state === "yellow") return CHIP_ACTION.NOOP;
   if (state === "backing_up") return CHIP_ACTION.NOOP;
   if (state === "pending") return CHIP_ACTION.NOOP;
+  if (state === "quarantined") return CHIP_ACTION.NOOP;
   if (state === "red" && authReconnect) return serverBackend ? CHIP_ACTION.SIGNIN : CHIP_ACTION.RECONNECT;
   if (state === "red" && !user) return CHIP_ACTION.SIGNIN;
   if (state === "red" && !online) return CHIP_ACTION.WAITING_NETWORK;
@@ -966,7 +980,7 @@ function renderUserMenu(host, user, salesId) {
 function renderSwBanner(host) {
   if (!host._swUpdate) return html3``;
   return html3`
-    <div class="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white text-xs flex items-center justify-between px-4 py-2">
+    <div class="w-full bg-blue-600 text-white text-xs flex items-center justify-between px-4 py-2">
       <span>${t("topbar.sw_update_body")}</span>
       <div class="flex gap-2">
         <button @click="${host._handleReloadForUpdate}"
@@ -1021,6 +1035,7 @@ function createSyncHandlers(host) {
       host._lastError = null;
       host._lastNotifiedStuckEpisode = 0;
       host._syncing = false;
+      if (e.detail?.quarantined !== void 0) host._quarantinedCount = e.detail.quarantined;
     },
     // Pull heartbeat only — must NOT clear retry/error state (those are push-side signals)
     onDeltaSynced: (e) => {
@@ -1113,8 +1128,10 @@ var VdgTopbar = class extends LitElement2 {
     _serverBacklog: { type: Number, state: true },
     _serverOldestPendingAgeMs: { type: Number, state: true },
     _serverProvider: { type: String, state: true },
-    _syncing: { type: Boolean, state: true }
+    _syncing: { type: Boolean, state: true },
     // vdg:sync-started (charter_event_bridge.rs)
+    _quarantinedCount: { type: Number, state: true }
+    // outbox.rs's own decided, permanent refusal count
   };
   createRenderRoot() {
     return this;
@@ -1150,6 +1167,7 @@ var VdgTopbar = class extends LitElement2 {
     this._serverOldestPendingAgeMs = null;
     this._serverProvider = "Google Drive";
     this._syncing = false;
+    this._quarantinedCount = 0;
     this._onNav = (e) => {
       this.route = e.detail.route;
     };
@@ -1171,6 +1189,7 @@ var VdgTopbar = class extends LitElement2 {
     };
     this._onOutbox = (e) => {
       this._outboxCount = e.detail?.count ?? 0;
+      if (e.detail?.quarantined !== void 0) this._quarantinedCount = e.detail.quarantined;
     };
     this._onSwUpdate = () => {
       if (!sessionStorage.getItem(SW_DISMISS_KEY)) this._swUpdate = true;
@@ -1240,6 +1259,12 @@ var VdgTopbar = class extends LitElement2 {
     window.addEventListener("vdg:auth-refresh-pending", this._onAuthPending);
     document.addEventListener("click", this._onDocClick);
     this._computeBreadcrumb();
+    window.__vdg_repo?.outbox_snapshot?.().then((snap) => {
+      if (snap) {
+        this._quarantinedCount = snap.quarantined ?? 0;
+      }
+    }).catch(() => {
+    });
   }
   disconnectedCallback() {
     super.disconnectedCallback();
@@ -1344,10 +1369,11 @@ var VdgTopbar = class extends LitElement2 {
     } : null);
     const salesId = currentSalesRepId();
     const now = Date.now();
+    const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).length > 0;
     const state = computeChipState({
       pending: this._outboxCount,
-      retrying: this._retrying,
-      retryStreak: this._retryStreak,
+      syncFailed,
+      quarantined: this._quarantinedCount > 0,
       backoff429: this._backoff429,
       offline: !this._online,
       signedOut: !user,
@@ -1360,7 +1386,7 @@ var VdgTopbar = class extends LitElement2 {
       serverProvider: this._serverProvider
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
-    const labelText = state === "red" && this._authReconnect ? t(isServerBackend() ? "topbar.sync.label.signin" : "topbar.sync.label.reconnect") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "backing_up" ? t("topbar.sync.state.backing_up") : t("topbar.sync.label");
+    const labelText = state === "red" && this._authReconnect ? t(isServerBackend() ? "topbar.sync.label.signin" : "topbar.sync.label.reconnect") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "quarantined" ? t("topbar.sync.state.quarantined") : t("topbar.sync.label");
     return html4`
       ${renderSwBanner(this)}
       <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
@@ -1394,6 +1420,7 @@ var VdgTopbar = class extends LitElement2 {
       user,
       authReconnect: this._authReconnect,
       popupBlocked: this._popupBlocked,
+      quarantinedCount: this._quarantinedCount,
       serverBacklog: this._serverBacklog,
       serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
       serverProvider: this._serverProvider,
@@ -2233,7 +2260,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.31 (d8daaae5)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.32 (f9309d2d)</div>
         </div>
       </div>
     </div>`;
@@ -4607,7 +4634,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-DEFO5QS3.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-25CWGROT.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4724,7 +4751,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.31 (d8daaae5)";
+var APP_VERSION = "v0.4.32 (f9309d2d)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4870,13 +4897,19 @@ async function checkVersionBanner(store) {
       if (days < NEW_FEATURE_BANNER_DAYS) return;
     }
     const banner = document.createElement("div");
-    banner.className = "fixed top-16 left-0 right-0 z-[8999] bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2";
+    const mount = document.getElementById("view-root");
+    if (mount) {
+      banner.className = "w-full bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2";
+    } else {
+      banner.className = "fixed top-16 left-0 right-0 z-[8999] bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2";
+    }
     banner.innerHTML = `
       <span>What's new in ${APP_VERSION}
         <button id="banner-see" class="ml-2 underline hover:no-underline">See changes</button>
       </span>
       <button id="banner-dismiss" class="ml-4 text-indigo-200 hover:text-white">\u2715</button>`;
-    document.body.appendChild(banner);
+    if (mount) mount.before(banner);
+    else document.body.appendChild(banner);
     banner.querySelector("#banner-see").addEventListener("click", () => {
       window.dispatchEvent(new CustomEvent("vdg:open-help", { detail: { section: "whats-new" } }));
     });
@@ -4943,7 +4976,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-BF45SC2G.js"),
-  "/shipments": () => import("./shipments-RYDQ2XFJ.js"),
+  "/shipments": () => import("./shipments-UGSBZWD5.js"),
   "/upload": () => import("./upload-6OLVB33H.js"),
   "/documents": () => import("./documents-G4ZYYEJ4.js"),
   "/finance": () => import("./finance-dashboard-MOS6ENJQ.js"),
@@ -4951,13 +4984,13 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-W54IXCMN.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-LUHLENTR.js"),
+  "/sales/me": () => import("./sales-me-IR7YQSWK.js"),
   "/sales/analytics": () => import("./sales-analytics-JWO3PH63.js"),
   "/sales/quote/new": () => import("./sales-quote-new-4WEU7Z57.js"),
-  "/sales/quote": () => import("./sales-quote-list-CIFZVLVP.js"),
-  "/masters/customers": () => import("./masters-customers-IWZNO7VJ.js"),
-  "/masters/carriers": () => import("./masters-carriers-JWYPVHIN.js"),
-  "/masters/services": () => import("./masters-services-GKCPG3TJ.js"),
+  "/sales/quote": () => import("./sales-quote-list-6HUY6WXM.js"),
+  "/masters/customers": () => import("./masters-customers-H3WFKPEM.js"),
+  "/masters/carriers": () => import("./masters-carriers-7ZQZG5SK.js"),
+  "/masters/services": () => import("./masters-services-VEUFXKJU.js"),
   "/help": () => import("./help-P4YWHS5I.js"),
   "/pending-access": () => import("./pending-access-NMS2R6QL.js"),
   "/background-jobs": () => import("./background-jobs-TEPHLQEZ.js"),
@@ -4965,10 +4998,10 @@ var VIEWS = {
   "/manager/dashboard": () => import("./dashboard-Z6REVVR2.js"),
   "/manager/pipeline": () => import("./pipeline-EUHZFO5V.js"),
   "/manager/approvals": () => import("./approvals-FJOY6GVC.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-QAYE7VOB.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-4BXDQKK2.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-QJIB7UNZ.js"),
   "/manager/finance/close-period": () => import("./close-period-ZHIFQNHD.js"),
-  "/manager/audit": () => import("./audit-XWEANZSS.js"),
+  "/manager/audit": () => import("./audit-XNSYUZS4.js"),
   "/manager/notifications": () => import("./notifications-IR5TYITQ.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-VUJAYQPO.js"),
@@ -5896,8 +5929,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=d8daaae5", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=d8daaae5", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=f9309d2d", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f9309d2d", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

@@ -3,10 +3,11 @@ import {
 } from "./chunk-MGTH6QM4.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/empty-state.js
-var EMPTY_STATE_VARIANT = Object.freeze({ FILTERED: "filtered", FIRST_RUN: "first-run" });
+var EMPTY_STATE_VARIANT = Object.freeze({ FILTERED: "filtered", FIRST_RUN: "first-run", LOAD_FAILED: "load-failed" });
 var EMPTY_STATE_ACTION = Object.freeze({
   CLEAR_FILTER: "empty-state-clear-filter",
-  CREATE: "empty-state-create"
+  CREATE: "empty-state-create",
+  RETRY: "empty-state-retry"
 });
 var ICON_FUNNEL = `<svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -15,6 +16,10 @@ var ICON_FUNNEL = `<svg class="w-8 h-8 text-amber-400" fill="none" stroke="curre
 var ICON_BOX = `<svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
     d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+</svg>`;
+var ICON_WARNING = `<svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
 </svg>`;
 var ICON_SPARKLE = `<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -63,10 +68,28 @@ function firstRunHtml({ entity, createLabel, body }) {
       ${createBtn}
     </div>`;
 }
+function loadFailedHtml({ entity, skipped = 0 }) {
+  const partialNote = skipped > 0 ? `<p class="text-xs text-amber-600 mt-1">${t("empty_state.load_failed.partial", { n: skipped })}</p>` : "";
+  return `
+    <div class="flex flex-col items-center justify-center gap-4 py-16" role="status" data-testid="empty-state-load-failed">
+      <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">${ICON_WARNING}</div>
+      <div class="text-center">
+        <p class="text-sm font-semibold text-slate-700">${t("empty_state.load_failed.title")}</p>
+        <p class="text-xs text-slate-400 mt-1 max-w-xs leading-relaxed">${t("empty_state.load_failed.body", { entity })}</p>
+        ${partialNote}
+      </div>
+      <button type="button" data-action="${EMPTY_STATE_ACTION.RETRY}"
+        class="px-4 py-2 text-xs font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors shadow-sm shadow-blue-200">
+        ${t("empty_state.load_failed.retry")}
+      </button>
+    </div>`;
+}
 function emptyStateHtml(opts) {
+  if (opts.variant === EMPTY_STATE_VARIANT.LOAD_FAILED) return loadFailedHtml(opts);
   return opts.variant === EMPTY_STATE_VARIANT.FILTERED ? filteredHtml(opts) : firstRunHtml(opts);
 }
-function bindEmptyStateActions(root, { onClearFilter, onCreate } = {}) {
+var NO_LOAD_FAILURE = Object.freeze({ failed: false, skipped: 0 });
+function bindEmptyStateActions(root, { onClearFilter, onCreate, onRetry } = {}) {
   if (root.dataset.emptyStateBound) return;
   root.dataset.emptyStateBound = "1";
   root.addEventListener("click", (e) => {
@@ -74,6 +97,7 @@ function bindEmptyStateActions(root, { onClearFilter, onCreate } = {}) {
     if (!btn) return;
     if (btn.dataset.action === EMPTY_STATE_ACTION.CLEAR_FILTER) onClearFilter?.();
     else if (btn.dataset.action === EMPTY_STATE_ACTION.CREATE) onCreate?.();
+    else if (btn.dataset.action === EMPTY_STATE_ACTION.RETRY) onRetry?.();
   });
 }
 function wireGridFilterEmptyState({
@@ -83,6 +107,8 @@ function wireGridFilterEmptyState({
   getTotal,
   entity,
   onCreate,
+  getLoadOutcome,
+  onRetry,
   filteredCreateLabel,
   firstRunCreateLabel,
   firstRunBody
@@ -92,10 +118,14 @@ function wireGridFilterEmptyState({
     const api = getApi();
     if (!api) return;
     const total = getTotal();
-    const variant = total === 0 ? EMPTY_STATE_VARIANT.FIRST_RUN : EMPTY_STATE_VARIANT.FILTERED;
-    const createLabel = !onCreate ? void 0 : variant === EMPTY_STATE_VARIANT.FIRST_RUN ? firstRunCreateLabel || t("empty_state.first_run.create", { entity }) : filteredCreateLabel || t("empty_state.filtered.create", { entity });
+    const outcome = getLoadOutcome ? getLoadOutcome() : NO_LOAD_FAILURE;
+    const variant = outcome.failed ? EMPTY_STATE_VARIANT.LOAD_FAILED : total === 0 ? EMPTY_STATE_VARIANT.FIRST_RUN : EMPTY_STATE_VARIANT.FILTERED;
+    const createLabel = outcome.failed || !onCreate ? void 0 : variant === EMPTY_STATE_VARIANT.FIRST_RUN ? firstRunCreateLabel || t("empty_state.first_run.create", { entity }) : filteredCreateLabel || t("empty_state.filtered.create", { entity });
     const displayed = api.getDisplayedRowCount ? api.getDisplayedRowCount() : total;
-    api.setGridOption("overlayNoRowsTemplate", emptyStateHtml({ variant, entity, createLabel, body: firstRunBody }));
+    api.setGridOption(
+      "overlayNoRowsTemplate",
+      emptyStateHtml({ variant, entity, createLabel, body: firstRunBody, skipped: outcome.skipped })
+    );
     if (displayed === 0) api.showNoRowsOverlay();
   };
   recompute();
@@ -104,6 +134,7 @@ function wireGridFilterEmptyState({
     recompute();
   });
   bindEmptyStateActions(root, {
+    onRetry,
     onClearFilter: () => {
       const si = getSearchInput();
       if (si) si.value = "";

@@ -179,13 +179,23 @@ export async function checkVersionBanner(store) {
       if (days < NEW_FEATURE_BANNER_DAYS) return;
     }
     const banner = document.createElement('div');
-    banner.className = 'fixed top-16 left-0 right-0 z-[8999] bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2';
+    // In the normal document flow (never `fixed`), inserted right before #view-root so it stacks
+    // under vdg-topbar (and its own SW-update banner, if showing) instead of floating over the
+    // page toolbar underneath — a `fixed` banner here used to cover the shipments/ledger toolbar
+    // and overlap the SW-update banner rather than stack below it (owner QA, two banners on the
+    // dashboard). Falls back to a body-level fixed banner if the shell markup isn't there yet.
+    const mount = document.getElementById('view-root');
+    if (mount) {
+      banner.className = 'w-full bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2';
+    } else {
+      banner.className = 'fixed top-16 left-0 right-0 z-[8999] bg-indigo-600 text-white text-xs flex items-center justify-between px-4 py-2';
+    }
     banner.innerHTML = `
       <span>What's new in ${APP_VERSION}
         <button id="banner-see" class="ml-2 underline hover:no-underline">See changes</button>
       </span>
       <button id="banner-dismiss" class="ml-4 text-indigo-200 hover:text-white">✕</button>`;
-    document.body.appendChild(banner);
+    if (mount) mount.before(banner); else document.body.appendChild(banner);
     banner.querySelector('#banner-see').addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('vdg:open-help', { detail: { section: 'whats-new' } }));
     });

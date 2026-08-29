@@ -32,6 +32,14 @@ class VdgPivotTable extends LitElement {
     rows:           { type: Array   },
     dims:           { type: Array   },
     showComparison: { type: Boolean },
+    // sync_health.rs's own verdict for this pivot's source kinds (shipment/pnl_line) — an empty
+    // `rows` array must render this, never `pivot.no_data`, when the load itself failed.
+    loadFailed:     { type: Boolean },
+    // Widened alongside empty-state.js's own LoadOutcome: a sibling read-side fix lets a
+    // collection load land as "N good, M skipped" instead of aborting on one bad record — 0
+    // today (pnl-report.js has no skip count to give yet), but the property exists so the caller
+    // never has to collapse that count back down to a boolean to reach this component.
+    skippedCount:   { type: Number },
     _dim0:          { type: String, state: true },
     _dim1:          { type: String, state: true },
   };
@@ -43,8 +51,14 @@ class VdgPivotTable extends LitElement {
     this.rows           = [];
     this.dims           = DEFAULT_DIMS;
     this.showComparison = false;
+    this.loadFailed     = false;
+    this.skippedCount   = 0;
     this._dim0          = DEFAULT_DIMS[0];
     this._dim1          = DEFAULT_DIMS[1];
+  }
+
+  _retry() {
+    this.dispatchEvent(new CustomEvent('vdg:pivot-retry', { bubbles: true, composed: true }));
   }
 
   updated(changed) {
@@ -198,7 +212,16 @@ class VdgPivotTable extends LitElement {
             </tbody>
           </table>
         </div>
-        ${!this.rows.length ? html`
+        ${!this.rows.length && this.loadFailed ? html`
+          <div class="flex flex-col items-center gap-3 py-10">
+            <div class="text-sm text-red-600 font-medium">${t('pivot.load_failed')}</div>
+            ${this.skippedCount > 0 ? html`
+              <div class="text-xs text-amber-600">${t('empty_state.load_failed.partial', { n: this.skippedCount })}</div>` : ''}
+            <button type="button" @click="${() => this._retry()}"
+              class="px-4 py-1.5 text-xs font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
+              ${t('empty_state.load_failed.retry')}
+            </button>
+          </div>` : !this.rows.length ? html`
           <div class="text-center text-slate-400 text-sm py-10">${t('pivot.no_data')}</div>` : ''}
       </div>`;
   }

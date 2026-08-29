@@ -31,8 +31,10 @@ let _groupedShipments = [];
 let _dims            = [...PNL_DEFAULT_ROW_DIMS];
 let _airDims         = [...AIR_DEFAULT_DIMS];
 let _sheetJsLoaded   = false;
+let _loadOutcome     = { failed: false, skipped: 0 }; // LoadOutcome (empty-state.js) — sync_health.rs's shipment/pnl_line verdict, widened for a future per-record skip count
 let _onPivotClick;
 let _onPivotDims;
+let _onPivotRetry;
 let _onLocale;
 
 function getRepo() { return window.__vdg_repo; }
@@ -225,6 +227,7 @@ async function exportExcel() {
 export async function render(root) {
   if (_onPivotClick) window.removeEventListener('vdg:pivot-cell-click', _onPivotClick);
   if (_onPivotDims)  window.removeEventListener('vdg:pivot-dims-changed', _onPivotDims);
+  if (_onPivotRetry) window.removeEventListener('vdg:pivot-retry', _onPivotRetry);
   if (_onLocale)     window.removeEventListener('vdg:locale-changed', _onLocale);
 
   const repo = getRepo();
@@ -233,6 +236,13 @@ export async function render(root) {
       repo.list('shipment', null),
       repo.list('pnl_line', null),
     ]);
+    // Either source can silently degrade to a fresh-but-empty local cache when its background
+    // bootstrap has not (yet) succeeded — sync_health.rs is Rust's own record of that, checked
+    // here rather than trusting an empty array as "no data for this period" (AC: fix the type).
+    // `skipped` stays 0 until the read side reports a per-record count — see LoadOutcome's own
+    // doc comment (empty-state.js) for why this is a typed object, not a boolean.
+    const failedKinds = repo.sync_failed_kinds?.() ?? [];
+    _loadOutcome = { failed: failedKinds.includes('shipment') || failedKinds.includes('pnl_line'), skipped: 0 };
   }
 
   const periodBtns = PERIODS.map((p) =>
@@ -283,6 +293,8 @@ export async function render(root) {
     pt.rows           = _pivotRows;
     pt.dims           = _dims;
     pt.showComparison = _showComparison;
+    pt.loadFailed     = _loadOutcome.failed;
+    pt.skippedCount   = _loadOutcome.skipped;
     pivotContainer.appendChild(pt);
   }
 
@@ -318,9 +330,13 @@ export async function render(root) {
     else                    { _dims    = e.detail.dims; }
     await refreshPivot();
   };
+  // pivot-table's own retry button (LOAD_FAILED state) — a full re-render re-runs the same
+  // repo.list() calls above, the only way to re-attempt the bootstrap this view depends on.
+  _onPivotRetry = () => { render(root); };
 
   window.addEventListener('vdg:pivot-cell-click',    _onPivotClick);
   window.addEventListener('vdg:pivot-dims-changed',  _onPivotDims);
+  window.addEventListener('vdg:pivot-retry',         _onPivotRetry);
 
   // Re-resolve #view-root at fire time — freshViewRoot() (F-19-16) detaches the captured
   // `root` node on navigation, so re-rendering into it is a silent no-op.

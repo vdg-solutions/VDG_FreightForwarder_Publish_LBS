@@ -14,6 +14,10 @@ const I18N_ROUTES = [
   { pattern: /^#\/masters\/customers$/,  group: 'nav.group.masters',   viewKey: 'nav.masters.customers' },
   { pattern: /^#\/masters\/ocean-carriers$/, group: 'nav.group.masters', viewKey: 'nav.masters.ocean_carriers' },
   { pattern: /^#\/manager\/reports\/pnl$/, group: 'nav.group.reports', viewKey: 'nav.reports.pnl_report' },
+  // Same shape as the P&L route above (group 'nav.group.reports' = "Kế toán") — viewKey reuses
+  // ledger-viewer.js's own page-heading key rather than nav.reports.ledger, which is a single
+  // pre-combined "Kế toán / Sổ cái" string for the sidebar's one-line label, not a group/view pair.
+  { pattern: /^#\/accounting\/ledger$/,  group: 'nav.group.reports', viewKey: 'ledger.title' },
   { pattern: /^#\/manager\/fx-rates$/,   group: 'nav.group.manager',   viewKey: 'nav.manager.fx_rates' },
   { pattern: /^#\/manager\/settings$/,   group: 'nav.group.manager',   viewKey: 'nav.manager.settings' },
   { pattern: /^#\/manager\/awb$/,        group: 'nav.group.manager',   viewKey: 'awb.admin.title' },
