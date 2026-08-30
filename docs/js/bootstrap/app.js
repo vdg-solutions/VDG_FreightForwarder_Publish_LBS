@@ -598,7 +598,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build dea038b2">v0.4.40 (dea038b2)</span>
+        <span class="font-mono whitespace-nowrap" title="build 081fc409">v0.4.41 (081fc409)</span>
       </div>
     `;
   }
@@ -2286,7 +2286,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.40 (dea038b2)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.41 (081fc409)</div>
         </div>
       </div>
     </div>`;
@@ -3087,7 +3087,12 @@ function _resetBackend() {
 }
 function readSessionToken() {
   try {
-    return localStorage.getItem(SESSION_TOKEN_KEY) || sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
+    const legacy = localStorage.getItem(SESSION_TOKEN_KEY);
+    if (legacy) {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      if (!sessionStorage.getItem(SESSION_TOKEN_KEY)) sessionStorage.setItem(SESSION_TOKEN_KEY, legacy);
+    }
+    return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
   } catch {
     return "";
   }
@@ -3098,12 +3103,11 @@ async function adoptSessionToken2(token) {
 function rememberSessionToken2(token) {
   try {
     if (token) {
-      localStorage.setItem(SESSION_TOKEN_KEY, token);
       sessionStorage.setItem(SESSION_TOKEN_KEY, token);
     } else {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
       sessionStorage.removeItem(SESSION_TOKEN_KEY);
     }
+    localStorage.removeItem(SESSION_TOKEN_KEY);
   } catch {
   }
 }
@@ -4664,7 +4668,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.40 (dea038b2)";
+var APP_VERSION = "v0.4.41 (081fc409)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5897,8 +5901,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=dea038b2", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=dea038b2", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=081fc409", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=081fc409", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

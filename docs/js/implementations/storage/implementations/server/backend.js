@@ -88,11 +88,23 @@ import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js'
 
 /// JSON in, JSON out, session token in a header. A non-2xx is an ApiError carrying the status the
 /// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) for callers to branch on.
+/// sessionStorage ONLY. The token used to be written to localStorage as well, which meant it
+/// outlived the tab, survived a reboot, and was readable by every other tab on this origin — a
+/// week-long credential in the most durable place the browser offers. sessionStorage dies with the
+/// tab, so closing it ends the session on that machine whether or not anyone signed out.
 function readSessionToken() {
   try {
-    return localStorage.getItem(SESSION_TOKEN_KEY) || sessionStorage.getItem(SESSION_TOKEN_KEY) || '';
+    // A token written by an older build is still in localStorage; take it once so this change does
+    // not sign anyone out, then delete it. Migration, not a fallback: the next read finds only
+    // sessionStorage.
+    const legacy = localStorage.getItem(SESSION_TOKEN_KEY);
+    if (legacy) {
+      localStorage.removeItem(SESSION_TOKEN_KEY);
+      if (!sessionStorage.getItem(SESSION_TOKEN_KEY)) sessionStorage.setItem(SESSION_TOKEN_KEY, legacy);
+    }
+    return sessionStorage.getItem(SESSION_TOKEN_KEY) || '';
   } catch {
-    return '';
+    return ''; // storage-less context (private mode, embedded webview) — no token is a valid answer
   }
 }
 
@@ -105,13 +117,16 @@ async function adoptSessionToken(token) {
 function rememberSessionToken(token) {
   try {
     if (token) {
-      localStorage.setItem(SESSION_TOKEN_KEY, token);
       sessionStorage.setItem(SESSION_TOKEN_KEY, token);
     } else {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
       sessionStorage.removeItem(SESSION_TOKEN_KEY);
     }
-  } catch {}
+    // Always, both ways: sign-in must not leave an older build's durable copy behind, and sign-out
+    // must clear one even on a session that never read it.
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch {
+    // storage-less context — the token does not persist and the next call re-authenticates
+  }
 }
 
 const API_FETCH_TIMEOUT_MS = 30000;
