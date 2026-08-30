@@ -113,18 +113,19 @@ async function hydrateSessionFromToken(resp) {
   // token the server verified once at sign-in.
   const expSec = Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1000);
   console.log('[Auth] POSTing to /session');
-  try {
-    const opened = await apiFetch('POST', '/session', { token: resp.access_token });
-    console.log('[Auth] /session POST result:', opened);
-    // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
-    // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
-    // wherever the cookie already works.
-    if (opened?.token) {
-      console.log('[Auth] Adopting session token...');
-      await adoptSessionToken(opened.token);
-    }
-  } catch (e) {
-    console.error('[Auth] Failed to create session via POST /session:', e);
+  // No try/catch here on purpose: a failed mint must fail the WHOLE hydrate. Swallowing it used
+  // to let a dead POST /session (network blip, 5xx) fall through to writing a durable local
+  // identity anyway — "signed in" locally, no server session ever created, and the very state
+  // this file exists to recover from. Both callers (signin-button.js, token-refresh.js) already
+  // catch a hydrate rejection and show it, not reload into a fresh copy of the same dead end.
+  const opened = await apiFetch('POST', '/session', { token: resp.access_token });
+  console.log('[Auth] /session POST result:', opened);
+  // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
+  // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
+  // wherever the cookie already works.
+  if (opened?.token) {
+    console.log('[Auth] Adopting session token...');
+    await adoptSessionToken(opened.token);
   }
 
   console.log('[Auth] Fetching userinfo from Google...');

@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f165bf98">v0.4.44 (f165bf98)</span>
+        <span class="font-mono whitespace-nowrap" title="build 14bf847a">v0.4.45 (14bf847a)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.44 (f165bf98)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.45 (14bf847a)</div>
         </div>
       </div>
     </div>`;
@@ -4001,15 +4001,11 @@ async function hydrateSessionFromToken2(resp) {
   _persistAccessToken(resp);
   const expSec = Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1e3);
   console.log("[Auth] POSTing to /session");
-  try {
-    const opened = await apiFetch("POST", "/session", { token: resp.access_token });
-    console.log("[Auth] /session POST result:", opened);
-    if (opened?.token) {
-      console.log("[Auth] Adopting session token...");
-      await adoptSessionToken(opened.token);
-    }
-  } catch (e) {
-    console.error("[Auth] Failed to create session via POST /session:", e);
+  const opened = await apiFetch("POST", "/session", { token: resp.access_token });
+  console.log("[Auth] /session POST result:", opened);
+  if (opened?.token) {
+    console.log("[Auth] Adopting session token...");
+    await adoptSessionToken(opened.token);
   }
   console.log("[Auth] Fetching userinfo from Google...");
   const info = await fetchUserinfo(resp.access_token);
@@ -4702,7 +4698,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.44 (f165bf98)";
+var APP_VERSION = "v0.4.45 (14bf847a)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5951,8 +5947,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=f165bf98", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f165bf98", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=14bf847a", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=14bf847a", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
