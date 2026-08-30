@@ -12,7 +12,7 @@ function _i() {
   return _impl;
 }
 
-/// ({role?}) -> { users: [{email, display_name, roles}] }
+/// ({role?, includeInactive?}) -> { users: [{email, display_name, roles, active}] }
 export const listUsers = (...a) => _i().listUsers(...a);
 /// ({email, display_name, roles}) -> the created row. Rejects (409) if the email already has
 /// a grant row -- use patchUser to change an existing person's roles/name (H3-a).

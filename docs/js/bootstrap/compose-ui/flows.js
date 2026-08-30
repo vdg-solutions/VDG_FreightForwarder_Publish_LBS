@@ -17,6 +17,7 @@ import { bindShipmentStateAliases } from '../../implementations/ui/core_abstract
 import { bindShipmentStateMigrator } from '../../implementations/ui/core_abstractions/ports/flows/shipment-state-migrator.js';
 import { bindShipmentVoidDelete } from '../../implementations/ui/core_abstractions/ports/flows/shipment-void-delete.js';
 import { bindQuoteOrchestrator } from '../../implementations/ui/core_abstractions/ports/flows/quote-orchestrator.js';
+import { bindQuoteVoidDelete } from '../../implementations/ui/core_abstractions/ports/flows/quote-void-delete.js';
 import { composeFlowsAdmin } from './flows-admin.js';
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { listUsers } from '../../implementations/storage/core_abstractions/user-directory.js';
@@ -197,6 +198,20 @@ export function composeFlows(wasm) {
     },
     checkAlreadyConverted: async (_repo, quoteId) =>
       (await wasm.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null,
+  });
+
+  bindQuoteVoidDelete({
+    chooseQuoteAffordance: (quote) => wasm.flows_quote_affordance({ quote: quote || {} }).affordance,
+    // Two steps on purpose: Rust decides what the caller may do, the view asks, Rust acts.
+    runQuoteAffordance: async ({ quote, canWrite, confirm }) => {
+      const plan = wasm.flows_quote_delete_plan({ quote: quote || {}, can_write: Boolean(canWrite) });
+      if (!plan.confirmable) return { mutated: false, reason: plan.reason };
+      const ok = await confirm(plan.affordance);
+      if (!ok) return { mutated: false, reason: REASON_CANCELLED };
+      const applied = await wasm.flows_quote_delete_apply({ quote: quote || {}, affordance: plan.affordance });
+      if (!applied.ok) throw new Error(applied.error);
+      return { mutated: true, affordance: plan.affordance };
+    },
   });
 
   composeFlowsAdmin(wasm);

@@ -106,6 +106,9 @@ import {
   bindSalesAnalyticsCompute
 } from "./chunk-7472JIPV.js";
 import {
+  bindQuoteVoidDelete
+} from "./chunk-RNW6UNLW.js";
+import {
   bindRepoQuery
 } from "./chunk-EPS4ANRF.js";
 import {
@@ -595,7 +598,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 3103c614">v0.4.37 (3103c614)</span>
+        <span class="font-mono whitespace-nowrap" title="build 43e446a3">v0.4.38 (43e446a3)</span>
       </div>
     `;
   }
@@ -2283,7 +2286,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.37 (3103c614)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.38 (43e446a3)</div>
         </div>
       </div>
     </div>`;
@@ -3184,8 +3187,11 @@ var serverSession = { serverSessionIdentity: serverSessionIdentity2 };
 
 // output/web/js.tmp/implementations/storage/implementations/server/server-users.js
 var USERS_PATH = "/users";
-async function listUsers2({ role } = {}) {
-  const qs = role ? `?role=${encodeURIComponent(role)}` : "";
+async function listUsers2({ role, includeInactive } = {}) {
+  const params = new URLSearchParams();
+  if (role) params.set("role", role);
+  if (includeInactive) params.set("include_inactive", "true");
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return apiFetch("GET", `${USERS_PATH}${qs}`);
 }
 async function createUser({ email, display_name, roles }) {
@@ -4658,7 +4664,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.37 (3103c614)";
+var APP_VERSION = "v0.4.38 (43e446a3)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4888,7 +4894,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-ANZUNYTQ.js"),
-  "/shipments": () => import("./shipments-HMXHE4VA.js"),
+  "/shipments": () => import("./shipments-RWWDMUQE.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-2SUK5ZXY.js"),
   "/finance": () => import("./finance-dashboard-XARJ36ZW.js"),
@@ -4899,7 +4905,7 @@ var VIEWS = {
   "/sales/me": () => import("./sales-me-SBW4Q4KX.js"),
   "/sales/analytics": () => import("./sales-analytics-ESCAX5NR.js"),
   "/sales/quote/new": () => import("./sales-quote-new-ODI237IK.js"),
-  "/sales/quote": () => import("./sales-quote-list-M5EHTDGY.js"),
+  "/sales/quote": () => import("./sales-quote-list-4YS2KDCV.js"),
   "/masters/customers": () => import("./masters-customers-E4QGFZXE.js"),
   "/masters/carriers": () => import("./masters-carriers-NGSX2ADW.js"),
   "/masters/services": () => import("./masters-services-EU2Q5CWP.js"),
@@ -4918,12 +4924,12 @@ var VIEWS = {
   // E-14 batch-02
   "/manager/sales": () => import("./sales-WMOGGFZG.js"),
   "/manager/finance/commissions": () => import("./commissions-AIMRQBT4.js"),
-  "/manager/commission-rules": () => import("./commission-rules-WKGTW4HM.js"),
+  "/manager/commission-rules": () => import("./commission-rules-562YSF6U.js"),
   "/manager/exceptions": () => import("./exceptions-57GTL7YN.js"),
   // E-15
   "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
-  "/manager/users": () => import("./users-BFGUP33O.js"),
+  "/manager/users": () => import("./users-4GPN5FGL.js"),
   // E-15 F-15-36
   "/manager/fx-rates": () => import("./fx-rates-NJZOGB3Y.js"),
   "/manager/settings": () => import("./settings-6PVD7RFG.js"),
@@ -4936,7 +4942,7 @@ var VIEWS = {
   // E-26 F-26-04
   "/masters/ocean-carriers": () => import("./ocean-carriers-4HZGIT5Q.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-IQHAOMSK.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-RYTZJBSW.js"),
   // E-16 F-16-04
   "/masters/uld-types": () => import("./uld-types-RUNAQRZ4.js"),
   "/manager/manifest": () => import("./manifest-DPQE7HAN.js"),
@@ -4956,7 +4962,7 @@ var VIEWS = {
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-URHU44XT.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-YGF4ERK5.js"),
+  "/admin/users": () => import("./users-view-6K7VVG3D.js"),
   // E-24 F-24-06
   "/admin/users/audit-log": () => import("./user-audit-log-view-2BVILWHD.js")
 };
@@ -5739,6 +5745,19 @@ function composeFlows(wasm3) {
     },
     checkAlreadyConverted: async (_repo, quoteId) => (await wasm3.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null
   });
+  bindQuoteVoidDelete({
+    chooseQuoteAffordance: (quote) => wasm3.flows_quote_affordance({ quote: quote || {} }).affordance,
+    // Two steps on purpose: Rust decides what the caller may do, the view asks, Rust acts.
+    runQuoteAffordance: async ({ quote, canWrite, confirm }) => {
+      const plan = wasm3.flows_quote_delete_plan({ quote: quote || {}, can_write: Boolean(canWrite) });
+      if (!plan.confirmable) return { mutated: false, reason: plan.reason };
+      const ok = await confirm(plan.affordance);
+      if (!ok) return { mutated: false, reason: REASON_CANCELLED };
+      const applied = await wasm3.flows_quote_delete_apply({ quote: quote || {}, affordance: plan.affordance });
+      if (!applied.ok) throw new Error(applied.error);
+      return { mutated: true, affordance: plan.affordance };
+    }
+  });
   composeFlowsAdmin(wasm3);
 }
 
@@ -5878,8 +5897,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=3103c614", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=3103c614", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=43e446a3", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=43e446a3", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

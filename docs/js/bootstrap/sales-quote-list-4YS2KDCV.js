@@ -1,4 +1,9 @@
 import {
+  CANCELLED_STATE,
+  chooseQuoteAffordance,
+  runQuoteAffordance
+} from "./chunk-RNW6UNLW.js";
+import {
   listWhere
 } from "./chunk-EPS4ANRF.js";
 import {
@@ -23,6 +28,9 @@ import {
 } from "./chunk-NQTRREKJ.js";
 import "./chunk-7DW526V3.js";
 import {
+  showConfirm
+} from "./chunk-HKNQBDY4.js";
+import {
   fmtDate,
   t
 } from "./chunk-5L442NSS.js";
@@ -33,7 +41,8 @@ var STATE_COLORS = {
   Sent: "bg-blue-100 text-blue-700",
   Accepted: "bg-emerald-100 text-emerald-700",
   Rejected: "bg-red-100 text-red-700",
-  Expired: "bg-amber-100 text-amber-700"
+  Expired: "bg-amber-100 text-amber-700",
+  Cancelled: "bg-slate-200 text-slate-500"
 };
 var KIND_QUOTATIONS = "quotations";
 function validUntilLabel(ms) {
@@ -53,7 +62,51 @@ function stateBadgeRenderer(params) {
   span.textContent = t("quote.status." + ds);
   return span;
 }
-function makeQuoteActionsRenderer(repo, onUpdated) {
+function idCellRenderer(params) {
+  const id = params.value;
+  if (!can("quote.edit")) {
+    const span = document.createElement("span");
+    span.textContent = id;
+    return span;
+  }
+  const a = document.createElement("a");
+  a.href = `#/sales/quote/${encodeURIComponent(id)}/edit`;
+  a.className = "text-blue-600 hover:underline";
+  a.textContent = id;
+  a.addEventListener("click", (e) => e.stopPropagation());
+  return a;
+}
+function appendRemovalButton(wrap, q, onRemoved, onUpdated) {
+  const affordance = chooseQuoteAffordance(q);
+  if (affordance === "none") return wrap;
+  const btn = document.createElement("button");
+  btn.className = affordance === "delete" ? "text-xs px-2 py-0.5 rounded font-medium text-red-700 hover:bg-red-50" : "text-xs px-2 py-0.5 rounded font-medium text-amber-700 hover:bg-amber-50";
+  btn.textContent = t(affordance === "delete" ? "common.action.delete" : "quote_list.action.withdraw");
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    btn.disabled = true;
+    const result = await runQuoteAffordance({
+      quote: q,
+      canWrite: can("quote.delete") || can("quote.withdraw"),
+      confirm: (aff) => showConfirm({
+        destructive: true,
+        title: t(aff === "delete" ? "quote_list.delete_confirm.title" : "quote_list.withdraw_confirm.title"),
+        body: aff === "withdraw" ? t("quote_list.withdraw_confirm.body") : void 0,
+        confirmLabel: t(aff === "delete" ? "common.action.delete" : "quote_list.action.withdraw"),
+        cancelLabel: t("common.action.cancel")
+      })
+    });
+    if (!result.mutated) {
+      btn.disabled = false;
+      return;
+    }
+    if (result.affordance === "delete") onRemoved(q.id);
+    else onUpdated({ ...q, state: CANCELLED_STATE });
+  });
+  wrap.appendChild(btn);
+  return wrap;
+}
+function makeQuoteActionsRenderer(repo, onUpdated, onRemoved) {
   return function quoteActionsRenderer(params) {
     const q = params.data;
     if (!q) return document.createTextNode("\u2014");
@@ -77,14 +130,14 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
           navigate("/manager/approvals");
         });
         wrap.appendChild(btn);
-        return wrap;
+        return appendRemovalButton(wrap, q, onRemoved, onUpdated);
       }
       const span = document.createElement("span");
       span.className = "text-xs text-slate-400";
       span.title = t("quote_list.pending_title");
       span.textContent = t("quote_list.pending_chip");
       wrap.appendChild(span);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
     if (ds === "Draft") {
       const btn = document.createElement("button");
@@ -97,7 +150,7 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         onUpdated(updated);
       });
       wrap.appendChild(btn);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
     if (ds === "Sent") {
       const btn = document.createElement("button");
@@ -110,7 +163,7 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         onUpdated(updated);
       });
       wrap.appendChild(btn);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
     if (ds === "Accepted") {
       const btn = document.createElement("button");
@@ -136,10 +189,10 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         }
       });
       wrap.appendChild(btn);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
     wrap.textContent = "\u2014";
-    return wrap;
+    return appendRemovalButton(wrap, q, onRemoved, onUpdated);
   };
 }
 async function loadQuotes(repo, salesId, seesAllQuotes) {
@@ -189,15 +242,22 @@ async function render(root) {
     items = items.map((q) => q.id === updated.id ? { ...q, ...updated } : q);
     api?.setGridOption("rowData", items);
   }
+  function onQuoteRemoved(id) {
+    items = items.filter((q) => q.id !== id);
+    api?.setGridOption("rowData", items);
+    const hdr = root.querySelector("#grid-header");
+    if (hdr) hdr.innerHTML = renderToolbar(items.length);
+    wireToolbar();
+  }
   function buildColumnDefs() {
     return [
-      { headerName: t("quote_list.col.id"), field: "id", width: 140, cellClass: "font-mono text-xs" },
+      { headerName: t("quote_list.col.id"), field: "id", width: 140, cellClass: "font-mono text-xs", cellRenderer: idCellRenderer },
       { headerName: t("quote_list.col.customer"), field: "customer", flex: 2, minWidth: 150, valueGetter: (p) => p.data.customer || "\u2014" },
       { headerName: t("quote_list.col.route"), field: "route", width: 140, cellClass: "font-mono text-xs", valueGetter: (p) => `${p.data.pol || "\u2014"} \u2192 ${p.data.pod || "\u2014"}` },
       { headerName: t("quote_list.col.container"), field: "container_type", width: 110, valueGetter: (p) => p.data.container_type || "\u2014" },
       { headerName: t("quote_list.col.state"), field: "state", width: 110, cellRenderer: stateBadgeRenderer },
       { headerName: t("quote_list.col.valid_until"), field: "valid_until_ms", width: 120, cellClass: "font-mono text-xs", valueGetter: (p) => validUntilLabel(p.data.valid_until_ms) },
-      { headerName: t("quote_list.col.actions"), field: "actions", width: 140, sortable: false, filter: false, cellRenderer: makeQuoteActionsRenderer(repo, onQuoteUpdated) }
+      { headerName: t("quote_list.col.actions"), field: "actions", width: 190, sortable: false, filter: false, cellRenderer: makeQuoteActionsRenderer(repo, onQuoteUpdated, onQuoteRemoved) }
     ];
   }
   function wireToolbar() {

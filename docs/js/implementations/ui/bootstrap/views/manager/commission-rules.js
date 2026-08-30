@@ -1,23 +1,28 @@
 import { bulkPut } from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
+import { showConfirm } from '../../helpers/show-confirm.js';
+import { openAddModal } from './commission-rules-modal.js';
 
 const KIND_COMMISSION_RULES = 'commission_rules';
 const KIND_USERS            = 'user'; // F-39-01: canonical user-master kind (MASTER_REGISTRY)
-const DEFAULT_SALES_PCT     = 70; // fallback default shown in placeholder
+const KIND_COMMISSION_ENTRY = 'commission_entry';
 
-let _users   = [];
-const _rules = new Map();
-let _gridApi = null;
+let _users          = [];
+const _rules        = new Map();
+let _entrySalesIds  = []; // created_by of every commission_entry — commission_rule_block_reason's input
+let _gridApi        = null;
 
 function getRepo() { return window.__vdg_repo; }
+function wasm() { return window.__vdg_wasm; }
 
 async function loadData() {
   const repo = getRepo();
   if (!repo) return;
-  const [users, ruleEntities] = await Promise.all([
+  const [users, ruleEntities, entries] = await Promise.all([
     repo.list(KIND_USERS, null).catch(() => []),
     repo.list(KIND_COMMISSION_RULES, null).catch(() => []),
+    repo.list(KIND_COMMISSION_ENTRY, null).catch(() => []),
   ]);
   _users = users;
   _rules.clear();
@@ -25,9 +30,38 @@ async function loadData() {
     const key = r.sales_id || r.salesId || r.id;
     if (key) _rules.set(key, r);
   }
+  _entrySalesIds = entries.map((e) => e.created_by).filter(Boolean);
 }
 
-function buildGridCols() {
+// One row per user PLUS one row per rule with no matching user — a rule is not required to
+// stay tied to the fixed user list (F-57-01: a departed rep can still carry an override).
+function buildRowData() {
+  const seen = new Set();
+  const rows = _users.map((u) => {
+    const key      = u.email || u.id;
+    const existing = _rules.get(key);
+    seen.add(key);
+    return {
+      id:          key,
+      email:       u.email || key,
+      name:        u.display_name || u.name || '',
+      role:        u.role || (Array.isArray(u.roles) ? u.roles[0] : u.roles) || '',
+      salesPct:    existing?.sales_pct ?? null,
+      hasOverride: existing != null,
+      dirty:       false,
+    };
+  });
+  for (const [key, r] of _rules) {
+    if (seen.has(key)) continue;
+    rows.push({
+      id: key, email: key, name: '', role: '',
+      salesPct: r.sales_pct ?? null, hasOverride: true, dirty: false,
+    });
+  }
+  return rows;
+}
+
+function buildGridCols(onDelete) {
   return [
     { field: 'email',  headerName: t('commission_rules.col.email'), flex: 1, minWidth: 200 },
     { field: 'name',   headerName: t('commission_rules.col.name'), flex: 1, minWidth: 140 },
@@ -35,7 +69,7 @@ function buildGridCols() {
     {
       headerName: t('commission_rules.col.sales_pct'),
       field: 'salesPct',
-      width: 150,
+      width: 170,
       cellRenderer: (p) => {
         const wrap  = document.createElement('div');
         wrap.className = 'flex items-center gap-2 h-full';
@@ -46,19 +80,33 @@ function buildGridCols() {
         input.max   = '100';
         input.step  = '1';
         input.value = p.value ?? '';
-        input.placeholder = t('commission_rules.default_suffix', { n: DEFAULT_SALES_PCT });
         input.className = 'w-24 border border-slate-300 rounded px-2 py-1 text-xs text-right focus:ring focus:ring-blue-200 outline-none';
 
         const lbsLabel = document.createElement('span');
         lbsLabel.className = 'text-xs text-slate-400 whitespace-nowrap';
-        lbsLabel.textContent = p.value != null
-          ? t('commission_rules.lbs_share', { n: 100 - Number(p.value) })
-          : t('commission_rules.lbs_share', { n: 100 - DEFAULT_SALES_PCT });
+
+        // The default/company-share label always comes from the same Rust rule the save
+        // path validates against — never a JS `100 - x`.
+        const paintSplit = (pct) => {
+          try {
+            const split = wasm().commission_rule_split(pct);
+            input.placeholder = t('commission_rules.default_suffix', { n: split.sales_pct });
+            lbsLabel.textContent = t('commission_rules.lbs_share', { n: split.company_pct });
+            input.classList.remove('border-red-400');
+            return true;
+          } catch {
+            lbsLabel.textContent = t('commission_rules.err_invalid_pct');
+            input.classList.add('border-red-400');
+            return false;
+          }
+        };
+        paintSplit(p.value != null ? Number(p.value) : null);
 
         input.addEventListener('input', (e) => {
-          const val = Math.min(Math.max(Number(e.target.value), 0), 100);
-          lbsLabel.textContent = t('commission_rules.lbs_share', { n: 100 - val });
-          p.data.salesPct = e.target.value === '' ? null : val;
+          const raw = e.target.value;
+          const pct = raw === '' ? null : Number(raw);
+          if (!paintSplit(pct)) return; // invalid — do not mark dirty, Save stays disabled for this edit
+          p.data.salesPct = pct;
           p.data.dirty    = true;
           const btn = document.getElementById('btn-save-rules');
           if (btn) btn.disabled = false;
@@ -69,10 +117,23 @@ function buildGridCols() {
         return wrap;
       },
     },
+    {
+      headerName: t('common.col.actions'),
+      field: 'actions',
+      width: 100,
+      cellRenderer: (p) => {
+        if (!p.data.hasOverride) return '';
+        const btn = document.createElement('button');
+        btn.className = 'text-xs text-red-500 hover:underline';
+        btn.textContent = t('common.action.delete');
+        btn.addEventListener('click', () => onDelete(p.data));
+        return btn;
+      },
+    },
   ];
 }
 
-function renderGrid(container) {
+function renderGrid(container, onDelete) {
   if (_gridApi) {
     try { _gridApi.destroy(); } catch { /* ignore */ }
     _gridApi = null;
@@ -84,22 +145,9 @@ function renderGrid(container) {
     return;
   }
 
-  const rowData = _users.map((u) => {
-    const key      = u.email || u.id;
-    const existing = _rules.get(key);
-    return {
-      id:       key,
-      email:    u.email || key,
-      name:     u.display_name || u.name || '',
-      role:     u.role || (Array.isArray(u.roles) ? u.roles[0] : u.roles) || '',
-      salesPct: existing?.sales_pct ?? null,
-      dirty:    false,
-    };
-  });
-
   const gridOptions = {
-    columnDefs:            buildGridCols(),
-    rowData,
+    columnDefs:            buildGridCols(onDelete),
+    rowData:               buildRowData(),
     defaultColDef:         { sortable: true, resizable: true },
     rowHeight:             48,
     suppressMovableColumns: true,
@@ -111,6 +159,7 @@ function renderGrid(container) {
 
 export async function render(root) {
   await loadData();
+  const defaultSplit = wasm().commission_rule_split(null);
 
   root.innerHTML = `
     <div class="p-6 space-y-5 max-w-[900px] mx-auto">
@@ -121,10 +170,16 @@ export async function render(root) {
             ${t('commission_rules.subtitle')}
           </p>
         </div>
-        <button id="btn-save-rules" disabled
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 text-sm font-medium transition-colors">
-          ${t('commission_rules.save')}
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="btn-add-rule"
+            class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm font-medium transition-colors">
+            + ${t('commission_rules.add_button')}
+          </button>
+          <button id="btn-save-rules" disabled
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 text-sm font-medium transition-colors">
+            ${t('commission_rules.save')}
+          </button>
+        </div>
       </div>
 
       <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
@@ -132,7 +187,7 @@ export async function render(root) {
         <div>${t('commission_rules.waterfall.line1')}</div>
         <div>${t('commission_rules.waterfall.line2')}</div>
         <div>${t('commission_rules.waterfall.line3')}</div>
-        <div class="pt-1 text-blue-600">${t('commission_rules.waterfall.default_note', { sales: DEFAULT_SALES_PCT, lbs: 100 - DEFAULT_SALES_PCT })}</div>
+        <div class="pt-1 text-blue-600">${t('commission_rules.waterfall.default_note', { sales: defaultSplit.sales_pct, lbs: defaultSplit.company_pct })}</div>
       </div>
 
       <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -143,7 +198,42 @@ export async function render(root) {
     </div>
   `;
 
-  renderGrid(root.querySelector('#rules-grid'));
+  async function refreshGrid() {
+    renderGrid(root.querySelector('#rules-grid'), onDeleteRule);
+  }
+
+  async function onDeleteRule(row) {
+    const ok = await showConfirm({
+      title: t('commission_rules.delete_confirm', { email: row.email }),
+      confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
+    });
+    if (!ok) return;
+
+    const blockReason = wasm().commission_rule_block_reason(row.id, JSON.stringify(_entrySalesIds));
+    if (blockReason) {
+      window.dispatchEvent(new CustomEvent('vdg:toast', {
+        detail: { type: 'error', message: t('commission_rules.delete_blocked') },
+      }));
+      return;
+    }
+
+    await getRepo().delete(KIND_COMMISSION_RULES, row.id);
+    window.dispatchEvent(new CustomEvent('vdg:toast', {
+      detail: { type: 'success', message: t('commission_rules.deleted') },
+    }));
+    await loadData();
+    await refreshGrid();
+  }
+
+  await refreshGrid();
+
+  root.querySelector('#btn-add-rule').addEventListener('click', () => {
+    openAddModal(root, async (entity) => {
+      await getRepo().put(KIND_COMMISSION_RULES, entity.id, entity);
+      await loadData();
+      await refreshGrid();
+    });
+  });
 
   root.querySelector('#btn-save-rules').addEventListener('click', async () => {
     const repo = getRepo();
@@ -185,6 +275,7 @@ export async function render(root) {
       if (status) status.textContent = t('commission_rules.saved_at', { time: new Date().toLocaleTimeString('vi-VN') });
       dirtyRows.forEach((r) => { r.dirty = false; });
       await loadData();
+      await refreshGrid();
     } catch (e) {
       window.dispatchEvent(new CustomEvent('vdg:toast', {
         detail: { type: 'error', message: t('commission_rules.save_error', { msg: e.message }) },

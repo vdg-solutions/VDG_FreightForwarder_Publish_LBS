@@ -5,6 +5,9 @@ import {
   editProfile
 } from "./chunk-RIGQBLAR.js";
 import {
+  navigate
+} from "./chunk-H2H4WJDI.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import "./chunk-7DW526V3.js";
@@ -146,6 +149,10 @@ async function render(root) {
       <div class="flex items-center justify-between">
         <div class="text-lg font-semibold text-slate-900">H\u1ED3 s\u01A1 Sales</div>
       </div>
+      <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 flex items-center justify-between gap-3">
+        <span>${t("manager.users.profile_only_notice")}</span>
+        <button id="btn-goto-user-mgmt" class="shrink-0 text-blue-600 hover:underline">${t("manager.users.manage_link")}</button>
+      </div>
       <div class="flex gap-3 flex-wrap">
         <input id="usr-search" placeholder="T\xECm email / t\xEAn\u2026"
                class="border rounded-lg px-3 py-1.5 text-xs w-56 text-slate-700" />
@@ -154,6 +161,7 @@ async function render(root) {
       <div id="usr-grid"></div>
     </div>`;
   root.querySelector("#usr-search").addEventListener("input", () => _applyAndMount(root));
+  root.querySelector("#btn-goto-user-mgmt").addEventListener("click", () => navigate("/admin/users"));
   await _reload(root);
 }
 export {

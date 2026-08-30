@@ -9,11 +9,17 @@
 // fields. There is no live navigation entry to this route (removed from sidebar.js's menu); it is
 // reachable by direct URL for a manager who still needs to fix a sales_code or commission
 // override.
+//
+// Both /admin/users and this route are Manager-only (access_policy.rs), so the manager landing
+// here already has full reach to /admin/users -- there is no persona that can create/deactivate a
+// user and yet gets stuck on this screen. The notice banner just says so instead of leaving what
+// reads like a dead-end list with no add/delete of its own.
 
 import { editProfile } from '../../../core_abstractions/ports/flows/user-provisioning.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { openEditModal } from './users-modals.js';
+import { navigate } from '../../router.js';
 
 const KIND_USER = 'user';
 const TOAST_MS  = 4_000;
@@ -110,6 +116,10 @@ export async function render(root) {
       <div class="flex items-center justify-between">
         <div class="text-lg font-semibold text-slate-900">Hồ sơ Sales</div>
       </div>
+      <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 flex items-center justify-between gap-3">
+        <span>${t('manager.users.profile_only_notice')}</span>
+        <button id="btn-goto-user-mgmt" class="shrink-0 text-blue-600 hover:underline">${t('manager.users.manage_link')}</button>
+      </div>
       <div class="flex gap-3 flex-wrap">
         <input id="usr-search" placeholder="Tìm email / tên…"
                class="border rounded-lg px-3 py-1.5 text-xs w-56 text-slate-700" />
@@ -119,6 +129,7 @@ export async function render(root) {
     </div>`;
 
   root.querySelector('#usr-search').addEventListener('input', () => _applyAndMount(root));
+  root.querySelector('#btn-goto-user-mgmt').addEventListener('click', () => navigate('/admin/users'));
 
   await _reload(root);
 }

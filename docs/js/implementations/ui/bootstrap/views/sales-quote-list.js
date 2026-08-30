@@ -4,17 +4,20 @@ import { currentSalesRepId } from '../../../ui/core_abstractions/ports/auth/sess
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
+import { chooseQuoteAffordance, runQuoteAffordance, CANCELLED_STATE } from '../../core_abstractions/ports/flows/quote-void-delete.js';
+import { showConfirm } from '../helpers/show-confirm.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { navigate } from '../router.js';
 import { t, fmtDate } from '../../../kernel/core_abstractions/i18n/index.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 
 const STATE_COLORS = {
-  Draft:    'bg-slate-100 text-slate-700',
-  Sent:     'bg-blue-100 text-blue-700',
-  Accepted: 'bg-emerald-100 text-emerald-700',
-  Rejected: 'bg-red-100 text-red-700',
-  Expired:  'bg-amber-100 text-amber-700',
+  Draft:     'bg-slate-100 text-slate-700',
+  Sent:      'bg-blue-100 text-blue-700',
+  Accepted:  'bg-emerald-100 text-emerald-700',
+  Rejected:  'bg-red-100 text-red-700',
+  Expired:   'bg-amber-100 text-amber-700',
+  Cancelled: 'bg-slate-200 text-slate-500',
 };
 
 const KIND_QUOTATIONS = 'quotations';
@@ -45,7 +48,57 @@ function stateBadgeRenderer(params) {
   return span;
 }
 
-function makeQuoteActionsRenderer(repo, onUpdated) {
+// The id door onto the existing (dead) edit route (bootstrap/app.js QUOTE_EDIT_RE) —
+// gated on quote.edit exactly like sales-me.js's own ref link onto /sales/edit/:ref.
+function idCellRenderer(params) {
+  const id = params.value;
+  if (!can('quote.edit')) {
+    const span = document.createElement('span');
+    span.textContent = id;
+    return span;
+  }
+  const a = document.createElement('a');
+  a.href = `#/sales/quote/${encodeURIComponent(id)}/edit`;
+  a.className = 'text-blue-600 hover:underline';
+  a.textContent = id;
+  a.addEventListener('click', (e) => e.stopPropagation());
+  return a;
+}
+
+// Delete (Draft) / withdraw (Sent, Accepted) — quotation_fsm's own Withdraw event draws the
+// line, not this button; a state the FSM has already resolved (Rejected/Expired/Cancelled)
+// answers 'none' and nothing is appended, same doctrine as shipments/cell-renderers.js.
+function appendRemovalButton(wrap, q, onRemoved, onUpdated) {
+  const affordance = chooseQuoteAffordance(q);
+  if (affordance === 'none') return wrap;
+  const btn = document.createElement('button');
+  btn.className = affordance === 'delete'
+    ? 'text-xs px-2 py-0.5 rounded font-medium text-red-700 hover:bg-red-50'
+    : 'text-xs px-2 py-0.5 rounded font-medium text-amber-700 hover:bg-amber-50';
+  btn.textContent = t(affordance === 'delete' ? 'common.action.delete' : 'quote_list.action.withdraw');
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    btn.disabled = true;
+    const result = await runQuoteAffordance({
+      quote: q,
+      canWrite: can('quote.delete') || can('quote.withdraw'),
+      confirm: (aff) => showConfirm({
+        destructive: true,
+        title: t(aff === 'delete' ? 'quote_list.delete_confirm.title' : 'quote_list.withdraw_confirm.title'),
+        body: aff === 'withdraw' ? t('quote_list.withdraw_confirm.body') : undefined,
+        confirmLabel: t(aff === 'delete' ? 'common.action.delete' : 'quote_list.action.withdraw'),
+        cancelLabel: t('common.action.cancel'),
+      }),
+    });
+    if (!result.mutated) { btn.disabled = false; return; }
+    if (result.affordance === 'delete') onRemoved(q.id);
+    else onUpdated({ ...q, state: CANCELLED_STATE });
+  });
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+function makeQuoteActionsRenderer(repo, onUpdated, onRemoved) {
   return function quoteActionsRenderer(params) {
     const q = params.data;
     if (!q) return document.createTextNode('—');
@@ -74,14 +127,14 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         btn.textContent = t('quote_list.action.review_override');
         btn.addEventListener('click', (e) => { e.stopPropagation(); navigate('/manager/approvals'); });
         wrap.appendChild(btn);
-        return wrap;
+        return appendRemovalButton(wrap, q, onRemoved, onUpdated);
       }
       const span = document.createElement('span');
       span.className = 'text-xs text-slate-400';
       span.title = t('quote_list.pending_title');
       span.textContent = t('quote_list.pending_chip');
       wrap.appendChild(span);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
 
     if (ds === 'Draft') {
@@ -95,7 +148,7 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         onUpdated(updated);
       });
       wrap.appendChild(btn);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
 
     if (ds === 'Sent') {
@@ -109,7 +162,7 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         onUpdated(updated);
       });
       wrap.appendChild(btn);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
 
     if (ds === 'Accepted') {
@@ -136,11 +189,11 @@ function makeQuoteActionsRenderer(repo, onUpdated) {
         }
       });
       wrap.appendChild(btn);
-      return wrap;
+      return appendRemovalButton(wrap, q, onRemoved, onUpdated);
     }
 
     wrap.textContent = '—';
-    return wrap;
+    return appendRemovalButton(wrap, q, onRemoved, onUpdated);
   };
 }
 
@@ -210,15 +263,23 @@ export async function render(root) {
     api?.setGridOption('rowData', items);
   }
 
+  function onQuoteRemoved(id) {
+    items = items.filter((q) => q.id !== id);
+    api?.setGridOption('rowData', items);
+    const hdr = root.querySelector('#grid-header');
+    if (hdr) hdr.innerHTML = renderToolbar(items.length);
+    wireToolbar();
+  }
+
   function buildColumnDefs() {
     return [
-      { headerName: t('quote_list.col.id'),          field: 'id',             width: 140, cellClass: 'font-mono text-xs' },
+      { headerName: t('quote_list.col.id'),          field: 'id',             width: 140, cellClass: 'font-mono text-xs', cellRenderer: idCellRenderer },
       { headerName: t('quote_list.col.customer'),    field: 'customer',       flex: 2, minWidth: 150, valueGetter: (p) => p.data.customer || '—' },
       { headerName: t('quote_list.col.route'),       field: 'route',          width: 140, cellClass: 'font-mono text-xs', valueGetter: (p) => `${p.data.pol || '—'} → ${p.data.pod || '—'}` },
       { headerName: t('quote_list.col.container'),   field: 'container_type', width: 110, valueGetter: (p) => p.data.container_type || '—' },
       { headerName: t('quote_list.col.state'),       field: 'state',          width: 110, cellRenderer: stateBadgeRenderer },
       { headerName: t('quote_list.col.valid_until'), field: 'valid_until_ms', width: 120, cellClass: 'font-mono text-xs', valueGetter: (p) => validUntilLabel(p.data.valid_until_ms) },
-      { headerName: t('quote_list.col.actions'),     field: 'actions',        width: 140, sortable: false, filter: false, cellRenderer: makeQuoteActionsRenderer(repo, onQuoteUpdated) },
+      { headerName: t('quote_list.col.actions'),     field: 'actions',        width: 190, sortable: false, filter: false, cellRenderer: makeQuoteActionsRenderer(repo, onQuoteUpdated, onQuoteRemoved) },
     ];
   }
 

@@ -280,6 +280,20 @@ export function commission_personal_tax(gross_vnd: number, tncn_pct_0_100: numbe
 export function commission_resolve_sales_share_pct(override_pct?: number | null, user_config_pct?: number | null): number;
 
 /**
+ * A rule is removable until a commission line has already been booked under it —
+ * `entry_sales_ids_json` is a JSON array of the `created_by` of every loaded `commission_entry`
+ * row. Returns the block reason, or null/undefined when the rule is safe to delete.
+ */
+export function commission_rule_block_reason(sales_id: string, entry_sales_ids_json: string): string | undefined;
+
+/**
+ * Validates `sales_pct_0_100` (0..100, `None`/undefined = default) and returns the verdict
+ * `{ sales_pct, company_pct }` — company_pct is ALWAYS `100 - sales_pct` via the same `Split`
+ * invariant the payout waterfall trusts. JS never computes `100 - x` itself.
+ */
+export function commission_rule_split(sales_pct_0_100?: number | null): any;
+
+/**
  * Single-source profit waterfall for the UI: margin → TNDN(20%) → net → sales/LBS split.
  * `sales_pct_0_100` is the manager-set share (0–100). Returns whole-VND figures.
  * `clamp_negatives`: true for payout (loss → zero), false for the sales-form
@@ -402,7 +416,13 @@ export function flows_post_reversal(req: any): Promise<any>;
 
 export function flows_post_shipment(req: any): Promise<any>;
 
+export function flows_quote_affordance(req: any): any;
+
 export function flows_quote_converted(req: any): Promise<any>;
+
+export function flows_quote_delete_apply(req: any): Promise<any>;
+
+export function flows_quote_delete_plan(req: any): any;
 
 export function flows_quote_totals(req: any): any;
 
@@ -888,6 +908,12 @@ export function validate_airport_icao(code: string): boolean;
 
 export function validate_awb_no(s: string): boolean;
 
+/**
+ * `valid_from`/`valid_to` are ISO 'YYYY-MM-DD'. Same invariant `PricedRecord::new` and
+ * `FxRateEntry::new` already carry: a validity window can't end before it starts.
+ */
+export function validate_date_range(valid_from: string, valid_to: string): boolean;
+
 export function validate_flight_no(no: string): boolean;
 
 export function validate_iata_dgr_class(class_str: string): boolean;
@@ -956,6 +982,8 @@ export interface InitOutput {
     readonly commission_net_after_tax: (a: number, b: number, c: number) => number;
     readonly commission_personal_tax: (a: number, b: number) => number;
     readonly commission_resolve_sales_share_pct: (a: number, b: number, c: number, d: number) => number;
+    readonly commission_rule_block_reason: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly commission_rule_split: (a: number, b: number, c: number) => void;
     readonly commission_waterfall: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly compute_dashboard_exceptions: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
@@ -1013,7 +1041,10 @@ export interface InitOutput {
     readonly flows_post_commission: (a: number) => number;
     readonly flows_post_reversal: (a: number) => number;
     readonly flows_post_shipment: (a: number) => number;
+    readonly flows_quote_affordance: (a: number, b: number) => void;
     readonly flows_quote_converted: (a: number) => number;
+    readonly flows_quote_delete_apply: (a: number) => number;
+    readonly flows_quote_delete_plan: (a: number, b: number) => void;
     readonly flows_quote_totals: (a: number, b: number) => void;
     readonly flows_register_entity: (a: number) => number;
     readonly flows_rehydrate_fsm: (a: number) => number;
@@ -1177,6 +1208,7 @@ export interface InitOutput {
     readonly validate_airport_iata: (a: number, b: number) => number;
     readonly validate_airport_icao: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
+    readonly validate_date_range: (a: number, b: number, c: number, d: number) => number;
     readonly validate_flight_no: (a: number, b: number) => number;
     readonly validate_iata_dgr_class: (a: number, b: number) => number;
     readonly validate_scac: (a: number, b: number) => number;
@@ -1260,9 +1292,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13834: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13847: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9893: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13895: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13908: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9954: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

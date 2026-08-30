@@ -1,6 +1,12 @@
 // Admin Users view — F-24-04. Manager-only /admin/users: table + filter/search + Add/Edit/
-// Deactivate. F-46-03: reads/writes go straight to GET/POST/PATCH /api/users — no wasm-bound repo
-// to wait on, so the F-24-25 "cold-boot deep link" retry this view used to need is gone with it.
+// Deactivate/Reactivate. F-46-03: reads/writes go straight to GET/POST/PATCH /api/users — no
+// wasm-bound repo to wait on, so the F-24-25 "cold-boot deep link" retry this view used to need is
+// gone with it.
+//
+// E-37: a deactivated account keeps its grant row forever (soft-deactivate, never a hard delete —
+// a user who ever touched a record must stay resolvable), so this screen fetches BOTH active and
+// deactivated rows (`includeInactive: true`) and lets the status filter narrow the view — the
+// server refuses that fetch to anyone but a Manager/owner, same gate as the writes below.
 
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
@@ -47,6 +53,7 @@ function _applyAndRender(root) {
   bindRowActions(wrap, rows, {
     onEdit:       (user) => openEditUserModal(user, { onSaved: () => _reload(root) }),
     onDeactivate: (user) => _onDeactivate(root, user),
+    onReactivate: (user) => openEditUserModal(user, { reactivate: true, onSaved: () => _reload(root) }),
   });
   const countEl = root.querySelector('#usr-count');
   if (countEl) countEl.textContent = `${rows.length} / ${_allUsers.length}`;
@@ -55,7 +62,7 @@ function _applyAndRender(root) {
 async function _reload(root) {
   renderUsersSkeleton(root.querySelector('#usr-table-wrap'));
   try {
-    const { users } = await listUsers();
+    const { users } = await listUsers({ includeInactive: true });
     _allUsers = sortUsersByEmail(users || []);
   } catch (err) {
     toast('error', err.message);
@@ -64,8 +71,9 @@ async function _reload(root) {
   _applyAndRender(root);
 }
 
-/// AC-04/AC-05: custom branded dialog replaces window.confirm(); confirm -> PATCH active:false —
-/// no reactivate flow in this feature's scope (matches the old cascade's own boundary).
+/// AC-04/AC-05: custom branded dialog replaces window.confirm(); confirm -> PATCH active:false.
+/// Reversible from this same screen: the Reactivate action on a deactivated row (bindRowActions
+/// below) opens the edit modal in reactivate mode and PATCHes roles back on.
 async function _onDeactivate(root, user) {
   const ok = await showConfirm({
     title:        t('admin.users.confirm.deactivate_title').replace('{email}', user.email),
@@ -92,6 +100,10 @@ function bindFilterBar(root) {
   });
   root.querySelector('#usr-role')?.addEventListener('change', (e) => {
     _filter.role = e.target.value;
+    _applyAndRender(root);
+  });
+  root.querySelector('#usr-status')?.addEventListener('change', (e) => {
+    _filter.activeFilter = e.target.value;
     _applyAndRender(root);
   });
 }

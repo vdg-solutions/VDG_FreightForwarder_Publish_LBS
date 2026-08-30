@@ -28,6 +28,8 @@ import {
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/admin/users-list.js
 var SKELETON_ROWS = 4;
+var STATUS_FILTER_ACTIVE = "active";
+var STATUS_FILTER_INACTIVE = "inactive";
 function roleLabel(role) {
   return t(ROLE_LABEL_KEYS[role] || role);
 }
@@ -35,6 +37,9 @@ function roleCell(user) {
   const [primary, ...rest] = (Array.isArray(user.roles) ? user.roles : []).filter(Boolean);
   if (!primary) return "\u2014";
   return roleLabel(primary) + rest.map((r) => `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">${roleLabel(r)}</span>`).join("");
+}
+function statusCell(user) {
+  return user.active ? `<span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px]">${t("admin.users.status.active")}</span>` : `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px]">${t("admin.users.status.inactive")}</span>`;
 }
 function filterBarHtml(filter) {
   const roleOptions = ROLE_VALUES.map((r) => `<option value="${r}" ${filter.role === r ? "selected" : ""}>${roleLabel(r)}</option>`).join("");
@@ -45,6 +50,11 @@ function filterBarHtml(filter) {
       <select id="usr-role" class="border rounded-lg px-3 py-1.5 text-xs text-slate-700">
         <option value="">${t("admin.users.filter.role_all")}</option>
         ${roleOptions}
+      </select>
+      <select id="usr-status" class="border rounded-lg px-3 py-1.5 text-xs text-slate-700">
+        <option value="" ${filter.activeFilter === "" ? "selected" : ""}>${t("admin.users.filter.active_all")}</option>
+        <option value="${STATUS_FILTER_ACTIVE}" ${filter.activeFilter === STATUS_FILTER_ACTIVE ? "selected" : ""}>${t("admin.users.status.active")}</option>
+        <option value="${STATUS_FILTER_INACTIVE}" ${filter.activeFilter === STATUS_FILTER_INACTIVE ? "selected" : ""}>${t("admin.users.status.inactive")}</option>
       </select>
       <span id="usr-count" class="text-xs text-slate-400 self-center"></span>
     </div>`;
@@ -64,14 +74,19 @@ function renderUsersTable(container, users) {
     return;
   }
   const rows = users.map((u) => `
-    <tr class="border-t border-slate-100 text-xs" data-user-email="${u.email}">
+    <tr class="border-t border-slate-100 text-xs ${u.active ? "" : "opacity-60"}" data-user-email="${u.email}">
       <td class="px-3 py-2">${u.email}</td>
       <td class="px-3 py-2">${u.display_name || ""}</td>
       <td class="px-3 py-2">${roleCell(u)}</td>
+      <td class="px-3 py-2">${statusCell(u)}</td>
       <td class="px-3 py-2">
         <div class="flex gap-1">
-          <button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t("admin.users.action.edit")}</button>
-          <button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t("admin.users.action.deactivate")}</button>
+          ${u.active ? `
+            <button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t("admin.users.action.edit")}</button>
+            <button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t("admin.users.action.deactivate")}</button>
+          ` : `
+            <button data-act="reactivate" class="px-2 py-0.5 text-[11px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">${t("admin.users.action.reactivate")}</button>
+          `}
         </div>
       </td>
     </tr>`).join("");
@@ -82,6 +97,7 @@ function renderUsersTable(container, users) {
           <th class="px-3 py-2 text-left">${t("admin.users.column.email")}</th>
           <th class="px-3 py-2 text-left">${t("admin.users.column.display_name")}</th>
           <th class="px-3 py-2 text-left">${t("admin.users.column.role")}</th>
+          <th class="px-3 py-2 text-left">${t("admin.users.column.active")}</th>
           <th class="px-3 py-2 text-left">${t("admin.users.column.actions")}</th>
         </tr>
       </thead>
@@ -94,6 +110,7 @@ function bindRowActions(container, users, handlers) {
     if (!user) return;
     tr.querySelector('[data-act="edit"]')?.addEventListener("click", () => handlers.onEdit(user));
     tr.querySelector('[data-act="deactivate"]')?.addEventListener("click", () => handlers.onDeactivate(user));
+    tr.querySelector('[data-act="reactivate"]')?.addEventListener("click", () => handlers.onReactivate(user));
   });
 }
 
@@ -158,19 +175,21 @@ function showError2(overlay, message) {
   err.textContent = message;
   err.classList.remove("hidden");
 }
-function openEditUserModal(user, { onSaved } = {}) {
+function openEditUserModal(user, { onSaved, reactivate = false } = {}) {
   const overlay = document.createElement("div");
   overlay.className = "fixed inset-0 z-50 bg-black/40 flex items-center justify-center";
+  const title = reactivate ? t("admin.users.modal.reactivate_title") : t("admin.users.modal.edit_title");
+  const rolesHint = reactivate ? t("admin.users.modal.reactivate_hint") : t("admin.users.roles.hint");
   overlay.innerHTML = `
     <div class="bg-white rounded-xl shadow-xl p-6 w-96 space-y-4">
-      <div class="text-sm font-semibold text-slate-800">${t("admin.users.modal.edit_title")} \u2014 ${user.email}</div>
+      <div class="text-sm font-semibold text-slate-800">${title} \u2014 ${user.email}</div>
       <div class="space-y-3">
         <label class="block text-xs text-slate-600">${t("admin.users.column.display_name")}
           <input id="edit-name" value="${user.display_name || ""}"
                  class="mt-1 w-full border rounded px-3 py-1.5 text-xs" /></label>
         <div class="space-y-1">
           <div class="text-xs font-medium text-slate-700">${t("admin.users.column.role")}</div>
-          <div class="text-[11px] text-slate-400">${t("admin.users.roles.hint")}</div>
+          <div class="text-[11px] text-slate-400">${rolesHint}</div>
           ${roleCheckboxesHtml(user.roles || [], (r) => t(ROLE_LABEL_KEYS[r] || r))}
         </div>
       </div>
@@ -182,9 +201,9 @@ function openEditUserModal(user, { onSaved } = {}) {
     </div>`;
   mountOverlay(overlay);
   overlay.querySelector("#edit-cancel").addEventListener("click", () => overlay.remove());
-  overlay.querySelector("#edit-submit").addEventListener("click", () => _onSubmit2(overlay, user, onSaved));
+  overlay.querySelector("#edit-submit").addEventListener("click", () => _onSubmit2(overlay, user, onSaved, reactivate));
 }
-async function _onSubmit2(overlay, user, onSaved) {
+async function _onSubmit2(overlay, user, onSaved, reactivate) {
   const newName = overlay.querySelector("#edit-name").value.trim();
   const newRoles = rolesFromForm(overlay);
   if (!newName) return showError2(overlay, t("admin.users.error.name_required"));
@@ -197,7 +216,8 @@ async function _onSubmit2(overlay, user, onSaved) {
   try {
     if (Object.keys(body).length) await patchUser(user.email, body);
     overlay.remove();
-    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t("admin.users.toast.updated").replace("{email}", user.email) } }));
+    const toastKey = reactivate ? "admin.users.toast.reactivated" : "admin.users.toast.updated";
+    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t(toastKey).replace("{email}", user.email) } }));
     await onSaved?.();
   } catch (err) {
     showError2(overlay, err.message);
@@ -237,7 +257,8 @@ function _applyAndRender(root) {
   renderUsersTable(wrap, rows);
   bindRowActions(wrap, rows, {
     onEdit: (user) => openEditUserModal(user, { onSaved: () => _reload(root) }),
-    onDeactivate: (user) => _onDeactivate(root, user)
+    onDeactivate: (user) => _onDeactivate(root, user),
+    onReactivate: (user) => openEditUserModal(user, { reactivate: true, onSaved: () => _reload(root) })
   });
   const countEl = root.querySelector("#usr-count");
   if (countEl) countEl.textContent = `${rows.length} / ${_allUsers.length}`;
@@ -245,7 +266,7 @@ function _applyAndRender(root) {
 async function _reload(root) {
   renderUsersSkeleton(root.querySelector("#usr-table-wrap"));
   try {
-    const { users } = await listUsers();
+    const { users } = await listUsers({ includeInactive: true });
     _allUsers = sortUsersByEmail(users || []);
   } catch (err) {
     toast("error", err.message);
@@ -277,6 +298,10 @@ function bindFilterBar(root) {
   });
   root.querySelector("#usr-role")?.addEventListener("change", (e) => {
     _filter.role = e.target.value;
+    _applyAndRender(root);
+  });
+  root.querySelector("#usr-status")?.addEventListener("change", (e) => {
+    _filter.activeFilter = e.target.value;
     _applyAndRender(root);
   });
 }

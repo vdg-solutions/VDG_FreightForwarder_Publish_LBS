@@ -7,6 +7,7 @@ import { t, fmtNumber } from '../../../../kernel/core_abstractions/i18n/index.js
 import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { chooseShipmentAffordance, runShipmentAffordance } from '../../../core_abstractions/ports/flows/shipment-void-delete.js';
+import { navigate } from '../../router.js';
 
 export function statusRenderer(params) {
   const el = document.createElement('status-badge');
@@ -78,6 +79,22 @@ async function handleRowAffordance(row, api, reload) {
   api?.setGridOption('rowData', rows);
 }
 
+// The edit door onto the existing 4-section shipment form — same route sales-me.js's own
+// ref link already uses (/sales/edit/:ref), never a second editor. shipment.edit's role set
+// (CustomerService, SalesRep, SalesManager, Manager) is wider than shipment.void's (Manager
+// only), so this button is independent of the affordance check below.
+function editButton(row) {
+  const btn = document.createElement('button');
+  btn.className = 'text-xs px-2 py-1 rounded-md font-medium text-blue-600 hover:bg-blue-50';
+  btn.textContent = t('common.action.edit');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); // must not also open the detail panel
+    const ref = row.shipment_ref || row.ref;
+    navigate(`/sales/edit/${encodeURIComponent(ref)}`);
+  });
+  return btn;
+}
+
 // F-19-77 AC-01/02/05 — manager-only Void/Delete row action. Decision keys ONLY on the stored
 // row (publish_state/state) — orphans surface as state==='Unknown' in the grid (F-18-11
 // resolver), so the selector routes them to 'delete' without a per-row WASM NOT_FOUND probe.
@@ -85,17 +102,31 @@ async function handleRowAffordance(row, api, reload) {
 // back for it would make this module and shipments.js import each other.
 export function createActionsRenderer(reload) {
   return function actionsRenderer(params) {
-    const affordance = chooseShipmentAffordance(params.data);
-    if (affordance === 'none') return document.createElement('span');
-    const btn = document.createElement('button');
-    btn.className = affordance === 'delete'
-      ? 'text-xs px-2 py-1 rounded-md font-medium text-red-700 hover:bg-red-50'
-      : 'text-xs px-2 py-1 rounded-md font-medium text-amber-700 hover:bg-amber-50';
-    btn.textContent = affordance === 'delete' ? t('common.action.delete') : t('shipments.action.void');
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation(); // AC-01/02: row action must not also open the detail panel
-      handleRowAffordance(params.data, params.api, reload);
-    });
-    return btn;
+    const wrap = document.createElement('div');
+    wrap.className = 'flex items-center gap-2 h-full';
+
+    if (can('shipment.edit')) {
+      wrap.appendChild(editButton(params.data));
+    }
+
+    // shipment.void gates the button itself, not just the column — a wider audience now reaches
+    // this renderer (via shipment.edit) than may void/delete.
+    if (can('shipment.void')) {
+      const affordance = chooseShipmentAffordance(params.data);
+      if (affordance !== 'none') {
+        const btn = document.createElement('button');
+        btn.className = affordance === 'delete'
+          ? 'text-xs px-2 py-1 rounded-md font-medium text-red-700 hover:bg-red-50'
+          : 'text-xs px-2 py-1 rounded-md font-medium text-amber-700 hover:bg-amber-50';
+        btn.textContent = affordance === 'delete' ? t('common.action.delete') : t('shipments.action.void');
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // AC-01/02: row action must not also open the detail panel
+          handleRowAffordance(params.data, params.api, reload);
+        });
+        wrap.appendChild(btn);
+      }
+    }
+
+    return wrap;
   };
 }

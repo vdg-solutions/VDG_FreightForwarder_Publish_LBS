@@ -34,7 +34,7 @@ const COLUMN_LABEL_KEY = {
   pnl:      'shipments.grid.pnl',
 };
 
-const ACTIONS_COL_WIDTH = 90;
+const ACTIONS_COL_WIDTH = 150; // room for Edit + Void/Delete side by side
 
 // Grid column headers via t() — pure, no DOM/agGrid dep so it's unit-reachable (AC-01).
 /**
@@ -71,8 +71,9 @@ export function buildColumnDefs(rows = null) {
     headerName: '', field: 'budget', width: 70, sortable: false, filter: false,
     cellRenderer: budgetLinkRenderer,
   });
-  // AC-05: only someone who may void a shipment gets the row action column at all.
-  if (can('shipment.void')) {
+  // AC-05: the column renders only for someone who may edit, void or delete a shipment at all;
+  // createActionsRenderer itself re-checks each action before drawing its own button.
+  if (can('shipment.edit') || can('shipment.void')) {
     cols.push({
       headerName: '', field: 'actions', width: ACTIONS_COL_WIDTH, sortable: false, filter: false,
       cellRenderer: createActionsRenderer(loadRealData),

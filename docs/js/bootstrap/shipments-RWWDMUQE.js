@@ -100,18 +100,38 @@ async function handleRowAffordance(row, api, reload) {
   const rows = await reload();
   api?.setGridOption("rowData", rows);
 }
+function editButton(row) {
+  const btn = document.createElement("button");
+  btn.className = "text-xs px-2 py-1 rounded-md font-medium text-blue-600 hover:bg-blue-50";
+  btn.textContent = t("common.action.edit");
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const ref = row.shipment_ref || row.ref;
+    navigate(`/sales/edit/${encodeURIComponent(ref)}`);
+  });
+  return btn;
+}
 function createActionsRenderer(reload) {
   return function actionsRenderer(params) {
-    const affordance = chooseShipmentAffordance(params.data);
-    if (affordance === "none") return document.createElement("span");
-    const btn = document.createElement("button");
-    btn.className = affordance === "delete" ? "text-xs px-2 py-1 rounded-md font-medium text-red-700 hover:bg-red-50" : "text-xs px-2 py-1 rounded-md font-medium text-amber-700 hover:bg-amber-50";
-    btn.textContent = affordance === "delete" ? t("common.action.delete") : t("shipments.action.void");
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      handleRowAffordance(params.data, params.api, reload);
-    });
-    return btn;
+    const wrap = document.createElement("div");
+    wrap.className = "flex items-center gap-2 h-full";
+    if (can("shipment.edit")) {
+      wrap.appendChild(editButton(params.data));
+    }
+    if (can("shipment.void")) {
+      const affordance = chooseShipmentAffordance(params.data);
+      if (affordance !== "none") {
+        const btn = document.createElement("button");
+        btn.className = affordance === "delete" ? "text-xs px-2 py-1 rounded-md font-medium text-red-700 hover:bg-red-50" : "text-xs px-2 py-1 rounded-md font-medium text-amber-700 hover:bg-amber-50";
+        btn.textContent = affordance === "delete" ? t("common.action.delete") : t("shipments.action.void");
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          handleRowAffordance(params.data, params.api, reload);
+        });
+        wrap.appendChild(btn);
+      }
+    }
+    return wrap;
   };
 }
 
@@ -132,7 +152,7 @@ var COLUMN_LABEL_KEY = {
   state: "state",
   pnl: "shipments.grid.pnl"
 };
-var ACTIONS_COL_WIDTH = 90;
+var ACTIONS_COL_WIDTH = 150;
 function buildColumnDefs(rows = null) {
   const cols = [
     { headerName: t(COLUMN_LABEL_KEY.ref), field: "ref", pinned: "left", width: 140, cellClass: "font-mono text-xs" },
@@ -166,7 +186,7 @@ function buildColumnDefs(rows = null) {
     filter: false,
     cellRenderer: budgetLinkRenderer
   });
-  if (can("shipment.void")) {
+  if (can("shipment.edit") || can("shipment.void")) {
     cols.push({
       headerName: "",
       field: "actions",
