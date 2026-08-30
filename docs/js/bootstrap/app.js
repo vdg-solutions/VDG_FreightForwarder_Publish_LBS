@@ -8,7 +8,7 @@ import {
 import "./chunk-2X6PKTEY.js";
 import {
   bindAirInvoiceComposer
-} from "./chunk-PQJILZSQ.js";
+} from "./chunk-MKBTAKU7.js";
 import {
   bindLedgerComposer,
   bindLedgerPoster,
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build eafc5489">v0.4.43 (eafc5489)</span>
+        <span class="font-mono whitespace-nowrap" title="build f165bf98">v0.4.44 (f165bf98)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.43 (eafc5489)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.44 (f165bf98)</div>
         </div>
       </div>
     </div>`;
@@ -2761,10 +2761,11 @@ var adoptSessionToken = (...a) => _i4().adoptSessionToken(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
 var ApiError = class extends Error {
-  constructor(status, message) {
+  constructor(status, message, params) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.params = params || {};
   }
 };
 
@@ -3130,11 +3131,26 @@ function rememberSessionToken2(token) {
   }
 }
 var API_FETCH_TIMEOUT_MS = 3e4;
+var API_RETRY_SAFE_METHODS = ["GET", "HEAD"];
+var API_RETRY_ATTEMPTS = 2;
+var API_RETRY_BACKOFF_MS = 400;
 function _nowIso() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
 var _apiReqSeq = 0;
 async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
+  const maxAttempts = API_RETRY_SAFE_METHODS.includes(method.toUpperCase()) ? API_RETRY_ATTEMPTS : 1;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await apiFetchOnce(method, path, body, extraHeaders);
+    } catch (err) {
+      if (err?.status !== 0 || attempt >= maxAttempts) throw err;
+      console.warn(`[API] ${method} ${path} transport failed (${err.message}) \u2014 one retry in ${API_RETRY_BACKOFF_MS}ms`);
+      await new Promise((r) => setTimeout(r, API_RETRY_BACKOFF_MS));
+    }
+  }
+}
+async function apiFetchOnce(method, path, body = void 0, extraHeaders = {}) {
   const url = `${API_BASE}${API_PREFIX}${path}`;
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
   const token = readSessionToken();
@@ -3187,7 +3203,7 @@ async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
     }));
   }
   if (!res.ok) {
-    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`);
+    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`, json?.params);
   }
   return json;
 }
@@ -3233,10 +3249,10 @@ async function probeRole(user, _wsName) {
   const me = await apiFetch("GET", "/me");
   const roles = Array.isArray(me?.roles) ? me.roles.filter(Boolean) : [];
   const areas = Array.isArray(me?.areas) ? me.areas.map((a) => ({ path: a.path, folder_id: a.folder_id })) : [];
-  if (me?.is_owner) return { kind: VERDICT_MANAGER };
   if (roles.length > 0) {
     return { kind: VERDICT_GRANT, token: String(me.fork || forkId(user.email)).toUpperCase(), roles, areas };
   }
+  if (me?.is_owner) return { kind: VERDICT_MANAGER };
   return { kind: VERDICT_NOT_PROVISIONED };
 }
 var serverWorkspaceAuthority = { probeRole };
@@ -4561,7 +4577,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-PZU332PG.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-7RFYGTTP.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4577,14 +4593,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-OH5DQOM5.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-OYUORFO3.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-OH5DQOM5.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-OYUORFO3.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4686,7 +4702,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.43 (eafc5489)";
+var APP_VERSION = "v0.4.44 (f165bf98)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4936,7 +4952,7 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-WO75SJKX.js"),
-  "/manager/pipeline": () => import("./pipeline-O6BIHEUC.js"),
+  "/manager/pipeline": () => import("./pipeline-TEBMCROQ.js"),
   "/manager/approvals": () => import("./approvals-V4RVJ7SQ.js"),
   "/manager/reports/pnl": () => import("./pnl-report-AWZBOYII.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-VPVF3ESY.js"),
@@ -4978,14 +4994,14 @@ var VIEWS = {
   "/masters/shipment-states": () => import("./shipment-states-TZO3QAGT.js"),
   "/quotes/air-calc": () => import("./air-calc-MSSJVYNW.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-YAERGP5T.js"),
+  "/manager/air-invoice": () => import("./air-invoice-MNK5RSO3.js"),
   // E-23 F-23-04
   "/accounting/ledger": () => import("./ledger-viewer-7PSYSSJF.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-URHU44XT.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-6K7VVG3D.js"),
+  "/admin/users": () => import("./users-view-MZPR7NQU.js"),
   // E-24 F-24-06
   "/admin/users/audit-log": () => import("./user-audit-log-view-2BVILWHD.js")
 };
@@ -5935,8 +5951,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=eafc5489", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=eafc5489", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=f165bf98", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f165bf98", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6528,13 +6544,25 @@ async function loadWasmModule() {
     throw err;
   }
 }
+var BOOT_ERROR_REASON_MAX_CHARS = 200;
+function bootErrorReason(err) {
+  const raw = err && (err.message || err.name) ? String(err.message || err.name) : String(err ?? "");
+  const text = raw.trim();
+  if (!text || text === "undefined") return "";
+  return text.length > BOOT_ERROR_REASON_MAX_CHARS ? `${text.slice(0, BOOT_ERROR_REASON_MAX_CHARS)}\u2026` : text;
+}
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
 function handleUnrecognizedBootError(err, mount) {
   console.error("[VDG] boot failed, unrecognized error:", err);
   if (!mount) return;
+  const reason = bootErrorReason(err);
   mount.innerHTML = `
     <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-xl font-semibold text-slate-700">${t("view_mount_failed_title")}</div>
       <div class="text-sm text-slate-500">${t("view_mount_failed_network")}</div>
+      ${reason ? `<div class="text-xs text-slate-400 font-mono max-w-lg break-words">${escapeHtml(reason)}</div>` : ""}
       <button id="boot-error-reload-btn" data-testid="boot-error-reload"
               class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
         ${t("view_mount_reload")}

@@ -1,6 +1,6 @@
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/manager/air-invoice-composer.js
-var KIND_AIR_RATE = "air_rate";
-var KIND_AIRLINE_CARRIER = "airline_carrier";
+var KIND_AIR_RATE = "air-rates";
+var KIND_AIRLINE_CARRIER = "airline-carriers";
 var _impl = null;
 function bindAirInvoiceComposer(impl) {
   _impl = impl;

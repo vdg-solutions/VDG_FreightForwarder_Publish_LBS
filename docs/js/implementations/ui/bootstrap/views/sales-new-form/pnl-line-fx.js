@@ -23,8 +23,8 @@ function nextFxDateId(side) {
 }
 
 // AC-01: mirrors section-header.js's CURRENCY_OPTIONS by value — not imported from there,
-// since section-header.js pulls in wasm-loader.js + semantic-search.js (heavy, network-bound
-// module graph) that a plain table-cell markup helper must not carry along. Keep in sync by hand.
+// since section-header.js pulls in wasm-loader.js (heavy, network-bound module graph) that a
+// plain table-cell markup helper must not carry along. Keep in sync by hand.
 export const LINE_CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 
 // Last-ditch header currency when neither the draft nor the workspace default supplies one.

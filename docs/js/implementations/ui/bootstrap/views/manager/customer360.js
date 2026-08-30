@@ -10,7 +10,7 @@ const KIND_CUSTOMER    = 'customers';
 const KIND_SHIPMENT    = 'shipment';
 const KIND_BILLING     = 'billing';
 const KIND_EXCEPTION   = 'exception';
-const KIND_QUOTATION   = 'quotation';
+const KIND_QUOTATION   = 'quotations'; // F-43-08: singular 'quotation' resolved to nothing -- tab was always empty
 const AUDIT_BATCH_SIZE = 50;
 const TAB_MULTIMODAL   = 'multimodal';
 

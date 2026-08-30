@@ -47,13 +47,41 @@ export async function loadWasmModule() {
 // promise rejection, and the user was left on index.html's frozen "Loading view…" placeholder
 // with no recovery. A 503 on pkg/vdg_freight.js during a deploy-propagation window rejects
 // exactly this way. main() routes here instead of re-throwing.
+/// The longest reason we will paint on the screen. A stack trace is for the console; a wall of it
+/// on the error screen buries the Reload button the user actually needs.
+const BOOT_ERROR_REASON_MAX_CHARS = 200;
+
+/// The real reason, trimmed for display. `view_mount_failed_network` GUESSES a deploy is in
+/// progress, and a live run caught it saying exactly that while /api/me answered 200 and repo-init
+/// had already reported ok -- a wrong diagnosis, confidently stated, with the true error visible
+/// only in a console nobody has open. The friendly line stays (it is right often enough), but the
+/// actual message rides along so a defect is diagnosable from a screenshot.
+function bootErrorReason(err) {
+  const raw = (err && (err.message || err.name)) ? String(err.message || err.name) : String(err ?? '');
+  const text = raw.trim();
+  if (!text || text === 'undefined') return '';
+  return text.length > BOOT_ERROR_REASON_MAX_CHARS
+    ? `${text.slice(0, BOOT_ERROR_REASON_MAX_CHARS)}…`
+    : text;
+}
+
+/// Escaped: the reason comes from a thrown error, which can carry a server-supplied string. It is
+/// interpolated into innerHTML below, so it is markup until proven otherwise.
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 export function handleUnrecognizedBootError(err, mount) {
   console.error('[VDG] boot failed, unrecognized error:', err); // DEV
   if (!mount) return;
+  const reason = bootErrorReason(err);
   mount.innerHTML = `
     <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-xl font-semibold text-slate-700">${t('view_mount_failed_title')}</div>
       <div class="text-sm text-slate-500">${t('view_mount_failed_network')}</div>
+      ${reason ? `<div class="text-xs text-slate-400 font-mono max-w-lg break-words">${escapeHtml(reason)}</div>` : ''}
       <button id="boot-error-reload-btn" data-testid="boot-error-reload"
               class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
         ${t('view_mount_reload')}

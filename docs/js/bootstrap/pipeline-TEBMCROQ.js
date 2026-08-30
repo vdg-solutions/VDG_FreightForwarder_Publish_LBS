@@ -20,6 +20,9 @@ import {
   guardMessage
 } from "./chunk-NSJXCXJQ.js";
 import {
+  persistAdvancedState
+} from "./chunk-VTRTBWKI.js";
+import {
   shipmentLane
 } from "./chunk-V5UQPUBE.js";
 import {
@@ -281,6 +284,15 @@ var VdgKanbanBoard = class extends LitElement {
 };
 customElements.define("vdg-kanban-board", VdgKanbanBoard);
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/manager/pipeline-transition.js
+async function applyShipmentTransition({ id, to, shipments, repo, wasm }) {
+  const s = shipments.find((x) => x.id === id);
+  if (!s) return null;
+  const nextState = typeof wasm?.shipment_move_to === "function" ? await wasm.shipment_move_to(id, to, JSON.stringify(s)) : to;
+  if (repo) await persistAdvancedState(repo, id, nextState);
+  return nextState;
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/pipeline.js
 var SEA_KANBAN_STATES = SHIPMENT_MAIN_PATH;
 var AIR_KANBAN_STATES = ["Created", "Tendered", "Accepted", "Manifested", "FlightDeparted", "FlightArrived", "Cleared", "PoD"];
@@ -484,28 +496,15 @@ async function render(root) {
   });
   content.addEventListener("vdg:transition-request", async (e) => {
     const { id, to } = e.detail;
-    const s = _shipments.find((x) => x.id === id);
-    if (!s) return;
-    const repo = getRepo();
-    const wasm = window.__vdg_wasm;
-    if (typeof wasm?.shipment_move_to === "function") {
+    try {
+      await applyShipmentTransition({ id, to, shipments: _shipments, repo: getRepo(), wasm: window.__vdg_wasm });
+    } catch (err) {
+      let message = err.message;
       try {
-        const nextState = await wasm.shipment_move_to(id, to, JSON.stringify(s));
-        if (repo) await repo.put("shipment", id, { ...s, state: nextState });
-      } catch (err) {
-        let message = err.message;
-        try {
-          message = guardMessage(JSON.parse(err.message));
-        } catch {
-        }
-        window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message } }));
+        message = guardMessage(JSON.parse(err.message));
+      } catch {
       }
-    } else if (repo) {
-      try {
-        await repo.put("shipment", id, { ...s, state: to });
-      } catch (err) {
-        console.warn("[pipeline] transition write failed:", err.message);
-      }
+      window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message } }));
     }
     _kanban?.confirmPending(id);
   });

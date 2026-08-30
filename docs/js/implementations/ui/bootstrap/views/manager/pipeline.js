@@ -11,6 +11,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import { SHIPMENT_MAIN_PATH } from '../../../../kernel/core_abstractions/util/shipment-phases.js';
 import { guardMessage } from '../../../../kernel/core_abstractions/util/guard-messages.js';
+import { applyShipmentTransition } from './pipeline-transition.js';
 
 const SEA_KANBAN_STATES = SHIPMENT_MAIN_PATH;
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
@@ -237,29 +238,18 @@ export async function render(root) {
     }));
   });
 
-  // Transition request → real shipment FSM move. The FSM is the authority on the
-  // resulting state, guards the move (credit hold, open exception, ...) and appends the audit
-  // row — repo.put here only mirrors what the FSM decided, it never decides on its own.
+  // Transition request → real shipment FSM move, written back through the same authoritative
+  // choke point detail-panel.js's own advance button uses (pipeline-transition.js's own doc
+  // comment has the F2 incident this replaces).
   content.addEventListener('vdg:transition-request', async (e) => {
     const { id, to } = e.detail;
-    const s = _shipments.find((x) => x.id === id);
-    if (!s) return;
-    const repo = getRepo();
-    const wasm = window.__vdg_wasm;
-    if (typeof wasm?.shipment_move_to === 'function') {
-      try {
-        const nextState = await wasm.shipment_move_to(id, to, JSON.stringify(s));
-        if (repo) await repo.put('shipment', id, { ...s, state: nextState });
-      } catch (err) {
-        // A refused transition is never swallowed — surface the real reason to the user.
-        let message = err.message;
-        try { message = guardMessage(JSON.parse(err.message)); } catch { /* non-JSON error */ }
-        window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message } }));
-      }
-    } else if (repo) {
-      // Degraded fallback — WASM unavailable, no FSM guard runs on this write.
-      try { await repo.put('shipment', id, { ...s, state: to }); }
-      catch (err) { console.warn('[pipeline] transition write failed:', err.message); } // DEV
+    try {
+      await applyShipmentTransition({ id, to, shipments: _shipments, repo: getRepo(), wasm: window.__vdg_wasm });
+    } catch (err) {
+      // A refused transition is never swallowed — surface the real reason to the user.
+      let message = err.message;
+      try { message = guardMessage(JSON.parse(err.message)); } catch { /* non-JSON error */ }
+      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message } }));
     }
     _kanban?.confirmPending(id);
   });

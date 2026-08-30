@@ -3,7 +3,7 @@
 // module only shapes state into the gate's request and returns its verdict, never recomputes it.
 // Import-clean: only DEFAULT_HEADER_CURRENCY from pnl-line-fx.js (chain → fx-lookup.js, both
 // CDN-free) plus the bound pnl-gate port. See design.md §2/§6 — this module must stay importable
-// under node:test without the section-header.js -> cache/semantic-search.js CDN crash.
+// under node:test without the section-header.js -> wasm-loader.js chain (unbound in node:test).
 import { DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
 import { vndInvariant, fxDeviation } from '../../../core_abstractions/ports/flows/pnl-gate.js';
 

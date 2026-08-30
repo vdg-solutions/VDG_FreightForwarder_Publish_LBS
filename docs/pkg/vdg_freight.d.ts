@@ -6,7 +6,7 @@ export class CustomerIndex {
     [Symbol.dispose](): void;
     add_customer(json_str: string): boolean;
     constructor();
-    search(query: string, query_embedding_json: string, top_k: number): string;
+    search(query: string, top_k: number): string;
 }
 
 export class WasmEntityRepo {
@@ -1004,7 +1004,7 @@ export interface InitOutput {
     readonly compute_due_soon: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
-    readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly data_clear_fork_scan: (a: number) => number;
     readonly data_current_revision: (a: number) => number;
     readonly data_delete_pnl_lines: (a: number) => number;
@@ -1310,9 +1310,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13995: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_14008: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10054: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13967: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13980: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10026: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

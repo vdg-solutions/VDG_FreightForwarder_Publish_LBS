@@ -16,6 +16,7 @@ import { openAddUserModal }  from './user-add-modal.js';
 import { openEditUserModal } from './user-edit-modal.js';
 import { showConfirm }       from '../../helpers/show-confirm.js';
 import { listUsers, patchUser } from '../../../../storage/core_abstractions/user-directory.js';
+import { usersErrorMessage } from './users-error-message.js';
 
 const TOAST_MS = 4_000;
 const DEFAULT_ACTIVE_FILTER = '';
@@ -89,7 +90,7 @@ async function _onDeactivate(root, user) {
     toast('success', t('admin.users.toast.deactivated').replace('{email}', user.email));
     await _reload(root);
   } catch (err) {
-    toast('error', err.message);
+    toast('error', usersErrorMessage(err));
   }
 }
 

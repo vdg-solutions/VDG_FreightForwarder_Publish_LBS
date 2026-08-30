@@ -9,6 +9,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { isValidEmail, rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { createUser } from '../../../../storage/core_abstractions/user-directory.js';
+import { usersErrorMessage } from './users-error-message.js';
 
 function showError(overlay, message) {
   const err = overlay.querySelector('#add-err');
@@ -66,7 +67,7 @@ async function _onSubmit(overlay, onAdded) {
     window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t('admin.users.toast.added').replace('{email}', email) } }));
     await onAdded?.();
   } catch (err) {
-    showError(overlay, err.message);
+    showError(overlay, usersErrorMessage(err));
     submitBtn.disabled = false;
   }
 }

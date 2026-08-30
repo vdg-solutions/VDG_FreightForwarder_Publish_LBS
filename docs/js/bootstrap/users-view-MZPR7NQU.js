@@ -114,6 +114,33 @@ function bindRowActions(container, users, handlers) {
   });
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/admin/users-error-message.js
+var KNOWN_CODES = /* @__PURE__ */ new Set([
+  "role_unknown",
+  "roles_required",
+  "already_exists",
+  "last_manager",
+  "email_invalid",
+  "roles_empty_use_deactivate",
+  "write_conflict"
+]);
+var CODE_SHAPE = /^[a-z][a-z0-9_]*$/;
+function roleLabel2(role) {
+  return role ? t(ROLE_LABEL_KEYS[role] || role) : role;
+}
+function usersErrorMessage(err) {
+  const code = err?.message || "";
+  if (KNOWN_CODES.has(code)) {
+    const params = { ...err.params || {} };
+    for (const key of ["role", "role_a", "role_b"]) {
+      if (key in params) params[key] = roleLabel2(params[key]);
+    }
+    return t(`users.error.${code}`, params);
+  }
+  if (CODE_SHAPE.test(code)) return t("users.error.generic");
+  return code || t("users.error.generic");
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/views/admin/user-add-modal.js
 function showError(overlay, message) {
   const err = overlay.querySelector("#add-err");
@@ -164,7 +191,7 @@ async function _onSubmit(overlay, onAdded) {
     window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t("admin.users.toast.added").replace("{email}", email) } }));
     await onAdded?.();
   } catch (err) {
-    showError(overlay, err.message);
+    showError(overlay, usersErrorMessage(err));
     submitBtn.disabled = false;
   }
 }
@@ -220,7 +247,7 @@ async function _onSubmit2(overlay, user, onSaved, reactivate) {
     window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "success", message: t(toastKey).replace("{email}", user.email) } }));
     await onSaved?.();
   } catch (err) {
-    showError2(overlay, err.message);
+    showError2(overlay, usersErrorMessage(err));
     submitBtn.disabled = false;
   }
 }
@@ -288,7 +315,7 @@ async function _onDeactivate(root, user) {
     toast("success", t("admin.users.toast.deactivated").replace("{email}", user.email));
     await _reload(root);
   } catch (err) {
-    toast("error", err.message);
+    toast("error", usersErrorMessage(err));
   }
 }
 function bindFilterBar(root) {

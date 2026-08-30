@@ -695,99 +695,6 @@ function classifyDocument(input, mode) {
   return { docType: null, confidence: "Low" };
 }
 
-// output/web/js.tmp/implementations/ui/implementations/semantic-search.js
-var ONNX_WASM_CDN = "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1/dist/";
-var extractor = null;
-var initPromise = null;
-var transformersPromise = null;
-function loadTransformers() {
-  if (!transformersPromise) {
-    transformersPromise = import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1");
-  }
-  return transformersPromise;
-}
-async function initPipeline(loader = loadTransformers) {
-  const { pipeline, env } = await loader();
-  env.allowRemoteModels = true;
-  env.allowLocalModels = false;
-  env.backends.onnx.wasm.wasmPaths = ONNX_WASM_CDN;
-  env.useBrowserCache = true;
-  const progressCallback = (info) => {
-    if (!info.file || !info.file.endsWith(".onnx")) return;
-    if (info.status === "progress" || info.status === "download") {
-      const loadedMB = info.loaded ? (info.loaded / 1024 / 1024).toFixed(1) : 0;
-      const totalMB = info.total ? (info.total / 1024 / 1024).toFixed(1) : 0;
-      const sizeText = info.total ? ` (${loadedMB}MB / ${totalMB}MB)` : "";
-      window.dispatchEvent(new CustomEvent("vdg:job-progress", {
-        detail: {
-          id: "ai-model-download",
-          name: t("bg_jobs.downloading_model", { file: "Semantic Search Engine" }) + sizeText,
-          progress: info.progress || 0,
-          status: "downloading"
-        }
-      }));
-    }
-  };
-  try {
-    console.log("[SemanticSearch] Loading Xenova/paraphrase-multilingual-MiniLM-L12-v2...");
-    extractor = await pipeline("feature-extraction", "Xenova/paraphrase-multilingual-MiniLM-L12-v2", {
-      quantized: true,
-      progress_callback: progressCallback
-    });
-    window.dispatchEvent(new CustomEvent("vdg:job-progress", {
-      detail: {
-        id: "ai-model-download",
-        name: t("bg_jobs.downloading_model", { file: "Semantic Search Engine" }),
-        progress: 100,
-        status: "done"
-      }
-    }));
-  } catch (e) {
-    console.warn("[SemanticSearch] Failed to load multilingual model, falling back to MiniLM...", e);
-    try {
-      extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
-        quantized: true,
-        progress_callback: progressCallback
-      });
-      window.dispatchEvent(new CustomEvent("vdg:job-progress", {
-        detail: {
-          id: "ai-model-download",
-          name: t("bg_jobs.downloading_model", { file: "Semantic Search Engine" }),
-          progress: 100,
-          status: "done"
-        }
-      }));
-    } catch (e2) {
-      console.error("[SemanticSearch] Completely failed to load any model", e2);
-      extractor = null;
-      window.dispatchEvent(new CustomEvent("vdg:job-progress", {
-        detail: {
-          id: "ai-model-download",
-          name: t("bg_jobs.downloading_model", { file: "Semantic Search Engine" }),
-          status: "error",
-          error: "Network error or model unavailable"
-        }
-      }));
-    }
-  }
-}
-async function getEmbedding(text, reinit = initPipeline) {
-  if (!text || text.trim() === "") return null;
-  if (!initPromise && !extractor) {
-    initPromise = reinit();
-  }
-  if (!extractor) {
-    return null;
-  }
-  try {
-    const output = await extractor(text, { pooling: "mean", normalize: true });
-    return Array.from(output.data);
-  } catch (e) {
-    console.warn("[SemanticSearch] Embedding generation failed", e);
-    return null;
-  }
-}
-
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-header-wiring.js
 function _applyDirection(root) {
   const sel = root.querySelector("[name=direction], [name=direction_display]");
@@ -917,7 +824,7 @@ function wireHeaderSection(root, onChanged) {
         const list = await repo.list("customers");
         for (const c of list) {
           if (c.name) {
-            cIndex.add_customer(JSON.stringify({ id: c.name, name: c.name, embedding: c.embedding || null }));
+            cIndex.add_customer(JSON.stringify({ id: c.name, name: c.name }));
           }
         }
       }
@@ -960,7 +867,7 @@ function wireHeaderSection(root, onChanged) {
             custInput.value = query;
             custHidden.value = query;
             custDropdown.classList.add("hidden");
-            if (cIndex) cIndex.add_customer(JSON.stringify({ id: query, name: query, embedding: null }));
+            if (cIndex) cIndex.add_customer(JSON.stringify({ id: query, name: query }));
             onChanged?.();
             window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { message: "\u0110\xE3 t\u1EA1o nhanh kh\xE1ch h\xE0ng", type: "success" } }));
           } catch (err) {
@@ -979,24 +886,27 @@ function wireHeaderSection(root, onChanged) {
         const repo = window.__vdg_repo;
         let results2 = [];
         if (repo) {
-          const list1 = await repo.list("customers") || [];
-          const list2 = await repo.list("customer") || [];
-          const list = list1.length > list2.length ? list1 : list2;
-          results2 = list.slice(0, 5).map((c) => ({ name: c.name }));
+          try {
+            const list = await repo.list("customers") || [];
+            results2 = list.slice(0, 5).map((c) => ({ name: c.name }));
+          } catch (e) {
+            console.warn("Failed to list customers", e);
+          }
         }
         renderDropdown(results2, query);
         return;
       }
       await initCIndex();
-      const qEmb = await getEmbedding(query);
       let resultsJson = "[]";
       if (cIndex) {
-        resultsJson = cIndex.search(query, JSON.stringify(qEmb), 5);
+        resultsJson = cIndex.search(query, 5);
       }
       const results = JSON.parse(resultsJson);
       if (isAutofillCheck) {
+        const normalize = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
         const exactMatch = results.find((r) => r.name.toLowerCase() === query.toLowerCase());
-        if (exactMatch || results.length > 0 && results[0].score > 0.95) {
+        const normalizedMatch = !exactMatch && results.length > 0 && normalize(results[0].name) === normalize(query);
+        if (exactMatch || normalizedMatch) {
           const bestName = exactMatch ? exactMatch.name : results[0].name;
           custInput.value = bestName;
           custHidden.value = bestName;
@@ -3481,8 +3391,16 @@ async function render(root, opts = {}) {
       const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, uomList] = await Promise.all([
         repo.list("customers").catch(() => []),
         repo.list("carriers").catch(() => []),
-        repo.list("shipments").catch(() => []),
-        salesRepId ? repo.get("user", `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
+        // F-43-08: 'shipment' (singular) is the registered kind -- 'shipments' resolved to
+        // nothing and rendered the job list empty with no error.
+        repo.list("shipment").catch((e) => {
+          console.error("[sales-new] shipment list failed:", e);
+          return [];
+        }),
+        salesRepId ? repo.get("user", `user:${salesRepId}`).catch((e) => {
+          console.error("[sales-new] user get failed:", e);
+          return null;
+        }) : Promise.resolve(null),
         salesRepId ? repo.get("commission_rules", salesRepId).catch(() => null) : Promise.resolve(null),
         // Accounting's default currency — a LOCAL store read (workspace_settings kind), not a
         // Drive fetch. Read on edit too now: it doubles as the book currency the form's live
@@ -3602,7 +3520,10 @@ async function render(root, opts = {}) {
       const prefix = repSelect.value;
       if (!prefix) return;
       try {
-        const user = await repo.get("user", `user:${prefix}`).catch(() => null) || { id: `user:${prefix}`, sales_code: null };
+        const user = await repo.get("user", `user:${prefix}`).catch((e) => {
+          console.error("[sales-new] user get failed:", e);
+          return null;
+        }) || { id: `user:${prefix}`, sales_code: null };
         const code = await ensureRepCode(user, repo);
         const fresh = await assignJobNo(repo, code);
         const jobEl = formMount.querySelector("[name=job_no]");

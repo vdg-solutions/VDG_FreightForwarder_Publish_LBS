@@ -6,7 +6,6 @@
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { classifyDocument } from '../sales-new/doc-auto-detect.js';
 import { loadWasm } from '../../../core_abstractions/ports/wasm-loader.js';
-import { getEmbedding } from '../../../implementations/semantic-search.js';
 import { computeChargeableKg } from '../../../core_abstractions/ports/flows/air-rate-calculator.js';
 import { slugify } from '../../../core_abstractions/ports/flows/pnl-commit-orchestrator.js';
 import { customerRepFor } from '../../../core_abstractions/ports/flows/sales-rep-derivation.js';
@@ -142,7 +141,7 @@ export function wireHeaderSection(root, onChanged) {
     } catch { /* autofill is best-effort — the select stays for a manual pick */ }
   }
 
-  // Wire Customer Hybrid Search
+  // Wire Customer BM25 Search
   const custInput = root.querySelector('#customer-search-input');
   const custHidden = root.querySelector('[name=customer]');
   const custDropdown = root.querySelector('#customer-search-dropdown');
@@ -160,7 +159,7 @@ export function wireHeaderSection(root, onChanged) {
               const list = await repo.list('customers');
               for (const c of list) {
                   if (c.name) {
-                      cIndex.add_customer(JSON.stringify({ id: c.name, name: c.name, embedding: c.embedding || null }));
+                      cIndex.add_customer(JSON.stringify({ id: c.name, name: c.name }));
                   }
               }
           }
@@ -204,7 +203,7 @@ export function wireHeaderSection(root, onChanged) {
                       custInput.value = query;
                       custHidden.value = query;
                       custDropdown.classList.add('hidden');
-                      if (cIndex) cIndex.add_customer(JSON.stringify({ id: query, name: query, embedding: null }));
+                      if (cIndex) cIndex.add_customer(JSON.stringify({ id: query, name: query }));
                       onChanged?.();
                       window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message: 'Đã tạo nhanh khách hàng', type: 'success' } }));
                   } catch(err) {
@@ -225,26 +224,33 @@ export function wireHeaderSection(root, onChanged) {
               const repo = window.__vdg_repo;
               let results = [];
               if (repo) {
-                  const list1 = await repo.list('customers') || [];
-                  const list2 = await repo.list('customer') || [];
-                  const list = list1.length > list2.length ? list1 : list2;
-                  results = list.slice(0, 5).map(c => ({ name: c.name }));
+                  // F-43-08: 'customer' (singular) is not a registered kind -- always resolved
+                  // empty, so the length-compare hedge below always picked 'customers' anyway.
+                  try {
+                      const list = await repo.list('customers') || [];
+                      results = list.slice(0, 5).map(c => ({ name: c.name }));
+                  } catch (e) { console.warn('Failed to list customers', e); } // DEV
               }
               renderDropdown(results, query);
               return;
           }
           await initCIndex();
-          const qEmb = await getEmbedding(query);
           let resultsJson = '[]';
           if (cIndex) {
-              resultsJson = cIndex.search(query, JSON.stringify(qEmb), 5);
+              resultsJson = cIndex.search(query, 5);
           }
           const results = JSON.parse(resultsJson);
-          
+
           if (isAutofillCheck) {
-              // If it's an exact match or very close score, auto-accept and don't warn
+              // BM25 scores are unbounded and depend on corpus size/term rarity, so a fixed
+              // magnitude (the old 0.95 cosine-similarity cutoff) has no honest meaning against
+              // them. "Confident" here means the top hit's name folds to the same normalized
+              // text as what was typed (case/whitespace/punctuation aside) — a near-duplicate of
+              // an exact match, not a plain relevance match.
+              const normalize = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
               const exactMatch = results.find(r => r.name.toLowerCase() === query.toLowerCase());
-              if (exactMatch || (results.length > 0 && results[0].score > 0.95)) {
+              const normalizedMatch = !exactMatch && results.length > 0 && normalize(results[0].name) === normalize(query);
+              if (exactMatch || normalizedMatch) {
                   const bestName = exactMatch ? exactMatch.name : results[0].name;
                   custInput.value = bestName;
                   custHidden.value = bestName;

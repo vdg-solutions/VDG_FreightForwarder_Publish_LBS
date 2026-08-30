@@ -130,6 +130,14 @@ function rememberSessionToken(token) {
 }
 
 const API_FETCH_TIMEOUT_MS = 30000;
+/// A Durable Object cold start costs 15-17s on this plan; measured live 2026-08-31, roughly one
+/// call in ten, against a warm median of ~150ms. That is transient by construction — the retry
+/// lands on the now-warm object — so one retry converts nearly every cold-start stall into a
+/// success instead of failing a whole sync tick. Only SAFE (idempotent) methods retry: replaying a
+/// POST would double-write.
+const API_RETRY_SAFE_METHODS = ['GET', 'HEAD'];
+const API_RETRY_ATTEMPTS     = 2;
+const API_RETRY_BACKOFF_MS   = 400;
 
 // Wall-clock ISO-8601 w/ ms — same spelling as the Rust side's Clock::now_iso(), so a pasted
 // dump interleaving both never looks like two clocks disagreeing.
@@ -141,7 +149,24 @@ function _nowIso() { return new Date().toISOString(); }
 // for something a human has to eyeball in a scrollback dump.
 let _apiReqSeq = 0;
 
+/// Retries a transport failure (timeout / dead network) once for a safe method. A non-2xx REPLY is
+/// never retried — the server answered, and a 4xx would answer the same way again.
 async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
+  const maxAttempts = API_RETRY_SAFE_METHODS.includes(method.toUpperCase()) ? API_RETRY_ATTEMPTS : 1;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await apiFetchOnce(method, path, body, extraHeaders);
+    } catch (err) {
+      // status 0 is this file's own "transport never delivered" marker (below). Anything else is
+      // a real answer from the server and must surface unchanged, first time, every time.
+      if (err?.status !== 0 || attempt >= maxAttempts) throw err;
+      console.warn(`[API] ${method} ${path} transport failed (${err.message}) — one retry in ${API_RETRY_BACKOFF_MS}ms`);
+      await new Promise((r) => setTimeout(r, API_RETRY_BACKOFF_MS));
+    }
+  }
+}
+
+async function apiFetchOnce(method, path, body = undefined, extraHeaders = {}) {
   const url = `${API_BASE}${API_PREFIX}${path}`;
   const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
   const token = readSessionToken();
@@ -192,7 +217,9 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
     }));
   }
   if (!res.ok) {
-    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`);
+    // CDB-API-09: json.reason is a CODE, not a sentence (json.params its substitution values) --
+    // carried through so a caller can render `users.error.<code>` instead of showing the code.
+    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`, json?.params);
   }
   return json;
 }

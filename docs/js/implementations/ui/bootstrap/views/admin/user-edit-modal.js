@@ -14,6 +14,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { rolesFromForm, roleCheckboxesHtml } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { patchUser } from '../../../../storage/core_abstractions/user-directory.js';
+import { usersErrorMessage } from './users-error-message.js';
 
 function showError(overlay, message) {
   const err = overlay.querySelector('#edit-err');
@@ -74,7 +75,7 @@ async function _onSubmit(overlay, user, onSaved, reactivate) {
     window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'success', message: t(toastKey).replace('{email}', user.email) } }));
     await onSaved?.();
   } catch (err) {
-    showError(overlay, err.message);
+    showError(overlay, usersErrorMessage(err));
     submitBtn.disabled = false;
   }
 }

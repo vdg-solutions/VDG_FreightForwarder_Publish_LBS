@@ -134,8 +134,10 @@ export async function render(root, opts = {}) {
       const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, uomList] = await Promise.all([
         repo.list('customers').catch(() => []),
         repo.list('carriers').catch(() => []),
-        repo.list('shipments').catch(() => []),
-        salesRepId ? repo.get('user', `user:${salesRepId}`).catch(() => null) : Promise.resolve(null),
+        // F-43-08: 'shipment' (singular) is the registered kind -- 'shipments' resolved to
+        // nothing and rendered the job list empty with no error.
+        repo.list('shipment').catch((e) => { console.error('[sales-new] shipment list failed:', e); return []; }),
+        salesRepId ? repo.get('user', `user:${salesRepId}`).catch((e) => { console.error('[sales-new] user get failed:', e); return null; }) : Promise.resolve(null),
         salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
         // Accounting's default currency — a LOCAL store read (workspace_settings kind), not a
         // Drive fetch. Read on edit too now: it doubles as the book currency the form's live
@@ -266,7 +268,7 @@ export async function render(root, opts = {}) {
       const prefix = repSelect.value;
       if (!prefix) return;
       try {
-        const user = (await repo.get('user', `user:${prefix}`).catch(() => null))
+        const user = (await repo.get('user', `user:${prefix}`).catch((e) => { console.error('[sales-new] user get failed:', e); return null; }))
           || { id: `user:${prefix}`, sales_code: null };
         const code  = await ensureRepCode(user, repo);
         const fresh = await assignJobNo(repo, code);
