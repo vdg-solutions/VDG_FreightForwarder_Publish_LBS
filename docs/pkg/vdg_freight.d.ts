@@ -249,9 +249,12 @@ export function check_awb_doc_transition(from: string, event: string): boolean;
 export function check_code_unique(items_json: string, code: string, skip_id?: string | null): boolean;
 
 /**
- * Returns true when `event` is a valid next event from `from_state` in FSM-04.
+ * F-14-xx kanban drag guard — affordance only, telling the board whether a drag target has ANY
+ * transition wired between the two states. The FSM still runs its real guards on the move via
+ * `shipment_move_to` and may refuse it even when this returns true (credit hold, open exception,
+ * missing dependency, ...). Unknown/corrupt state names are simply not offered.
  */
-export function check_quotation_transition(from_state: string, event: string): boolean;
+export function check_shipment_transition(from_state: string, to_state: string): boolean;
 
 /**
  * AC-10: case-insensitive prefix classify of a mục B description; falls back to `"Other"`.
@@ -355,6 +358,8 @@ export function flows_accept_quote(req: any): Promise<any>;
 export function flows_active_sales_reps(req: any): Promise<any>;
 
 export function flows_air_calc(req: any): any;
+
+export function flows_approval_decide(req: any): Promise<any>;
 
 export function flows_assert_rep_code(req: any): Promise<any>;
 
@@ -683,6 +688,8 @@ export function manager_pnl_drill(req: any): any;
 
 export function manager_pnl_pivot(req: any): any;
 
+export function manager_self_approved_review(req: any): any;
+
 export function manager_users_filter(req: any): any;
 
 export function manager_users_sort(req: any): any;
@@ -803,6 +810,14 @@ export function select(sql: string, params_json: string): string;
  * keeps its permissive policy as the escape hatch). Returns the state the job ends at.
  */
 export function shipment_auto_advance(entity_id: string, shipment_json: string): any;
+
+/**
+ * The real kanban drag move. Builds the record's own registry/context (same shape as
+ * `shipment_auto_advance`) so the real guards see real data, resolves the event off
+ * `event_for_hop`, then runs it through `run_transition` — the one place a shipment's stored
+ * state actually moves, persisting the state and appending the audit row.
+ */
+export function shipment_move_to(entity_id: string, to_state: string, shipment_json: string): any;
 
 /**
  * `{ current, off_path, phases: [{ state, position, requirements }] }`.
@@ -976,7 +991,7 @@ export interface InitOutput {
     readonly check_allocation_within_mgw: (a: number, b: number, c: number) => number;
     readonly check_awb_doc_transition: (a: number, b: number, c: number, d: number) => number;
     readonly check_code_unique: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
+    readonly check_shipment_transition: (a: number, b: number, c: number, d: number) => number;
     readonly classify_pnl_line_kind: (a: number, b: number, c: number) => void;
     readonly commission_default_personal_tax_pct: () => number;
     readonly commission_net_after_tax: (a: number, b: number, c: number) => number;
@@ -1011,6 +1026,7 @@ export interface InitOutput {
     readonly flows_accept_quote: (a: number) => number;
     readonly flows_active_sales_reps: (a: number) => number;
     readonly flows_air_calc: (a: number, b: number) => void;
+    readonly flows_approval_decide: (a: number) => number;
     readonly flows_assert_rep_code: (a: number) => number;
     readonly flows_assign_job_no: (a: number) => number;
     readonly flows_assign_rep_code: (a: number) => number;
@@ -1145,6 +1161,7 @@ export interface InitOutput {
     readonly manager_pnl_buy_sell: (a: number, b: number) => void;
     readonly manager_pnl_drill: (a: number, b: number) => void;
     readonly manager_pnl_pivot: (a: number, b: number) => void;
+    readonly manager_self_approved_review: (a: number, b: number) => void;
     readonly manager_users_filter: (a: number, b: number) => void;
     readonly manager_users_sort: (a: number, b: number) => void;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1170,6 +1187,7 @@ export interface InitOutput {
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_move_to: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly sqlite_init: (a: number, b: number, c: number, d: number) => number;
     readonly sqlite_release: () => void;
@@ -1292,9 +1310,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13895: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13908: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9954: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13966: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13979: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10025: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

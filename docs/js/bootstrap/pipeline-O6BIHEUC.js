@@ -17,6 +17,9 @@ import {
 } from "./chunk-M3ODLRBG.js";
 import "./chunk-NGKBNKFN.js";
 import {
+  guardMessage
+} from "./chunk-NSJXCXJQ.js";
+import {
   shipmentLane
 } from "./chunk-V5UQPUBE.js";
 import {
@@ -123,8 +126,8 @@ var VdgKanbanBoard = class extends LitElement {
     if (!from || from === toState) return;
     const wasm = window.__vdg_wasm;
     let allowed;
-    if (wasm?.check_quotation_transition) {
-      allowed = wasm.check_quotation_transition(from, toState);
+    if (wasm?.check_shipment_transition) {
+      allowed = wasm.check_shipment_transition(from, toState);
     } else {
       const validTargets = VALID_NEXT[from] || [];
       allowed = validTargets.includes(toState);
@@ -484,7 +487,20 @@ async function render(root) {
     const s = _shipments.find((x) => x.id === id);
     if (!s) return;
     const repo = getRepo();
-    if (repo) {
+    const wasm = window.__vdg_wasm;
+    if (typeof wasm?.shipment_move_to === "function") {
+      try {
+        const nextState = await wasm.shipment_move_to(id, to, JSON.stringify(s));
+        if (repo) await repo.put("shipment", id, { ...s, state: nextState });
+      } catch (err) {
+        let message = err.message;
+        try {
+          message = guardMessage(JSON.parse(err.message));
+        } catch {
+        }
+        window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message } }));
+      }
+    } else if (repo) {
       try {
         await repo.put("shipment", id, { ...s, state: to });
       } catch (err) {

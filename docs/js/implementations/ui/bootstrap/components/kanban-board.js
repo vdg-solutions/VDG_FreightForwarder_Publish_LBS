@@ -110,11 +110,13 @@ class VdgKanbanBoard extends LitElement {
     const from   = ship?.state || ship?.State;
     if (!from || from === toState) return;
 
-    // B1: WASM FSM guard; fallback to VALID_NEXT if WASM unavailable
+    // B1: shipment FSM drag affordance — check_shipment_transition, not the quotation FSM's
+    // check_quotation_transition (that answered a different (state,event) question and refused
+    // every drag once WASM was loaded). Fallback to VALID_NEXT if WASM unavailable.
     const wasm = window.__vdg_wasm;
     let allowed;
-    if (wasm?.check_quotation_transition) {
-      allowed = wasm.check_quotation_transition(from, toState);
+    if (wasm?.check_shipment_transition) {
+      allowed = wasm.check_shipment_transition(from, toState);
     } else {
       // fallback if WASM unavailable
       const validTargets = VALID_NEXT[from] || [];

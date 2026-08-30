@@ -2,7 +2,7 @@
 // auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v081fc409';
+const STATIC_CACHE     = 'vdg-static-vf0dfdf42';
 // Build-hash-versioned, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
@@ -186,6 +186,7 @@ const BOOT_GRAPH = [
   'js/implementations/ui/core_abstractions/ports/data/shipment-repo.js',
   'js/implementations/ui/core_abstractions/ports/data/write-gate.js',
   'js/implementations/ui/core_abstractions/ports/flows/air-rate-calculator.js',
+  'js/implementations/ui/core_abstractions/ports/flows/approval-orchestrator.js',
   'js/implementations/ui/core_abstractions/ports/flows/backup-exporter.js',
   'js/implementations/ui/core_abstractions/ports/flows/fsm-auto-advance.js',
   'js/implementations/ui/core_abstractions/ports/flows/fsm-ingest.js',
@@ -231,6 +232,7 @@ const BOOT_GRAPH = [
   'js/implementations/ui/core_abstractions/ports/manager/manifest-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/notification-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/pnl-composer.js',
+  'js/implementations/ui/core_abstractions/ports/manager/self-approved-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/user-audit-log-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/users-view-composer.js',
   'js/implementations/ui/core_abstractions/ports/storage/awb-repo.js',
@@ -259,7 +261,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps 081fc409 → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps f0dfdf42 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

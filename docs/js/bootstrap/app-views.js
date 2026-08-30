@@ -27,6 +27,7 @@ export const VIEWS = {
   '/manager/reports/pnl':            () => import('../implementations/ui/bootstrap/views/manager/pnl-report.js'),
   '/manager/finance/cash-flow':      () => import('../implementations/ui/bootstrap/views/manager/cash-flow.js'),
   '/manager/finance/close-period':   () => import('../implementations/ui/bootstrap/views/manager/close-period.js'),
+  '/manager/finance/self-approved-review': () => import('../implementations/ui/bootstrap/views/manager/self-approved-review.js'),
   '/manager/audit':                  () => import('../implementations/ui/bootstrap/views/manager/audit.js'),
   '/manager/notifications':          () => import('../implementations/ui/bootstrap/views/manager/notifications.js'),
   // E-14 batch-02

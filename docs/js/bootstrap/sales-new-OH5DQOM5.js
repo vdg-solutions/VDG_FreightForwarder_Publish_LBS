@@ -44,14 +44,14 @@ import {
   slugify
 } from "./chunk-JAUWUVEL.js";
 import {
+  computeChargeableKg
+} from "./chunk-WKFYYEZM.js";
+import {
   fxDeviation
 } from "./chunk-Z6T6WECV.js";
 import {
   ROLE_LABEL_KEYS
 } from "./chunk-P5SY6HRX.js";
-import {
-  computeChargeableKg
-} from "./chunk-WKFYYEZM.js";
 import {
   DEFAULT_CURRENCY_FIELD,
   readSettings

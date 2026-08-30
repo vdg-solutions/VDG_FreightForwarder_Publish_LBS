@@ -63,6 +63,10 @@ export const V1_ITEMS = [
   // after commission settlement. No narrower rule for "/manager/finance/close-period" — falls to
   // the broad "/manager" rule; allowRoles matches that exactly.
   { group: 'reports',   route: '/manager/finance/close-period', labelKey: 'nav.manager.close_period', icon: 'lock', allowRoles: [ROLE_MANAGER] },
+  // authorization-model.md §4: LBS's detective control — self-approval is never blocked, only
+  // recorded and surfaced. allowRoles matches access_policy.rs's own narrower rule for this route
+  // exactly (Manager + Auditor, the outside reader a real audit substitutes for a second signer).
+  { group: 'reports',   route: '/manager/finance/self-approved-review', labelKey: 'nav.manager.self_approved_review', icon: 'doc', allowRoles: [ROLE_MANAGER, ROLE_AUDITOR] },
   // #31: finance policy the ACCOUNTANT owns (default P&L currency). Not under /manager — that
   // prefix is Manager-only in access_policy.rs, which would lock out the very role that sets it.
   { group: 'reports',   route: '/accounting/settings', labelKey: 'nav.accounting.settings', icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_ACCOUNTANT] },

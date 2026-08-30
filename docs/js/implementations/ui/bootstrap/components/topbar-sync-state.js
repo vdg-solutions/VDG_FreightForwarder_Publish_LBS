@@ -56,6 +56,17 @@ export function createSyncHandlers(host) {
       }
     },
     onServerHealth: (e) => {
+      // A probe that could not reach the server carries no backlog number, and the one we last
+      // read is now unknowable — not zero, not still valid. Left standing it froze at whatever it
+      // last saw and painted "đang sao lưu" forever, through a whole outage, with nothing pending
+      // and nothing changed. Drop it: `unreachable` is the honest state, and the next successful
+      // poll re-establishes the real count.
+      if (e.detail?.unreachable) {
+        host._serverBacklog = 0;
+        host._serverOldestPendingAgeMs = null;
+        host.requestUpdate();
+        return;
+      }
       if (e.detail?.backlog_depth !== undefined) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
       if (e.detail?.oldest_pending_age_ms !== undefined) host._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
       if (e.detail?.provider) host._serverProvider = e.detail.provider;

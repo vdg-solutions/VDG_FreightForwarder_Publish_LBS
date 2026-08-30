@@ -3,11 +3,11 @@
 import '../../components/approval-card.js';
 import { APPROVAL_SLA_HOURS } from '../../components/approval-card.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { decide }    from '../../../core_abstractions/ports/flows/approval-orchestrator.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
 
 const TOAST_AUTODISMISS_MS = 5_000;
 const KIND_APPROVAL        = 'approval_request';
-const KIND_DECISION        = 'approval_decision';
 
 let _items       = [];
 const _filter      = { type: null, urgent: false };
@@ -15,7 +15,6 @@ const _selectedIds = new Set();
 let _onEntity;
 
 function getRepo()  { return window.__vdg_repo; }
-function currentUser() { return window.__vdg_auth?.getCurrentUser?.()?.email || 'manager'; }
 
 function ageHours(isoStr) {
   return (Date.now() - new Date(isoStr).getTime()) / 3_600_000;
@@ -36,46 +35,6 @@ async function loadItems() {
   return all
     .filter((a) => a.status === 'Pending' && !a._deleted)
     .sort((a, b) => new Date(a.requested_at) - new Date(b.requested_at));
-}
-
-async function writeDecision(approvalId, decision, comment, delegatedTo) {
-  const repo = getRepo();
-  if (!repo) return;
-  const now = Date.now();
-  const decidedAt = new Date(now).toISOString();
-  const by = currentUser();
-
-  // Write decision record
-  const decId = crypto.randomUUID?.() || `dec-${Date.now()}`;
-  const rec = {
-    id:                  decId,
-    approval_request_id: approvalId,
-    decision,
-    comment:    comment || '',
-    decided_at: decidedAt,
-    decided_by: by,
-  };
-  if (delegatedTo) rec.delegated_to = delegatedTo;
-  await repo.put(KIND_DECISION, decId, rec);
-
-  // Update approval_request status
-  const ar = await repo.get(KIND_APPROVAL, approvalId).catch(() => null);
-  if (ar) {
-    await repo.put(KIND_APPROVAL, approvalId, {
-      ...ar,
-      status:        decision === 'NeedInfo' ? 'Pending' : decision,
-      decided_at_ms: now,
-      decided_by:    by,
-      decision,
-    });
-    // Mirror back to quote if QuoteOverride approved
-    if (ar.type === 'QuoteOverride' && ar.target_id && decision === 'Approved') {
-      const quote = await repo.get('quotations', ar.target_id).catch(() => null);
-      if (quote) {
-        await repo.put('quotations', quote.id, { ...quote, pending_manager_approval: false });
-      }
-    }
-  }
 }
 
 function updateBadge(count) {
@@ -176,7 +135,7 @@ export async function render(root) {
     });
     if (!ok) return;
     const ids = [..._selectedIds];
-    await Promise.all(ids.map((id) => writeDecision(id, 'Approved', '', undefined)));
+    await Promise.all(ids.map((id) => decide(id, 'Approved', '', undefined)));
     _selectedIds.clear();
     _items = await loadItems();
     renderCards(root, _items);
@@ -185,7 +144,7 @@ export async function render(root) {
   root.addEventListener('vdg:approval-decision', async (e) => {
     const { approval_request_id, decision, comment, delegated_to } = e.detail;
     try {
-      await writeDecision(approval_request_id, decision, comment, delegated_to);
+      await decide(approval_request_id, decision, comment, delegated_to);
       _items = _items.filter((a) => a.id !== approval_request_id || decision === 'NeedInfo');
       renderCards(root, _items);
     } catch (err) {

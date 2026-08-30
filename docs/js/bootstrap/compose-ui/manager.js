@@ -23,6 +23,7 @@ import { bindLedgerRepost } from '../../implementations/ui/core_abstractions/por
 import { bindManifestComposer } from '../../implementations/ui/core_abstractions/ports/manager/manifest-composer.js';
 import { bindNotificationComposer } from '../../implementations/ui/core_abstractions/ports/manager/notification-composer.js';
 import { bindPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/pnl-composer.js';
+import { bindSelfApprovedComposer } from '../../implementations/ui/core_abstractions/ports/manager/self-approved-composer.js';
 import { bindUserAuditLogComposer } from '../../implementations/ui/core_abstractions/ports/manager/user-audit-log-composer.js';
 import { bindUsersViewComposer } from '../../implementations/ui/core_abstractions/ports/manager/users-view-composer.js';
 
@@ -174,6 +175,11 @@ export function composeManager(wasm) {
     computePerSalesRate: (exceptions) =>
       wasm.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
     computeEscalated: (severity) => wasm.manager_exception_escalate({ severity: severity || '' }).severity,
+  });
+
+  bindSelfApprovedComposer({
+    compose: (decisions, { period = '', from = null, to = null } = {}) =>
+      wasm.manager_self_approved_review({ decisions: decisions || [], period, from, to }).rows,
   });
 
   bindDocumentBoardComposer({

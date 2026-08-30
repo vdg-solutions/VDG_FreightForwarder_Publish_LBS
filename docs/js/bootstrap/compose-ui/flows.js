@@ -18,6 +18,7 @@ import { bindShipmentStateMigrator } from '../../implementations/ui/core_abstrac
 import { bindShipmentVoidDelete } from '../../implementations/ui/core_abstractions/ports/flows/shipment-void-delete.js';
 import { bindQuoteOrchestrator } from '../../implementations/ui/core_abstractions/ports/flows/quote-orchestrator.js';
 import { bindQuoteVoidDelete } from '../../implementations/ui/core_abstractions/ports/flows/quote-void-delete.js';
+import { bindApprovalOrchestrator } from '../../implementations/ui/core_abstractions/ports/flows/approval-orchestrator.js';
 import { composeFlowsAdmin } from './flows-admin.js';
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { listUsers } from '../../implementations/storage/core_abstractions/user-directory.js';
@@ -211,6 +212,16 @@ export function composeFlows(wasm) {
       const applied = await wasm.flows_quote_delete_apply({ quote: quote || {}, affordance: plan.affordance });
       if (!applied.ok) throw new Error(applied.error);
       return { mutated: true, affordance: plan.affordance };
+    },
+  });
+
+  bindApprovalOrchestrator({
+    decide: async (approvalId, decisionValue, comment, delegatedTo) => {
+      const r = await wasm.flows_approval_decide({
+        approval_id: approvalId, decision: decisionValue, comment: comment || null, delegated_to: delegatedTo || null,
+      });
+      if (!r.ok) throw new Error(r.error);
+      return { selfApproved: r.self_approved };
     },
   });
 

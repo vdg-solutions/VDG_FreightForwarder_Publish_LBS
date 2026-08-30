@@ -47,6 +47,7 @@ const STATIC_ROUTES = [
   { pattern: /^#\/manager\/approvals$/,             group: 'nav.group.manager',   viewKey: 'nav.manager.approvals' },
   { pattern: /^#\/manager\/finance\/cash-flow$/,    group: 'nav.group.manager',   viewKey: 'nav.manager.cash_flow' },
   { pattern: /^#\/manager\/finance\/close-period$/, group: 'nav.group.manager',   viewKey: 'nav.manager.close_period' },
+  { pattern: /^#\/manager\/finance\/self-approved-review$/, group: 'nav.group.manager', viewKey: 'nav.manager.self_approved_review' },
   { pattern: /^#\/manager\/audit$/,                 group: 'nav.group.manager',   viewKey: 'nav.manager.audit' },
   { pattern: /^#\/manager\/notifications$/,         group: 'nav.group.manager',   viewKey: 'nav.manager.notifications' },
   { pattern: /^#\/manager\/sales$/,                 group: 'nav.group.manager',   viewKey: 'nav.manager.sales_perf' },

@@ -1,4 +1,7 @@
 import {
+  decide
+} from "./chunk-6YYBEROF.js";
+import {
   statusBadgeLabel
 } from "./chunk-VRYVVURA.js";
 import {
@@ -260,16 +263,12 @@ customElements.define("vdg-approval-card", VdgApprovalCard);
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/approvals.js
 var TOAST_AUTODISMISS_MS = 5e3;
 var KIND_APPROVAL = "approval_request";
-var KIND_DECISION = "approval_decision";
 var _items = [];
 var _filter = { type: null, urgent: false };
 var _selectedIds = /* @__PURE__ */ new Set();
 var _onEntity;
 function getRepo() {
   return window.__vdg_repo;
-}
-function currentUser() {
-  return window.__vdg_auth?.getCurrentUser?.()?.email || "manager";
 }
 function ageHours2(isoStr) {
   return (Date.now() - new Date(isoStr).getTime()) / 36e5;
@@ -286,40 +285,6 @@ async function loadItems() {
   if (!repo) return [];
   const all = await repo.list(KIND_APPROVAL, null);
   return all.filter((a) => a.status === "Pending" && !a._deleted).sort((a, b) => new Date(a.requested_at) - new Date(b.requested_at));
-}
-async function writeDecision(approvalId, decision, comment, delegatedTo) {
-  const repo = getRepo();
-  if (!repo) return;
-  const now = Date.now();
-  const decidedAt = new Date(now).toISOString();
-  const by = currentUser();
-  const decId = crypto.randomUUID?.() || `dec-${Date.now()}`;
-  const rec = {
-    id: decId,
-    approval_request_id: approvalId,
-    decision,
-    comment: comment || "",
-    decided_at: decidedAt,
-    decided_by: by
-  };
-  if (delegatedTo) rec.delegated_to = delegatedTo;
-  await repo.put(KIND_DECISION, decId, rec);
-  const ar = await repo.get(KIND_APPROVAL, approvalId).catch(() => null);
-  if (ar) {
-    await repo.put(KIND_APPROVAL, approvalId, {
-      ...ar,
-      status: decision === "NeedInfo" ? "Pending" : decision,
-      decided_at_ms: now,
-      decided_by: by,
-      decision
-    });
-    if (ar.type === "QuoteOverride" && ar.target_id && decision === "Approved") {
-      const quote = await repo.get("quotations", ar.target_id).catch(() => null);
-      if (quote) {
-        await repo.put("quotations", quote.id, { ...quote, pending_manager_approval: false });
-      }
-    }
-  }
 }
 function updateBadge(count) {
   window.dispatchEvent(new CustomEvent("vdg:approval-count", { detail: { count } }));
@@ -405,7 +370,7 @@ async function render(root) {
     });
     if (!ok) return;
     const ids = [..._selectedIds];
-    await Promise.all(ids.map((id) => writeDecision(id, "Approved", "", void 0)));
+    await Promise.all(ids.map((id) => decide(id, "Approved", "", void 0)));
     _selectedIds.clear();
     _items = await loadItems();
     renderCards(root, _items);
@@ -413,7 +378,7 @@ async function render(root) {
   root.addEventListener("vdg:approval-decision", async (e) => {
     const { approval_request_id, decision, comment, delegated_to } = e.detail;
     try {
-      await writeDecision(approval_request_id, decision, comment, delegated_to);
+      await decide(approval_request_id, decision, comment, delegated_to);
       _items = _items.filter((a) => a.id !== approval_request_id || decision === "NeedInfo");
       renderCards(root, _items);
     } catch (err) {
