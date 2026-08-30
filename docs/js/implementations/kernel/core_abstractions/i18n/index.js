@@ -3,6 +3,7 @@
 import { fetchJson } from '../ports/http.js';
 import { dispatchAppEvent } from '../ports/app-events.js';
 import { dateFrom } from '../ports/clock.js';
+import { dateDisplay, datePatternHint } from '../ports/wasm-format.js';
 
 const SUPPORTED_LOCALES = ['vi', 'en'];
 const DEFAULT_LOCALE    = 'vi';
@@ -39,15 +40,26 @@ export function currentLocale() { return _locale; }
 // same locale). This function only renders whatever Rust returns.
 export function fmtDate(isoOrDate) {
   const iso = isoOrDate instanceof Date ? isoOrDate.toISOString() : String(isoOrDate ?? '');
-  if (typeof window !== 'undefined' && typeof window.fmt_date_display === 'function') {
-    return window.fmt_date_display(iso);
-  }
+  const fromRust = dateDisplay(iso);
+  if (fromRust !== null) return fromRust;
   // wasm not loaded yet (or a non-browser test importing this module directly) — same shape as
   // the Rust rule, kept only as a bootstrap-order/test fallback, never the app's real decision.
   const d = isoOrDate instanceof Date ? isoOrDate : dateFrom(isoOrDate);
   return new Intl.DateTimeFormat(_locale, {
     day: '2-digit', month: '2-digit', year: 'numeric',
   }).format(d);
+}
+
+// H4-c: the literal-format explainer for a date field with no value yet (date-input-hint.js) —
+// the one moment `fmtDate` itself has nothing to render. Same source of truth as `fmtDate`
+// (`fmt_date_pattern_hint`, declared right beside `fmt_date_display` in js_bridge.rs) so the two
+// can never drift apart the way the native widget and the old value-only hint used to.
+export function fmtDatePattern() {
+  const fromRust = datePatternHint();
+  if (fromRust !== null) return fromRust;
+  // Bootstrap-order/test fallback only — mirrors fmtDate's own fallback above, never the app's
+  // real decision (that stays in Rust).
+  return 'dd/mm/yyyy';
 }
 
 export function fmtNumber(n) {

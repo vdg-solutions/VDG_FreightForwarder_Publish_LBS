@@ -19,6 +19,25 @@ export function boundedList(repo, kind, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
   return safeMasterLoad(() => repo.list(kind, null), tag, _ms);
 }
 
+// F-?? (masters outage collapse): repo.list() always answers from the local cache, so an outage
+// with nothing cached yet still resolves { ok: true, value: [] } — indistinguishable from a
+// genuinely empty master table. `sync_health` (Rust) already knows the difference: any kind whose
+// bootstrap/push failed this session and has not since recovered shows up in
+// `repo.sync_failed_kinds()`, the same synchronous registry shipments.js/pnl-report.js already
+// read for their own load-outcome checks. Fold that fact into `listRes` here — ONE place, so
+// every master view's existing `if (!listRes.ok)` retry branch fires on an outage it would
+// otherwise render as "nothing here yet, create your first record."
+//
+// Never overrides a NON-empty result: stale cached rows during an outage must still render (the
+// stale-while-revalidate contract `wasm_repo.rs::list` already promises) — this only closes the
+// gap where an empty cache and a real failure would otherwise collapse into each other.
+export function foldSyncFailure(listRes, kind, repo) {
+  if (!listRes.ok || listRes.value.length > 0) return listRes;
+  const failedKinds = repo?.sync_failed_kinds?.() ?? [];
+  if (!failedKinds.includes(kind)) return listRes;
+  return { ok: false, error: new Error(`sync-failed:${kind}`) };
+}
+
 // Actionable retry row — replaces a colspan "Đang tải…" placeholder inside a <tbody>.
 export function renderMasterLoadRetryRow(tbody, colSpan, message, retryLabel, onRetry) {
   if (!tbody) return;

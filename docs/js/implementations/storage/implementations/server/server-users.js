@@ -16,8 +16,8 @@ export async function listUsers({ role } = {}) {
   return apiFetch('GET', `${USERS_PATH}${qs}`);
 }
 
-/// {email, display_name, roles} -> the created/updated row. Idempotent: a repeat call with the
-/// same email updates the existing grant, never creates a second one.
+/// {email, display_name, roles} -> the created row. Strict create (H3-a): rejects with 409 if
+/// the email already has a grant row -- use patchUser to change an existing person.
 export async function createUser({ email, display_name, roles }) {
   return apiFetch('POST', USERS_PATH, { email, display_name, roles });
 }

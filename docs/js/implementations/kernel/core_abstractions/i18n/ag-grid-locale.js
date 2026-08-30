@@ -3,6 +3,7 @@
 // calling agGridLocaleText() at grid-init time always resolves the current locale. Property
 // names below are ag-grid's own localeText contract — do not rename.
 import { t } from './index.js';
+import { createGrid } from '../ports/grid.js';
 
 // AC-06 key-completeness — one grid.* i18n key per ag-grid localeText property.
 export const AG_GRID_LOCALE_KEYS = [
@@ -64,10 +65,5 @@ export function agGridLocaleText() {
 // F-19-93 (D14): shared factory so views can't stand up a grid without the locale. Handles
 // both the modern createGrid() and the legacy `new Grid()` API ag-grid-community 31.x still ships.
 export function mountAgGrid(container, gridOptions) {
-  const options = { ...gridOptions, localeText: agGridLocaleText() };
-  if (typeof window.agGrid?.createGrid === 'function') {
-    return window.agGrid.createGrid(container, options);
-  }
-  const grid = new window.agGrid.Grid(container, options);
-  return grid.gridOptions?.api || options.api;
+  return createGrid(container, { ...gridOptions, localeText: agGridLocaleText() });
 }

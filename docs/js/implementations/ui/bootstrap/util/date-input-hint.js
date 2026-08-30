@@ -1,15 +1,21 @@
-// date-input-hint.js — F4-d: a bare `<input type="date">` renders in the BROWSER's own locale,
-// never the page's — `lang="${currentLocale()}"` on the element (already tried, every filter/
-// form date input in the app carries it) is not reliably honored across browsers/versions; the
-// deployed app still showed `08/30/2026` (MM/DD/YYYY) for a Vietnamese-locale page. Chasing the
-// native widget's own rendering further is not this app's decision to make — the fix is to stop
-// relying on it: every date input gets a small adjacent hint in the app's ONE convention
+// date-input-hint.js — F4-d/H4-c: a bare `<input type="date">` renders in the BROWSER's own
+// locale, never the page's — `lang="${currentLocale()}"` on the element (already tried, every
+// filter/form date input in the app carries it) is not reliably honored across browsers/versions;
+// the deployed app still showed `08/30/2026` (MM/DD/YYYY) for a Vietnamese-locale page. Chasing
+// the native widget's own rendering further is not this app's decision to make — the fix is to
+// stop relying on it: every date input gets a small adjacent hint in the app's ONE convention
 // (fmtDate — i18n/index.js, the same function every other date display in the app already
 // goes through), kept in sync as the user picks a new value. The `<input>` itself is untouched
 // (native picker, native `value`, still always ISO yyyy-mm-dd per the HTML spec regardless of
 // display locale) — only a READ affordance is added, so no existing read/parse of `.value`
 // anywhere breaks.
-import { fmtDate } from '../../../kernel/core_abstractions/i18n/index.js';
+//
+// H4-c: an EMPTY input used to paint no hint at all — exactly the moment a reader most needs to
+// know which convention the field expects, and the exact moment the bare native placeholder
+// (`mm/dd/yyyy` under an en-US browser) contradicts the app's own dd/mm/yyyy rule with nothing
+// beside it to correct that impression. `fmtDatePattern()` (Rust-owned, same file as fmtDate's
+// own convention) fills that gap with the literal pattern instead of leaving the hint blank.
+import { fmtDate, fmtDatePattern } from '../../../kernel/core_abstractions/i18n/index.js';
 
 const HINT_CLASS = 'vdg-date-hint text-xs text-slate-400 ml-1 whitespace-nowrap';
 const WIRED_FLAG = 'vdgDateHintWired';
@@ -22,7 +28,7 @@ function ensureHint(input) {
     hint.className = HINT_CLASS;
     input.insertAdjacentElement('afterend', hint);
   }
-  hint.textContent = input.value ? `(${fmtDate(input.value)})` : '';
+  hint.textContent = input.value ? `(${fmtDate(input.value)})` : `(${fmtDatePattern()})`;
 }
 
 /// Wires a hint onto every `input[type="date"]` under `root` (root itself included), and — via

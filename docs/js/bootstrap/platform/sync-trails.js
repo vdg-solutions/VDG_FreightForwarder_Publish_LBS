@@ -156,6 +156,11 @@ export function installErrorLog({ getUser, getVersion }) {
 
   window.addEventListener(SYNC_ERROR_EVENT, (e) => {
     const detail = e.detail || {};
-    capture(ERROR_KIND_SYNC, `${detail.kind} ${detail.id}`, JSON.stringify(detail));
+    // H4-f: the event never carried an `id` field (its real shape is {kind, period, reason,
+    // error} — tick.rs/outbox.rs's own SYNC_ERROR_EVENT dispatches) — `${detail.kind}
+    // ${detail.id}` always rendered "<kind> undefined" in the manager's errors grid. `reason` is
+    // the one field every dispatch site always sets (outbox.rs's own quarantine_group omits
+    // `error`); prefer the richer `error` text when the dispatch carries one.
+    capture(ERROR_KIND_SYNC, `${detail.kind}: ${detail.error || detail.reason || 'unknown'}`, JSON.stringify(detail));
   });
 }

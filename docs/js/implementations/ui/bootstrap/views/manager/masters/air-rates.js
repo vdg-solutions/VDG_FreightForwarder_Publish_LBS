@@ -3,7 +3,7 @@
 
 import { t, currentLocale } from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, foldSyncFailure, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { currentUserRole, currentUserRoles } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
@@ -190,7 +190,7 @@ export async function render(root) {
     const statusEl = root.querySelector('#ar-status');
     if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
-    const listRes = await boundedList(repo, KIND, 'air-rates:list');
+    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'air-rates:list'), KIND, repo);
     if (!listRes.ok) {
       if (tbody) tbody.innerHTML = '';
       emptyEl?.classList.add('hidden');

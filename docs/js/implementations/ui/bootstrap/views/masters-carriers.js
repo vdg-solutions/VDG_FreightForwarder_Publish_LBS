@@ -3,6 +3,7 @@
 import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
+import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
@@ -125,8 +126,9 @@ function makeActionsRenderer(onEdit, onDelete) {
 export async function render(root) {
   const isM  = canWriteMaster(KIND, currentRoles());
   const repo = window.__vdg_repo;
-  let items  = [];
-  let api    = null;
+  let items      = [];
+  let api        = null;
+  let loadFailed = false;
 
   root.innerHTML = `
     <div class="p-6 max-w-[1600px] mx-auto">
@@ -189,17 +191,15 @@ export async function render(root) {
 
   async function reload() {
     const statusEl = root.querySelector('#m-status');
-    const listRes = await boundedList(repo, KIND, `${KIND}:list`);
-    if (!listRes.ok) {
-      items = [];
-      api?.setGridOption('rowData', items);
-      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.load.retry'), reload);
-      return;
-    }
-
-    items = listRes.value;
+    const listRes = foldSyncFailure(await boundedList(repo, KIND, `${KIND}:list`), KIND, repo);
+    loadFailed = !listRes.ok;
+    items = loadFailed ? [] : listRes.value;
     api?.setGridOption('rowData', items);
-    if (statusEl) statusEl.textContent = '';
+    if (loadFailed) {
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.load.retry'), reload);
+    } else if (statusEl) {
+      statusEl.textContent = '';
+    }
     const hdr = root.querySelector('#grid-header');
     if (hdr) hdr.innerHTML = renderToolbar(items.length);
     wireToolbar();
@@ -227,6 +227,10 @@ export async function render(root) {
       // "Thêm hãng vận chuyển mới" / "Tạo hãng vận chuyển đầu tiên" match this view's own
       // "+ Thêm mới" toolbar verb, so no per-view override is needed here.
       onCreate: isM ? handleAdd : undefined,
+      // F-?? outage/first-run collapse: a known sync failure (foldSyncFailure above) must render
+      // the LOAD_FAILED card, never the "create your first carrier" onboarding copy.
+      getLoadOutcome: () => ({ failed: loadFailed, skipped: 0 }),
+      onRetry: reload,
     });
     root.querySelector('#export-csv')?.addEventListener('click', () => {
       api?.exportDataAsCsv({ fileName: 'vdg_carriers.csv' });

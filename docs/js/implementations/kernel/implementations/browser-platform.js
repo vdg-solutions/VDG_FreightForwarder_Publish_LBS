@@ -57,3 +57,23 @@ export const base64Codec = {
   decode: (b64) => atob(b64),
   encode: (str) => btoa(str),
 };
+
+// The display formatters Rust owns, reached through the wasm exports the loader hangs on
+// `window` (js_bridge.rs). Returning null when the export is absent lets the caller fall back
+// during boot instead of throwing at a moment the app is expected to render.
+export const wasmFormatter = {
+  dateDisplay:     (iso) => (typeof window.fmt_date_display === 'function' ? window.fmt_date_display(iso) : null),
+  datePatternHint: ()    => (typeof window.fmt_date_pattern_hint === 'function' ? window.fmt_date_pattern_hint() : null),
+};
+
+// ag-grid-community 31.x ships as a global script, and 31.x still answers to both the modern
+// createGrid() and the legacy `new Grid()` shape.
+export const agGridHost = {
+  create: (container, options) => {
+    if (typeof window.agGrid?.createGrid === 'function') {
+      return window.agGrid.createGrid(container, options);
+    }
+    const grid = new window.agGrid.Grid(container, options);
+    return grid.gridOptions?.api || options.api;
+  },
+};

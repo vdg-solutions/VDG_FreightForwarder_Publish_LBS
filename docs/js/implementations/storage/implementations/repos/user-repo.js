@@ -24,6 +24,12 @@ export class UserStoreRepo extends UserRepoPort {
     return await this._repo().users_list_all();
   }
 
+  // H4-e: the raw stored shape, no Users-screen projection — see users_list_raw's own doc
+  // comment (store::operators::user_store.rs). The workspace backup export's own reach.
+  async listRaw() {
+    return await this._repo().users_list_raw();
+  }
+
   async get(email) {
     return await this._repo().users_get(email);
   }

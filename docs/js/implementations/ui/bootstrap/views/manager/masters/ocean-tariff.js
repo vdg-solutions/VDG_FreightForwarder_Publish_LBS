@@ -6,7 +6,7 @@
 // contract is already exercised generically by priced-ref-repo.test.mjs).
 
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
-import { boundedList, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
 const KIND             = 'ocean-tariff';
 const CARRIER_KIND     = 'ocean-carriers';
@@ -117,10 +117,11 @@ export async function render(root) {
     const statusEl = root.querySelector('#m-status');
     if (!repo) { if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
-    const [tariffRes, carrierRes] = await Promise.all([
+    const [tariffRaw, carrierRes] = await Promise.all([
       boundedList(repo, KIND, 'ocean-tariff:list'),
       boundedList(repo, CARRIER_KIND, 'ocean-tariff:carriers'),
     ]);
+    const tariffRes = foldSyncFailure(tariffRaw, KIND, repo);
     if (!tariffRes.ok) {
       if (tbody) tbody.innerHTML = '';
       emptyEl?.classList.add('hidden');

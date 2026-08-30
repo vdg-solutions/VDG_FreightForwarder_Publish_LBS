@@ -69,6 +69,14 @@ function filteredHtml({ entity, createLabel }) {
 function firstRunHtml({ entity, createLabel, body }) {
   const createBtn = createBtnHtml(createLabel,
     'mt-1 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md shadow-blue-200');
+  // No createLabel means this viewer cannot create here (write-permission decided in Rust,
+  // see master_registry.rs / action_policy.rs) — the copy must say the table is empty, never
+  // invite an action the click would just refuse. A caller's own `body` override is onboarding
+  // language written for someone who CAN create, so it only applies alongside a real CTA.
+  const title = createLabel ? t('empty_state.first_run.title', { entity }) : t('empty_state.first_run.readonly_title', { entity });
+  const bodyText = createLabel
+    ? (body || t('empty_state.first_run.body', { entity }))
+    : t('empty_state.first_run.readonly_body', { entity });
   return `
     <div class="flex flex-col items-center justify-center gap-4 py-16" role="status" data-testid="empty-state-first-run"
          style="background:linear-gradient(180deg,#fff 0%,#f8fafc 100%)">
@@ -77,8 +85,8 @@ function firstRunHtml({ entity, createLabel, body }) {
         <div class="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full flex items-center justify-center shadow-sm">${ICON_SPARKLE}</div>
       </div>
       <div class="text-center">
-        <p class="text-base font-semibold text-slate-800">${t('empty_state.first_run.title', { entity })}</p>
-        <p class="text-xs text-slate-400 mt-1.5 max-w-xs leading-relaxed">${body || t('empty_state.first_run.body', { entity })}</p>
+        <p class="text-base font-semibold text-slate-800">${title}</p>
+        <p class="text-xs text-slate-400 mt-1.5 max-w-xs leading-relaxed">${bodyText}</p>
       </div>
       ${createBtn}
     </div>`;
@@ -118,7 +126,9 @@ function loadFailedHtml({ entity, skipped = 0 }) {
  * @param {string} opts.entity - lowercase, localized entity noun (interpolated into the sentence)
  * @param {string} [opts.createLabel] - localized CTA label; omit to render without a create action
  * @param {string} [opts.body] - first-run only: override the generic body (e.g. the owner's
- *   literal shipments copy) instead of the generic "{entity} first record" template
+ *   literal shipments copy) instead of the generic "{entity} first record" template. Only used
+ *   when `createLabel` is set — a viewer with no create action gets the neutral read-only body
+ *   instead, never this onboarding-flavored override (see firstRunHtml)
  * @param {number} [opts.skipped] - load-failed only: records skipped this load (0 = none/unknown)
  */
 export function emptyStateHtml(opts) {

@@ -14,7 +14,8 @@ function _i() {
 
 /// ({role?}) -> { users: [{email, display_name, roles}] }
 export const listUsers = (...a) => _i().listUsers(...a);
-/// ({email, display_name, roles}) -> the created/updated row
+/// ({email, display_name, roles}) -> the created row. Rejects (409) if the email already has
+/// a grant row -- use patchUser to change an existing person's roles/name (H3-a).
 export const createUser = (...a) => _i().createUser(...a);
 /// (email, {display_name?, roles?, active?}) -> the updated row
 export const patchUser = (...a) => _i().patchUser(...a);

@@ -3,7 +3,7 @@
 import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
-import { boundedList, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
@@ -47,8 +47,9 @@ export async function render(root) {
 
   const canEdit  = canWriteMaster(KIND, currentRoles());
   const repo = window.__vdg_repo;
-  let items  = [];
-  let api    = null;
+  let items      = [];
+  let api        = null;
+  let loadFailed = false;
 
   const loadReps = async () => (repo ? await getActiveSalesReps(repo).catch(() => []) : []);
 
@@ -116,22 +117,21 @@ export async function render(root) {
     const statusEl = root.querySelector('#m-status');
     if (!repo) {
       items = [];
+      loadFailed = false;
       api?.setGridOption('rowData', items);
       if (statusEl) statusEl.textContent = '';
       return;
     }
 
-    const listRes = await boundedList(repo, KIND, 'customers:list');
-    if (!listRes.ok) {
-      items = [];
-      api?.setGridOption('rowData', items);
-      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.load.retry'), reload);
-      return;
-    }
-
-    items = listRes.value;
+    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'customers:list'), KIND, repo);
+    loadFailed = !listRes.ok;
+    items = loadFailed ? [] : listRes.value;
     api?.setGridOption('rowData', items);
-    if (statusEl) statusEl.textContent = '';
+    if (loadFailed) {
+      renderMasterLoadRetryStatus(statusEl, t('masters.load_error'), t('common.load.retry'), reload);
+    } else if (statusEl) {
+      statusEl.textContent = '';
+    }
     const hdr = root.querySelector('#grid-header');
     if (hdr) hdr.innerHTML = renderToolbar(items.length);
     wireToolbar();
@@ -158,6 +158,10 @@ export async function render(root) {
       // CTA relies on the generic empty_state.filtered.create / first_run.create templates —
       // matches this view's own "+ Thêm mới" toolbar verb, so no per-view override is needed.
       onCreate: canEdit ? handleAdd : undefined,
+      // F-?? outage/first-run collapse: a known sync failure (foldSyncFailure above) must render
+      // the LOAD_FAILED card, never the "create your first customer" onboarding copy.
+      getLoadOutcome: () => ({ failed: loadFailed, skipped: 0 }),
+      onRetry: reload,
     });
     root.querySelector('#export-csv')?.addEventListener('click', () => {
       api?.exportDataAsCsv({ fileName: 'vdg_customers.csv' });

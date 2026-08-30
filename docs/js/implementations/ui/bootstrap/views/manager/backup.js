@@ -39,6 +39,7 @@ function _html() {
       <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 space-y-1">
         <div class="font-semibold">${t('backup.restore.title')}</div>
         <p>${t('backup.restore.body_1')}</p>
+        <p class="font-semibold">${t('backup.restore.gap_ledger')}</p>
         <p>${t('backup.restore.body_2')}</p>
       </div>
     </div>`;

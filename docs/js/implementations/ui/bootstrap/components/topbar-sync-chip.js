@@ -17,6 +17,9 @@ export const DOT_CLASS = {
   quarantined: 'bg-rose-700',  // a decided, permanent refusal (outbox.rs::quarantine_group) —
                                 // its own shade, never the plain 'red' used for an ordinary
                                 // offline/reconnect wait that resolves on its own
+  unreachable: 'bg-red-500',   // H4-b: the server cannot be reached at all — as alarming as
+                                // offline, but its own STATE key so decideChipAction/tooltip
+                                // never reuse the signin/reconnect wording 'red' carries
 };
 
 // State color → i18n semantic label key (AC-07)
@@ -28,6 +31,7 @@ export const STATE_TO_LABEL_KEY = {
   red:         'offline',
   pending:     'auth_pending', // F-50-01 AC-10 — distinct key, never reuses offline/healthy
   quarantined: 'quarantined',
+  unreachable: 'unreachable',  // H4-b — own key, never folded into 'offline' or 'retrying'
 };
 
 // AC-07 — aria-label builder; pure, testable without DOM
@@ -44,12 +48,14 @@ export function buildAriaLabel(state, outboxCount, t, serverBacklog = 0) {
 
 // AC-03 — state machine; clock injected via `now`. F-50-01 added the calm 'pending' state
 // (AC-06/07/08); this fn's OWN decision beyond that is browser-only (online/auth/backoff) —
-// whether the DATA itself is trustworthy right now (pending/failed/quarantined) is Rust's own
-// verdict (sync_health.rs), passed in as `syncFailed`/`quarantined` rather than re-derived here
-// from a JS-tracked retry counter (owner: "mọi business đều phải nằm trong wasm" — a failed
-// collection or a quarantined row is exactly that kind of decision, not a render).
+// whether the DATA itself is trustworthy right now (pending/failed/unreachable/quarantined) is
+// Rust's own verdict (sync_health.rs), passed in as `syncFailed`/`unreachable`/`quarantined`
+// rather than re-derived here from a JS-tracked retry counter (owner: "mọi business đều phải
+// nằm trong wasm" — a failed collection or a quarantined row is exactly that kind of decision,
+// not a render).
 export function computeChipState({
-  pending, syncFailed, quarantined, backoff429, offline, signedOut, lastSyncMs, now, authReconnect, authPending,
+  pending, syncFailed, unreachable = false, quarantined, backoff429, offline, signedOut, lastSyncMs, now,
+  authReconnect, authPending,
   serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
 }) {
   if (authReconnect) return 'red';          // F-29-13 AC-05 — genuine reconnect need
@@ -60,6 +66,13 @@ export function computeChipState({
   // into "just still retrying" or, worse, the healthy "nothing pending" case.
   if (quarantined) return 'quarantined';
   if (authPending) return 'pending';        // F-50-01 AC-06 — expected structural popup-blocked wait
+  // H4-b: `unreachable` is Rust's own sync_health::is_unreachable() — the whole-session delta
+  // pull itself failing, never a single master kind's bootstrap miss. Ranked ABOVE the softer
+  // 'orange' signals below (a slow secondary backup / a rate-limit backoff / one narrow kind
+  // failing) because "nothing can reach the server" is strictly worse than any of those, and
+  // deliberately independent of `serverBacklog` (backing_up, further below) — that counter stays
+  // permanently non-zero while its own drain bug is open, and must never be read as an outage.
+  if (unreachable) return 'unreachable';
   if (serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== undefined && serverOldestPendingAgeMs > 300_000) {
     return 'orange';
   }
@@ -133,7 +146,7 @@ export function buildChipTitle({
       ? t('topbar.sync.tooltip.lastSync').replace('{ago}', ago)
       : t('topbar.sync.tooltip.lastSync.never');
   }
-  if (lastError && (state === 'orange' || state === 'red')) {
+  if (lastError && (state === 'orange' || state === 'red' || state === 'unreachable')) {
     return `${stateText} — ${lastError}`;
   }
   return stateText;
@@ -200,6 +213,11 @@ export function decideChipAction({ state, user, online, lastError, authReconnect
   if (state === 'red' && authReconnect)       return serverBackend ? CHIP_ACTION.SIGNIN : CHIP_ACTION.RECONNECT;
   if (state === 'red' && !user)               return CHIP_ACTION.SIGNIN;
   if (state === 'red' && !online)             return CHIP_ACTION.WAITING_NETWORK;
+  // H4-b: a click can't fix "the server is down" any faster than the delta tick's own retry —
+  // same FORCE_RETRY affordance a narrow failed kind already gets, never NOOP (a genuine outage
+  // is exactly the case a manager wants a manual nudge for, unlike the quarantined/pending waits
+  // above which a click cannot resolve at all).
+  if (state === 'unreachable')                return CHIP_ACTION.FORCE_RETRY;
   if (state === 'orange' && lastError)        return CHIP_ACTION.FORCE_RETRY;
   return CHIP_ACTION.SYNC_NOW;
 }

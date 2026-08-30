@@ -14,6 +14,10 @@ export class WasmEntityRepo {
     [Symbol.dispose](): void;
     awb_append(awb_json: string): Promise<any>;
     awb_delete(awb_no: string, ym: string): Promise<any>;
+    /**
+     * H4-d: every AWB across every month — same shape as `fx_list_all` above.
+     */
+    awb_list_all(): Promise<any>;
     awb_list_by_month(ym: string): Promise<any>;
     delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
@@ -149,6 +153,13 @@ export class WasmEntityRepo {
      */
     sync_failed_reason(): string | undefined;
     /**
+     * H4-b: the server itself is unreachable this session (`sync_health::is_unreachable`) —
+     * distinct from `sync_failed_kinds` being non-empty, which also fires on a single master
+     * kind's bootstrap failing narrowly while everything else still works. Synchronous, same
+     * shape as `sync_failed_kinds` above: the chip reads this on every render, no round trip.
+     */
+    sync_server_unreachable(): boolean;
+    /**
      * Distinct records skipped for `kind` this session — the count a view's partial-data notice
      * names (`empty_state.load_failed.partial` / `pivot-table.js`'s own `skippedCount`).
      */
@@ -164,6 +175,11 @@ export class WasmEntityRepo {
     users_get(email: string): Promise<any>;
     users_list(): Promise<any>;
     users_list_all(): Promise<any>;
+    /**
+     * H4-e: every grant, RAW stored shape, no UI projection — the workspace backup export's own
+     * reach (see `UserStoreOperator::list_raw`'s own doc comment).
+     */
+    users_list_raw(): Promise<any>;
     users_remove(email: string): Promise<any>;
     users_upsert(user_json: string): Promise<any>;
 }
@@ -412,6 +428,14 @@ export function flows_void_plan(req: any): any;
  * of the browser's display locale) or a full ISO timestamp; returns `""` for anything else.
  */
 export function fmt_date_display(iso: string): string;
+
+/**
+ * H4-c: the literal-format explainer shown beside a date input that has no value yet
+ * (date-input-hint.js) -- day/month/year, same order and separator `fmt_date_display` formats a
+ * real value with. Declared right beside it on purpose: a future change to that `format!()`
+ * call is the one place a reviewer would also see this literal needs the same edit.
+ */
+export function fmt_date_pattern_hint(): string;
 
 /**
  * `taken_json` is the JSON array of forks already in use; `seed` is a caller-supplied random
@@ -898,6 +922,7 @@ export interface InitOutput {
     readonly flows_void_apply: (a: number) => number;
     readonly flows_void_plan: (a: number, b: number) => void;
     readonly fmt_date_display: (a: number, b: number, c: number) => void;
+    readonly fmt_date_pattern_hint: (a: number) => void;
     readonly fork_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly freight_app_init: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
@@ -1030,6 +1055,7 @@ export interface InitOutput {
     readonly verify_license: (a: number, b: number, c: bigint) => number;
     readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_awb_list_all: (a: number) => number;
     readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
@@ -1079,12 +1105,14 @@ export interface InitOutput {
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
     readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
+    readonly wasmentityrepo_sync_server_unreachable: (a: number) => number;
     readonly wasmentityrepo_sync_skipped_count: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_sync_skipped_kinds: (a: number) => number;
     readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_list: (a: number) => number;
     readonly wasmentityrepo_users_list_all: (a: number) => number;
+    readonly wasmentityrepo_users_list_raw: (a: number) => number;
     readonly wasmentityrepo_users_remove: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1099,9 +1127,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13479: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13492: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9538: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13520: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13533: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9579: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

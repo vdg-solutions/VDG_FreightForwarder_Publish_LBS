@@ -8,7 +8,7 @@ import {
   validateAirlineIata, validateAirlineIcao, checkIataUnique,
 } from '../../../../../kernel/core_abstractions/util/iata-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
 const KIND        = 'airline-carriers';
 const KIND_PREFIX = 'ACR';
@@ -140,7 +140,7 @@ export async function render(root) {
     const statusEl = root.querySelector('#m-status');
     if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
-    const listRes = await boundedList(repo, KIND, 'airline-carriers:list');
+    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'airline-carriers:list'), KIND, repo);
     if (!listRes.ok) {
       if (tbody) tbody.innerHTML = '';
       emptyEl?.classList.add('hidden');

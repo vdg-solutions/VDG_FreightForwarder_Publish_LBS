@@ -6,7 +6,7 @@ import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master
 import { t }                            from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { validateUldCode, checkUldCodeUnique } from '../../../../../kernel/core_abstractions/util/uld-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
 const KIND        = 'uld-types';
 const KIND_PREFIX = 'ULD';
@@ -181,7 +181,7 @@ export async function render(root) {
     const statusEl = root.querySelector('#m-status');
     if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
-    const listRes = await boundedList(repo, KIND, 'uld-types:list');
+    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'uld-types:list'), KIND, repo);
     if (!listRes.ok) {
       if (tbody) tbody.innerHTML = '';
       emptyEl?.classList.add('hidden');

@@ -1,7 +1,7 @@
 // Post-OAuth repo-init chain — "render-first, sync-later"
 // Critical path: open store → WASM init → repo build → license gate → RENDER
 
-import { currentSalesRepId } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
+import { currentSalesRepId, currentRolesResolved } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
 import { safeAwait } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
 import { createPlatform } from '../platform/index.js';
@@ -157,6 +157,18 @@ async function _deferredInit(user, db, serverApi, repo) {
     // the ACL-probe snapshot auth_set_resolved_roles already wrote (it can disagree, and it wins).
     // Rust reads the record, derives the roles and the fork, and republishes the whole principal —
     // this call carries the email and nothing else.
+    //
+    // A lookup that fails (server unreachable at this exact moment) now leaves the session
+    // UNRESOLVED instead of publishing a false "denied" (resolve_principal.rs), but nobody ever
+    // asked again — the sidebar stayed on "unreachable" until a manual reload. `vdg:server-health`
+    // is the same signal the reconnect chip already answers to (startHealthPoll's tick, or any
+    // other apiFetch success) — piggyback on it instead of a second timer, and stop listening once
+    // a real verdict lands.
+    const retryPrincipalOnReconnect = () => {
+      if (currentRolesResolved()) { window.removeEventListener('vdg:server-health', retryPrincipalOnReconnect); return; }
+      wasm().auth_resolve_principal({ email: user.email }).catch(() => {});
+    };
+    window.addEventListener('vdg:server-health', retryPrincipalOnReconnect);
     wasm().auth_resolve_principal({ email: user.email }).catch(() => {});
 
   } catch (err) {

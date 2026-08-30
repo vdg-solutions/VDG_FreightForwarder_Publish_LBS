@@ -9,6 +9,19 @@ const VND_CURRENCY = 'VND';
 const FX_CELL_CLS  = 'border border-slate-200 rounded px-1 py-0.5 text-xs';
 const RO_CELL_CLS  = `${FX_CELL_CLS} bg-slate-50`;
 
+// H4-c: a monotonic, module-scope counter — never the row's own `idx`/`data-line` position.
+// section-lines-wiring.js's "add row" appends compute their new idx from the CURRENT row count
+// (`tbody.querySelectorAll('tr[data-line]').length`), which repeats a value the moment a row
+// ABOVE the end was removed first (3 rows 0/1/2, remove row 1, add one back -> count is 2, so the
+// new row's idx is 2 again, the same as the still-present row 2). A position is the wrong source
+// for an identity that has to stay unique for the page's whole lifetime; a counter that only ever
+// goes up cannot repeat regardless of how rows are added/removed in between.
+let _fxDateIdSeq = 0;
+function nextFxDateId(side) {
+  _fxDateIdSeq += 1;
+  return `${side}_fx_date_${_fxDateIdSeq}`;
+}
+
 // AC-01: mirrors section-header.js's CURRENCY_OPTIONS by value — not imported from there,
 // since section-header.js pulls in wasm-loader.js + semantic-search.js (heavy, network-bound
 // module graph) that a plain table-cell markup helper must not carry along. Keep in sync by hand.
@@ -68,20 +81,26 @@ export function currencySelectHtml(name, selected, cls = `w-16 ${FX_CELL_CLS}`) 
   return `<select name="${name}" class="${cls}">${opts}</select>`;
 }
 
-/** fxCellsHtml — AC-01/03/04/06: currency + fx_rate + fx_date cells for one side ('buy'|'sell') */
+/** fxCellsHtml — AC-01/03/04/06: currency + fx_rate + fx_date cells for one side ('buy'|'sell').
+ *  Every row shares the SAME `name` (row-scoped lookups only, `row.querySelector('[name=...]')`,
+ *  never a document-wide one — see applyFxDateDefaults/harvest below), but the date input had NO
+ *  `id` at all, so every row's `buy_fx_date`/`sell_fx_date` input carried the identical EMPTY id
+ *  — a real "N elements, same id" collision the moment anything (a11y tooling, a future
+ *  `getElementById` caller) looks for one. `nextFxDateId` makes each call's id unique. */
 export function fxCellsHtml(side, line = {}, headerCurrency, bookCurrency) {
   const currency        = line[`${side}_currency`] || headerCurrency || bookCurrency || VND_CURRENCY;
   const { rate, locked } = lockFxIfVnd(currency, bookCurrency);
   const rateVal          = locked ? rate : (line[`${side}_fx_rate`] ?? '');
   const rateCls          = locked ? RO_CELL_CLS : FX_CELL_CLS;
+  const dateId           = nextFxDateId(side);
   return `
     <td class="px-1 py-1">${currencySelectHtml(`${side}_currency`, currency)}</td>
     <td class="px-1 py-1">
       <input name="${side}_fx_rate" type="number" step="any" value="${rateVal}"${locked ? ' readonly' : ''}
         class="w-16 ${rateCls} text-right" /></td>
     <td class="px-1 py-1">
-      <input name="${side}_fx_date" type="date" value="${line[`${side}_fx_date`] || ''}" lang="${currentLocale()}"
-        class="w-28 ${FX_CELL_CLS}" /></td>`;
+      <input id="${dateId}" name="${side}_fx_date" type="date" value="${line[`${side}_fx_date`] || ''}"
+        lang="${currentLocale()}" class="w-28 ${FX_CELL_CLS}" /></td>`;
 }
 
 function fmtVndNum(val) {

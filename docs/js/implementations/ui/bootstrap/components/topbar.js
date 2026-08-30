@@ -224,8 +224,12 @@ class VdgTopbar extends LitElement {
     // unrelated "complete" signal could silently reset (the exact bug that hid a quarantined row
     // behind a green dot).
     const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).length > 0;
+    // H4-b: the whole-session pull itself failing (server unreachable) — a narrower,
+    // total-outage-specific fact than `syncFailed`, which also fires on one master kind's
+    // bootstrap missing while the rest of the app still works.
+    const unreachable = !!window.__vdg_repo?.sync_server_unreachable?.();
     const state = computeChipState({
-      pending: this._outboxCount, syncFailed, quarantined: this._quarantinedCount > 0,
+      pending: this._outboxCount, syncFailed, unreachable, quarantined: this._quarantinedCount > 0,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
       serverBacklog: this._serverBacklog,
@@ -235,12 +239,16 @@ class VdgTopbar extends LitElement {
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
     // B-38-03-01: in reconnect state the label IS the affordance — "Đồng bộ" next to a red
     // triangle reads as ordinary sync noise, and the owner signed out/in by hand instead of
-    // clicking. The tooltip already said it; the label has to.
+    // clicking. The tooltip already said it; the label has to. H4-b: the same logic applies to
+    // 'unreachable'/'orange' — a chip that keeps saying "Đồng bộ" through a total outage or a
+    // failed kind is exactly the "indistinguishable from healthy" defect this closes.
     const labelText = (state === 'red' && this._authReconnect)
       ? t(isServerBackend() ? 'topbar.sync.label.signin' : 'topbar.sync.label.reconnect')
       : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
+      : (state === 'unreachable') ? t('topbar.sync.state.unreachable')
       : (state === 'backing_up') ? t('topbar.sync.state.backing_up')
       : (state === 'quarantined') ? t('topbar.sync.state.quarantined')
+      : (state === 'orange') ? t('topbar.sync.state.retrying')
       : t('topbar.sync.label');
 
     return html`

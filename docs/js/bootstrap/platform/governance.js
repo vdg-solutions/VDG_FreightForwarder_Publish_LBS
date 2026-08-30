@@ -40,6 +40,9 @@ export const governancePlatform = {
   governance_users_get:    async (email)  => (await userRepo()?.get(email)) ?? null,
   governance_users_upsert: async (record) => (await userRepo()?.upsert(record)) ?? record,
   governance_users_remove: async (email)  => { await userRepo()?.remove(email); },
+  // H4-e: the raw, restorable grant shape (no Users-screen role/workspace/created_at/active
+  // projection) — the workspace backup export's own reach (UserStoreRepo.listRaw()).
+  governance_users_list_raw: async ()     => (await userRepo()?.listRaw()) ?? [],
 
   governance_audit_append: async (kind, subject, action, detail) => {
     window.__vdg_audit_log?.append(kind, subject, action, detail);
