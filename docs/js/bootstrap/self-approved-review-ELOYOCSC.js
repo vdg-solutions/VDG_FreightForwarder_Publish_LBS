@@ -8,6 +8,7 @@ import {
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/self-approved-review.js
 var KIND_DECISION = "approval_decision";
+var EMPTY_CELL = "\u2014";
 var MONTH_COUNT_BACK = 12;
 var DECISION_LABEL_KEY = {
   Approved: "approval.action.approve",
@@ -38,6 +39,10 @@ function decisionLabel(decision) {
 function typeLabel(type) {
   return t(`approval_card.type.${type}`);
 }
+function reasonLabel(row) {
+  if (!row.reason_code) return EMPTY_CELL;
+  return t(`approval.reason.${row.reason_code}`, row.reason_params || {});
+}
 function rowHtml(row) {
   return `
     <tr class="border-t border-slate-100">
@@ -46,8 +51,8 @@ function rowHtml(row) {
       <td class="px-4 py-2 text-xs text-slate-700">${typeLabel(row.type)}</td>
       <td class="px-4 py-2 text-xs text-slate-700">${row.target_kind} \xB7 ${row.target_id}</td>
       <td class="px-4 py-2 text-xs font-medium text-amber-700">${decisionLabel(row.decision)}</td>
-      <td class="px-4 py-2 text-xs text-slate-600">${row.reason}</td>
-      <td class="px-4 py-2 text-xs text-slate-600">${row.comment || "\u2014"}</td>
+      <td class="px-4 py-2 text-xs text-slate-600">${reasonLabel(row)}</td>
+      <td class="px-4 py-2 text-xs text-slate-600">${row.comment || EMPTY_CELL}</td>
     </tr>`;
 }
 function recompute() {

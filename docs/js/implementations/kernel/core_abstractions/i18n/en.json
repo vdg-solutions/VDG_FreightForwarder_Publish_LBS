@@ -161,6 +161,7 @@
   "quote.status.Rejected": "Rejected",
   "quote.status.Expired": "Expired",
   "quote.status.Cancelled": "Withdrawn",
+  "approval.reason.quote_below_last_accepted": "Quote total is more than {pct}% below the last accepted quote on this lane",
   "approval.action.approve": "Approve",
   "approval.action.reject": "Reject",
   "approval.action.need_info": "Need info",

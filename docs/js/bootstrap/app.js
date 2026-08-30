@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f0dfdf42">v0.4.42 (f0dfdf42)</span>
+        <span class="font-mono whitespace-nowrap" title="build eafc5489">v0.4.43 (eafc5489)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.42 (f0dfdf42)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.43 (eafc5489)</div>
         </div>
       </div>
     </div>`;
@@ -4686,7 +4686,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.42 (f0dfdf42)";
+var APP_VERSION = "v0.4.43 (eafc5489)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4941,7 +4941,7 @@ var VIEWS = {
   "/manager/reports/pnl": () => import("./pnl-report-AWZBOYII.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-VPVF3ESY.js"),
   "/manager/finance/close-period": () => import("./close-period-ODQV56G6.js"),
-  "/manager/finance/self-approved-review": () => import("./self-approved-review-L2TD5P3G.js"),
+  "/manager/finance/self-approved-review": () => import("./self-approved-review-ELOYOCSC.js"),
   "/manager/audit": () => import("./audit-YZBBMNU5.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
@@ -5935,8 +5935,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=f0dfdf42", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f0dfdf42", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=eafc5489", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=eafc5489", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

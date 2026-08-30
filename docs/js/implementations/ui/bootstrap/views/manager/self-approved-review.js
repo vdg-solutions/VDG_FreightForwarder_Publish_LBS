@@ -6,6 +6,7 @@ import { compose } from '../../../core_abstractions/ports/manager/self-approved-
 import { t, fmtDate } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND_DECISION     = 'approval_decision';
+const EMPTY_CELL        = '—';
 const MONTH_COUNT_BACK  = 12; // matches close-period.js's own back-window
 const DECISION_LABEL_KEY = {
   Approved: 'approval.action.approve',
@@ -40,6 +41,13 @@ function typeLabel(type) {
   return t(`approval_card.type.${type}`);
 }
 
+// The reason arrives as a code plus its substitution values (approval_reason.rs), never a
+// sentence — building it here is what lets a Vietnamese manager read it in Vietnamese.
+function reasonLabel(row) {
+  if (!row.reason_code) return EMPTY_CELL;
+  return t(`approval.reason.${row.reason_code}`, row.reason_params || {});
+}
+
 function rowHtml(row) {
   return `
     <tr class="border-t border-slate-100">
@@ -48,8 +56,8 @@ function rowHtml(row) {
       <td class="px-4 py-2 text-xs text-slate-700">${typeLabel(row.type)}</td>
       <td class="px-4 py-2 text-xs text-slate-700">${row.target_kind} · ${row.target_id}</td>
       <td class="px-4 py-2 text-xs font-medium text-amber-700">${decisionLabel(row.decision)}</td>
-      <td class="px-4 py-2 text-xs text-slate-600">${row.reason}</td>
-      <td class="px-4 py-2 text-xs text-slate-600">${row.comment || '—'}</td>
+      <td class="px-4 py-2 text-xs text-slate-600">${reasonLabel(row)}</td>
+      <td class="px-4 py-2 text-xs text-slate-600">${row.comment || EMPTY_CELL}</td>
     </tr>`;
 }
 

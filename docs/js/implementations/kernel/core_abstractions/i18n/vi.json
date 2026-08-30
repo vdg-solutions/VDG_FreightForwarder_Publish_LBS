@@ -161,6 +161,7 @@
   "quote.status.Rejected": "Từ chối",
   "quote.status.Expired": "Hết hạn",
   "quote.status.Cancelled": "Đã rút",
+  "approval.reason.quote_below_last_accepted": "Tổng báo giá thấp hơn {pct}% so với báo giá được duyệt gần nhất trên cùng tuyến",
   "approval.action.approve": "Phê duyệt",
   "approval.action.reject": "Từ chối",
   "approval.action.need_info": "Cần thêm thông tin",
