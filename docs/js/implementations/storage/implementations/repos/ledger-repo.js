@@ -127,4 +127,3 @@ export class LedgerStoreRepo extends LedgerRepo {
     return result.value.text();
   }
 }
-export { LedgerStoreRepo as LedgerDriveRepo };

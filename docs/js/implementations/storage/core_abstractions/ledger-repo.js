@@ -1,6 +1,6 @@
 /**
- * Port: ledger persistence (Drive-backed double-entry journal).
- * Phase-1 impl: LedgerDriveRepo.
+ * Port: ledger persistence (server-backed double-entry journal).
+ * Impl: LedgerStoreRepo.
  */
 export class LedgerRepo {
   /** @returns {Promise<{etag: string}>} */

@@ -1,6 +1,7 @@
 /**
- * Port: entity persistence.
- * Phase-1 impl: LocalStorageEntityRepo. E-13: swap to DriveEntityRepo.
+ * Port: entity persistence. The live path today is WasmEntityRepo (repo-init-steps.js), which
+ * talks to CharterDB through the server — this abstract shape predates that and has no adapter
+ * bound to it any more.
  */
 export class EntityRepo {
   /** @returns {Promise<object[]>} */

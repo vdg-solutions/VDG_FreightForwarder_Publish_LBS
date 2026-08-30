@@ -1,6 +1,6 @@
 // profile-cache.js — port: last-known DISPLAY identity (name / picture / email). Token expiry
 // must not blank the avatar; display only, never an auth decision. Bound to
-// implementations/drive/profile-cache.js.
+// implementations/auth/profile-cache.js.
 
 export const PROFILE_KEY = 'vdg.auth.profile';
 

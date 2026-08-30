@@ -3,7 +3,7 @@
 
 import { t, currentLocale }                        from '../../../../kernel/core_abstractions/i18n/index.js';
 import { fxRateRepo }                              from '../../../core_abstractions/ports/storage/fx-rate-repo.js';
-import { validateRate, validateSpread, addRateEntry, FX_PAIR_DEFAULT } from '../../../../kernel/core_abstractions/util/validate-rate.js';
+import { addRateEntry, FX_PAIR_DEFAULT } from '../../../../kernel/core_abstractions/util/validate-rate.js';
 import { clearRateCache }                          from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { currentUserRole }                         from '../../../core_abstractions/ports/governance/route-guard.js';
 import { safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../kernel/core_abstractions/util/master-load.js';
@@ -174,7 +174,7 @@ export async function render(root) {
   async function onDelete(entry) {
     try {
       await fxRateRepo.deleteEntry(entry.valid_from, entry.valid_to, entry.pair || FX_PAIR_DEFAULT);
-      clearRateCache(); // drop stale lookups so an open PNL form sees the delete
+      clearRateCache(fxRateRepo); // drop stale lookups so an open PNL form sees the delete
       toast('success', `${t('fx.admin.delete')}: ${entry.valid_from}`);
     } catch (err) {
       toast('error', err.message);
@@ -196,14 +196,21 @@ export async function render(root) {
       const rateBuy   = fd.get('rate_buy')   || '';
       const rateSell  = fd.get('rate_sell')  || '';
       const source    = fd.get('source')     || 'Manual';
-      const validErr = validateRate(rateBuy) || validateRate(rateSell) || validateSpread(rateBuy, rateSell);
-      if (validErr) { errEl.textContent = t(validErr); return; }
+      try {
+        const wasm = window.__vdg_wasm;
+        wasm.fx_rate_validate_value(rateBuy);
+        wasm.fx_rate_validate_value(rateSell);
+        wasm.fx_rate_validate_spread(rateBuy, rateSell);
+      } catch (err) {
+        errEl.textContent = err.message;
+        return;
+      }
       try {
         const entryErr = await addRateEntry(
           fxRateRepo, validFrom, validTo, FX_PAIR_DEFAULT, rateBuy, rateSell, source, currentUserRole(), deleteFirst,
         );
         if (entryErr) { errEl.textContent = t(entryErr); return; }
-        clearRateCache(); // drop stale lookups so an open PNL form sees the new rate
+        clearRateCache(fxRateRepo); // drop stale lookups so an open PNL form sees the new rate
         toast('success', t('fx.admin.add'));
         await reload();
       } catch (err) {

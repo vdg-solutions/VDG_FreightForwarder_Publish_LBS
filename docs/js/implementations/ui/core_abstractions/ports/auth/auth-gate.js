@@ -4,7 +4,7 @@
 
 let _impl = null;
 
-/// Root bootstrap binds { requireAuth, detectRoleViaDrive, clearRoleCache } once.
+/// Root bootstrap binds { requireAuth, detectRoleViaServer, clearRoleCache } once.
 export function bindAuthGate(impl) { _impl = impl; }
 
 function _i() {
@@ -16,6 +16,6 @@ function _i() {
 export const requireAuth = (...a) => _i().requireAuth(...a);
 /// (user, { force }) -> the resolved role token; rejects with the real error when the workspace
 /// authority could not answer — a failed request is never "this user has no roles".
-export const detectRoleViaDrive = (...a) => _i().detectRoleViaDrive(...a);
+export const detectRoleViaServer = (...a) => _i().detectRoleViaServer(...a);
 /// () -> drops this browser's cached verdict so the next probe is fresh.
 export const clearRoleCache = (...a) => _i().clearRoleCache(...a);

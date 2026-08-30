@@ -4,9 +4,6 @@
 import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
-import {
-  validateAirlineIata, validateAirlineIcao, checkIataUnique,
-} from '../../../../../kernel/core_abstractions/util/iata-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
@@ -73,15 +70,20 @@ function openModal(root, entity, items, onSave) {
     };
     setErr('#m-err-iata', ''); setErr('#m-err-icao', ''); setErr('#m-err-name', '');
 
-    const iataErr = validateAirlineIata(iata);
-    if (iataErr) { setErr('#m-err-iata', iataErr); return; }
-    const icaoErr = validateAirlineIcao(icao);
-    if (icaoErr) { setErr('#m-err-icao', icaoErr); return; }
+    const wasm = window.__vdg_wasm;
+    if (!wasm.validate_airline_iata(iata)) {
+      setErr('#m-err-iata', '2 alphanumeric characters with at least one letter, e.g. VN or 5J');
+      return;
+    }
+    if (!wasm.validate_airline_icao(icao)) { setErr('#m-err-icao', '3 uppercase letters, e.g. HVN'); return; }
     if (!name) { setErr('#m-err-name', 'Name is required'); return; }
 
     // AC-13 carrier: uniqueness on iata_code
-    const dupErr = checkIataUnique(items, iata, entity?.id);
-    if (dupErr) { setErr('#m-err-iata', dupErr); return; }
+    const codeItems = JSON.stringify(items.map((i) => ({ id: i.id, code: i.iata_code })));
+    if (wasm.check_code_unique(codeItems, iata, entity?.id ?? null)) {
+      setErr('#m-err-iata', `Airport IATA code ${iata} already exists`);
+      return;
+    }
 
     const updated = { ...(entity || {}), id: entity?.id || genId(iata), iata_code: iata, icao_code: icao, name };
     await onSave(updated);

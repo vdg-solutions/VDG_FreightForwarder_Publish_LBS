@@ -4,7 +4,6 @@
 import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }                            from '../../../../../kernel/core_abstractions/i18n/index.js';
-import { validateUldCode, checkUldCodeUnique } from '../../../../../kernel/core_abstractions/util/uld-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
@@ -101,10 +100,13 @@ function openModal(root, entity, items, onSave) {
     };
     setErr('#m-err-code', ''); setErr('#m-err-mgw', '');
 
-    const codeErr = validateUldCode(code);
-    if (codeErr) { setErr('#m-err-code', codeErr); return; }
-    const dupErr = checkUldCodeUnique(items, code, entity?.id);
-    if (dupErr)  { setErr('#m-err-code', dupErr); return; }
+    const wasm = window.__vdg_wasm;
+    if (!wasm.validate_uld_type_code(code)) { setErr('#m-err-code', '3 uppercase letters, e.g. AKE'); return; }
+    const codeItems = JSON.stringify(items.map((i) => ({ id: i.id, code: i.code })));
+    if (wasm.check_code_unique(codeItems, code, entity?.id ?? null)) {
+      setErr('#m-err-code', `ULD code ${code} already exists`);
+      return;
+    }
     if (mgw <= tare) { setErr('#m-err-mgw', 'MGW must exceed tare'); return; }
 
     const max_volume_m3  = volRaw ? parseFloat(volRaw) : null;

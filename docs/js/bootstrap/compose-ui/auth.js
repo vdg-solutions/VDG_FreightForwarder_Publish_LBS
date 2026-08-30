@@ -27,9 +27,9 @@ export function composeAuth(wasm) {
   bindSessionRoles(sessionRoles);
 
 
-  // A failed request is not an answer about authority: the reply says so, and the REAL Drive error
-  // is re-thrown so the boot fallbacks can read its status/kind.
-  const detectRoleViaDrive = async (user, options = {}) => {
+  // A failed request is not an answer about authority: the reply says so, and the REAL server
+  // error is re-thrown so the boot fallbacks can read its status/kind.
+  const detectRoleViaServer = async (user, options = {}) => {
     const reply = await wasm.auth_detect_role({ user: user ?? null, force: !!options.force });
     if (!reply.ok) throw takeAuthError() || new Error(reply.error || 'auth: the workspace authority did not answer');
     return reply.role;
@@ -38,7 +38,7 @@ export function composeAuth(wasm) {
   // F-19-01: the probe carries its own 5s race; this outer guard catches a stall anywhere else in
   // the chain so boot can never hang silently on role resolution.
   const detectOrThrow = async (user, tag) => {
-    const result = await safeAwait(detectRoleViaDrive(user), SAFE_AWAIT_DEFAULT_MS, null, tag);
+    const result = await safeAwait(detectRoleViaServer(user), SAFE_AWAIT_DEFAULT_MS, null, tag);
     if (!result.ok) throw result.error;
     return result.value;
   };
@@ -64,7 +64,7 @@ export function composeAuth(wasm) {
     signIn(onSignedIn);
   };
 
-  bindAuthGate({ requireAuth, detectRoleViaDrive, clearRoleCache: () => wasm.auth_clear_role_cache({}) });
+  bindAuthGate({ requireAuth, detectRoleViaServer, clearRoleCache: () => wasm.auth_clear_role_cache({}) });
 
   // red-signedOut chip click → re-launch the login overlay
   if (!_signinListenerWired) {

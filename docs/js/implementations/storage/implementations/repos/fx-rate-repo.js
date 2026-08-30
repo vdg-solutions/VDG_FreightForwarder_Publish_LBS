@@ -51,5 +51,27 @@ export class FxRateStoreRepo {
   async deleteEntry(validFrom, validTo, pair) {
     await this._repo().fx_delete_entry(validFrom, validTo, pair);
   }
+
+  // F-29-01: the fx-lookup rules (VND self-pair, Buy/Sell direction requirement, session cache)
+  // moved to wasm — fx-lookup.js is core_abstractions (no tech), so it reaches them through this
+  // adapter, same as every other wasm call in this class.
+  pnlFxLookupPair(currency) {
+    return this._wasm().pnl_fx_lookup_pair(currency);
+  }
+
+  pnlFxRequireDirection(direction) {
+    this._wasm().pnl_fx_require_direction(direction);
+  }
+
+  pnlFxCacheGet(dateStr, pair, direction) {
+    return this._wasm().pnl_fx_cache_get(dateStr, pair, direction);
+  }
+
+  pnlFxCachePut(dateStr, pair, direction, rate) {
+    this._wasm().pnl_fx_cache_put(dateStr, pair, direction, rate);
+  }
+
+  pnlFxCacheClear() {
+    this._wasm().pnl_fx_cache_clear();
+  }
 }
-export { FxRateStoreRepo as FxRateDriveRepo };

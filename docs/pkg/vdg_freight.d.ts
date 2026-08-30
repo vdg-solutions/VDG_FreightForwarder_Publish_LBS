@@ -242,9 +242,21 @@ export function check_allocation_within_mgw(tare_kg: number, mgw_kg: number, tot
 export function check_awb_doc_transition(from: string, event: string): boolean;
 
 /**
+ * `items_json` = JSON array of `{id, code}` (JS projects whichever field the master keys on —
+ * iata_code/scac/code/id — onto `code` before calling). Returns true when `code` is a
+ * duplicate of some OTHER item's code (skip_id excluded).
+ */
+export function check_code_unique(items_json: string, code: string, skip_id?: string | null): boolean;
+
+/**
  * Returns true when `event` is a valid next event from `from_state` in FSM-04.
  */
 export function check_quotation_transition(from_state: string, event: string): boolean;
+
+/**
+ * AC-10: case-insensitive prefix classify of a mục B description; falls back to `"Other"`.
+ */
+export function classify_pnl_line_kind(desc: string): string;
 
 /**
  * Section C's prefilled TNCN pct before a manager edits a row (15, never enforced).
@@ -311,6 +323,11 @@ export function data_put_envelope(req: any): Promise<any>;
 export function data_put_shipment(req: any): Promise<any>;
 
 export function data_write_gate(req: any): Promise<any>;
+
+/**
+ * F-41-07: `direction` may be `""` (unset); returns `""` when neither it nor `product` resolves.
+ */
+export function derive_shipment_direction(direction: string, product: string): string;
 
 export function drain_events(): any;
 
@@ -468,6 +485,19 @@ export function fx_rate_ingest_month(ym: string, content: string): void;
  */
 export function fx_rate_prepare_append(entry_json: string, role: string): any;
 
+/**
+ * F1: the bank never buys for more than it sells. Moved from util/validate-rate.js.
+ */
+export function fx_rate_validate_spread(raw_buy: string, raw_sell: string): void;
+
+/**
+ * AC-04: pre-submit rate check — same rule `fx_rate_prepare_append` enforces on write, exposed
+ * so the UI can reject before attempting the append. Moved from util/validate-rate.js.
+ */
+export function fx_rate_validate_value(raw_value: string): void;
+
+export function gen_uom_id(code: string): string;
+
 export function get_entity_state(entity_id: string): any;
 
 export function get_transition_log(entity_id: string): any;
@@ -545,6 +575,8 @@ export function import_pnl_excel_wasm(bytes: Uint8Array): any;
  */
 export function license_arm(license_str: string, current_unix_ts: bigint): any;
 
+export function manager_air_invoice(req: any): any;
+
 export function manager_air_pnl(req: any): any;
 
 export function manager_ap_payables(req: any): any;
@@ -570,6 +602,10 @@ export function manager_customer360(req: any): any;
 export function manager_customer_mode_mix(req: any): any;
 
 export function manager_dashboard(req: any): Promise<any>;
+
+export function manager_demdet_overview(req: any): any;
+
+export function manager_document_board(req: any): any;
 
 export function manager_email_valid(req: any): any;
 
@@ -613,6 +649,8 @@ export function manager_ledger_running_balances(req: any): any;
 
 export function manager_ledger_trial_balance(req: any): any;
 
+export function manager_manifest_overview(req: any): any;
+
 export function manager_notification_from_event(req: any): any;
 
 export function manager_notifications_time_based(req: any): any;
@@ -642,6 +680,49 @@ export function permission_can_push_own_fork(role: string): boolean;
  * resolveAcl() consumes this directly, replacing the role-drive-acl.json fetch.
  */
 export function permission_resolve_grants(role: string, fork?: string | null): any;
+
+/**
+ * Minor-unit digit count for `currency` — DISPLAY only; storage keeps full precision.
+ */
+export function pnl_currency_exponent(currency: string): number;
+
+/**
+ * Evict all cached entries (call after admin adds/deletes a rate).
+ */
+export function pnl_fx_cache_clear(): void;
+
+/**
+ * `hit:false` — ask the repo. `hit:true, rate:null` — already asked this session and it was not
+ * found; do not ask again.
+ */
+export function pnl_fx_cache_get(date_str: string, pair: string, direction: string): any;
+
+export function pnl_fx_cache_put(date_str: string, pair: string, direction: string, rate?: number | null): void;
+
+/**
+ * `None` — VND self-pair, price at 1, no lookup needed. `Some(pair)` — fetch `<currency>/VND`.
+ */
+export function pnl_fx_lookup_pair(currency: string): string | undefined;
+
+/**
+ * Circular 200: every FX ask states which side (Buy|Sell) it wants — no default side. Reuses
+ * the same parser admin FX-rate entry validates against (`js_bridge_dtos.rs`), so a caller fails
+ * fast, synchronously, before doing any repo I/O.
+ */
+export function pnl_fx_require_direction(direction: string): void;
+
+/**
+ * A line quoted in the workspace's book currency needs no conversion — locks fx_rate at 1.
+ * Same `currency == book_currency` test `line_vnd` prices against (pnl_gate.rs); the input cell
+ * and the money math read one fact, never two.
+ */
+export function pnl_line_fx_lock(currency: string, book_currency: string): any;
+
+/**
+ * Round a full-precision value to `currency`'s ISO 4217 exponent, for display only — never
+ * writes back over the value it was derived from.
+ */
+export function pnl_round_for_display(value: number, currency: string): number;
 
 /**
  * Called by `PricedRefRepo` before BOTH writes that can land a record in a ref —
@@ -797,9 +878,33 @@ export function sync_wma_predict(req: any): any;
 
 export function sync_wma_save(req: any): Promise<any>;
 
+export function validate_airline_iata(code: string): boolean;
+
+export function validate_airline_icao(code: string): boolean;
+
+export function validate_airport_iata(code: string): boolean;
+
+export function validate_airport_icao(code: string): boolean;
+
 export function validate_awb_no(s: string): boolean;
 
+export function validate_flight_no(no: string): boolean;
+
 export function validate_iata_dgr_class(class_str: string): boolean;
+
+export function validate_scac(code: string): boolean;
+
+export function validate_shipment_gate(request_json: string): any;
+
+export function validate_uld_type_code(code: string): boolean;
+
+/**
+ * Container units validate as ISO 6346 size-type codes, every other category as UN/ECE
+ * Recommendation 20 — see rulesets::validators::uom for the shape each takes.
+ */
+export function validate_uom_code(category: string, code: string): boolean;
+
+export function validate_uom_label(label: string): boolean;
 
 export function vdg_version(): string;
 
@@ -844,7 +949,9 @@ export interface InitOutput {
     readonly check_air_shipment_transition: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly check_allocation_within_mgw: (a: number, b: number, c: number) => number;
     readonly check_awb_doc_transition: (a: number, b: number, c: number, d: number) => number;
+    readonly check_code_unique: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly check_quotation_transition: (a: number, b: number, c: number, d: number) => number;
+    readonly classify_pnl_line_kind: (a: number, b: number, c: number) => void;
     readonly commission_default_personal_tax_pct: () => number;
     readonly commission_net_after_tax: (a: number, b: number, c: number) => number;
     readonly commission_personal_tax: (a: number, b: number) => number;
@@ -870,6 +977,7 @@ export interface InitOutput {
     readonly data_put_envelope: (a: number) => number;
     readonly data_put_shipment: (a: number) => number;
     readonly data_write_gate: (a: number) => number;
+    readonly derive_shipment_direction: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly drain_events: (a: number) => void;
     readonly exec: (a: number, b: number, c: number) => void;
     readonly flows_accept_quote: (a: number) => number;
@@ -928,6 +1036,9 @@ export interface InitOutput {
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly fx_rate_validate_spread: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly fx_rate_validate_value: (a: number, b: number, c: number) => void;
+    readonly gen_uom_id: (a: number, b: number, c: number) => void;
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
@@ -959,6 +1070,7 @@ export interface InitOutput {
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
+    readonly manager_air_invoice: (a: number, b: number) => void;
     readonly manager_air_pnl: (a: number, b: number) => void;
     readonly manager_ap_payables: (a: number, b: number) => void;
     readonly manager_ar_aging: (a: number, b: number) => void;
@@ -972,6 +1084,8 @@ export interface InitOutput {
     readonly manager_customer360: (a: number, b: number) => void;
     readonly manager_customer_mode_mix: (a: number, b: number) => void;
     readonly manager_dashboard: (a: number) => number;
+    readonly manager_demdet_overview: (a: number, b: number) => void;
+    readonly manager_document_board: (a: number, b: number) => void;
     readonly manager_email_valid: (a: number, b: number) => void;
     readonly manager_exception_escalate: (a: number, b: number) => void;
     readonly manager_exception_mttr: (a: number, b: number) => void;
@@ -993,6 +1107,7 @@ export interface InitOutput {
     readonly manager_ledger_reconcile: (a: number) => number;
     readonly manager_ledger_running_balances: (a: number, b: number) => void;
     readonly manager_ledger_trial_balance: (a: number, b: number) => void;
+    readonly manager_manifest_overview: (a: number, b: number) => void;
     readonly manager_notification_from_event: (a: number, b: number) => void;
     readonly manager_notifications_time_based: (a: number, b: number) => void;
     readonly manager_period_key: (a: number, b: number) => void;
@@ -1006,6 +1121,14 @@ export interface InitOutput {
     readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly permission_can_push_own_fork: (a: number, b: number, c: number) => void;
     readonly permission_resolve_grants: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly pnl_currency_exponent: (a: number, b: number) => number;
+    readonly pnl_fx_cache_clear: () => void;
+    readonly pnl_fx_cache_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly pnl_fx_cache_put: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+    readonly pnl_fx_lookup_pair: (a: number, b: number, c: number) => void;
+    readonly pnl_fx_require_direction: (a: number, b: number, c: number) => void;
+    readonly pnl_line_fx_lock: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly pnl_round_for_display: (a: number, b: number, c: number) => number;
     readonly priced_ref_check_overlap: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly priced_ref_resolve_on_date: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly process_excel_file: (a: number, b: number, c: number) => void;
@@ -1049,8 +1172,18 @@ export interface InitOutput {
     readonly sync_wma_on_event: (a: number, b: number) => void;
     readonly sync_wma_predict: (a: number, b: number) => void;
     readonly sync_wma_save: (a: number) => number;
+    readonly validate_airline_iata: (a: number, b: number) => number;
+    readonly validate_airline_icao: (a: number, b: number) => number;
+    readonly validate_airport_iata: (a: number, b: number) => number;
+    readonly validate_airport_icao: (a: number, b: number) => number;
     readonly validate_awb_no: (a: number, b: number) => number;
+    readonly validate_flight_no: (a: number, b: number) => number;
     readonly validate_iata_dgr_class: (a: number, b: number) => number;
+    readonly validate_scac: (a: number, b: number) => number;
+    readonly validate_shipment_gate: (a: number, b: number, c: number) => void;
+    readonly validate_uld_type_code: (a: number, b: number) => number;
+    readonly validate_uom_code: (a: number, b: number, c: number, d: number) => number;
+    readonly validate_uom_label: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;
     readonly verify_license: (a: number, b: number, c: bigint) => number;
     readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
@@ -1127,9 +1260,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13520: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13533: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9579: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13834: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13847: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9893: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

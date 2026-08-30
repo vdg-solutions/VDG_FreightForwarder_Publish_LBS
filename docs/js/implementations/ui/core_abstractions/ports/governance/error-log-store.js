@@ -13,5 +13,5 @@ function _i() {
 
 /// (repo) -> the log, newest first
 export const listErrorRecords = (...a) => _i().listErrorRecords(...a);
-/// (driveApi, month) -> drops that month's bundle
+/// (month) -> drops that month's bundle
 export const purgeErrorMonth = (...a) => _i().purgeErrorMonth(...a);

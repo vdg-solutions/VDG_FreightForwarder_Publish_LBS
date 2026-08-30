@@ -6,9 +6,8 @@
 // `hydrate` is injected rather than imported: google-oauth.js owns session hydration and calls
 // this file, so importing it back would be a cycle.
 
-import { isServerBackend } from '../../core_abstractions/backend.js';
 import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
-import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
+import { IDENTITY_SCOPE } from '../../core_abstractions/oauth-scope.js';
 import { gisErrorMessage } from './gis-error.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
@@ -42,9 +41,8 @@ export function renderSignInButton(container, { hydrate, clientId }) {
     if (btnSpan) btnSpan.textContent = t('login.signin_opening');
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      // Server backend: identity only. No Drive scope means no Drive consent screen and no
-      // second popup — the server never touches the user's Drive.
-      scope:     isServerBackend() ? IDENTITY_SCOPE : `${IDENTITY_SCOPE} ${DRIVE_SCOPE}`,
+      // Identity only — no consent screen, no second popup. The server never touches Drive.
+      scope:     IDENTITY_SCOPE,
       callback:  (resp) => {
         answered();
         if (resp.error) {

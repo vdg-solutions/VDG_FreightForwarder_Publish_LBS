@@ -1,12 +1,8 @@
-// backend.js — which storage authority this page is talking to.
-//
-// vdg-server is THE backend: GitHub Pages now serves the client-server build, whose API_BASE names
-// the server origin (today a Cloudflare Worker). The Drive-direct flavour is frozen on branch
-// `serverless` and is not what Pages ships — a stamped bundle must never fall back to it.
-// API_BASE stamped at publish = server build, decided at publish time, not re-decided per boot.
-// An unstamped bundle (only the frozen serverless flavour) still probes /api/health and lands on
-// Drive. A cross-origin API carries the session cookie with credentials: 'include' (the server
-// allows exactly the Pages origin, cookie SameSite=None).
+// backend.js — the ONE storage authority this page talks to: vdg-server. The client is
+// server-only (2026-08-30) — it never falls back to Google Drive, in any mode, for any reason.
+// API_BASE names the server origin (today a Cloudflare Worker) when stamped at publish; empty
+// means same-origin (a local vdg-server run). A cross-origin API carries the session cookie with
+// credentials: 'include' (the server allows exactly the Pages origin, cookie SameSite=None).
 
 import { API_BASE } from '../../core_abstractions/workspace-config.js';
 
@@ -23,7 +19,6 @@ const COOKIE_PROBE_TIMEOUT_MS = 4000;
 // unblock a stuck fetch (browser bug territory), so this never races the real timeout.
 const TRANSPORT_SAFE_AWAIT_MARGIN_MS = 5000;
 const BACKEND_SERVER     = 'server';
-const BACKEND_DRIVE      = 'drive';
 const SESSION_TOKEN_HEADER = 'X-Vdg-Session';
 // The page (github.io) and the API (workers.dev) are different SITES, so the session cookie is a
 // third-party cookie: InPrivate, Safari and strict tracking protection drop it, and the user then
@@ -40,12 +35,16 @@ const BACKEND_KEY        = 'vdg.backend'; // sessionStorage: survives reload, no
 
 let _backend = null;
 
-/// A build stamped with API_BASE IS a server build — that is a publish-time fact, not something
-/// to re-decide per boot. Treating an unreachable /api as "drive" let a single failed probe
-/// (a timeout, a 5xx) silently swap the storage authority mid-session: the browser then wrote
-/// straight to Drive with the user's own token, behind the server's back — duplicate grant
-/// files the server never saw, and no ACL check on the way in. An outage must read as an
-/// outage. Only an unstamped build (the serverless flavour) may probe and land on Drive.
+/// There is exactly one backend, so this never decides WHICH authority to use — only whether it
+/// is reachable yet. A build stamped with API_BASE skips the probe entirely (cross-origin server,
+/// publish-time fact). A same-origin build (local vdg-server, or one not up yet) probes /api/health
+/// for visibility only: a failed/timed-out probe here used to switch the app into a Drive-direct
+/// mode whose adapter no longer exists — a server hiccup then silently ran with the user's own
+/// Google token, behind the server's back, no ACL check on the way in. An outage now reads as an
+/// outage: the probe result never changes the backend, and an unreachable server surfaces the same
+/// way any other failed server call does (apiFetch's ApiError, the sync engine's own
+/// sync_health::is_unreachable()) — nudged along here via the same 'vdg:server-health' event
+/// apiFetch already dispatches, so the topbar doesn't have to wait for the first real request.
 async function detectBackend() {
   if (_backend) return _backend;
   if (API_BASE) { _backend = BACKEND_SERVER; return _backend; } // stamped = server, unconditionally
@@ -60,18 +59,13 @@ async function detectBackend() {
     'detectBackend:health',
   );
   clearTimeout(timer);
-  // unreachable/timed-out probe is a legitimate answer ("no /api here", the serverless build) —
-  // not a fault to propagate.
   const body = ok && res.ok ? await res.json().catch(() => null) : null;
-  _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
+  if (!(body && body.ok === true) && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('vdg:server-health', { detail: { unreachable: true } }));
+  }
+  _backend = BACKEND_SERVER; // the only backend — the probe never changes this
   try { sessionStorage.setItem(BACKEND_KEY, _backend); } catch { /* storage-less context */ }
   return _backend;
-}
-
-/// Sync read after detectBackend() has run (requireAuth awaits it before anything else).
-function isServerBackend() {
-  if (API_BASE) return true; // same publish-time fact, readable before detectBackend() has run
-  return (_backend ?? _readRemembered()) === BACKEND_SERVER;
 }
 
 function _readRemembered() {
@@ -85,8 +79,7 @@ import { ApiError } from '../../core_abstractions/api-error.js';
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 
 /// JSON in, JSON out, session cookie along. A non-2xx is an ApiError carrying the status the
-/// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) — the same numbers the Drive-era
-/// callers already branch on.
+/// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) for callers to branch on.
 function readSessionToken() {
   try {
     return localStorage.getItem(SESSION_TOKEN_KEY) || sessionStorage.getItem(SESSION_TOKEN_KEY) || '';
@@ -182,4 +175,4 @@ async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
 }
 
 /// What the storage bootstrap binds behind the backend port.
-export const backend = { detectBackend, isServerBackend, apiFetch, rememberSessionToken, adoptSessionToken, _resetBackend };
+export const backend = { detectBackend, apiFetch, rememberSessionToken, adoptSessionToken, _resetBackend };

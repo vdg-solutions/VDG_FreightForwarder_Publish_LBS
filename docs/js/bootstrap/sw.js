@@ -2,7 +2,7 @@
 // auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v01b74dd3';
+const STATIC_CACHE     = 'vdg-static-v3103c614';
 // Build-hash-versioned, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
@@ -98,7 +98,6 @@ const BOOT_GRAPH = [
   'js/implementations/storage/bootstrap/compose.js',
   'js/implementations/storage/core_abstractions/api-error.js',
   'js/implementations/storage/core_abstractions/backend.js',
-  'js/implementations/storage/core_abstractions/drive-endpoints.js',
   'js/implementations/storage/core_abstractions/events.js',
   'js/implementations/storage/core_abstractions/grant-file.js',
   'js/implementations/storage/core_abstractions/id-token.js',
@@ -106,6 +105,7 @@ const BOOT_GRAPH = [
   'js/implementations/storage/core_abstractions/io-port-shared.js',
   'js/implementations/storage/core_abstractions/ledger-repo.js',
   'js/implementations/storage/core_abstractions/local-store.js',
+  'js/implementations/storage/core_abstractions/oauth-scope.js',
   'js/implementations/storage/core_abstractions/oauth.js',
   'js/implementations/storage/core_abstractions/popup-guard.js',
   'js/implementations/storage/core_abstractions/priced-envelope.js',
@@ -213,17 +213,21 @@ const BOOT_GRAPH = [
   'js/implementations/ui/core_abstractions/ports/governance/period-opening-balance.js',
   'js/implementations/ui/core_abstractions/ports/governance/route-guard.js',
   'js/implementations/ui/core_abstractions/ports/governance/workspace-settings.js',
+  'js/implementations/ui/core_abstractions/ports/manager/air-invoice-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/ar-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/commission-calculator.js',
   'js/implementations/ui/core_abstractions/ports/manager/commission-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/customer360-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/dashboard-composer.js',
+  'js/implementations/ui/core_abstractions/ports/manager/demdet-composer.js',
+  'js/implementations/ui/core_abstractions/ports/manager/document-board-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/exception-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/ledger-aggregator.js',
   'js/implementations/ui/core_abstractions/ports/manager/ledger-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/ledger-reconciler.js',
   'js/implementations/ui/core_abstractions/ports/manager/ledger-repost.js',
+  'js/implementations/ui/core_abstractions/ports/manager/manifest-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/notification-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/pnl-composer.js',
   'js/implementations/ui/core_abstractions/ports/manager/user-audit-log-composer.js',
@@ -244,7 +248,7 @@ const STATIC_ASSETS = [...SHELL_ASSETS, ...BOOT_GRAPH];
 
 // Real Google auth hosts — the only endpoints the pass-through is for. Host-anchored,
 // not path-anchored: a bare /token or /oauth2 substring also matches our own app files
-// (js/implementations/storage/implementations/drive/token-refresh.js), which is the r3 boot-hang regression (F-19-44 D-r3-1).
+// (js/implementations/storage/implementations/auth/token-refresh.js), which is the r3 boot-hang regression (F-19-44 D-r3-1).
 const AUTH_HOSTS = ['accounts.google.com', 'oauth2.googleapis.com'];
 // The vdg-server API lives on its own origin (VDG_API_BASE); every route under this prefix is
 // dynamic workspace state and must never be answered from a cache.
@@ -254,7 +258,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps 01b74dd3 → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps 3103c614 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

@@ -19,10 +19,16 @@ export const DEFAULT_INITIAL_STATE = 'Created';
 // could never leave. The product the user picked already SAYS the direction for the two
 // unambiguous cases; AIR/LCL stay null, which the FSM honestly reports as an unsupplied
 // dependency instead of guessing import jobs into the export FSM (F-37-07).
-export const DIRECTION_BY_PRODUCT = { 'FCL EXPORT': 'export', 'IMPORT FCL': 'import' };
+// F-41-07 moved the table + rule to Rust (rulesets::shipment_direction) — see that file for why
+// Incoterms 2020 does NOT change this behaviour (no incoterm/country data exists on this form).
+const wasm = () => globalThis.window?.__vdg_wasm || globalThis.__vdg_wasm;
 
 export function deriveDirection(state) {
-  return state.direction || DIRECTION_BY_PRODUCT[state.product] || null;
+  const mod = wasm();
+  if (typeof mod?.derive_shipment_direction !== 'function') {
+    throw new Error('shipment-builder: wasm not ready — derive_shipment_direction missing');
+  }
+  return mod.derive_shipment_direction(state.direction || '', state.product || '') || null;
 }
 
 /**

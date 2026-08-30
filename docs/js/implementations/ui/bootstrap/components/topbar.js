@@ -6,7 +6,6 @@ import { currentUserEmail } from '../../core_abstractions/ports/governance/route
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
 import { readCachedProfile } from '../../../storage/core_abstractions/profile-cache.js';
-import { isServerBackend } from '../../../storage/core_abstractions/backend.js';
 import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
@@ -185,7 +184,7 @@ class VdgTopbar extends LitElement {
   _onChipClick(state) {
     const user = window.__vdg_auth?.getCurrentUser?.();
     const action = decideChipAction({ state, user, online: this._online, lastError: this._lastError,
-                                      authReconnect: this._authReconnect, serverBackend: isServerBackend() });
+                                      authReconnect: this._authReconnect });
     if (action === CHIP_ACTION.NOOP) return;
     if (action === CHIP_ACTION.SIGNIN) { window.dispatchEvent(new CustomEvent('vdg:auth-signin-request')); return; }
     if (action === CHIP_ACTION.WAITING_NETWORK) { window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'warn', message: t('topbar.sync.action.waiting_network') } })); return; }
@@ -243,7 +242,7 @@ class VdgTopbar extends LitElement {
     // 'unreachable'/'orange' — a chip that keeps saying "Đồng bộ" through a total outage or a
     // failed kind is exactly the "indistinguishable from healthy" defect this closes.
     const labelText = (state === 'red' && this._authReconnect)
-      ? t(isServerBackend() ? 'topbar.sync.label.signin' : 'topbar.sync.label.reconnect')
+      ? t('topbar.sync.label.signin')
       : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
       : (state === 'unreachable') ? t('topbar.sync.state.unreachable')
       : (state === 'backing_up') ? t('topbar.sync.state.backing_up')

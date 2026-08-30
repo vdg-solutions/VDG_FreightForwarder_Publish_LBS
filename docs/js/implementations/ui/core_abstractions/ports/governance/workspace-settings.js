@@ -20,7 +20,7 @@ function _i() {
 
 /// (repo) -> settings as they stand locally; defaults when the row is absent or the store wedged.
 export const readSettings = (...a) => _i().readSettings(...a);
-/// (driveApi, wsName, repo) -> settings, migrating the legacy shared workspace.json once.
+/// (wsName) -> settings, reading the workspace_settings row through the server.
 export const loadWorkspaceSettings = (...a) => _i().loadWorkspaceSettings(...a);
-/// (driveApi, wsName, settings, repo) -> writes the single settings row.
+/// (settings) -> writes the single settings row.
 export const saveWorkspaceSettings = (...a) => _i().saveWorkspaceSettings(...a);

@@ -6,7 +6,6 @@ import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/ses
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
-import { genUnitId, validateUnit, checkCodeUnique } from '../../../../../kernel/core_abstractions/util/uom-validators.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND = 'units-of-measure';
@@ -125,17 +124,24 @@ function openModal(root, entity, items, onSave) {
     };
     setErr('#m-err-code', ''); setErr('#m-err-label-vi', '');
 
-    const errKey = validateUnit(code, labelVi);
-    if (errKey) { setErr(errKey === 'uom.err.code_required' ? '#m-err-code' : '#m-err-label-vi', t(errKey)); return; }
+    const wasm = window.__vdg_wasm;
+    if (!wasm.validate_uom_code(category, code)) {
+      setErr('#m-err-code', t(code ? 'uom.err.code_invalid_format' : 'uom.err.code_required'));
+      return;
+    }
+    if (!wasm.validate_uom_label(labelVi)) { setErr('#m-err-label-vi', t('uom.err.label_required')); return; }
 
     if (!entity) {
-      const dupKey = checkCodeUnique(items, code);
-      if (dupKey) { setErr('#m-err-code', t('uom.err.code_duplicate', { code })); return; }
+      const codeItems = JSON.stringify(items.map((i) => ({ id: i.id, code: i.id })));
+      if (wasm.check_code_unique(codeItems, code, null)) {
+        setErr('#m-err-code', t('uom.err.code_duplicate', { code }));
+        return;
+      }
     }
 
     const updated = {
       ...(entity || {}),
-      id: entity?.id || genUnitId(code),
+      id: entity?.id || wasm.gen_uom_id(code),
       code,
       category,
       label_vi: labelVi,

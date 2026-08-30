@@ -7,6 +7,9 @@ import {
 } from "./chunk-SZYDA4BO.js";
 import "./chunk-2X6PKTEY.js";
 import {
+  bindAirInvoiceComposer
+} from "./chunk-PQJILZSQ.js";
+import {
   bindLedgerComposer,
   bindLedgerPoster,
   bindLedgerReconciler,
@@ -25,6 +28,9 @@ import {
 import {
   jobTracker
 } from "./chunk-K3L3PCZY.js";
+import {
+  bindManifestComposer
+} from "./chunk-3FXNTAAE.js";
 import {
   bindShipmentStateMigrator
 } from "./chunk-NM5PQAZF.js";
@@ -88,6 +94,9 @@ import {
   bindPeriodClose
 } from "./chunk-QL3VBJTQ.js";
 import {
+  bindDemDetComposer
+} from "./chunk-A4QUGFDN.js";
+import {
   bindDueSoon
 } from "./chunk-REGXU2BV.js";
 import {
@@ -128,13 +137,13 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-6DYTBMNJ.js";
+} from "./chunk-JAUWUVEL.js";
 import {
   bindPnlGate
-} from "./chunk-53TPUVAF.js";
+} from "./chunk-Z6T6WECV.js";
 import {
   bindUsersViewComposer
-} from "./chunk-5OE4W62S.js";
+} from "./chunk-P5SY6HRX.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
@@ -161,7 +170,7 @@ import {
   homeRouteForRole,
   normalizeRole,
   routeGuard
-} from "./chunk-U7A2KJSA.js";
+} from "./chunk-M3ODLRBG.js";
 import {
   ROLES_RESOLVED_EVENT,
   ROLE_ACCOUNTANT,
@@ -171,7 +180,7 @@ import {
   ROLE_READ_ONLY,
   ROLE_SALES_MANAGER,
   ROLE_SALES_REP
-} from "./chunk-CTHPHM7D.js";
+} from "./chunk-NGKBNKFN.js";
 import {
   bindShipmentVoidDelete
 } from "./chunk-44LRVLWO.js";
@@ -194,9 +203,12 @@ import {
   bindWasmLoader
 } from "./chunk-EJWPNW2L.js";
 import {
+  bindDocumentBoardComposer
+} from "./chunk-KRST3G4J.js";
+import {
   bindAuthGate,
   requireAuth
-} from "./chunk-ZT36KEIN.js";
+} from "./chunk-2LU3BLTO.js";
 import {
   API_BASE,
   activeWorkspaceName
@@ -204,7 +216,7 @@ import {
 import {
   bindFxRateRepo,
   fxRateRepo
-} from "./chunk-ZRBZYMV7.js";
+} from "./chunk-KQNTGIY5.js";
 import {
   bindCustomer360Composer
 } from "./chunk-TE5ZYPE3.js";
@@ -583,7 +595,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 01b74dd3">v0.4.36 (01b74dd3)</span>
+        <span class="font-mono whitespace-nowrap" title="build 3103c614">v0.4.37 (3103c614)</span>
       </div>
     `;
   }
@@ -624,20 +636,6 @@ function _i() {
 }
 var readCachedProfile = (...a) => _i().readCachedProfile(...a);
 var writeCachedProfile = (...a) => _i().writeCachedProfile(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
-var _impl2 = null;
-function bindBackend(impl) {
-  _impl2 = impl;
-}
-function _i2() {
-  if (!_impl2) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
-  return _impl2;
-}
-var isServerBackend = (...a) => _i2().isServerBackend(...a);
-var apiFetch = (...a) => _i2().apiFetch(...a);
-var rememberSessionToken = (...a) => _i2().rememberSessionToken(...a);
-var adoptSessionToken = (...a) => _i2().adoptSessionToken(...a);
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/breadcrumb-resolver.js
 var I18N_ROUTES = [
@@ -903,12 +901,12 @@ var CHIP_ACTION = {
   RECONNECT: "reconnect",
   SYNC_NOW: "sync_now"
 };
-function decideChipAction({ state, user, online, lastError, authReconnect, serverBackend = false }) {
+function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === "yellow") return CHIP_ACTION.NOOP;
   if (state === "backing_up") return CHIP_ACTION.NOOP;
   if (state === "pending") return CHIP_ACTION.NOOP;
   if (state === "quarantined") return CHIP_ACTION.NOOP;
-  if (state === "red" && authReconnect) return serverBackend ? CHIP_ACTION.SIGNIN : CHIP_ACTION.RECONNECT;
+  if (state === "red" && authReconnect) return CHIP_ACTION.SIGNIN;
   if (state === "red" && !user) return CHIP_ACTION.SIGNIN;
   if (state === "red" && !online) return CHIP_ACTION.WAITING_NETWORK;
   if (state === "unreachable") return CHIP_ACTION.FORCE_RETRY;
@@ -1352,8 +1350,7 @@ var VdgTopbar = class extends LitElement2 {
       user,
       online: this._online,
       lastError: this._lastError,
-      authReconnect: this._authReconnect,
-      serverBackend: isServerBackend()
+      authReconnect: this._authReconnect
     });
     if (action === CHIP_ACTION.NOOP) return;
     if (action === CHIP_ACTION.SIGNIN) {
@@ -1412,7 +1409,7 @@ var VdgTopbar = class extends LitElement2 {
       serverProvider: this._serverProvider
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
-    const labelText = state === "red" && this._authReconnect ? t(isServerBackend() ? "topbar.sync.label.signin" : "topbar.sync.label.reconnect") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "unreachable" ? t("topbar.sync.state.unreachable") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "quarantined" ? t("topbar.sync.state.quarantined") : state === "orange" ? t("topbar.sync.state.retrying") : t("topbar.sync.label");
+    const labelText = state === "red" && this._authReconnect ? t("topbar.sync.label.signin") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "unreachable" ? t("topbar.sync.state.unreachable") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "quarantined" ? t("topbar.sync.state.quarantined") : state === "orange" ? t("topbar.sync.state.retrying") : t("topbar.sync.label");
     return html4`
       ${renderSwBanner(this)}
       <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
@@ -2236,17 +2233,17 @@ var VdgCmdPalette = class extends LitElement9 {
 customElements.define("vdg-cmd-palette", VdgCmdPalette);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/oauth.js
-var _impl3 = null;
+var _impl2 = null;
 function bindOAuthProvider(impl) {
-  _impl3 = impl;
+  _impl2 = impl;
 }
-function _i3() {
-  if (!_impl3) throw new Error("storage/oauth: no adapter bound (the storage bootstrap binds it)");
-  return _impl3;
+function _i2() {
+  if (!_impl2) throw new Error("storage/oauth: no adapter bound (the storage bootstrap binds it)");
+  return _impl2;
 }
-var hydrateSessionFromToken = (...a) => _i3().hydrateSessionFromToken(...a);
-var initGoogleSignIn = (...a) => _i3().initGoogleSignIn(...a);
-var renderSignInButton = (...a) => _i3().renderSignInButton(...a);
+var hydrateSessionFromToken = (...a) => _i2().hydrateSessionFromToken(...a);
+var initGoogleSignIn = (...a) => _i2().initGoogleSignIn(...a);
+var renderSignInButton = (...a) => _i2().renderSignInButton(...a);
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/login.js
 function sessionExpiredMessage() {
@@ -2286,7 +2283,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.36 (01b74dd3)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.37 (3103c614)</div>
         </div>
       </div>
     </div>`;
@@ -2349,15 +2346,15 @@ function storageApi() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
-var _impl4 = null;
+var _impl3 = null;
 function bindKeyValueStore(impl) {
-  _impl4 = impl;
+  _impl3 = impl;
 }
-function _i4() {
-  if (!_impl4) throw new Error("kernel/key-value: no adapter bound (the kernel bootstrap binds it)");
-  return _impl4;
+function _i3() {
+  if (!_impl3) throw new Error("kernel/key-value: no adapter bound (the kernel bootstrap binds it)");
+  return _impl3;
 }
-var kvSet = (...a) => _i4().setItem(...a);
+var kvSet = (...a) => _i3().setItem(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/grant-file.js
 var GRANT_AREAS_KEY = "vdg.grant.areas";
@@ -2378,7 +2375,7 @@ function bindWorkspaceAuthority(adapter) {
   _adapter = adapter;
 }
 function workspaceAuthority() {
-  if (!_adapter) throw new Error("storage/workspace-authority: no adapter bound (bootstrap selects drive | server)");
+  if (!_adapter) throw new Error("storage/workspace-authority: no adapter bound (the storage bootstrap binds it)");
   return _adapter;
 }
 
@@ -2728,6 +2725,19 @@ var governancePlatform = {
   governance_fx_closing_rate: async (date, pair, direction) => fxRateRepo.getRate(date, pair, direction)
 };
 
+// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
+var _impl4 = null;
+function bindBackend(impl) {
+  _impl4 = impl;
+}
+function _i4() {
+  if (!_impl4) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
+  return _impl4;
+}
+var apiFetch = (...a) => _i4().apiFetch(...a);
+var rememberSessionToken = (...a) => _i4().rememberSessionToken(...a);
+var adoptSessionToken = (...a) => _i4().adoptSessionToken(...a);
+
 // output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
 var ApiError = class extends Error {
   constructor(status, message) {
@@ -2921,13 +2931,13 @@ function composeAuth(wasm3) {
     setResolvedRoles: (token, roles) => wasm3.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
   };
   bindSessionRoles(sessionRoles);
-  const detectRoleViaDrive = async (user, options = {}) => {
+  const detectRoleViaServer = async (user, options = {}) => {
     const reply = await wasm3.auth_detect_role({ user: user ?? null, force: !!options.force });
     if (!reply.ok) throw takeAuthError() || new Error(reply.error || "auth: the workspace authority did not answer");
     return reply.role;
   };
   const detectOrThrow = async (user, tag) => {
-    const result = await safeAwait(detectRoleViaDrive(user), SAFE_AWAIT_DEFAULT_MS, null, tag);
+    const result = await safeAwait(detectRoleViaServer(user), SAFE_AWAIT_DEFAULT_MS, null, tag);
     if (!result.ok) throw result.error;
     return result.value;
   };
@@ -2950,7 +2960,7 @@ function composeAuth(wasm3) {
     }
     signIn(onSignedIn);
   };
-  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaDrive, clearRoleCache: () => wasm3.auth_clear_role_cache({}) });
+  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaServer, clearRoleCache: () => wasm3.auth_clear_role_cache({}) });
   if (!_signinListenerWired) {
     _signinListenerWired = true;
     window.addEventListener(SIGNIN_REQUEST_EVENT, () => signIn(() => location.reload()));
@@ -3003,7 +3013,7 @@ function _i8() {
   if (!_impl8) throw new Error("storage/token: no adapter bound (the storage bootstrap binds it)");
   return _impl8;
 }
-var reconnectDriveInteractive = (...a) => _i8().reconnectDriveInteractive(...a);
+var reconnectInteractive = (...a) => _i8().reconnectInteractive(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/events.js
 var _impl9 = null;
@@ -3023,7 +3033,6 @@ var CREDENTIALS_MODE = API_BASE ? "include" : "same-origin";
 var PROBE_TIMEOUT_MS = 1500;
 var TRANSPORT_SAFE_AWAIT_MARGIN_MS = 5e3;
 var BACKEND_SERVER = "server";
-var BACKEND_DRIVE = "drive";
 var SESSION_TOKEN_HEADER = "X-Vdg-Session";
 var SESSION_TOKEN_KEY = "vdg.session-token";
 var BACKEND_KEY = "vdg.backend";
@@ -3049,16 +3058,15 @@ async function detectBackend() {
   );
   clearTimeout(timer);
   const body = ok && res.ok ? await res.json().catch(() => null) : null;
-  _backend = body && body.ok === true ? BACKEND_SERVER : BACKEND_DRIVE;
+  if (!(body && body.ok === true) && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("vdg:server-health", { detail: { unreachable: true } }));
+  }
+  _backend = BACKEND_SERVER;
   try {
     sessionStorage.setItem(BACKEND_KEY, _backend);
   } catch {
   }
   return _backend;
-}
-function isServerBackend2() {
-  if (API_BASE) return true;
-  return (_backend ?? _readRemembered()) === BACKEND_SERVER;
 }
 function _readRemembered() {
   try {
@@ -3158,7 +3166,7 @@ async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
   }
   return json;
 }
-var backend = { detectBackend, isServerBackend: isServerBackend2, apiFetch: apiFetch2, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
+var backend = { detectBackend, apiFetch: apiFetch2, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
 
 // output/web/js.tmp/implementations/storage/implementations/server/server-session.js
 async function serverSessionIdentity2() {
@@ -3745,9 +3753,8 @@ async function fetchUserinfo(accessToken) {
   }
 }
 
-// output/web/js.tmp/implementations/storage/core_abstractions/drive-endpoints.js
+// output/web/js.tmp/implementations/storage/core_abstractions/oauth-scope.js
 var IDENTITY_SCOPE = "openid email profile";
-var DRIVE_SCOPE = "openid email profile";
 
 // output/web/js.tmp/implementations/storage/implementations/auth/access-token.js
 var CLIENT_ID = "875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com";
@@ -3777,11 +3784,10 @@ function _anchor() {
   if (_anchorInstance) return _anchorInstance;
   _anchorInstance = createTokenAnchor({
     clientId: CLIENT_ID,
-    // Server deployment: the browser talks to the server, never to Drive, so the only thing a token
-    // has to carry is identity — that is all the server needs to mint a session. Asking for the full
-    // Drive scope here got Google's "hasn't verified this app" warning in front of every reconnect,
-    // for a permission the build never exercises. The Drive-direct flavour still needs the real one.
-    scope: isServerBackend() ? IDENTITY_SCOPE : DRIVE_SCOPE,
+    // The browser talks only to the server — the only thing a token has to carry is identity, which
+    // is all the server needs to mint a session. Asking for a wider scope got Google's "hasn't
+    // verified this app" warning in front of every reconnect, for a permission the build never uses.
+    scope: IDENTITY_SCOPE,
     keys: { token: ACCESS_TOKEN_KEY, exp: ACCESS_TOKEN_EXP_KEY, issued: ACCESS_TOKEN_ISSUED_KEY },
     loginHint: _sessionEmail,
     verifyAccount: _verifySameAccount,
@@ -3804,10 +3810,10 @@ function refreshAccessTokenSilently() {
 function recoverFromUnauthorized(usedToken) {
   return _anchor().recover(usedToken);
 }
-function reconnectDriveInteractive2() {
+function reconnectInteractive2() {
   return _anchor().reconnect();
 }
-var tokenAuthority = { getAccessToken, refreshAccessTokenSilently, recoverFromUnauthorized, reconnectDriveInteractive: reconnectDriveInteractive2 };
+var tokenAuthority = { getAccessToken, refreshAccessTokenSilently, recoverFromUnauthorized, reconnectInteractive: reconnectInteractive2 };
 
 // output/web/js.tmp/implementations/storage/implementations/auth/signin-button.js
 var SIGNIN_STALL_HINT_MS = 6e4;
@@ -3838,9 +3844,8 @@ function renderSignInButton2(container, { hydrate, clientId }) {
     if (btnSpan) btnSpan.textContent = t("login.signin_opening");
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      // Server backend: identity only. No Drive scope means no Drive consent screen and no
-      // second popup — the server never touches the user's Drive.
-      scope: isServerBackend() ? IDENTITY_SCOPE : `${IDENTITY_SCOPE} ${DRIVE_SCOPE}`,
+      // Identity only — no consent screen, no second popup. The server never touches Drive.
+      scope: IDENTITY_SCOPE,
       callback: (resp) => {
         answered();
         if (resp.error) {
@@ -3885,7 +3890,6 @@ function renderSignInButton2(container, { hydrate, clientId }) {
 var CLIENT_ID2 = "875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com";
 var ACCESS_TOKEN_KEY2 = "vdg.auth.access_token";
 var ACCESS_TOKEN_EXP_KEY2 = "vdg.auth.access_token_exp";
-var DRIVE_SCOPE_KEY = "vdg.auth.drive_scope_granted.v2";
 var GIS_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 var GIS_SCRIPT_TIMEOUT = 1e4;
 var DEFAULT_TOKEN_TTL_SEC = 3600;
@@ -3893,7 +3897,6 @@ var AUTH_STORAGE_KEYS = Object.freeze([
   TOKEN_KEY,
   ACCESS_TOKEN_KEY2,
   ACCESS_TOKEN_EXP_KEY2,
-  DRIVE_SCOPE_KEY,
   ROLE_CACHE_KEY,
   PROFILE_KEY,
   "vdg.session-token"
@@ -3912,21 +3915,9 @@ function getCurrentUser2() {
 function signOut2() {
   for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k);
   _currentUser = null;
-  if (!isServerBackend()) return Promise.resolve();
   return apiFetch("DELETE", "/session").catch((e) => {
     console.warn("sign-out: server session not ended:", e?.message || e);
   }).finally(() => rememberSessionToken(""));
-}
-function shouldGrantDriveScope(resp, hasGrantedAllScopesFn) {
-  const checkFn = hasGrantedAllScopesFn ?? window.google?.accounts?.oauth2?.hasGrantedAllScopes;
-  if (typeof checkFn === "function") return Boolean(checkFn(resp, DRIVE_SCOPE));
-  return (resp?.scope || "").split(" ").includes(DRIVE_SCOPE);
-}
-function hasDriveScopeGrant() {
-  return localStorage.getItem(DRIVE_SCOPE_KEY) === "1";
-}
-function clearDriveScopeGrant() {
-  localStorage.removeItem(DRIVE_SCOPE_KEY);
 }
 function wasPreviouslySignedIn2() {
   return localStorage.getItem(ACCESS_TOKEN_EXP_KEY2) != null;
@@ -3943,72 +3934,38 @@ function restampIdTokenExp(accessExpMs) {
 }
 function _persistAccessToken(resp) {
   const expMs = Date.now() + (resp.expires_in || DEFAULT_TOKEN_TTL_SEC) * 1e3;
-  if (isServerBackend()) {
-    localStorage.removeItem(ACCESS_TOKEN_KEY2);
-    localStorage.removeItem(ACCESS_TOKEN_EXP_KEY2);
-    return expMs;
-  }
-  localStorage.setItem(ACCESS_TOKEN_KEY2, resp.access_token);
-  localStorage.setItem(ACCESS_TOKEN_EXP_KEY2, String(expMs));
-  restampIdTokenExp(expMs);
+  localStorage.removeItem(ACCESS_TOKEN_KEY2);
+  localStorage.removeItem(ACCESS_TOKEN_EXP_KEY2);
   return expMs;
 }
-var REVIVED_SESSION_MIN_TTL_MS = 10 * 60 * 1e3;
 async function rebuildSessionFromStoredToken2() {
-  if (isServerBackend()) {
-    const me = await serverSessionIdentity();
-    if (!me) return null;
-    const cached2 = readCachedProfile();
-    localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
-      email: me.email,
-      name: me.name || cached2?.name || "",
-      picture: cached2?.picture || "",
-      sub: cached2?.sub || me.email,
-      exp: Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1e3)
-    }));
-    _currentUser = null;
-    return getCurrentUser2();
-  }
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY2);
-  if (!token) return null;
-  try {
-    const info = await fetchUserinfo(token);
-    if (!info?.sub) return null;
-    const storedExp = parseInt(localStorage.getItem(ACCESS_TOKEN_EXP_KEY2) || "0", 10);
-    const expMs = Math.max(storedExp, Date.now() + REVIVED_SESSION_MIN_TTL_MS);
-    localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
-      email: info.email,
-      name: info.name,
-      picture: info.picture,
-      sub: info.sub,
-      exp: Math.floor(expMs / 1e3)
-    }));
-    _currentUser = null;
-    return getCurrentUser2();
-  } catch {
-    return null;
-  }
+  const me = await serverSessionIdentity();
+  if (!me) return null;
+  const cached2 = readCachedProfile();
+  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
+    email: me.email,
+    name: me.name || cached2?.name || "",
+    picture: cached2?.picture || "",
+    sub: cached2?.sub || me.email,
+    exp: Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1e3)
+  }));
+  _currentUser = null;
+  return getCurrentUser2();
 }
 async function hydrateSessionFromToken2(resp) {
   console.log("[Auth] Hydrating session from token...", { hasAccessToken: !!resp?.access_token });
-  const expMs = _persistAccessToken(resp);
-  const expSec = Math.floor((isServerBackend() ? Date.now() + SERVER_SESSION_TTL_MS : expMs) / 1e3);
-  if (isServerBackend()) {
-    console.log("[Auth] Server backend mode detected, setting DRIVE_SCOPE_KEY and POSTing to /session");
-    localStorage.setItem(DRIVE_SCOPE_KEY, "1");
-    try {
-      const opened = await apiFetch("POST", "/session", { token: resp.access_token });
-      console.log("[Auth] /session POST result:", opened);
-      if (opened?.token) {
-        console.log("[Auth] Adopting session token...");
-        await adoptSessionToken(opened.token);
-      }
-    } catch (e) {
-      console.error("[Auth] Failed to create session via POST /session:", e);
+  _persistAccessToken(resp);
+  const expSec = Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1e3);
+  console.log("[Auth] POSTing to /session");
+  try {
+    const opened = await apiFetch("POST", "/session", { token: resp.access_token });
+    console.log("[Auth] /session POST result:", opened);
+    if (opened?.token) {
+      console.log("[Auth] Adopting session token...");
+      await adoptSessionToken(opened.token);
     }
-  } else {
-    if (shouldGrantDriveScope(resp)) localStorage.setItem(DRIVE_SCOPE_KEY, "1");
-    else if (typeof resp?.scope === "string" && resp.scope.length > 0) clearDriveScopeGrant();
+  } catch (e) {
+    console.error("[Auth] Failed to create session via POST /session:", e);
   }
   console.log("[Auth] Fetching userinfo from Google...");
   const info = await fetchUserinfo(resp.access_token);
@@ -4027,44 +3984,6 @@ async function hydrateSessionFromToken2(resp) {
   const builtUser = getCurrentUser2();
   console.log("[Auth] Built user from token:", builtUser);
   return builtUser;
-}
-function requestDriveScopeGrant(onGranted, onDenied) {
-  if (isServerBackend()) {
-    onDenied(new Error("drive scope is never requested on a server build"));
-    return;
-  }
-  if (!window.google?.accounts?.oauth2) {
-    onDenied(new Error("GIS oauth2 not loaded"));
-    return;
-  }
-  const sessionEmail = getCurrentUser2()?.email;
-  const client = window.google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID2,
-    scope: DRIVE_SCOPE,
-    ...sessionEmail ? { login_hint: sessionEmail } : {},
-    callback: (resp) => {
-      if (resp.error) {
-        onDenied(new Error(resp.error));
-        return;
-      }
-      _persistAccessToken(resp);
-      if (shouldGrantDriveScope(resp)) {
-        localStorage.setItem(DRIVE_SCOPE_KEY, "1");
-        onGranted();
-      } else {
-        clearDriveScopeGrant();
-        onDenied(new Error("Drive scope still not granted"));
-      }
-    },
-    // F-35-01 AC-02 — fail fast on a blocked popup instead of hanging with no callback at all.
-    error_callback: (err) => onDenied(new Error(gisErrorMessage(err)))
-  });
-  if (!ensureWindowOpen()) {
-    window.dispatchEvent(new CustomEvent("vdg:auth-popup-blocked"));
-    onDenied(new Error("popup-blocked:window-open-unavailable"));
-    return;
-  }
-  client.requestAccessToken({ prompt: "consent" });
 }
 function loadGisScript() {
   return new Promise((resolve, reject) => {
@@ -4093,16 +4012,8 @@ function renderSignInButton3(container) {
   return renderSignInButton2(container, { hydrate: hydrateSessionFromToken2, clientId: CLIENT_ID2 });
 }
 if (typeof window !== "undefined") window.__vdg_auth = { getCurrentUser: getCurrentUser2, signOut: signOut2 };
-var identityProvider = { getCurrentUser: getCurrentUser2, signOut: signOut2, hasDriveScopeGrant, wasPreviouslySignedIn: wasPreviouslySignedIn2, rebuildSessionFromStoredToken: rebuildSessionFromStoredToken2 };
-var oauthProvider = {
-  clearDriveScopeGrant,
-  hydrateSessionFromToken: hydrateSessionFromToken2,
-  restampIdTokenExp,
-  initGoogleSignIn: initGoogleSignIn2,
-  renderSignInButton: renderSignInButton3,
-  requestDriveScopeGrant,
-  shouldGrantDriveScope
-};
+var identityProvider = { getCurrentUser: getCurrentUser2, signOut: signOut2, wasPreviouslySignedIn: wasPreviouslySignedIn2, rebuildSessionFromStoredToken: rebuildSessionFromStoredToken2 };
+var oauthProvider = { hydrateSessionFromToken: hydrateSessionFromToken2, restampIdTokenExp, initGoogleSignIn: initGoogleSignIn2, renderSignInButton: renderSignInButton3 };
 
 // output/web/js.tmp/implementations/storage/implementations/local/store-client.js
 var INIT_TIMEOUT_MS = 2e4;
@@ -4638,14 +4549,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-L7R4BTCC.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-QXQS5MRH.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-L7R4BTCC.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-QXQS5MRH.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4747,7 +4658,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.36 (01b74dd3)";
+var APP_VERSION = "v0.4.37 (3103c614)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4957,7 +4868,7 @@ function initBreakpointListener() {
 var _onReconnected = null;
 async function _onReconnectRequest() {
   try {
-    const resp = await reconnectDriveInteractive();
+    const resp = await reconnectInteractive();
     const user = await hydrateSessionFromToken(resp);
     if (user && _onReconnected) await _onReconnected(user);
     window.dispatchEvent(new CustomEvent("vdg:auth-reconnected"));
@@ -4979,73 +4890,73 @@ var VIEWS = {
   "/dashboard": () => import("./dashboard-ANZUNYTQ.js"),
   "/shipments": () => import("./shipments-HMXHE4VA.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
-  "/documents": () => import("./documents-23ITYCL2.js"),
+  "/documents": () => import("./documents-2SUK5ZXY.js"),
   "/finance": () => import("./finance-dashboard-XARJ36ZW.js"),
   "/finance/credit": () => import("./credit-dashboard-Z43BZ656.js"),
-  "/finance/demdet": () => import("./demdet-5OQIDY6G.js"),
+  "/finance/demdet": () => import("./demdet-SGLKGZCR.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-6IIZFDI2.js"),
+  "/sales/me": () => import("./sales-me-SBW4Q4KX.js"),
   "/sales/analytics": () => import("./sales-analytics-ESCAX5NR.js"),
   "/sales/quote/new": () => import("./sales-quote-new-ODI237IK.js"),
   "/sales/quote": () => import("./sales-quote-list-M5EHTDGY.js"),
   "/masters/customers": () => import("./masters-customers-E4QGFZXE.js"),
   "/masters/carriers": () => import("./masters-carriers-NGSX2ADW.js"),
   "/masters/services": () => import("./masters-services-EU2Q5CWP.js"),
-  "/help": () => import("./help-M4LK2HPE.js"),
-  "/pending-access": () => import("./pending-access-C5HQHARB.js"),
+  "/help": () => import("./help-IKAUORGB.js"),
+  "/pending-access": () => import("./pending-access-7DMAML24.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-WO75SJKX.js"),
-  "/manager/pipeline": () => import("./pipeline-MAGG7IY5.js"),
+  "/manager/pipeline": () => import("./pipeline-XAMJ6U6I.js"),
   "/manager/approvals": () => import("./approvals-BZ3ROLME.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-TY3AO5X6.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-H4LIC27O.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-AWZBOYII.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-VPVF3ESY.js"),
   "/manager/finance/close-period": () => import("./close-period-ODQV56G6.js"),
   "/manager/audit": () => import("./audit-YZBBMNU5.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-WMOGGFZG.js"),
-  "/manager/finance/commissions": () => import("./commissions-UQHEUB2O.js"),
+  "/manager/finance/commissions": () => import("./commissions-AIMRQBT4.js"),
   "/manager/commission-rules": () => import("./commission-rules-WKGTW4HM.js"),
   "/manager/exceptions": () => import("./exceptions-57GTL7YN.js"),
   // E-15
-  "/manager/errors": () => import("./errors-XQNXG2GJ.js"),
+  "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
   "/manager/users": () => import("./users-BFGUP33O.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-M3MKHD64.js"),
-  "/manager/settings": () => import("./settings-HKZPFQKM.js"),
+  "/manager/fx-rates": () => import("./fx-rates-NJZOGB3Y.js"),
+  "/manager/settings": () => import("./settings-6PVD7RFG.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-AZZRSNHO.js"),
-  "/masters/flights": () => import("./flights-AXQMG65Q.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-ISQFMJQV.js"),
+  "/masters/airports": () => import("./airports-27G7TOG7.js"),
+  "/masters/flights": () => import("./flights-THBLV3Y2.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-MRA3NDIZ.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-OSANYJIQ.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-4HZGIT5Q.js"),
   // E-20 F-28-15
   "/masters/ocean-tariff": () => import("./ocean-tariff-IQHAOMSK.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-2UTQ3YOD.js"),
-  "/manager/manifest": () => import("./manifest-D3TER2UA.js"),
+  "/masters/uld-types": () => import("./uld-types-RUNAQRZ4.js"),
+  "/manager/manifest": () => import("./manifest-DPQE7HAN.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-GM5YS7CX.js"),
+  "/masters/air-rates": () => import("./air-rates-A6LOCJ5Z.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-KZBUT2YJ.js"),
-  "/masters/local-charges": () => import("./local-charges-25CXTM2R.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-F24UAC2I.js"),
+  "/masters/local-charges": () => import("./local-charges-VTLC2OXG.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
   "/masters/shipment-states": () => import("./shipment-states-TZO3QAGT.js"),
   "/quotes/air-calc": () => import("./air-calc-MSSJVYNW.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-2GSELVSW.js"),
+  "/manager/air-invoice": () => import("./air-invoice-YAERGP5T.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-XMFWJP7M.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-7PSYSSJF.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-UHDB7FGG.js"),
+  "/accounting/settings": () => import("./settings-URHU44XT.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-J2BPSQ2M.js"),
+  "/admin/users": () => import("./users-view-YGF4ERK5.js"),
   // E-24 F-24-06
   "/admin/users/audit-log": () => import("./user-audit-log-view-2BVILWHD.js")
 };
@@ -5289,6 +5200,13 @@ function composeManager(wasm3) {
       return { rows: withDims(reply.rows), grandTotals: reply.grandTotals };
     }
   });
+  bindAirInvoiceComposer({
+    composeAirInvoice: (awbs, airRates, carriers) => wasm3.manager_air_invoice({
+      awbs: awbs || [],
+      air_rates: airRates || [],
+      carriers: carriers || []
+    })
+  });
   bindArComposer({
     // F1: fxRatesBuy is currency -> buying closing rate for `today` (131 is an asset).
     // cash-flow.js fetches it (fetchClosingRatesBuy) before calling this; an absent/empty map
@@ -5380,6 +5298,22 @@ function composeManager(wasm3) {
     computeMttr: (exceptions) => wasm3.manager_exception_mttr({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows.map((r) => ({ type: r.typeKey ? t(r.typeKey) : r.type, avgHours: r.avgHours })),
     computePerSalesRate: (exceptions) => wasm3.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
     computeEscalated: (severity) => wasm3.manager_exception_escalate({ severity: severity || "" }).severity
+  });
+  bindDocumentBoardComposer({
+    composeDocumentBoard: (documents, shippingInstructions, arrivalNotices, releaseOrders) => wasm3.manager_document_board({
+      documents: documents || [],
+      shipping_instructions: shippingInstructions || [],
+      arrival_notices: arrivalNotices || [],
+      release_orders: releaseOrders || [],
+      now_ms: Date.now(),
+      tz_offset_min: tz()
+    })
+  });
+  bindDemDetComposer({
+    overview: (instances) => wasm3.manager_demdet_overview({ instances: instances || [], now_ms: Date.now(), tz_offset_min: tz() })
+  });
+  bindManifestComposer({
+    overview: (manifests) => wasm3.manager_manifest_overview({ manifests: manifests || [], now_ms: Date.now(), tz_offset_min: tz() })
   });
   bindLedgerAggregator({
     trialBalance: (chart, legsByAccount, asOfDate) => wasm3.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
@@ -5494,8 +5428,8 @@ function composeGovernance(wasm3) {
   });
   bindWorkspaceSettings({
     readSettings: async () => (await wasm3.governance_load_settings({ local_only: true })).settings,
-    loadWorkspaceSettings: async (_api2, wsName) => (await wasm3.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
-    saveWorkspaceSettings: async (_api2, _wsName, settings) => {
+    loadWorkspaceSettings: async (wsName) => (await wasm3.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
+    saveWorkspaceSettings: async (settings) => {
       const saved = raise(await wasm3.governance_save_settings({ settings }));
       window.__vdg_workspace_settings = saved.settings;
       return saved.settings;
@@ -5553,7 +5487,7 @@ function composeGovernance(wasm3) {
   });
   bindErrorLogStore({
     listErrorRecords: async () => (await wasm3.governance_error_records({})).records,
-    purgeErrorMonth: async (_api2, month) => raise(await wasm3.governance_purge_error_month({ month }))
+    purgeErrorMonth: async (month) => raise(await wasm3.governance_purge_error_month({ month }))
   });
 }
 
@@ -5853,6 +5787,24 @@ var FxRateStoreRepo = class {
   async deleteEntry(validFrom, validTo, pair) {
     await this._repo().fx_delete_entry(validFrom, validTo, pair);
   }
+  // F-29-01: the fx-lookup rules (VND self-pair, Buy/Sell direction requirement, session cache)
+  // moved to wasm — fx-lookup.js is core_abstractions (no tech), so it reaches them through this
+  // adapter, same as every other wasm call in this class.
+  pnlFxLookupPair(currency) {
+    return this._wasm().pnl_fx_lookup_pair(currency);
+  }
+  pnlFxRequireDirection(direction) {
+    this._wasm().pnl_fx_require_direction(direction);
+  }
+  pnlFxCacheGet(dateStr, pair, direction) {
+    return this._wasm().pnl_fx_cache_get(dateStr, pair, direction);
+  }
+  pnlFxCachePut(dateStr, pair, direction, rate) {
+    this._wasm().pnl_fx_cache_put(dateStr, pair, direction, rate);
+  }
+  pnlFxCacheClear() {
+    this._wasm().pnl_fx_cache_clear();
+  }
 };
 
 // output/web/js.tmp/implementations/storage/implementations/repos/awb-repo.js
@@ -5926,8 +5878,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=01b74dd3", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=01b74dd3", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=3103c614", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=3103c614", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6255,13 +6207,13 @@ async function _deferredInit(user, db, serverApi, repo3) {
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
-    const { LedgerStoreRepo } = await import("./ledger-repo-2QISTPTZ.js");
+    const { LedgerStoreRepo } = await import("./ledger-repo-ZL3HPSXV.js");
     const ledgerRepo3 = new LedgerStoreRepo();
     window.__vdg_ledger_repo = ledgerRepo3;
     bindLedgerRepo(ledgerRepo3);
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
-    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-4HYDSPX7.js");
+    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-6CO7BZ2N.js");
     window.__vdg_user_repo = new UserServerRepo(userAuditLog);
     const retryPrincipalOnReconnect = () => {
       if (currentRolesResolved()) {
@@ -6601,7 +6553,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-4CSCRTUM.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-DPLZVWOV.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6669,7 +6621,7 @@ function bootApp(user, db) {
     btn.textContent = "Refresh Role";
     btn.className = "fixed bottom-4 right-4 z-50 px-3 py-1 bg-slate-700 text-white text-xs rounded";
     btn.onclick = async () => {
-      const { detectRoleViaServer } = await import("./auth-gate-C34OZ7ED.js");
+      const { detectRoleViaServer } = await import("./auth-gate-BT6ZDZJG.js");
       await detectRoleViaServer(user, { force: true });
       location.reload();
     };
@@ -6685,7 +6637,7 @@ async function main() {
   initAccessTokenRefresh({
     // reconnect-chip listener only (no proactive refresh)
     onReconnected: async (user) => {
-      const { detectRoleViaServer } = await import("./auth-gate-C34OZ7ED.js");
+      const { detectRoleViaServer } = await import("./auth-gate-BT6ZDZJG.js");
       await detectRoleViaServer(user, { force: true });
     }
   });

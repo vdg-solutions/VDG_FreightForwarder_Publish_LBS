@@ -4,9 +4,6 @@
 import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
-import {
-  validateAirportIata, validateAirportIcao, checkIataUnique,
-} from '../../../../../kernel/core_abstractions/util/iata-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
@@ -85,14 +82,16 @@ function openModal(root, entity, items, onSave) {
     };
     setErr('#m-err-iata', ''); setErr('#m-err-icao', '');
 
-    const iataErr = validateAirportIata(iata);
-    if (iataErr) { setErr('#m-err-iata', iataErr); return; }
-    const icaoErr = icao ? validateAirportIcao(icao) : null;
-    if (icaoErr) { setErr('#m-err-icao', icaoErr); return; }
+    const wasm = window.__vdg_wasm;
+    if (!wasm.validate_airport_iata(iata)) { setErr('#m-err-iata', '3 uppercase letters, e.g. SGN'); return; }
+    if (icao && !wasm.validate_airport_icao(icao)) { setErr('#m-err-icao', '4 uppercase letters, e.g. VVTS'); return; }
 
     // AC-13: uniqueness guard
-    const dupErr = checkIataUnique(items, iata, entity?.id);
-    if (dupErr) { setErr('#m-err-iata', dupErr); return; }
+    const codeItems = JSON.stringify(items.map((i) => ({ id: i.id, code: i.iata_code })));
+    if (wasm.check_code_unique(codeItems, iata, entity?.id ?? null)) {
+      setErr('#m-err-iata', `Airport IATA code ${iata} already exists`);
+      return;
+    }
 
     const updated = { ...(entity || {}), id: entity?.id || genId(iata), iata_code: iata, name, city, country };
     if (icao) updated.icao_code = icao; else delete updated.icao_code;

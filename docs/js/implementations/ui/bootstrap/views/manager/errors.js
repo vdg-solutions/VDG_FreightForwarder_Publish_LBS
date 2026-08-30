@@ -14,8 +14,6 @@ let _allRows  = [];
 let _kindFilter = '';
 let _dateFilter = '';
 
-function getApi() { return window.__vdg_drive_api || null; }
-
 // ── grid ───────────────────────────────────────────────────────────────────────
 
 function applyFilters(rows) {
@@ -91,8 +89,6 @@ export async function render(root) {
     </div>`;
   mountDateHints(root);
 
-  const api = getApi();
-
   async function reload() {
     root.querySelector('#err-status').textContent = t('loading');
     try {
@@ -120,7 +116,6 @@ export async function render(root) {
   root.querySelector('#btn-refresh').addEventListener('click', reload);
 
   root.querySelector('#btn-clear-all').addEventListener('click', async () => {
-    if (!api) return;
     const ok = await showConfirm({
       title: t('errors.confirm.delete_title'),
       body:  t('dunning_tmpl.confirm.body'),
@@ -132,7 +127,7 @@ export async function render(root) {
     const now   = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     try {
-      await purgeErrorMonth(api, month);
+      await purgeErrorMonth(month);
       await reload();
     } catch (err) {
       window.dispatchEvent(new CustomEvent('vdg:toast', {

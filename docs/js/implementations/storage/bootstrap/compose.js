@@ -1,7 +1,6 @@
 // compose.js — the storage module's composition root: every port in core_abstractions gets its
-// adapter here, and ONE decision is made (which storage authority this page talks to):
-//
-//   server — vdg-server (SQLite), same origin or a tunneled API_BASE; the server shim transport
+// adapter here. There is exactly one storage authority: vdg-server (SQLite), same origin or a
+// tunneled API_BASE.
 
 import { bindBackend } from '../core_abstractions/backend.js';
 import { bindServerSession } from '../core_abstractions/server-session.js';
@@ -49,7 +48,9 @@ bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new Cust
 // F-46-03: user management is server-only by design (owner 2026-08-21) — no Drive-mode branch.
 bindUserDirectory({ listUsers, createUser, patchUser });
 
-/// `?mock=1` or localStorage vdg.driveMode=mock: the localStorage-backed Drive double.
+/// `?mock=1` or localStorage vdg.driveMode=mock: seeds a fake session for CDP/regression runs
+/// (client/tests/local/seed, client/tests/regression) — the key predates the server split and is
+/// unrelated to Google Drive today; left named as the test scripts already key on it.
 export function isMockMode() {
   try {
     return new URLSearchParams(location.search).get(MOCK_QUERY_KEY) === '1'
@@ -57,7 +58,8 @@ export function isMockMode() {
   } catch { return false; /* no location/storage (worker, test) — the real transport */ }
 }
 
-/// Decide once, bind once. Never throws — an unreachable API is simply the Drive backend.
+/// Probe once, bind once. Never throws — an unreachable API is reported as an outage
+/// (backend.js's own vdg:server-health dispatch), never a switch to a different backend.
 export async function composeStorage() {
   const backendKind = await backend.detectBackend();
   // The Drive REST shim is gone: every live caller now speaks CharterDB directly (apiFetch, or

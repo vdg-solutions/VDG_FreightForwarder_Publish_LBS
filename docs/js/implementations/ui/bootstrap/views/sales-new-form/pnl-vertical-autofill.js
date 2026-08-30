@@ -119,6 +119,10 @@ export function shipmentToDraft(shipment, ce) {
 function _lineToDraft(ln, s) {
   const buyCurrency  = ln.buying_currency  || s.job_currency || 'VND';
   const sellCurrency = ln.selling_currency || s.job_currency || 'VND';
+  // Book-currency rate lock (AC-03) — same wasm rule pnl-line-fx.js's lockFxIfVnd calls
+  // (pnl_gate.rs::lock_fx_if_book_currency), not a second "== VND" re-derivation here.
+  const bookCurrency = s.job_currency || 'VND';
+  const wasm = window.__vdg_wasm;
   return {
     desc:        ln.description          || '',
     kind:        ln.subtype              || '',
@@ -126,14 +130,14 @@ function _lineToDraft(ln, s) {
     buy_unit:    ln.buying_unit          || '',
     buy_amt:     ln.buying_amount        || 0,
     buy_currency:  buyCurrency,
-    buy_fx_rate:   ln.buying_fx_rate  || (buyCurrency === 'VND'  ? 1 : ''),
+    buy_fx_rate:   ln.buying_fx_rate  || (wasm.pnl_line_fx_lock(buyCurrency, bookCurrency).rate ?? ''),
     buy_fx_date:   ln.buying_fx_date  || '',
     vnd_pay:     ln.buying_vnd_pay       || 0,
     sell_qty:    ln.selling_qty          || 0,
     sell_unit:   ln.selling_unit         || '',
     sell_amt:    ln.selling_amount       || 0,
     sell_currency: sellCurrency,
-    sell_fx_rate:  ln.selling_fx_rate || (sellCurrency === 'VND' ? 1 : ''),
+    sell_fx_rate:  ln.selling_fx_rate || (wasm.pnl_line_fx_lock(sellCurrency, bookCurrency).rate ?? ''),
     sell_fx_date:  ln.selling_fx_date || '',
     vnd_collect: ln.selling_vnd_collect  || 0,
     pol_pod_side: ln.pol_pod_side        || 'N/A',

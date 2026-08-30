@@ -1,9 +1,9 @@
 // awb-repo.js — ui port: the AWB storage adapter the manager AWB grid reads and writes through.
-// Bound to the Drive-backed AwbDriveRepo by compose-ui/storage.js.
+// Bound to the server-backed AwbStoreRepo by compose-ui/storage.js.
 
 let _impl = null;
 
-/// The adapter registers an AwbDriveRepo-shaped instance once, from compose-ui/storage.js.
+/// The adapter registers an AwbStoreRepo-shaped instance once, from compose-ui/storage.js.
 export function bindAwbRepo(impl) { _impl = impl; }
 
 function _i() {
@@ -11,8 +11,8 @@ function _i() {
   return _impl;
 }
 
-/// Same method names/signatures AwbDriveRepo carried — views call this object exactly as they
-/// called `new AwbDriveRepo()` before.
+/// Same method names/signatures AwbStoreRepo carried — views call this object exactly as they
+/// called `new AwbStoreRepo()` before.
 export const awbRepo = {
   listByMonth:   (...a) => _i().listByMonth(...a),
   append:        (...a) => _i().append(...a),

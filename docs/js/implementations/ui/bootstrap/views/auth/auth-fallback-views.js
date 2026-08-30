@@ -1,5 +1,5 @@
 // F-15-19 AC-4 — Fallback views for auth failure modes.
-// Used when the Drive role probe times out or the user has no workspace membership.
+// Used when the server role probe times out or the user has no workspace membership.
 // Extracted from app.js so the loading-hang recovery path can dynamic-import safely.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';

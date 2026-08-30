@@ -1,5 +1,5 @@
 // token-anchor.js — port: the TokenAnchor factory (browser-only Google access-token authority,
-// implementations/drive/token-anchor.js). The event names it emits are contract.
+// implementations/auth/token-anchor.js). The event names it emits are contract.
 
 export const ANCHOR_EVT_POPUP_BLOCKED   = 'popup-blocked';
 export const ANCHOR_EVT_SIGNIN_REQUIRED = 'signin-required';

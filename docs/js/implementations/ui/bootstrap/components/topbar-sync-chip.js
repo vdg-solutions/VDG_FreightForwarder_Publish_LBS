@@ -199,18 +199,17 @@ export const CHIP_ACTION = { NOOP:'noop', SIGNIN:'signin', WAITING_NETWORK:'wait
   FORCE_RETRY:'force_retry', RECONNECT:'reconnect', SYNC_NOW:'sync_now' };
 
 // AC-06 — pure click decision; reconnect wins over signin/offline when authReconnect is set
-/// `serverBackend`: this deployment keeps its data on the server, so the browser holds a SERVER
-/// session and never talks to Drive. "Reconnect Google Drive" then has nothing to reconnect — the
-/// credential that expired is the server session, and the way back is a plain sign-in. Offering
-/// the Drive re-consent instead asks Google for a Drive scope this build never uses, which is what
-/// raises the "Google hasn't verified this app" warning on a perfectly ordinary session timeout.
-export function decideChipAction({ state, user, online, lastError, authReconnect, serverBackend = false }) {
+/// This deployment keeps its data on the server, so the browser holds a SERVER session — the
+/// credential that expires is that session, and the way back is a plain sign-in, never a Drive
+/// re-consent (which would ask Google for a scope this build never uses, raising the "Google
+/// hasn't verified this app" warning on a perfectly ordinary session timeout).
+export function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === 'yellow')                     return CHIP_ACTION.NOOP;
   if (state === 'backing_up')                 return CHIP_ACTION.NOOP;
   if (state === 'pending')                    return CHIP_ACTION.NOOP; // F-50-01 AC-12 — click isn't swallowed: the window-level gesture listener still fires independently
   // A quarantined row needs a code fix, not a retry — nothing behind this click could resolve it.
   if (state === 'quarantined')                return CHIP_ACTION.NOOP;
-  if (state === 'red' && authReconnect)       return serverBackend ? CHIP_ACTION.SIGNIN : CHIP_ACTION.RECONNECT;
+  if (state === 'red' && authReconnect)       return CHIP_ACTION.SIGNIN;
   if (state === 'red' && !user)               return CHIP_ACTION.SIGNIN;
   if (state === 'red' && !online)             return CHIP_ACTION.WAITING_NETWORK;
   // H4-b: a click can't fix "the server is down" any faster than the delta tick's own retry —

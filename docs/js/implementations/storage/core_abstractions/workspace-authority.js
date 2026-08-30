@@ -1,11 +1,9 @@
 // workspace-authority.js — port: who is this signed-in account for the active workspace, as the
-// storage authority sees it. ONE question, answered by whichever adapter the bootstrap bound:
-//   drive  — ownership of the workspace root (bootstrap Manager) or the grant file shared to the
-//            account, or a bare fork, or nothing (implementations/drive/drive-workspace-authority.js)
-//   server — GET /api/me: the server already applied the same rules (implementations/server/server-role.js)
-// The verdict is data; the auth-gate (freight_app) turns it into session roles + caches. Neither
-// adapter touches the app's caches — that is what keeps a third adapter (gdrive-db, Firebase) a
-// one-file job.
+// storage authority sees it. ONE question, answered by the bound adapter: GET /api/me, where the
+// server already applied the ownership/grant/fork rules (implementations/server/server-role.js).
+// The verdict is data; the auth-gate (freight_app) turns it into session roles + caches. The
+// adapter never touches the app's caches — that is what keeps a second adapter (Firebase, a plain
+// server login) a one-file job.
 
 /// Verdicts. `token` is the fork token the rest of the app keys on (MANAGER sentinel or the
 /// user's prefix upper-cased); `roles` the role names; `areas` the folder-id manifest an
@@ -32,7 +30,7 @@ let _adapter = null;
 export function bindWorkspaceAuthority(adapter) { _adapter = adapter; }
 
 export function workspaceAuthority() {
-  if (!_adapter) throw new Error('storage/workspace-authority: no adapter bound (bootstrap selects drive | server)');
+  if (!_adapter) throw new Error('storage/workspace-authority: no adapter bound (the storage bootstrap binds it)');
   return _adapter;
 }
 

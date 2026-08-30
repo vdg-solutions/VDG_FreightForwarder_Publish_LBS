@@ -21,7 +21,6 @@ import { getCurrentPeriodLock } from '../../../core_abstractions/ports/governanc
 
 const TOAST_MS = 4_000;
 
-function getApi()  { return window.__vdg_drive_api; }
 function getRepo() { return window.__vdg_repo; }
 
 function toast(type, msg) {
@@ -77,13 +76,11 @@ export async function render(root) {
   root.innerHTML = `<div class="p-6 max-w-2xl mx-auto"><div id="acct-settings-mount">${t('loading')}</div></div>`;
   const mount = root.querySelector('#acct-settings-mount');
 
-  const api = getApi();
   const ws  = activeWorkspaceName();
   const defaultSettings = { [DEFAULT_CURRENCY_FIELD]: DEFAULT_HEADER_CURRENCY };
-  // Cache-first + bounded, same shape as manager/settings.js. The read is a local store hit now
-  // (workspace_settings is a repo kind), so this is cheap — the bound only covers the one-time
-  // legacy workspace.json migration path.
-  const settingsRes = await safeMasterLoad(() => loadWorkspaceSettings(api, ws), 'acct-settings:load');
+  // Cache-first + bounded, same shape as manager/settings.js. The read is a server call
+  // (workspace_settings is a repo kind), so this is cheap.
+  const settingsRes = await safeMasterLoad(() => loadWorkspaceSettings(ws), 'acct-settings:load');
   let settings = window.__vdg_workspace_settings ?? (settingsRes.ok ? settingsRes.value : defaultSettings);
   window.__vdg_workspace_settings = settings;
 
@@ -120,7 +117,7 @@ export async function render(root) {
       // Spread over the CURRENT settings, never over defaults: this screen owns one field, and
       // rewriting the row from a partial object would blank fx_source and the second-eyes flag.
       const next = { ...settings, [DEFAULT_CURRENCY_FIELD]: new FormData(e.target).get(DEFAULT_CURRENCY_FIELD) };
-      await saveWorkspaceSettings(api, ws, next);
+      await saveWorkspaceSettings(next);
       settings = next;
       toast('success', t('settings.toast.saved'));
       statusEl.textContent = '';

@@ -1,20 +1,19 @@
-// Session-level FX rate cache + lookup helper.
+// Session-level FX rate lookup — pure wiring, no tech (core_abstractions). The VND self-pair
+// rule, the Buy/Sell direction requirement and the session cache all live in Rust now
+// (js_bridge_pnl_fx.rs): a cache is state that outlives a render, so it is business, not UI.
+// Reached through `repo` (the same fx-rate adapter every caller already passes for `getRate`),
+// never a platform global — this file's own job is the real I/O the rules gate.
 
-const VND_CURRENCY = 'VND';
-
-// Map<"YYYY-MM-DD/pair/direction", number|null> — cleared on clearRateCache().
-const SESSION_CACHE = new Map();
-
-/// Async: call repo.getRate(), cache result. Returns rate as Number or null (not found).
-/// currency default 'USD' for legacy callers that omit the pair. direction: 'Buy'|'Sell' —
-/// Circular 200 values assets at the buying rate and liabilities at the selling rate, so every
-/// caller states which side it wants; there is no default.
+/// Async: call repo.getRate(), cache result via wasm (through `repo`). Returns rate as Number or
+/// null (not found). currency default 'USD' for legacy callers that omit the pair. direction:
+/// 'Buy'|'Sell' — Circular 200 values assets at the buying rate and liabilities at the selling
+/// rate, so every caller states which side it wants; there is no default (rejected downstream).
 export async function getRateForDate(repo, dateStr, currency = 'USD', direction) {
-  if (currency === VND_CURRENCY) return 1; // self-pair, no lookup
-  if (!direction) throw new Error('getRateForDate: direction (Buy|Sell) is required');
-  const pair = `${currency}/${VND_CURRENCY}`;
-  const key = `${dateStr}/${pair}/${direction}`;
-  if (SESSION_CACHE.has(key)) return SESSION_CACHE.get(key);
+  const pair = repo.pnlFxLookupPair(currency);
+  if (pair == null) return 1; // self-pair (VND), no lookup — Rust rule
+  repo.pnlFxRequireDirection(direction || ''); // throws synchronously before any repo I/O
+  const cached = repo.pnlFxCacheGet(dateStr, pair, direction);
+  if (cached.hit) return cached.rate;
   let rate = null;
   try {
     const resolved = await repo.getRate(dateStr, pair, direction);
@@ -27,11 +26,11 @@ export async function getRateForDate(repo, dateStr, currency = 'USD', direction)
     if (!/FxRateNotFound|not found/i.test(err.message)) throw err;
     rate = null;
   }
-  SESSION_CACHE.set(key, rate);
+  repo.pnlFxCachePut(dateStr, pair, direction, rate);
   return rate;
 }
 
 /// Evict all cached entries (call after admin adds/deletes a rate).
-export function clearRateCache() {
-  SESSION_CACHE.clear();
+export function clearRateCache(repo) {
+  repo.pnlFxCacheClear();
 }

@@ -1,79 +1,51 @@
 // validate-shipment-form.js — the shipment form's save/publish gate, split out of sales-new-form.js at the
 // 350-line cap. Pure: a state object in, an array of message strings out. No DOM, no repo, so
 // the publish rules can be read (and tested) without standing the form up.
+//
+// F-41-01/F-29-01 AC-05/F-29-02 AC-04/F-41-07/F-29-04 VR-02: every rule that used to live here
+// moved to Rust (rulesets::shipment_publish_gate) — this is now a thin call over the wasm gate
+// that renders the i18n keys it returns. No business rule is duplicated in JS.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { computeVndInvariant } from './pnl-save-validations.js';
+
+const wasm = () => globalThis.window?.__vdg_wasm || globalThis.__vdg_wasm;
 
 // → string[] (empty = valid); negative margin is NOT a blocker (AC-03)
 //
-// F-41-01: two gates are PUBLISH gates, not save gates. CS opens the job at the booking window,
-// before any B/L number or charge line exists — blocking that save blocked the whole CS-first
-// flow the process is built on. Publish is the handover to Accounting, which is where a job
-// without a bill number or a single line stops being a working file and starts being a mistake.
-// Default publish:true keeps every existing caller/test on the strict path.
+// F-41-01: two of the gate's rules are PUBLISH gates, not save gates. CS opens the job at the
+// booking window, before any B/L number or charge line exists — blocking that save blocked the
+// whole CS-first flow the process is built on. Publish is the handover to Accounting, which is
+// where a job without a bill number or a single line stops being a working file and starts being
+// a mistake. Default publish:true keeps every existing caller/test on the strict path.
 export function validateShipmentForm(state, { publish = true } = {}) {
-  const errs = [];
-  if (publish && !state.mbl && !state.hbl && !state.job_file_no) {
-    errs.push(t('sales_new.validation.no_bill'));
+  const mod = wasm();
+  if (typeof mod?.validate_shipment_gate !== 'function') {
+    throw new Error('validate-shipment-form: wasm not ready — validate_shipment_gate missing');
   }
-  if (!state.customer) {
-    errs.push(t('sales_new.validation.no_customer'));
-  }
-  // novalidate (sales-new-form.js) hands the browser's own datetime-local refusal over to this
-  // gate — badInput means the box holds unparseable input (e.g. date+hour+minute typed, AM/PM
-  // segment left empty), which is NOT the same as an untouched field. Blocks on save too, not
-  // only publish: a badInput box must never save silently as blank.
-  if (state.closing_si_bad_input) {
-    errs.push(t('sales_new.validation.closing_si_incomplete'));
-  }
-  if (state.closing_cy_bad_input) {
-    errs.push(t('sales_new.validation.closing_cy_incomplete'));
-  }
-  // The job's owner must exist from birth: the revenue fork, the publish fork and the Job No
-  // namespace are all addressed by it — an unattributed save writes into nobody's folders.
-  if (!state.sales_rep) {
-    errs.push(t('sales_new.validation.no_sales_rep'));
-  }
-  // F-41-07: the customs checklist row is keyed on direction, so a job saved without one can
-  // never leave Arrived on its own evidence. Only blocks on publish — a booking-window draft may
-  // legitimately not know yet — and only bites when the product did not already settle it.
-  if (publish && !state.direction) {
-    errs.push(t('sales_new.validation.no_direction'));
-  }
-  const hasLine = (state.lines || []).some((l) => l.vnd_pay > 0 || l.vnd_collect > 0);
-  if (publish && !hasLine) {
-    errs.push(t('sales_new.validation.no_lines'));
-  }
-  // F-29-01 AC-05: amount without currency, or non-VND without fx_rate — hard block per side
-  let lineCurrencyMissing = false;
-  let lineFxMissing       = false;
-  for (const l of state.lines || []) {
-    if (l.buy_amt && !l.buy_currency)   lineCurrencyMissing = true;
-    if (l.sell_amt && !l.sell_currency) lineCurrencyMissing = true;
-    if (l.buy_currency && l.buy_currency !== 'VND' && l.buy_amt && !l.buy_fx_rate) {
-      lineFxMissing = true;
-    }
-    if (l.sell_currency && l.sell_currency !== 'VND' && l.sell_amt && !l.sell_fx_rate) {
-      lineFxMissing = true;
-    }
-  }
-  // F-29-02 AC-04: same hard block, extended to mục C commission rows
-  for (const l of state.commission_lines || []) {
-    if (l.amount_fx && !l.currency) lineCurrencyMissing = true;
-    if (l.currency && l.currency !== 'VND' && l.amount_fx && !l.fx_rate) lineFxMissing = true;
-  }
-  if (lineCurrencyMissing) errs.push(t('sales_new.validation.line_currency_required'));
-  if (lineFxMissing) {
-    errs.push(t('sales_new.validation.line_fx_required'));
-    errs.push(t('sales_new.validation.line_fx_no_rate_hint'));
-  }
+  const request = {
+    publish,
+    mbl: state.mbl || '',
+    hbl: state.hbl || '',
+    job_file_no: state.job_file_no || '',
+    customer: state.customer || '',
+    sales_rep: state.sales_rep || '',
+    direction: state.direction || '',
+    product: state.product || '',
+    closing_si_bad_input: !!state.closing_si_bad_input,
+    closing_cy_bad_input: !!state.closing_cy_bad_input,
+    book_currency: state.book_currency || '',
+    lines: state.lines || [],
+    commission_lines: state.commission_lines || [],
+  };
+  const reply = mod.validate_shipment_gate(JSON.stringify(request));
 
-  // F-29-04 VR-02: defensive Σvnd invariant — carried per-line VND must match the recomputed sum
-  const inv = computeVndInvariant(state);
-  if (!inv.match) {
+  // `reply.errors` are i18n key SUFFIXES under sales_new.validation. — the gate decides WHICH
+  // rules fired, this only renders them (same convention as the FX-deviation confirm dialog).
+  const errs = reply.errors.map((key) => t(`sales_new.validation.${key}`));
+  if (reply.vnd_mismatch) {
+    const { expected, actual, delta } = reply.vnd_mismatch;
     errs.push(t('sales_new.validation.vnd_invariant')
-      .replace('{expected}', inv.expected).replace('{actual}', inv.actual).replace('{delta}', inv.delta));
+      .replace('{expected}', expected).replace('{actual}', actual).replace('{delta}', delta));
   }
   return errs;
 }

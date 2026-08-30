@@ -12,8 +12,6 @@ const DEFAULT_FX_SOURCE = 'Manual';
 const FX_SOURCE_OPTIONS = ['Vietcombank', 'SBV', 'Manual'];
 const TOAST_MS          = 4_000;
 
-function getApi() { return window.__vdg_drive_api; }
-
 function toast(type, msg) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message: msg, duration: TOAST_MS } }));
 }
@@ -59,14 +57,11 @@ export async function render(root) {
   root.innerHTML = `<div class="p-6 max-w-2xl mx-auto"><div id="settings-mount">${t('loading')}</div></div>`;
   const mount = root.querySelector('#settings-mount');
 
-  const api  = getApi();
   const ws   = activeWorkspaceName();
   const defaultSettings = { fx_source: DEFAULT_FX_SOURCE, [SECOND_EYES_FIELD]: false };
-  // F-52-01 AC-06/07: bounded + cache-first — mirrors air-rates.js:149-152. A stalled Drive
+  // F-52-01 AC-06/07: bounded + cache-first — mirrors air-rates.js:149-152. A stalled server
   // read must not stack onto mountView's ceiling; a prior successful load renders instantly.
-  const settingsRes = api
-    ? await safeMasterLoad(() => loadWorkspaceSettings(api, ws), 'settings:load')
-    : { ok: true, value: defaultSettings };
+  const settingsRes = await safeMasterLoad(() => loadWorkspaceSettings(ws), 'settings:load');
   let settings = window.__vdg_workspace_settings ?? (settingsRes.ok ? settingsRes.value : defaultSettings);
   window.__vdg_workspace_settings = settings;
 
@@ -81,7 +76,7 @@ export async function render(root) {
     try {
       const fd   = new FormData(e.target);
       const next = { ...settings, fx_source: fd.get('fx_source'), [SECOND_EYES_FIELD]: fd.get(SECOND_EYES_FIELD) === 'on' };
-      await saveWorkspaceSettings(api, ws, next);
+      await saveWorkspaceSettings(next);
       settings = next;
       toast('success', t('settings.toast.saved'));
       statusEl.textContent = '';

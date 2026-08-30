@@ -1,5 +1,5 @@
 // popup-guard.js — port: make sure window.open is callable before a GIS popup (an ad-blocker
-// may have nulled or wrapped it). Bound to implementations/drive/window-open-guard.js.
+// may have nulled or wrapped it). Bound to implementations/auth/window-open-guard.js.
 
 let _impl = null;
 

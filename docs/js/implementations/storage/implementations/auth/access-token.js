@@ -6,9 +6,9 @@
 // caller reaches it through the token port (storage/core_abstractions/token.js).
 //
 // Owner model ("lúc 401 mới cần"): the token lives in ONE place (localStorage). getAccessToken()
-// just reads it — NEVER re-mints on a read. A Drive op that outlives the token 401s, and
-// drive-api recovers through the anchor rule (see token-anchor.js): stale verdicts retry with
-// the current token; only a fresh verdict spends the one shared silent refresh.
+// just reads it — NEVER re-mints on a read. A server call that outlives the token 401s, and
+// recovers through the anchor rule (see token-anchor.js): stale verdicts retry with the current
+// token; only a fresh verdict spends the one shared silent refresh.
 
 import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
 import { parseIdToken } from '../../core_abstractions/id-token.js';
@@ -17,8 +17,7 @@ import { SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstractions/util/sa
 import { createTokenAnchor, ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from '../../core_abstractions/token-anchor.js';
 import { ACCESS_TOKEN_ISSUED_KEY } from '../../core_abstractions/token.js';
 import { fetchUserinfo } from './userinfo.js';
-import { isServerBackend } from '../../core_abstractions/backend.js';
-import { DRIVE_SCOPE, IDENTITY_SCOPE } from '../../core_abstractions/drive-endpoints.js';
+import { IDENTITY_SCOPE } from '../../core_abstractions/oauth-scope.js';
 
 const CLIENT_ID                = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com'; // Makefile sed target
 const ID_TOKEN_KEY             = 'vdg.auth.id_token';
@@ -66,11 +65,10 @@ function _anchor() {
   if (_anchorInstance) return _anchorInstance;
   _anchorInstance = createTokenAnchor({
   clientId: CLIENT_ID,
-  // Server deployment: the browser talks to the server, never to Drive, so the only thing a token
-  // has to carry is identity — that is all the server needs to mint a session. Asking for the full
-  // Drive scope here got Google's "hasn't verified this app" warning in front of every reconnect,
-  // for a permission the build never exercises. The Drive-direct flavour still needs the real one.
-  scope:    isServerBackend() ? IDENTITY_SCOPE : DRIVE_SCOPE,
+  // The browser talks only to the server — the only thing a token has to carry is identity, which
+  // is all the server needs to mint a session. Asking for a wider scope got Google's "hasn't
+  // verified this app" warning in front of every reconnect, for a permission the build never uses.
+  scope:    IDENTITY_SCOPE,
   keys:     { token: ACCESS_TOKEN_KEY, exp: ACCESS_TOKEN_EXP_KEY, issued: ACCESS_TOKEN_ISSUED_KEY },
   loginHint:       _sessionEmail,
   verifyAccount:   _verifySameAccount,
@@ -86,16 +84,16 @@ function _anchor() {
 
 async function getAccessToken() { return _anchor().current(); }
 
-function refreshAccessTokenSilently() { return _anchor().silent(); }        // drive-api 401 re-mint ONLY
+function refreshAccessTokenSilently() { return _anchor().silent(); }        // 401 re-mint ONLY
 
-// The anchor rule for drive-api's 401 branches — see token-anchor.js::recover.
+// The anchor rule for a 401 caller's recovery branch — see token-anchor.js::recover.
 function recoverFromUnauthorized(usedToken) { return _anchor().recover(usedToken); }
 
 // Reconnect-chip click. prompt:'' + login_hint: an already-consented live session auto-closes the
 // popup in a flash on the CORRECT account. Escalation ladder (owner model): wrong account minted →
 // FORCE the account chooser; wrong again → full sign-in ("phải bắt login nếu không chọn được lại
 // đúng account đang làm việc"); other refusals escalate to prompt:'consent'.
-function reconnectDriveInteractive() { return _anchor().reconnect(); }
+function reconnectInteractive() { return _anchor().reconnect(); }
 
 /// What the storage bootstrap binds behind the token port.
-export const tokenAuthority = { getAccessToken, refreshAccessTokenSilently, recoverFromUnauthorized, reconnectDriveInteractive };
+export const tokenAuthority = { getAccessToken, refreshAccessTokenSilently, recoverFromUnauthorized, reconnectInteractive };

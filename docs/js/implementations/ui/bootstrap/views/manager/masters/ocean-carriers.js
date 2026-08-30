@@ -4,7 +4,6 @@
 import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
-import { validateScac, checkScacUnique } from '../../../../../kernel/core_abstractions/util/scac-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
@@ -69,13 +68,16 @@ function openModal(root, entity, items, onSave) {
     };
     setErr('#m-err-scac', ''); setErr('#m-err-name', '');
 
-    const scacErr = validateScac(scac);
-    if (scacErr) { setErr('#m-err-scac', scacErr); return; }
+    const wasm = window.__vdg_wasm;
+    if (!wasm.validate_scac(scac)) { setErr('#m-err-scac', '2-4 uppercase letters, e.g. WHLC'); return; }
     if (!name) { setErr('#m-err-name', t('masters.ocean_carriers.err_name_required')); return; }
 
     // AC-01: uniqueness on scac
-    const dupErr = checkScacUnique(items, scac, entity?.id);
-    if (dupErr) { setErr('#m-err-scac', dupErr); return; }
+    const codeItems = JSON.stringify(items.map((i) => ({ id: i.id, code: i.scac })));
+    if (wasm.check_code_unique(codeItems, scac, entity?.id ?? null)) {
+      setErr('#m-err-scac', `SCAC ${scac} already exists`);
+      return;
+    }
 
     const updated = { ...(entity || {}), id: entity?.id || genId(scac), scac, name, aliases };
     await onSave(updated);

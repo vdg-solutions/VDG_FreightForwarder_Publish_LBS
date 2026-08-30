@@ -1,8 +1,8 @@
 // compose-ui/governance.js — binds the ui's governance ports to the wasm freight_app exports.
 //
-// The `repo` / `api` arguments the views still pass are ignored on purpose: the Rust
-// use-cases hold those ports themselves (bootstrap/platform), so the signatures stay what the
-// views already call while the store is reached through one path instead of two.
+// The `repo` arguments some views still pass are ignored on purpose: the Rust use-cases hold
+// that port themselves (bootstrap/platform), so the signatures stay what the views already call
+// while the store is reached through one path instead of two.
 import {
   bindRouteGuard, ROLE_READ_ONLY, UNKNOWN_USER_ID,
 } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
@@ -51,9 +51,9 @@ export function composeGovernance(wasm) {
 
   bindWorkspaceSettings({
     readSettings: async () => (await wasm.governance_load_settings({ local_only: true })).settings,
-    loadWorkspaceSettings: async (_api, wsName) =>
+    loadWorkspaceSettings: async (wsName) =>
       (await wasm.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
-    saveWorkspaceSettings: async (_api, _wsName, settings) => {
+    saveWorkspaceSettings: async (settings) => {
       const saved = raise(await wasm.governance_save_settings({ settings }));
       // What already-mounted views read; the delta tick brings OTHER machines up to date.
       window.__vdg_workspace_settings = saved.settings;
@@ -119,6 +119,6 @@ export function composeGovernance(wasm) {
 
   bindErrorLogStore({
     listErrorRecords: async () => (await wasm.governance_error_records({})).records,
-    purgeErrorMonth:  async (_api, month) => raise(await wasm.governance_purge_error_month({ month })),
+    purgeErrorMonth:  async (month) => raise(await wasm.governance_purge_error_month({ month })),
   });
 }

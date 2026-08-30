@@ -2,49 +2,28 @@
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { computeLineVnd, fxCellsHtml, vndCellHtml, DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
 
-// Mirrors Rust PNL_VERTICAL_KIND_MAP — prefix-to-kind for AC-10
-export const PNL_VERTICAL_KIND_MAP_JS = {
-  'OCEAN FREIGHT': 'OceanFreight',
-  'AIR FREIGHT':   'Air',
-  'SEAL':          'Customs',
-  'BILL':          'Other',
-  'TELEX':         'Other',
-  'AMS':           'Other',
-  'D/O':           'HandlingAgent',
-  'DEM':           'Other',
-  'DET':           'Other',
-  'CFS':           'HandlingAgent',
-  'FUMI':          'Other',
-  'HANDLING':      'HandlingAgent',
-  'LATE PAYMENT':  'Other',
-  'REFUND':        'Other',
-  'SHUT OUT':      'Other',
-  'THC':           'THC',
-  'BAF':           'BAF',
-  'CAF':           'CAF',
-  'EBS':           'EBS',
-  'BANK CHARGE':   'BankCharge',
-  'CHI PHÍ AGENT': 'HandlingAgent', 'CHI PHI AGENT': 'HandlingAgent',
-  'BÁN RA':        'FreightRevenue', 'BAN RA':        'FreightRevenue',
-  'MUA VÀO':       'FreightCost',    'MUA VAO':       'FreightCost',
-};
-
 export const KIND_LIST = ['OceanFreight','Air','Customs','HandlingAgent','THC','BAF','CAF','EBS','BankCharge','FreightRevenue','FreightCost','Other'];
 const POL_POD_OPTS = ['N/A', 'POL', 'POD'];
 const INIT_ROWS    = 3;
 const CELL_CLS     = 'border border-slate-200 rounded px-1 py-0.5 text-xs';
 
+// The prefix->kind table (26 entries incl. Vietnamese prefixes) and the classify rule both moved
+// to Rust (rulesets::pnl_line_kind) — a comment here used to claim a Rust PNL_VERTICAL_KIND_MAP
+// mirror already existed; a repo-wide grep found none, so this table was the only source. This is
+// now a thin call over the wasm export; no business rule left in JS (AC-10).
+const wasm = () => globalThis.window?.__vdg_wasm || globalThis.__vdg_wasm;
+
 /**
- * classifyKind — case-insensitive prefix match against PNL_VERTICAL_KIND_MAP_JS, fallback 'Other' (AC-10)
+ * classifyKind — case-insensitive prefix match, fallback 'Other' (AC-10). Decided by wasm.
  * @param {string} desc
  * @returns {string}
  */
 export function classifyKind(desc) {
-  const upper = (desc || '').trim().toUpperCase();
-  for (const [prefix, kind] of Object.entries(PNL_VERTICAL_KIND_MAP_JS)) {
-    if (upper.startsWith(prefix)) return kind;
+  const mod = wasm();
+  if (typeof mod?.classify_pnl_line_kind !== 'function') {
+    throw new Error('section-lines: wasm not ready — classify_pnl_line_kind missing');
   }
-  return 'Other';
+  return mod.classify_pnl_line_kind(desc || '');
 }
 
 function kindOpts(selected) {

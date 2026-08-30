@@ -4,9 +4,6 @@
 import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
-import {
-  validateFlightNo, validateAirportIata, validateAirlineIata,
-} from '../../../../../kernel/core_abstractions/util/iata-validators.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 
@@ -27,7 +24,7 @@ function buildModal(entity) {
         <div class="text-base font-semibold text-slate-900 mb-1">${entity ? t('masters.flights.edit_title') : t('masters.flights.add_button')}</div>
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">${t('flights.field.flight_no')} <span class="text-red-500">*</span></label>
-          <input id="m-flight_no" type="text" maxlength="6" value="${escHtml(e.flight_no)}" required placeholder="e.g. VN422"
+          <input id="m-flight_no" type="text" maxlength="7" value="${escHtml(e.flight_no)}" required placeholder="e.g. VN422"
                  class="w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <span id="m-err-fn" class="hidden text-xs text-red-600"></span>
         </div>
@@ -86,14 +83,17 @@ function openModal(root, entity, onSave) {
     };
     setErr('#m-err-fn', ''); setErr('#m-err-carrier', ''); setErr('#m-err-origin', ''); setErr('#m-err-dest', '');
 
-    const fnErr = validateFlightNo(fn);
-    if (fnErr) { setErr('#m-err-fn', fnErr); return; }
-    const cErr = validateAirlineIata(carrier);
-    if (cErr) { setErr('#m-err-carrier', cErr); return; }
-    const oErr = validateAirportIata(origin);
-    if (oErr) { setErr('#m-err-origin', oErr); return; }
-    const dErr = validateAirportIata(dest);
-    if (dErr) { setErr('#m-err-dest', dErr); return; }
+    const wasm = window.__vdg_wasm;
+    if (!wasm.validate_flight_no(fn)) {
+      setErr('#m-err-fn', 'IATA designator + 1-4 digits, optional suffix letter, e.g. VN422 or 5J123A');
+      return;
+    }
+    if (!wasm.validate_airline_iata(carrier)) {
+      setErr('#m-err-carrier', '2 alphanumeric characters with at least one letter, e.g. VN or 5J');
+      return;
+    }
+    if (!wasm.validate_airport_iata(origin)) { setErr('#m-err-origin', '3 uppercase letters, e.g. SGN'); return; }
+    if (!wasm.validate_airport_iata(dest)) { setErr('#m-err-dest', '3 uppercase letters, e.g. SGN'); return; }
 
     const updated = {
       ...(entity || {}),

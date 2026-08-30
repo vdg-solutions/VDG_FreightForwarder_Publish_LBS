@@ -18,4 +18,3 @@ export class AwbStoreRepo {
     await this._repo().awb_delete(awbNo, ym);
   }
 }
-export { AwbStoreRepo as AwbDriveRepo };

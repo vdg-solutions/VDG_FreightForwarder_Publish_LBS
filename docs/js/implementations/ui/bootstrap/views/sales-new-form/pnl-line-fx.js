@@ -41,9 +41,11 @@ export function computeLineVnd(amount, currency, fxRate, bookCurrency) {
 }
 
 /** lockFxIfVnd — AC-03: currency matching the workspace's book currency locks fx_rate at 1.
- *  Named for the case that's true today (book = VND); read bookCurrency, not the name. */
+ *  Named for the case that's true today (book = VND); read bookCurrency, not the name.
+ *  Thin call into the wasm rule (pnl_gate.rs::lock_fx_if_book_currency) — the same
+ *  `currency == book_currency` test computeLineVnd prices against, never a second copy of it. */
 export function lockFxIfVnd(currency, bookCurrency) {
-  return currency === bookCurrency ? { rate: 1, locked: true } : { rate: null, locked: false };
+  return window.__vdg_wasm.pnl_line_fx_lock(currency, bookCurrency);
 }
 
 /// Thin call into the Rust rule (boundary/workspace_config.rs::header_currency). The bridge is up
@@ -103,11 +105,18 @@ export function fxCellsHtml(side, line = {}, headerCurrency, bookCurrency) {
         lang="${currentLocale()}" class="w-28 ${FX_CELL_CLS}" /></td>`;
 }
 
-function fmtVndNum(val) {
+/** fmtVndNum — AC-02: display-format the derived book-currency amount. Rounding to the right
+ *  number of decimals is an ISO 4217 fact about `currency` (VND has 0, USD/EUR have 2, ...),
+ *  read from wasm (pnl_gate.rs::round_for_display) — never a hardcoded "0 decimals" here. The
+ *  stored figure this is derived from is untouched; only what gets shown rounds. */
+function fmtVndNum(val, currency) {
   if (val == null || val === '') return '';
   const n = Number(val);
   if (isNaN(n) || n === 0) return '';
-  return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const wasm = window.__vdg_wasm;
+  const rounded = wasm.pnl_round_for_display(n, currency);
+  const exponent = wasm.pnl_currency_exponent(currency);
+  return rounded.toLocaleString('en-US', { minimumFractionDigits: exponent, maximumFractionDigits: exponent });
 }
 
 /** vndCellHtml — AC-02: readonly derived book-currency Chi/Thu cell (replaces the old free-input cell) */
@@ -119,7 +128,7 @@ export function vndCellHtml(side, line = {}, bookCurrency) {
   const fieldName = side === 'buy' ? 'vnd_pay' : 'vnd_collect';
   const colorCls  = side === 'buy' ? 'text-blue-700 bg-blue-50/40' : 'text-emerald-700 bg-emerald-50/40';
   return `<td class="px-1 py-1">
-    <input name="${fieldName}" type="text" value="${fmtVndNum(vnd)}" placeholder="0" readonly
+    <input name="${fieldName}" type="text" value="${fmtVndNum(vnd, bookCurrency)}" placeholder="0" readonly
       class="w-28 ${RO_CELL_CLS} text-right font-semibold ${colorCls}" /></td>`;
 }
 
@@ -167,8 +176,9 @@ function _recomputeVndCell(row, side) {
   const rateEl = row.querySelector(`[name=${side}_fx_rate]`);
   const vndEl  = row.querySelector(`[name=${side === 'buy' ? 'vnd_pay' : 'vnd_collect'}]`);
   if (!vndEl) return;
-  const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrencyOf(row));
-  vndEl.value = fmtVndNum(vnd);
+  const bookCurrency = bookCurrencyOf(row);
+  const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrency);
+  vndEl.value = fmtVndNum(vnd, bookCurrency);
 }
 
 /**

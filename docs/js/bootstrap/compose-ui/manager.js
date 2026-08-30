@@ -6,17 +6,21 @@
 import { t, fmtDate } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
 import { currentUserEmail } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
+import { bindAirInvoiceComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-invoice-composer.js';
 import { bindAirPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js';
 import { bindArComposer } from '../../implementations/ui/core_abstractions/ports/manager/ar-composer.js';
 import { bindCommissionCalculator } from '../../implementations/ui/core_abstractions/ports/manager/commission-calculator.js';
 import { bindCommissionComposer } from '../../implementations/ui/core_abstractions/ports/manager/commission-composer.js';
 import { bindCustomer360Composer } from '../../implementations/ui/core_abstractions/ports/manager/customer360-composer.js';
 import { bindDashboardComposer } from '../../implementations/ui/core_abstractions/ports/manager/dashboard-composer.js';
+import { bindDemDetComposer } from '../../implementations/ui/core_abstractions/ports/manager/demdet-composer.js';
+import { bindDocumentBoardComposer } from '../../implementations/ui/core_abstractions/ports/manager/document-board-composer.js';
 import { bindExceptionComposer } from '../../implementations/ui/core_abstractions/ports/manager/exception-composer.js';
 import { bindLedgerAggregator } from '../../implementations/ui/core_abstractions/ports/manager/ledger-aggregator.js';
 import { bindLedgerComposer } from '../../implementations/ui/core_abstractions/ports/manager/ledger-composer.js';
 import { bindLedgerReconciler } from '../../implementations/ui/core_abstractions/ports/manager/ledger-reconciler.js';
 import { bindLedgerRepost } from '../../implementations/ui/core_abstractions/ports/manager/ledger-repost.js';
+import { bindManifestComposer } from '../../implementations/ui/core_abstractions/ports/manager/manifest-composer.js';
 import { bindNotificationComposer } from '../../implementations/ui/core_abstractions/ports/manager/notification-composer.js';
 import { bindPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/pnl-composer.js';
 import { bindUserAuditLogComposer } from '../../implementations/ui/core_abstractions/ports/manager/user-audit-log-composer.js';
@@ -83,6 +87,12 @@ export function composeManager(wasm) {
       });
       return { rows: withDims(reply.rows), grandTotals: reply.grandTotals };
     },
+  });
+
+  bindAirInvoiceComposer({
+    composeAirInvoice: (awbs, airRates, carriers) => wasm.manager_air_invoice({
+      awbs: awbs || [], air_rates: airRates || [], carriers: carriers || [],
+    }),
   });
 
   bindArComposer({
@@ -164,6 +174,24 @@ export function composeManager(wasm) {
     computePerSalesRate: (exceptions) =>
       wasm.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
     computeEscalated: (severity) => wasm.manager_exception_escalate({ severity: severity || '' }).severity,
+  });
+
+  bindDocumentBoardComposer({
+    composeDocumentBoard: (documents, shippingInstructions, arrivalNotices, releaseOrders) => wasm.manager_document_board({
+      documents: documents || [], shipping_instructions: shippingInstructions || [],
+      arrival_notices: arrivalNotices || [], release_orders: releaseOrders || [],
+      now_ms: Date.now(), tz_offset_min: tz(),
+    }),
+  });
+
+  bindDemDetComposer({
+    overview: (instances) =>
+      wasm.manager_demdet_overview({ instances: instances || [], now_ms: Date.now(), tz_offset_min: tz() }),
+  });
+
+  bindManifestComposer({
+    overview: (manifests) =>
+      wasm.manager_manifest_overview({ manifests: manifests || [], now_ms: Date.now(), tz_offset_min: tz() }),
   });
 
   bindLedgerAggregator({

@@ -61,4 +61,3 @@ export class UserStoreRepo extends UserRepoPort {
       currentUser.email, currentUser.name || '', activeWorkspaceName() || '');
   }
 }
-export { UserStoreRepo as UserDriveRepo };

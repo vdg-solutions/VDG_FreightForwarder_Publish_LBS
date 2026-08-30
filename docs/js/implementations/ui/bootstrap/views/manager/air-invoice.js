@@ -1,58 +1,19 @@
-// Air Invoice CASS-format view (F-16-09, E-16)
+// Air Invoice (CASS) reconciliation (F-16-09, E-16)
 // Route: /manager/air-invoice
+//
+// Real AWBs (awb_list_all, the same store awb.js reads) reconciled against the `air_rate` tariff
+// they were booked at — chargeable weight, expected freight, variance and verdict are all
+// air_invoice.rs's own compute; this view only renders rows and builds the CSV export.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { emptyStateHtml, EMPTY_STATE_VARIANT } from '../../components/empty-state.js';
+import { composeAirInvoice, KIND_AIR_RATE, KIND_AIRLINE_CARRIER } from '../../../core_abstractions/ports/manager/air-invoice-composer.js';
 
-const CSV_HEADER = 'hawb_no,awb_no,mawb_no,flight_no,origin_iata,dest_iata,weight_chargeable_kg,freight,currency,cass_code,cass_eligible';
+const CSV_HEADER = 'awb_no,carrier_iata,flight_no,origin_iata,dest_iata,weight_chargeable_kg,expected_freight,invoiced_amount,variance_amount,currency,verdict';
 
-// Mock data — ≥3 invoices, ≥2 carriers (no live I/O required)
-const MOCK_INVOICES = [
-  {
-    carrier_iata: 'VN',
-    carrier_name: 'Vietnam Airlines',
-    hawb_no: '180-12345675',
-    awb_no: '180-12345675',
-    mawb_no: '020-11111110',
-    flight_no: 'VN422',
-    origin_iata: 'SGN',
-    dest_iata: 'HAN',
-    weight_chargeable_kg: 450.0,
-    freight: 1575.0,
-    currency: 'USD',
-    cass_code: 'VN-5675',
-    cass_eligible: true,
-  },
-  {
-    carrier_iata: 'VN',
-    carrier_name: 'Vietnam Airlines',
-    hawb_no: '180-22222220',
-    awb_no: '180-22222220',
-    mawb_no: '020-11111110',
-    flight_no: 'VN422',
-    origin_iata: 'SGN',
-    dest_iata: 'PEK',
-    weight_chargeable_kg: 310.0,
-    freight: 1085.0,
-    currency: 'USD',
-    cass_code: 'VN-2220',
-    cass_eligible: true,
-  },
-  {
-    carrier_iata: 'VJ',
-    carrier_name: 'VietJet Air',
-    hawb_no: '130-33333335',
-    awb_no: '130-33333335',
-    mawb_no: '050-22222225',
-    flight_no: 'VJ208',
-    origin_iata: 'HAN',
-    dest_iata: 'SGN',
-    weight_chargeable_kg: 680.0,
-    freight: 2040.0,
-    currency: 'USD',
-    cass_code: 'VJ-3335',
-    cass_eligible: false,
-  },
-];
+function getRepo() { return window.__vdg_repo; }
+
+function fmtAmount(n) { return n != null ? Number(n).toLocaleString('vi-VN') : '—'; }
 
 // AC-05: quote field iff it contains comma, double-quote, or newline (RFC 4180)
 export function csvField(value) {
@@ -64,28 +25,28 @@ export function csvField(value) {
 }
 
 // AC-03/04/05/06: pure CSV builder — returns string, no DOM side effects
-export function buildCassCSV(invoices) {
-  const rows = invoices.map((inv) => [
-    csvField(inv.hawb_no),
-    csvField(inv.awb_no),
-    csvField(inv.mawb_no),
-    csvField(inv.flight_no),
-    csvField(inv.origin_iata),
-    csvField(inv.dest_iata),
-    csvField(inv.weight_chargeable_kg),
-    csvField(inv.freight),
-    csvField(inv.currency),
-    csvField(inv.cass_code),
-    csvField(inv.cass_eligible),
+export function buildCassCSV(rows) {
+  const lines = rows.map((r) => [
+    csvField(r.awbNo),
+    csvField(r.carrierIata),
+    csvField(r.flightNo),
+    csvField(r.originIata),
+    csvField(r.destIata),
+    csvField(r.weightChargeableKg),
+    csvField(r.expectedFreightDisplay),
+    csvField(r.invoicedAmountDisplay),
+    csvField(r.varianceAmountDisplay),
+    csvField(r.invoiceCurrency),
+    csvField(r.verdict),
   ].join(','));
-  return [CSV_HEADER, ...rows].join('\n');
+  return [CSV_HEADER, ...lines].join('\n');
 }
 
-function groupByCarrier(invList) {
+function groupByCarrier(rows) {
   const map = new Map();
-  for (const inv of invList) {
-    if (!map.has(inv.carrier_iata)) map.set(inv.carrier_iata, { name: inv.carrier_name, rows: [] });
-    map.get(inv.carrier_iata).rows.push(inv);
+  for (const r of rows) {
+    if (!map.has(r.carrierIata)) map.set(r.carrierIata, { name: r.carrierName, rows: [] });
+    map.get(r.carrierIata).rows.push(r);
   }
   return map;
 }
@@ -94,32 +55,32 @@ function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function eligibleBadge(inv, idx) {
-  const on = inv.cass_eligible;
-  const cls = on
-    ? 'bg-green-100 text-green-700 border-green-300'
-    : 'bg-slate-100 text-slate-500 border-slate-300';
-  return `<button class="cass-toggle text-[10px] px-2 py-0.5 rounded border font-mono ${cls}" data-idx="${idx}">${on ? 'CASS' : '—'}</button>`;
+function verdictBadge(verdict) {
+  const map = {
+    matched:  ['bg-green-100 text-green-700',   t('air_invoice.verdict.matched')],
+    disputed: ['bg-red-100 text-red-700',       t('air_invoice.verdict.disputed')],
+    unbilled: ['bg-slate-100 text-slate-500',   t('air_invoice.verdict.unbilled')],
+  };
+  const [cls, label] = map[verdict] || map.unbilled;
+  return `<span class="text-[10px] px-2 py-0.5 rounded border-0 font-medium ${cls}">${label}</span>`;
 }
 
-function buildInvoiceRow(inv, idx) {
+function buildInvoiceRow(r) {
   return `
-    <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs" data-row="${idx}">
-      <td class="px-3 py-2 font-mono">${escHtml(inv.hawb_no)}</td>
-      <td class="px-3 py-2 font-mono">${escHtml(inv.flight_no)}</td>
-      <td class="px-3 py-2">${escHtml(inv.origin_iata)} → ${escHtml(inv.dest_iata)}</td>
-      <td class="px-3 py-2 text-right">${inv.weight_chargeable_kg} kg</td>
-      <td class="px-3 py-2 text-right">${inv.freight} ${escHtml(inv.currency)}</td>
-      <td class="px-3 py-2 font-mono text-blue-700">${escHtml(inv.cass_code)}</td>
-      <td class="px-3 py-2 text-center">${eligibleBadge(inv, idx)}</td>
+    <tr class="border-t border-slate-100 hover:bg-slate-50 text-xs">
+      <td class="px-3 py-2 font-mono">${escHtml(r.awbNo)}</td>
+      <td class="px-3 py-2 font-mono">${escHtml(r.flightNo) || '—'}</td>
+      <td class="px-3 py-2">${escHtml(r.originIata)} → ${escHtml(r.destIata)}</td>
+      <td class="px-3 py-2 text-right">${fmtAmount(r.weightChargeableKg)} kg</td>
+      <td class="px-3 py-2 text-right">${fmtAmount(r.expectedFreightDisplay)} ${escHtml(r.rateCurrency)}</td>
+      <td class="px-3 py-2 text-right">${fmtAmount(r.invoicedAmountDisplay)} ${escHtml(r.invoiceCurrency)}</td>
+      <td class="px-3 py-2 text-right">${r.varianceAmountDisplay != null ? fmtAmount(r.varianceAmountDisplay) : '—'}</td>
+      <td class="px-3 py-2 text-center">${verdictBadge(r.verdict)}</td>
     </tr>`;
 }
 
-function buildCarrierSection(carrierIata, group, invList) {
-  const rows = group.rows.map((inv) => {
-    const idx = invList.indexOf(inv);
-    return buildInvoiceRow(inv, idx);
-  }).join('');
+function buildCarrierSection(carrierIata, group) {
+  const rows = group.rows.map(buildInvoiceRow).join('');
   return `
     <div class="mb-6">
       <div class="text-sm font-semibold text-slate-700 mb-2 px-1">
@@ -130,13 +91,14 @@ function buildCarrierSection(carrierIata, group, invList) {
         <table class="w-full">
           <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-3 py-2 text-left">${t('air_invoice.col.hawb')}</th>
+              <th class="px-3 py-2 text-left">${t('air_invoice.col.awb')}</th>
               <th class="px-3 py-2 text-left">${t('air_invoice.col.flight')}</th>
               <th class="px-3 py-2 text-left">${t('air_invoice.col.route')}</th>
               <th class="px-3 py-2 text-right">${t('air_invoice.col.weight')}</th>
-              <th class="px-3 py-2 text-right">${t('air_invoice.col.freight')}</th>
-              <th class="px-3 py-2 text-left">${t('air_invoice.col.cass_code')}</th>
-              <th class="px-3 py-2 text-center">CASS</th>
+              <th class="px-3 py-2 text-right">${t('air_invoice.col.expected')}</th>
+              <th class="px-3 py-2 text-right">${t('air_invoice.col.invoiced')}</th>
+              <th class="px-3 py-2 text-right">${t('air_invoice.col.variance')}</th>
+              <th class="px-3 py-2 text-center">${t('air_invoice.col.verdict')}</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -145,51 +107,60 @@ function buildCarrierSection(carrierIata, group, invList) {
     </div>`;
 }
 
+function summaryHtml(totals) {
+  return `
+    <div class="flex items-center gap-4 text-xs text-slate-500 mb-4">
+      <span>${t('air_invoice.verdict.matched')}: <b class="text-green-700">${totals.matchedCount}</b></span>
+      <span>${t('air_invoice.verdict.disputed')}: <b class="text-red-700">${totals.disputedCount}</b></span>
+      <span>${t('air_invoice.verdict.unbilled')}: <b class="text-slate-600">${totals.unbilledCount}</b></span>
+    </div>`;
+}
+
+async function loadReconciliation() {
+  const repo = getRepo();
+  if (!repo) return { rows: [], totals: { matchedCount: 0, disputedCount: 0, unbilledCount: 0 } };
+  const [awbs, airRates, carriers] = await Promise.all([
+    repo.awb_list_all(),
+    repo.list(KIND_AIR_RATE, null),
+    repo.list(KIND_AIRLINE_CARRIER, null),
+  ]);
+  return composeAirInvoice(awbs, airRates, carriers);
+}
+
 export async function render(root) {
-  // Local mutable copy — toggle mutates cass_eligible here
-  const invoices = MOCK_INVOICES.map((inv) => ({ ...inv }));
+  const { rows, totals } = await loadReconciliation();
 
   root.innerHTML = `
     <div class="p-6 max-w-6xl mx-auto">
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between mb-4">
         <div class="text-lg font-semibold text-slate-900">${t('air_invoice.title')}</div>
         <button id="air-invoice-export"
           class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium">
           ${t('air_invoice.export_csv')}
         </button>
       </div>
+      ${rows.length ? summaryHtml(totals) : ''}
       <div id="air-invoice-body"></div>
     </div>`;
 
   const body = root.querySelector('#air-invoice-body');
   if (!body) return;
 
-  const groups = groupByCarrier(invoices);
-  for (const [iata, group] of groups) {
-    body.insertAdjacentHTML('beforeend', buildCarrierSection(iata, group, invoices));
+  if (!rows.length) {
+    body.innerHTML = emptyStateHtml({ variant: EMPTY_STATE_VARIANT.FIRST_RUN, entity: t('air_invoice.entity') });
+    root.querySelector('#air-invoice-export')?.setAttribute('disabled', 'true');
+    return;
   }
 
-  // Toggle cass_eligible in local state + update badge UI
-  body.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.cass-toggle');
-    if (!btn) return;
-    const idx = Number(btn.dataset.idx);
-    const inv = invoices[idx];
-    if (!inv) return;
-    inv.cass_eligible = !inv.cass_eligible;
-    const on = inv.cass_eligible;
-    btn.textContent = on ? 'CASS' : '—';
-    btn.className = btn.className
-      .replace(/bg-\S+ text-\S+ border-\S+/g, '')
-      .trim()
-      + (on ? ' bg-green-100 text-green-700 border-green-300' : ' bg-slate-100 text-slate-500 border-slate-300');
-  });
+  const groups = groupByCarrier(rows);
+  for (const [iata, group] of groups) {
+    body.insertAdjacentHTML('beforeend', buildCarrierSection(iata, group));
+  }
 
-  // CSV export via Blob + URL.createObjectURL
   const exportBtn = root.querySelector('#air-invoice-export');
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
-      const csv  = buildCassCSV(invoices);
+      const csv  = buildCassCSV(rows);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');

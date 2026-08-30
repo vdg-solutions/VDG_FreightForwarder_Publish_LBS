@@ -3,10 +3,10 @@
 // of the roles it renders.
 
 import { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
-         ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_PRICING } from '../../roles.js';
+         ROLE_ACCOUNTANT, ROLE_AUDITOR } from '../../roles.js';
 
 export { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
-         ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_PRICING };
+         ROLE_ACCOUNTANT, ROLE_AUDITOR };
 
 export const ROLE_VALUES = [ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP,
                             ROLE_CUSTOMER_SERVICE, ROLE_ACCOUNTANT, ROLE_AUDITOR];
@@ -14,7 +14,8 @@ export const ROLE_VALUES = [ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP,
 // #28: roles are a FLAT SET — one person holds as many as the job needs (a manager who also sells;
 // a sales rep who also keeps the rate cards). ROLE_VALUES stays the filter-bar vocabulary;
 // ASSIGNABLE_ROLES is what the add/edit form offers as checkboxes.
-export const ASSIGNABLE_ROLES = [...ROLE_VALUES, ROLE_PRICING];
+// Every role is assignable; the two-tier primary/hat split died with `Pricing` (2026-08-30).
+export const ASSIGNABLE_ROLES = [...ROLE_VALUES];
 
 // The add and edit modals used to keep one copy of this map each, and both had to be remembered
 // when a role was added — a role missing here renders its raw enum name in the checkbox list.
@@ -25,7 +26,6 @@ export const ROLE_LABEL_KEYS = {
   [ROLE_CUSTOMER_SERVICE]: 'admin.users.role.customer_service',
   [ROLE_ACCOUNTANT]:       'admin.users.role.accountant',
   [ROLE_AUDITOR]:          'admin.users.role.auditor',
-  [ROLE_PRICING]:          'admin.users.hat.pricing',   // a hat, so its label reads as one
 };
 
 /// Ticked roles, returned in ASSIGNABLE_ROLES order so the wire format is stable. Reads the form

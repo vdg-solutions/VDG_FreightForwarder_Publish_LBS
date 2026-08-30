@@ -4,7 +4,7 @@
 
 export {
   ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
-  ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_PRICING, ROLE_READ_ONLY,
+  ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_READ_ONLY,
 } from '../../kernel/core_abstractions/roles.js';
 
 // F-42-05: role-gated chrome mounts BEFORE sign-in resolves, so it must be told to look again.
