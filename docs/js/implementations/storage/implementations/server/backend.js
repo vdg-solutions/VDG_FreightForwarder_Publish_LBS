@@ -2,14 +2,22 @@
 // server-only (2026-08-30) — it never falls back to Google Drive, in any mode, for any reason.
 // API_BASE names the server origin (today a Cloudflare Worker) when stamped at publish; empty
 // means same-origin (a local vdg-server run). A cross-origin API carries the session cookie with
-// credentials: 'include' (the server allows exactly the Pages origin, cookie SameSite=None).
+// Auth is a bearer-style header, never a cookie — see CREDENTIALS_MODE below.
 
 import { API_BASE } from '../../core_abstractions/workspace-config.js';
 
 const HEALTH_PATH        = '/api/health';
 const ME_PATH            = '/me';
 const API_PREFIX         = '/api';
-const CREDENTIALS_MODE   = API_BASE ? 'include' : 'same-origin';
+// 'omit', always. Auth rides the X-Vdg-Session HEADER (see apiFetch below), which the server
+// reads FIRST (dispatch.rs: `from_header.or(from_cookie)`) — the cookie was only ever a second
+// copy of a token that already lives in localStorage, so HttpOnly bought nothing an XSS could
+// not read anyway. Meanwhile a cross-site cookie is exactly what browsers now refuse: Edge's
+// Tracking Prevention blocked storage for this origin and the health probe hung its full 30s.
+// The app is on github.io and the API on workers.dev BY DESIGN — a decentralised deployment puts
+// the store on another site, and a header is the credential that survives that. Omitting
+// credentials also deletes CSRF outright: nothing is sent ambiently, so nothing can be forged.
+const CREDENTIALS_MODE   = 'omit';
 const PROBE_TIMEOUT_MS   = 1500;
 // Longer than the health probe on purpose: a timeout here does no harm (the fallback token simply
 // stays), while a cold Durable Object answering /me in two seconds would otherwise be read as
@@ -78,7 +86,7 @@ function _resetBackend() { _backend = null; try { sessionStorage.removeItem(BACK
 import { ApiError } from '../../core_abstractions/api-error.js';
 import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
 
-/// JSON in, JSON out, session cookie along. A non-2xx is an ApiError carrying the status the
+/// JSON in, JSON out, session token in a header. A non-2xx is an ApiError carrying the status the
 /// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) for callers to branch on.
 function readSessionToken() {
   try {
