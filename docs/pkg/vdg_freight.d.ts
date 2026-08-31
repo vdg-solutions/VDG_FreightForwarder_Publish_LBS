@@ -836,13 +836,21 @@ export function shipment_phases(entity_id: string, shipment_json: string): strin
  * exhausted retry budget is classified (sahpool_lock_policy::next_sahpool_step) — never guessed
  * here from a raw browser error string.
  *
- * Returns which mode the store ended up in: "opfs" (normal), "memory-disabled" (OPFS turned off
- * for this context), or "memory-stale-self" (a dead context's handles never let go in time, but
+ * Whether to use OPFS is decided HERE, not by the caller: it is a storage-durability decision,
+ * and the worker's JS half is bootstrap and transport only (this module's own header, and the
+ * project law that business decisions live in wasm). JS supplies facts it alone holds; this is
+ * not one of them.
+ *
+ * Returns which mode the store ended up in: "opfs" (normal), "memory-disabled" (this context has
+ * no OPFS at all), or "memory-stale-self" (a dead context's handles never let go in time, but
  * Web Locks proved no LIVE tab is holding them — self-heals, no user action needed). A genuine
  * conflict (no exclusivity guarantee, budget exhausted) is the one case returned as an Err —
  * that is the only situation a "close the other tab" message would ever be true.
+ *
+ * Every mode except "opfs" means **writes do not survive a reload**. The caller must say so out
+ * loud rather than let the app look normal while the database is RAM.
  */
-export function sqlite_init(scope: string, use_opfs: boolean, has_lock_exclusivity: boolean): Promise<string>;
+export function sqlite_init(scope: string, has_lock_exclusivity: boolean): Promise<string>;
 
 /**
  * Explicit lifecycle release — called from JS on `pagehide`, right before this document's worker
@@ -1189,7 +1197,7 @@ export interface InitOutput {
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_move_to: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly sqlite_init: (a: number, b: number, c: number, d: number) => number;
+    readonly sqlite_init: (a: number, b: number, c: number) => number;
     readonly sqlite_release: () => void;
     readonly store_count_entities: (a: number) => void;
     readonly store_delete: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1310,9 +1318,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13966: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13979: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10025: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13969: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13971: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10023: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

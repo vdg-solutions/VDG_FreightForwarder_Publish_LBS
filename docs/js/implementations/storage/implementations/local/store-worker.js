@@ -6,9 +6,9 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: 14bf847a is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: e0fa3b24 is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=14bf847a', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=e0fa3b24', import.meta.url).href;
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.
@@ -20,15 +20,21 @@ let _mod   = null;
 function ready(scope, hasLockExclusivity) {
   if (_ready) return _ready;
   if (!scope) return Promise.reject(new Error('sqlite: missing store scope — the database is per-account'));
-  const useOpfs = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated;
+  // Whether OPFS is usable is NOT decided here. This half is bootstrap + transport (see the file
+  // header); `sqlite_init` probes for OPFS itself. What used to sit here — `crossOriginIsolated`
+  // — was both a decision JS had no business making AND the wrong question: the SAH-pool VFS is
+  // the one that needs no COOP/COEP, and no deployed origin (GitHub Pages, workers.dev) sets
+  // those headers, so the flag was false in every production build and put the whole store on
+  // `:memory:`. Records showed up, then vanished on reload.
   _ready = (async () => {
     _mod = await import(WASM_URL);
     await _mod.default();
-    const mode = await _mod.sqlite_init(scope, useOpfs, !!hasLockExclusivity);
-    if (mode === 'memory-stale-self') {
-      // Self-healed: a dead context's OPFS handles hadn't let go yet, but Web Locks proved no
-      // LIVE tab holds them — degrade to :memory: for this session rather than surface anything.
-      console.warn('[store-worker] sahpool stale-self, running on :memory: this session');
+    const mode = await _mod.sqlite_init(scope, !!hasLockExclusivity);
+    // Anything but 'opfs' means this session's writes die with the tab. Never silent: a store
+    // that looks normal and forgets everything on reload reads to the user as lost work, and to
+    // whoever debugs it as anything at all.
+    if (mode !== 'opfs') {
+      console.warn(`[store-worker] sqlite mode=${mode} — running on :memory:, writes will NOT survive a reload`);
     }
   })().catch((e) => { _ready = null; _mod = null; throw e; });
   return _ready;

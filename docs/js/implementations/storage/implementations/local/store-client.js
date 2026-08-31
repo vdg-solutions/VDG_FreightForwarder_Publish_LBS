@@ -18,7 +18,7 @@
 // statement → the IndexedDB concurrent-transaction wedge class is gone by construction.
 //
 // CharterDB (vdg-server) stays the source of truth; SQLite is the local materialized cache + query
-// engine. See backlog/wiki/sqlite-opfs-migration.md, client-server-pivot.md.
+// engine. See backlog/wiki/archive/sqlite-opfs-migration.md (archived), client-server-pivot.md.
 
 // First op pays the cold cost (module fetch + wasm compile + VFS install); give it room. Every later
 // op is a local SQL call in Rust — milliseconds — so a short backstop is a dead-worker detector.

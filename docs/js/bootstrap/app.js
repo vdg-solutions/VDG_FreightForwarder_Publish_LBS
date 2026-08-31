@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 14bf847a">v0.4.45 (14bf847a)</span>
+        <span class="font-mono whitespace-nowrap" title="build e0fa3b24">v0.4.46 (e0fa3b24)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.45 (14bf847a)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.46 (e0fa3b24)</div>
         </div>
       </div>
     </div>`;
@@ -4698,7 +4698,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.45 (14bf847a)";
+var APP_VERSION = "v0.4.46 (e0fa3b24)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5947,8 +5947,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=14bf847a", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=14bf847a", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=e0fa3b24", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e0fa3b24", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
