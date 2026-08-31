@@ -6,9 +6,9 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: e0fa3b24 is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: 3ffaa542 is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=e0fa3b24', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=3ffaa542', import.meta.url).href;
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.
@@ -30,11 +30,16 @@ function ready(scope, hasLockExclusivity) {
     _mod = await import(WASM_URL);
     await _mod.default();
     const mode = await _mod.sqlite_init(scope, !!hasLockExclusivity);
-    // Anything but 'opfs' means this session's writes die with the tab. Never silent: a store
-    // that looks normal and forgets everything on reload reads to the user as lost work, and to
-    // whoever debugs it as anything at all.
-    if (mode !== 'opfs') {
+    // 'memory-*' means this session's writes die with the tab. Never silent: a store that looks
+    // normal and forgets everything on reload reads to the user as lost work, and to whoever
+    // debugs it as anything at all.
+    if (mode.startsWith('memory')) {
       console.warn(`[store-worker] sqlite mode=${mode} — running on :memory:, writes will NOT survive a reload`);
+    } else if (mode === 'opfs-rebuilt') {
+      // The file on disk was some other build's shape (schema_policy.rs). It was dropped and
+      // recreated, so this account re-bootstraps from the server — including anything the old
+      // outbox still held. Loud on purpose; it is a local wipe, not a normal boot.
+      console.warn('[store-worker] local cache rebuilt: the stored database was a different schema version, so it was dropped and will re-sync from the server');
     }
   })().catch((e) => { _ready = null; _mod = null; throw e; });
   return _ready;
