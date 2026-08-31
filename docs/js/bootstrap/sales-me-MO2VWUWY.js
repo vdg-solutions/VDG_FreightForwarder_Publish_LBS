@@ -22,6 +22,9 @@ import {
   listShipments
 } from "./chunk-Q3NWEQ2V.js";
 import {
+  isMountedRoute
+} from "./chunk-EN6RKDYW.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import {
@@ -333,10 +336,12 @@ function commissionHtml(stats) {
       <div class="mt-3 text-[10px] text-slate-400">${t("sales_me.commission.rate_note")}</div>
     </div>`;
 }
+var OWN_ROUTE = "/sales/me";
 var _onLocale = null;
 async function render(root) {
   if (_onLocale) window.removeEventListener("vdg:locale-changed", _onLocale);
   _onLocale = () => {
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById("view-root");
     if (liveRoot) render(liveRoot);
   };

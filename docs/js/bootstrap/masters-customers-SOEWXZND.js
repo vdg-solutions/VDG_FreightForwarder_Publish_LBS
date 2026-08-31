@@ -1,4 +1,7 @@
 import {
+  isMountedRoute
+} from "./chunk-EN6RKDYW.js";
+import {
   getActiveSalesReps
 } from "./chunk-YFN2XPGT.js";
 import {
@@ -165,10 +168,12 @@ function makeActionsRenderer(onEdit, onDelete) {
     return wrap;
   };
 }
+var OWN_ROUTE = "/masters/customers";
 var _onLocale = null;
 async function render(root) {
   if (_onLocale) window.removeEventListener("vdg:locale-changed", _onLocale);
   _onLocale = () => {
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById("view-root");
     if (liveRoot) render(liveRoot);
   };

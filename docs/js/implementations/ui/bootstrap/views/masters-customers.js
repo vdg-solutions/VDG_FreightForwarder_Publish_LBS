@@ -9,6 +9,7 @@ import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-loca
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { openModal } from './masters-customers-modal.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
+import { isMountedRoute } from '../util/view-mounted.js';
 
 const KIND       = 'customers';
 
@@ -35,11 +36,16 @@ function makeActionsRenderer(onEdit, onDelete) {
 // ── entry point ───────────────────────────────────────────────────────────────
 
 
+/// The route that mounts THIS view (app-views.js). Exact match, never a prefix.
+const OWN_ROUTE = '/masters/customers';
+
 let _onLocale = null;
 
 export async function render(root) {
   if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
   _onLocale = () => {
+    // Never repaint this view over whichever one the user navigated to (view-mounted.js).
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById('view-root');
     if (liveRoot) render(liveRoot);
   };

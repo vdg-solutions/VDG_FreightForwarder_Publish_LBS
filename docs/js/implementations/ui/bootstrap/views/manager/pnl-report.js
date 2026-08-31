@@ -11,6 +11,7 @@ import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/
 import { currentUserEmail } from '../../../core_abstractions/ports/governance/route-guard.js';
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
 import { exportExcel } from './pnl-report-export.js';
+import { isMountedRoute } from '../../util/view-mounted.js';
 
 // F4-e: "Last12M" wasn't a real term in either language — TTM (trailing twelve months) is the
 // standard finance abbreviation for this window, same register as its three siblings, no
@@ -37,6 +38,9 @@ let _loadOutcome     = { failed: false, skipped: 0 }; // LoadOutcome (empty-stat
 let _onPivotClick;
 let _onPivotDims;
 let _onPivotRetry;
+/// The route that mounts THIS view (app-views.js). Exact match, never a prefix.
+const OWN_ROUTE = '/manager/reports/pnl';
+
 let _onLocale;
 
 function getRepo() { return window.__vdg_repo; }
@@ -301,6 +305,8 @@ export async function render(root) {
   // Re-resolve #view-root at fire time — freshViewRoot() (F-19-16) detaches the captured
   // `root` node on navigation, so re-rendering into it is a silent no-op.
   _onLocale = () => {
+    // Never repaint this view over whichever one the user navigated to (view-mounted.js).
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById('view-root');
     if (liveRoot) render(liveRoot);
   };

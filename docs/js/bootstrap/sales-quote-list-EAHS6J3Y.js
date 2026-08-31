@@ -18,6 +18,9 @@ import {
   navigate
 } from "./chunk-H2H4WJDI.js";
 import {
+  isMountedRoute
+} from "./chunk-EN6RKDYW.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import {
@@ -199,10 +202,12 @@ async function loadQuotes(repo, salesId, seesAllQuotes) {
   const filter = seesAllQuotes ? null : (q) => (q.sales_rep_id || "").toLowerCase() === salesId.toLowerCase();
   return listWhere(repo, KIND_QUOTATIONS, filter).catch(() => []);
 }
+var OWN_ROUTE = "/sales/quote";
 var _onLocale = null;
 async function render(root) {
   if (_onLocale) window.removeEventListener("vdg:locale-changed", _onLocale);
   _onLocale = () => {
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById("view-root");
     if (liveRoot) render(liveRoot);
   };

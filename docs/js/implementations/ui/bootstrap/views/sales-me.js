@@ -12,6 +12,7 @@ import { statusBadgeLabel } from '../../../kernel/core_abstractions/util/status-
 import { loadMyData } from './sales-me-data.js';
 import { navigate } from '../router.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
+import { isMountedRoute } from '../util/view-mounted.js';
 
 const LOAD_TIMEOUT_MS = 12000;
 const CLOSED_LIKE_STATES = ['Closed', 'Delivered'];
@@ -143,11 +144,16 @@ function commissionHtml(stats) {
 // ── entry point ───────────────────────────────────────────────────────────────
 
 
+/// The route that mounts THIS view (app-views.js). Exact match, never a prefix.
+const OWN_ROUTE = '/sales/me';
+
 let _onLocale = null;
 
 export async function render(root) {
   if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
   _onLocale = () => {
+    // Never repaint this view over whichever one the user navigated to (view-mounted.js).
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById('view-root');
     if (liveRoot) render(liveRoot);
   };

@@ -22,6 +22,9 @@ import {
 } from "./chunk-M3ODLRBG.js";
 import "./chunk-NGKBNKFN.js";
 import {
+  isMountedRoute
+} from "./chunk-EN6RKDYW.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import "./chunk-7DW526V3.js";
@@ -429,6 +432,7 @@ var _loadOutcome = { failed: false, skipped: 0 };
 var _onPivotClick;
 var _onPivotDims;
 var _onPivotRetry;
+var OWN_ROUTE = "/manager/reports/pnl";
 var _onLocale;
 function getRepo() {
   return window.__vdg_repo;
@@ -653,6 +657,7 @@ async function render(root) {
   window.addEventListener("vdg:pivot-dims-changed", _onPivotDims);
   window.addEventListener("vdg:pivot-retry", _onPivotRetry);
   _onLocale = () => {
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById("view-root");
     if (liveRoot) render(liveRoot);
   };

@@ -11,6 +11,7 @@ import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
+import { isMountedRoute } from '../util/view-mounted.js';
 
 const PANEL_WIDTH_PX    = 480;
 const SLIDE_DURATION_MS = 250;
@@ -171,6 +172,9 @@ export async function loadRealData() {
 }
 
 const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
+/// The route that mounts THIS view (app-views.js). Exact match, never a prefix — the create form
+/// lives at `/shipments/new`, which a `startsWith` test would wrongly call "still here".
+const OWN_ROUTE = '/shipments';
 const KIND_SHIPMENT        = 'shipment';
 
 let _onLocale;        // module-level, mirrors pnl-report.js's teardown-then-attach handle
@@ -257,6 +261,7 @@ export async function render(root) {
   // Re-resolve #view-root at fire time — freshViewRoot() (F-19-16) detaches the captured
   // `root` node on navigation, so re-rendering into it is a silent no-op.
   _onLocale = () => {
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById('view-root');
     if (liveRoot) render(liveRoot);
   };
@@ -266,6 +271,7 @@ export async function render(root) {
   // vdg:entity-changed. Without this the list kept the old status until a manual reload.
   _onEntityChanged = (e) => {
     if (e?.detail?.kind && e.detail.kind !== KIND_SHIPMENT) return;
+    if (!isMountedRoute(OWN_ROUTE)) return; // never repaint over the view the user is actually working in
     const liveRoot = document.getElementById('view-root');
     if (liveRoot) render(liveRoot);
   };

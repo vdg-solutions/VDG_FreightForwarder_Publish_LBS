@@ -25,6 +25,9 @@ import {
   listShipments
 } from "./chunk-Q3NWEQ2V.js";
 import {
+  isMountedRoute
+} from "./chunk-EN6RKDYW.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import {
@@ -256,6 +259,7 @@ async function loadRealData() {
   return allShipments;
 }
 var ENTITY_CHANGED_EVENT = "vdg:entity-changed";
+var OWN_ROUTE = "/shipments";
 var KIND_SHIPMENT = "shipment";
 var _onLocale;
 var _onEntityChanged;
@@ -323,12 +327,14 @@ async function render(root) {
     document.body.appendChild(panel);
   }
   _onLocale = () => {
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById("view-root");
     if (liveRoot) render(liveRoot);
   };
   window.addEventListener("vdg:locale-changed", _onLocale);
   _onEntityChanged = (e) => {
     if (e?.detail?.kind && e.detail.kind !== KIND_SHIPMENT) return;
+    if (!isMountedRoute(OWN_ROUTE)) return;
     const liveRoot = document.getElementById("view-root");
     if (liveRoot) render(liveRoot);
   };
