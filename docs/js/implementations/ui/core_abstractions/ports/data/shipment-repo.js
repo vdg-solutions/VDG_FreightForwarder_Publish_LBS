@@ -28,6 +28,7 @@ export const REVENUE_SEEN = '_revenue_seen';
 let _impl = null;
 
 /// Root bootstrap binds { putShipment, putEnvelope, getEnvelope, listEnvelopes, deleteShipment,
+/// rollbackShipmentCreate,
 /// getShipment, listShipments, joinLoaded, anyRevenueVisible } once.
 export function bindShipmentRepo(impl) { _impl = impl; }
 
@@ -46,6 +47,9 @@ export const getEnvelope = (...a) => _i().getEnvelope(...a);
 export const listEnvelopes = (...a) => _i().listEnvelopes(...a);
 /// (repo, ref) -> void; throws PeriodLockedError / LicenseReadOnlyError.
 export const deleteShipment = (...a) => _i().deleteShipment(...a);
+/// (repo, ref) -> void. Undo a create that failed part-way — gated on `shipment.create`, the
+/// authority that wrote the record, not on the manager-only Void/Delete affordance.
+export const rollbackShipmentCreate = (...a) => _i().rollbackShipmentCreate(...a);
 /// (repo, ref) -> the shipment rejoined with whatever revenue this reader can see, or null.
 export const getShipment = (...a) => _i().getShipment(...a);
 /// (repo, predicate?) -> joined shipments.

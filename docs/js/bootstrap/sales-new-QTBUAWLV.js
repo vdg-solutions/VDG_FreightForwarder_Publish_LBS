@@ -87,12 +87,12 @@ import {
 } from "./chunk-EJWPNW2L.js";
 import {
   REVENUE_SEEN,
-  deleteShipment,
   getEnvelope,
   getShipment,
   listEnvelopes,
-  putShipment
-} from "./chunk-U4BJYZQA.js";
+  putShipment,
+  rollbackShipmentCreate
+} from "./chunk-Q3NWEQ2V.js";
 import {
   getActiveSalesReps
 } from "./chunk-YFN2XPGT.js";
@@ -3124,6 +3124,13 @@ async function _mintFreeShipmentRef(repo, dir, salesRepId) {
   if (!repo?.mint_shipment_ref) throw new Error("WASM repo not ready");
   return await repo.mint_shipment_ref(dir, String(salesRepId || ""));
 }
+async function _bestEffort(step) {
+  try {
+    await step();
+  } catch (cleanupErr) {
+    console.warn("[VDG] rollback step failed, original error preserved:", cleanupErr?.message || cleanupErr);
+  }
+}
 async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultLedgerRepo(), opts = {}) {
   if (!repo) throw new Error("Repo not available");
   const publish = opts.publish !== false;
@@ -3158,9 +3165,9 @@ async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultLedgerRe
     await _writePnlLines(repo, ref, shipment, INITIAL_LEDGER_VERSION);
     if (publish) await _handOverToAccounting(repo, shipment);
   } catch (err) {
-    await deleteShipment(repo, ref);
-    for (const { key } of writtenCe) await repo.delete("commission_entry", key);
-    await _deletePnlLines(repo, ref);
+    await _bestEffort(() => rollbackShipmentCreate(repo, ref));
+    for (const { key } of writtenCe) await _bestEffort(() => repo.delete("commission_entry", key));
+    await _bestEffort(() => _deletePnlLines(repo, ref));
     throw err;
   }
   const advancedTo = await autoAdvanceShipment(repo, shipment);

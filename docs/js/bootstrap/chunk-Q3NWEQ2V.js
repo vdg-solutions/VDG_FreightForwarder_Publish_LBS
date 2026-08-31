@@ -14,6 +14,7 @@ var putEnvelope = (...a) => _i().putEnvelope(...a);
 var getEnvelope = (...a) => _i().getEnvelope(...a);
 var listEnvelopes = (...a) => _i().listEnvelopes(...a);
 var deleteShipment = (...a) => _i().deleteShipment(...a);
+var rollbackShipmentCreate = (...a) => _i().rollbackShipmentCreate(...a);
 var getShipment = (...a) => _i().getShipment(...a);
 var listShipments = (...a) => _i().listShipments(...a);
 
@@ -26,6 +27,7 @@ export {
   getEnvelope,
   listEnvelopes,
   deleteShipment,
+  rollbackShipmentCreate,
   getShipment,
   listShipments
 };

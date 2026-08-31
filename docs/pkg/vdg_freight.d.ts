@@ -339,6 +339,12 @@ export function data_put_envelope(req: any): Promise<any>;
 
 export function data_put_shipment(req: any): Promise<any>;
 
+/**
+ * The compensating half of a create that failed part-way — see `ShipmentRepo::rollback_create`
+ * for why this is not `data_delete_shipment` with a different name.
+ */
+export function data_rollback_shipment_create(req: any): Promise<any>;
+
 export function data_write_gate(req: any): Promise<any>;
 
 /**
@@ -1027,6 +1033,7 @@ export interface InitOutput {
     readonly data_published_for: (a: number) => number;
     readonly data_put_envelope: (a: number) => number;
     readonly data_put_shipment: (a: number) => number;
+    readonly data_rollback_shipment_create: (a: number) => number;
     readonly data_write_gate: (a: number) => number;
     readonly derive_shipment_direction: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly drain_events: (a: number) => void;
@@ -1318,9 +1325,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13971: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13973: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10025: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13980: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13982: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10034: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

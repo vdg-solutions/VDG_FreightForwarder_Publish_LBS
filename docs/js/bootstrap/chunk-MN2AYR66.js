@@ -6,7 +6,7 @@ import {
 } from "./chunk-EPS4ANRF.js";
 import {
   getShipment
-} from "./chunk-U4BJYZQA.js";
+} from "./chunk-Q3NWEQ2V.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/note-print-data.js
 var NOTE_TYPE_DEBIT = "debit";

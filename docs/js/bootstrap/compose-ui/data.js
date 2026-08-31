@@ -82,6 +82,9 @@ export function composeData(wasm) {
     deleteShipment: async (_repo, ref) => {
       throwIfRefused(await wasm.data_delete_shipment({ shipment_ref: ref }));
     },
+    rollbackShipmentCreate: async (_repo, ref) => {
+      throwIfRefused(await wasm.data_rollback_shipment_create({ shipment_ref: ref }));
+    },
     getShipment: async (_repo, ref) => {
       const reply = await wasm.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || 'the read failed');

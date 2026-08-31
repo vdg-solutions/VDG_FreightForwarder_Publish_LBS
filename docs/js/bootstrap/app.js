@@ -237,7 +237,7 @@ import {
   deleteShipment,
   putEnvelope,
   putShipment
-} from "./chunk-U4BJYZQA.js";
+} from "./chunk-Q3NWEQ2V.js";
 import {
   bindSalesRegistry
 } from "./chunk-YFN2XPGT.js";
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build fd550196">v0.4.48 (fd550196)</span>
+        <span class="font-mono whitespace-nowrap" title="build e911eb07">v0.4.49 (e911eb07)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.48 (fd550196)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.49 (e911eb07)</div>
         </div>
       </div>
     </div>`;
@@ -4573,7 +4573,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-7RFYGTTP.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-TODV6DTY.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4589,14 +4589,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-OYUORFO3.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-QTBUAWLV.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-OYUORFO3.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-QTBUAWLV.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4698,7 +4698,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.48 (fd550196)";
+var APP_VERSION = "v0.4.49 (e911eb07)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4927,8 +4927,8 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-ANZUNYTQ.js"),
-  "/shipments": () => import("./shipments-TSJGKWHN.js"),
+  "/dashboard": () => import("./dashboard-HL3DU6FG.js"),
+  "/shipments": () => import("./shipments-N7XDACMY.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-2SUK5ZXY.js"),
   "/finance": () => import("./finance-dashboard-XARJ36ZW.js"),
@@ -4936,8 +4936,8 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-SGLKGZCR.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-SBW4Q4KX.js"),
-  "/sales/analytics": () => import("./sales-analytics-ESCAX5NR.js"),
+  "/sales/me": () => import("./sales-me-I54YKRCO.js"),
+  "/sales/analytics": () => import("./sales-analytics-QDT5QQ2H.js"),
   "/sales/quote/new": () => import("./sales-quote-new-ODI237IK.js"),
   "/sales/quote": () => import("./sales-quote-list-4YS2KDCV.js"),
   "/masters/customers": () => import("./masters-customers-E4QGFZXE.js"),
@@ -4957,8 +4957,8 @@ var VIEWS = {
   "/manager/audit": () => import("./audit-YZBBMNU5.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-WMOGGFZG.js"),
-  "/manager/finance/commissions": () => import("./commissions-AIMRQBT4.js"),
+  "/manager/sales": () => import("./sales-5E7WJGCQ.js"),
+  "/manager/finance/commissions": () => import("./commissions-5BGPBET6.js"),
   "/manager/commission-rules": () => import("./commission-rules-562YSF6U.js"),
   "/manager/exceptions": () => import("./exceptions-57GTL7YN.js"),
   // E-15
@@ -4995,7 +4995,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-7PSYSSJF.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-URHU44XT.js"),
+  "/accounting/settings": () => import("./settings-CQ5YVYMR.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-MZPR7NQU.js"),
   // E-24 F-24-06
@@ -5086,6 +5086,9 @@ function composeData(wasm3) {
     },
     deleteShipment: async (_repo, ref) => {
       throwIfRefused(await wasm3.data_delete_shipment({ shipment_ref: ref }));
+    },
+    rollbackShipmentCreate: async (_repo, ref) => {
+      throwIfRefused(await wasm3.data_rollback_shipment_create({ shipment_ref: ref }));
     },
     getShipment: async (_repo, ref) => {
       const reply = await wasm3.data_get_shipment({ shipment_ref: ref });
@@ -5947,8 +5950,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=fd550196", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fd550196", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=e911eb07", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e911eb07", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6618,7 +6621,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-OKHWM7XH.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-S4BA6OXY.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6626,7 +6629,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-GSG2EVRB.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-EEVDWKAO.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6634,7 +6637,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-DPLZVWOV.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-RKPJ4KFT.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
