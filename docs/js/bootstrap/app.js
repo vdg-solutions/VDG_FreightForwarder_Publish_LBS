@@ -192,7 +192,7 @@ import {
 } from "./chunk-NGKBNKFN.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-LE3AGHB4.js";
+} from "./chunk-ZCHT56IC.js";
 import "./chunk-NSJXCXJQ.js";
 import {
   bindActionGuard,
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build e911eb07">v0.4.49 (e911eb07)</span>
+        <span class="font-mono whitespace-nowrap" title="build d77ed8f9">v0.4.50 (d77ed8f9)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.49 (e911eb07)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.50 (d77ed8f9)</div>
         </div>
       </div>
     </div>`;
@@ -4589,14 +4589,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-QTBUAWLV.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-AGUG4JCH.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-QTBUAWLV.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-AGUG4JCH.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4698,7 +4698,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.49 (e911eb07)";
+var APP_VERSION = "v0.4.50 (d77ed8f9)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4928,7 +4928,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-HL3DU6FG.js"),
-  "/shipments": () => import("./shipments-N7XDACMY.js"),
+  "/shipments": () => import("./shipments-TE2BIDCU.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-2SUK5ZXY.js"),
   "/finance": () => import("./finance-dashboard-XARJ36ZW.js"),
@@ -5950,8 +5950,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=e911eb07", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e911eb07", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=d77ed8f9", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=d77ed8f9", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

@@ -229,7 +229,12 @@ export function collectCargoItems(root) {
   const rows = Array.from(root.querySelectorAll('#cargo-items-tbody tr[data-cargo-row]'));
   return rows.map((r, i) => {
     const val = (f) => r.querySelector(`[data-cargo-field="${f}"]`)?.value?.trim() || '';
-    const num = (f) => {
+    // `numField`, not `num`: this module imports a `num` field-renderer from section-header.js,
+    // and a local const of the same name puts every earlier reference to the import in this block
+    // into the temporal dead zone. Harmless as written (nothing calls it before line 232), but
+    // shadowing an import is the exact shape that blanked the shipment detail panel — the linter's
+    // no-shadowed-import rule refuses the pattern rather than each case's luck.
+    const numField = (f) => {
       const v = Number(val(f));
       return Number.isFinite(v) && v > 0 ? v : null;
     };
@@ -237,11 +242,11 @@ export function collectCargoItems(root) {
       item_id: `itm-${i + 1}`,
       description: val('description') || null,
       hs_code: val('hs_code') || null,
-      package_qty: num('package_qty'),
+      package_qty: numField('package_qty'),
       package_type: val('package_type') || 'CTNS',
-      gross_weight_kg: num('gross_weight_kg'),
-      net_weight_kg: num('net_weight_kg'),
-      volume_cbm: num('volume_cbm'),
+      gross_weight_kg: numField('gross_weight_kg'),
+      net_weight_kg: numField('net_weight_kg'),
+      volume_cbm: numField('volume_cbm'),
       marks_and_numbers: val('marks_and_numbers') || null,
     };
   }).filter((item) => item.description || item.package_qty || item.gross_weight_kg || item.volume_cbm);

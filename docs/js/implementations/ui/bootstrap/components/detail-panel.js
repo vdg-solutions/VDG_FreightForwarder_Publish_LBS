@@ -253,10 +253,17 @@ class VdgDetailPanel extends LitElement {
     if (!event) return html``;
     const offline = !navigator.onLine;
     const label = `${offline ? t('shipment.detail.offline_prefix') : ''}${t(TRANSITION_LABEL[event])}`;
-    const can = this.wasmReady && !this.notFound;
+    // NOT named `can`. It used to be, and `const` is block-scoped and hoisted into the temporal
+    // dead zone — so the local declaration here shadowed the imported `can` for this WHOLE
+    // function, and the `can('shipment.transition')` call five lines above threw
+    // "ReferenceError: Cannot access 'can' before initialization" instead of calling the guard.
+    // That throw escaped render(), so Lit rendered NOTHING: the detail panel opened as a blank
+    // white pane for every shipment whose state was not `Closed` (the one branch that returns
+    // before reaching the call), for every role. The name is what caused it; keep them distinct.
+    const armed = this.wasmReady && !this.notFound;
     return html`
       <div class="mt-4">
-        <button @click=${() => this._applyTransition()} ?disabled=${!can || this.transitioning}
+        <button @click=${() => this._applyTransition()} ?disabled=${!armed || this.transitioning}
           title=${!this.wasmReady ? t('shipment.detail.wasm_not_available') : ''}
           class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
           ${this.transitioning ? t('shipment.detail.applying') : `→ ${label}`}

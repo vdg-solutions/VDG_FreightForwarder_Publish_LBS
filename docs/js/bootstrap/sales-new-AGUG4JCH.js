@@ -2202,7 +2202,7 @@ function collectCargoItems(root) {
   const rows = Array.from(root.querySelectorAll("#cargo-items-tbody tr[data-cargo-row]"));
   return rows.map((r, i) => {
     const val = (f) => r.querySelector(`[data-cargo-field="${f}"]`)?.value?.trim() || "";
-    const num2 = (f) => {
+    const numField = (f) => {
       const v = Number(val(f));
       return Number.isFinite(v) && v > 0 ? v : null;
     };
@@ -2210,11 +2210,11 @@ function collectCargoItems(root) {
       item_id: `itm-${i + 1}`,
       description: val("description") || null,
       hs_code: val("hs_code") || null,
-      package_qty: num2("package_qty"),
+      package_qty: numField("package_qty"),
       package_type: val("package_type") || "CTNS",
-      gross_weight_kg: num2("gross_weight_kg"),
-      net_weight_kg: num2("net_weight_kg"),
-      volume_cbm: num2("volume_cbm"),
+      gross_weight_kg: numField("gross_weight_kg"),
+      net_weight_kg: numField("net_weight_kg"),
+      volume_cbm: numField("volume_cbm"),
       marks_and_numbers: val("marks_and_numbers") || null
     };
   }).filter((item) => item.description || item.package_qty || item.gross_weight_kg || item.volume_cbm);

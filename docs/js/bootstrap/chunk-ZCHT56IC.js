@@ -382,15 +382,15 @@ var VdgDetailPanel = class extends LitElement2 {
   }
   _renderButton(cur) {
     if (cur === "Closed") return html2`<button disabled class="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed">${t("shipment.detail.job_closed")}</button>`;
-    if (!can2("shipment.transition")) return html2``;
+    if (!can("shipment.transition")) return html2``;
     const event = NEXT_EVENT[cur];
     if (!event) return html2``;
     const offline = !navigator.onLine;
     const label = `${offline ? t("shipment.detail.offline_prefix") : ""}${t(TRANSITION_LABEL[event])}`;
-    const can2 = this.wasmReady && !this.notFound;
+    const armed = this.wasmReady && !this.notFound;
     return html2`
       <div class="mt-4">
-        <button @click=${() => this._applyTransition()} ?disabled=${!can2 || this.transitioning}
+        <button @click=${() => this._applyTransition()} ?disabled=${!armed || this.transitioning}
           title=${!this.wasmReady ? t("shipment.detail.wasm_not_available") : ""}
           class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
           ${this.transitioning ? t("shipment.detail.applying") : `\u2192 ${label}`}
