@@ -212,8 +212,11 @@ async function apiFetchOnce(method, path, body = undefined, extraHeaders = {}) {
     const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
     const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
     const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? 'Google Drive';
+    // See server-io-adapters.js's own note: quarantine removes a row from backlog_depth, so the
+    // backlog alone cannot tell a drained queue from an abandoned one.
+    const server_quarantined_depth = json.mirror?.quarantined_depth ?? 0;
     window.dispatchEvent(new CustomEvent('vdg:server-health', {
-      detail: { backlog_depth, oldest_pending_age_ms, provider },
+      detail: { backlog_depth, server_quarantined_depth, oldest_pending_age_ms, provider },
     }));
   }
   if (!res.ok) {

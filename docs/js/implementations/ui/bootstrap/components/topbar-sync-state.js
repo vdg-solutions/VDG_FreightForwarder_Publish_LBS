@@ -63,11 +63,20 @@ export function createSyncHandlers(host) {
       // poll re-establishes the real count.
       if (e.detail?.unreachable) {
         host._serverBacklog = 0;
+        // Same rule, same reason: a probe that never landed makes the last count unknowable, not
+        // zero. Holding a stale 1 here would paint "Cần xử lý" through an outage that says nothing
+        // about whether anything is actually parked.
+        host._serverQuarantined = 0;
         host._serverOldestPendingAgeMs = null;
         host.requestUpdate();
         return;
       }
       if (e.detail?.backlog_depth !== undefined) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
+      // Guarded on !== undefined, not truthiness: backend.js's HEADER branch dispatches this same
+      // event carrying backlog alone, and must not be read as "the server says zero quarantined".
+      if (e.detail?.server_quarantined_depth !== undefined) {
+        host._serverQuarantined = Number(e.detail.server_quarantined_depth) || 0;
+      }
       if (e.detail?.oldest_pending_age_ms !== undefined) host._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
       if (e.detail?.provider) host._serverProvider = e.detail.provider;
       // F-58-02: sync_delta.rs only sends this field when one tick's own call count went above

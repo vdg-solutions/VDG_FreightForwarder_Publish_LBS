@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build ce712bb4">v0.4.55 (ce712bb4)</span>
+        <span class="font-mono whitespace-nowrap" title="build 29a465c0">v0.4.56 (29a465c0)</span>
       </div>
     `;
   }
@@ -1087,11 +1087,15 @@ function createSyncHandlers(host) {
     onServerHealth: (e) => {
       if (e.detail?.unreachable) {
         host._serverBacklog = 0;
+        host._serverQuarantined = 0;
         host._serverOldestPendingAgeMs = null;
         host.requestUpdate();
         return;
       }
       if (e.detail?.backlog_depth !== void 0) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
+      if (e.detail?.server_quarantined_depth !== void 0) {
+        host._serverQuarantined = Number(e.detail.server_quarantined_depth) || 0;
+      }
       if (e.detail?.oldest_pending_age_ms !== void 0) host._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
       if (e.detail?.provider) host._serverProvider = e.detail.provider;
       if (e.detail?.sync_tick_calls !== void 0) {
@@ -1173,8 +1177,10 @@ var VdgTopbar = class extends LitElement2 {
     _serverProvider: { type: String, state: true },
     _syncing: { type: Boolean, state: true },
     // vdg:sync-started (charter_event_bridge.rs)
-    _quarantinedCount: { type: Number, state: true }
+    _quarantinedCount: { type: Number, state: true },
     // outbox.rs's own decided, permanent refusal count
+    _serverQuarantined: { type: Number, state: true }
+    // charterdb's mirror.quarantined_depth (CDB-DUR-09)
   };
   createRenderRoot() {
     return this;
@@ -1211,6 +1217,7 @@ var VdgTopbar = class extends LitElement2 {
     this._serverProvider = "Google Drive";
     this._syncing = false;
     this._quarantinedCount = 0;
+    this._serverQuarantined = 0;
     this._onNav = (e) => {
       this.route = e.detail.route;
     };
@@ -1413,11 +1420,12 @@ var VdgTopbar = class extends LitElement2 {
     const now = Date.now();
     const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).length > 0;
     const unreachable = !!window.__vdg_repo?.sync_server_unreachable?.();
+    const quarantinedTotal = this._quarantinedCount + this._serverQuarantined;
     const state = computeChipState({
       pending: this._outboxCount,
       syncFailed,
       unreachable,
-      quarantined: this._quarantinedCount > 0,
+      quarantined: quarantinedTotal > 0,
       backoff429: this._backoff429,
       offline: !this._online,
       signedOut: !user,
@@ -1464,7 +1472,7 @@ var VdgTopbar = class extends LitElement2 {
       user,
       authReconnect: this._authReconnect,
       popupBlocked: this._popupBlocked,
-      quarantinedCount: this._quarantinedCount,
+      quarantinedCount: quarantinedTotal,
       serverBacklog: this._serverBacklog,
       serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
       serverProvider: this._serverProvider,
@@ -2304,7 +2312,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.55 (ce712bb4)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.56 (29a465c0)</div>
         </div>
       </div>
     </div>`;
@@ -3079,8 +3087,9 @@ async function apiFetchOnce(method, path, body = void 0, extraHeaders = {}) {
     const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
     const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
     const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? "Google Drive";
+    const server_quarantined_depth = json.mirror?.quarantined_depth ?? 0;
     window.dispatchEvent(new CustomEvent("vdg:server-health", {
-      detail: { backlog_depth, oldest_pending_age_ms, provider }
+      detail: { backlog_depth, server_quarantined_depth, oldest_pending_age_ms, provider }
     }));
   }
   if (!res.ok) {
@@ -3298,9 +3307,11 @@ var ServerIoPort = class extends SharedIoPort {
         const backlog_depth = res.mirror?.backlog_depth ?? res.replication_backlog ?? 0;
         const oldest_pending_age_ms = res.mirror?.oldest_pending_age_ms ?? null;
         const provider = res.mirror?.provider ?? res.secondary_provider ?? "Google Drive";
+        const server_quarantined_depth = res.mirror?.quarantined_depth ?? 0;
         window.dispatchEvent(new CustomEvent("vdg:server-health", {
           detail: {
             backlog_depth,
+            server_quarantined_depth,
             oldest_pending_age_ms,
             provider
           }
@@ -4567,7 +4578,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.55 (ce712bb4)";
+var APP_VERSION = "v0.4.56 (29a465c0)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5808,8 +5819,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=ce712bb4", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ce712bb4", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=29a465c0", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=29a465c0", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

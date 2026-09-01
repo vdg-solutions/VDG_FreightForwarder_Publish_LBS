@@ -133,9 +133,15 @@ export class ServerIoPort extends SharedIoPort {
         const backlog_depth = res.mirror?.backlog_depth ?? res.replication_backlog ?? 0;
         const oldest_pending_age_ms = res.mirror?.oldest_pending_age_ms ?? null;
         const provider = res.mirror?.provider ?? res.secondary_provider ?? 'Google Drive';
+        // CDB-DUR-09: a quarantined row DROPS OUT of backlog_depth (session.rs:222 — it is a
+        // decided fact, not an unresolved one), and quarantined_depth is the only thing that tells
+        // "stuck" apart from "drained". Carrying just the backlog made the chip read a queue
+        // emptied BY the failure as success: server said quarantined_depth 1 and the dot was green.
+        const server_quarantined_depth = res.mirror?.quarantined_depth ?? 0;
         window.dispatchEvent(new CustomEvent('vdg:server-health', {
           detail: {
             backlog_depth,
+            server_quarantined_depth,
             oldest_pending_age_ms,
             provider,
           },

@@ -58,6 +58,7 @@ class VdgTopbar extends LitElement {
     _serverProvider:           { type: String,  state: true },
     _syncing:                  { type: Boolean, state: true }, // vdg:sync-started (charter_event_bridge.rs)
     _quarantinedCount:         { type: Number,  state: true }, // outbox.rs's own decided, permanent refusal count
+    _serverQuarantined:        { type: Number,  state: true }, // charterdb's mirror.quarantined_depth (CDB-DUR-09)
   };
 
   createRenderRoot() { return this; }
@@ -75,7 +76,7 @@ class VdgTopbar extends LitElement {
     this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
     this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = 'Google Drive';
     this._syncing = false;
-    this._quarantinedCount = 0;
+    this._quarantinedCount = 0; this._serverQuarantined = 0;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     // Sync-pipeline listeners (vdg:sync-started/complete/error, vdg:delta-synced,
@@ -227,8 +228,12 @@ class VdgTopbar extends LitElement {
     // total-outage-specific fact than `syncFailed`, which also fires on one master kind's
     // bootstrap missing while the rest of the app still works.
     const unreachable = !!window.__vdg_repo?.sync_server_unreachable?.();
+    // Two decided refusals, one fact for the reader: this device's outbox parked a row
+    // (outbox.rs::quarantine_group), or CharterDB parked one on its way to Drive
+    // (mirror.quarantined_depth). Either one means data is stopped and no retry is coming.
+    const quarantinedTotal = this._quarantinedCount + this._serverQuarantined;
     const state = computeChipState({
-      pending: this._outboxCount, syncFailed, unreachable, quarantined: this._quarantinedCount > 0,
+      pending: this._outboxCount, syncFailed, unreachable, quarantined: quarantinedTotal > 0,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
       serverBacklog: this._serverBacklog,
@@ -274,7 +279,7 @@ class VdgTopbar extends LitElement {
             lastSyncMs: displayLastSyncMs(this._lastSyncMs, this._lastPullMs), now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
-            quarantinedCount: this._quarantinedCount,
+            quarantinedCount: quarantinedTotal,
             serverBacklog: this._serverBacklog,
             serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
             serverProvider: this._serverProvider,
