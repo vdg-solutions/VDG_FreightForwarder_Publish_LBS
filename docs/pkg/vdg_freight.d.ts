@@ -12,11 +12,6 @@ export class CustomerIndex {
 export class WasmEntityRepo {
     free(): void;
     [Symbol.dispose](): void;
-    /**
-     * The raw `/me` body, fetched in Rust. `server-role.js` used to call it with `apiFetch` and
-     * derive the verdict itself — including a JS copy of `derive_fork`. Both are gone.
-     */
-    auth_fetch_me(): Promise<any>;
     awb_append(awb_json: string): Promise<any>;
     awb_delete(awb_no: string, ym: string): Promise<any>;
     /**
@@ -233,6 +228,23 @@ export function auth_adopt_session(req: any): Promise<any>;
 export function auth_clear_role_cache(req: any): Promise<any>;
 
 export function auth_detect_role(req: any): Promise<any>;
+
+/**
+ * The raw `/me` body, fetched in Rust. `server-role.js` used to call it with `apiFetch` and derive
+ * the verdict itself — including a JS copy of `derive_fork`. Both are gone.
+ *
+ * A FREE export, not a method on the repo store, and that is the whole point. It never read
+ * `self`: `http_io::fetch_me()` takes the API base from `option_env!` and the session from the
+ * cookie, so no repo state was ever involved. Hanging it off the store nonetheless invented a
+ * dependency that boot cannot satisfy — `requireAuth` runs BEFORE `runRepoInit`, so
+ * `window.__vdg_repo` does not exist yet when the auth gate probes, and every cold-cache boot
+ * died on "WASM repo not ready" (prod v0.4.52/v0.4.53). A warm RoleCache skipped the probe, which
+ * is why it survived testing: the failure needed a first-ever load to show itself.
+ *
+ * `window.__vdg_wasm` is set by `wasm-loader.js` before `requireAuth` is reached, so the caller
+ * this serves is satisfied by construction rather than by ordering luck.
+ */
+export function auth_fetch_me(): Promise<any>;
 
 export function auth_has_role(req: any): any;
 
@@ -988,6 +1000,7 @@ export interface InitOutput {
     readonly auth_adopt_session: (a: number) => number;
     readonly auth_clear_role_cache: (a: number) => number;
     readonly auth_detect_role: (a: number) => number;
+    readonly auth_fetch_me: () => number;
     readonly auth_has_role: (a: number, b: number) => void;
     readonly auth_require_auth: (a: number) => number;
     readonly auth_resolve_principal: (a: number) => number;
@@ -1240,7 +1253,6 @@ export interface InitOutput {
     readonly validate_uom_label: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;
     readonly verify_license: (a: number, b: number, c: bigint) => number;
-    readonly wasmentityrepo_auth_fetch_me: (a: number) => number;
     readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_awb_list_all: (a: number) => number;
@@ -1317,9 +1329,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13975: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13977: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10026: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13974: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13976: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10025: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 9f6b4b65">v0.4.53 (9f6b4b65)</span>
+        <span class="font-mono whitespace-nowrap" title="build b2e10631">v0.4.54 (b2e10631)</span>
       </div>
     `;
   }
@@ -1025,8 +1025,8 @@ function renderSwBanner(host) {
 async function handleFileUpload(host, e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const repo4 = window.__vdg_repo;
-  if (!repo4) return;
+  const repo3 = window.__vdg_repo;
+  if (!repo3) return;
   window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.processing") } }));
   try {
     const text = await file.text();
@@ -1035,7 +1035,7 @@ async function handleFileUpload(host, e) {
     let count = 0;
     for (const item of data) {
       if (!item?.id) throw new Error('Import item missing "id" field.');
-      await putEnvelope(repo4, item.id, item);
+      await putEnvelope(repo3, item.id, item);
       count++;
       if (count % 500 === 0) {
         window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.progress", { count, total: data.length }) } }));
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.53 (9f6b4b65)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.54 (b2e10631)</div>
         </div>
       </div>
     </div>`;
@@ -2606,9 +2606,9 @@ function ledgerRepo2() {
 }
 var REPO_NOT_MOUNTED = "user repo not mounted yet";
 function requireUserRepo() {
-  const repo4 = userRepo();
-  if (!repo4) throw new Error(REPO_NOT_MOUNTED);
-  return repo4;
+  const repo3 = userRepo();
+  if (!repo3) throw new Error(REPO_NOT_MOUNTED);
+  return repo3;
 }
 async function workspaceTry(op2, args) {
   const api = storageApi();
@@ -2649,9 +2649,9 @@ var governancePlatform = {
   },
   governance_ledger_accounts: async () => await ledgerRepo2()?.chartOfAccounts() ?? [],
   governance_ledger_balance: async (account, asOf) => {
-    const repo4 = ledgerRepo2();
-    if (!repo4) throw new Error("ledger repo not ready");
-    return repo4.getBalance(account, asOf);
+    const repo3 = ledgerRepo2();
+    if (!repo3) throw new Error("ledger repo not ready");
+    return repo3.getBalance(account, asOf);
   },
   // F1: reuses the same fx-rates domain island the FX admin screen and the sales-new P&L form
   // resolve through — period close asks for a number the same way a P&L line does.
@@ -2739,26 +2739,26 @@ var flowsPlatform = {
 
 // output/web/js.tmp/bootstrap/platform/index.js
 var PREFS_NS = "prefs";
-function createPlatform({ repo: repo4 }) {
+function createPlatform({ repo: repo3 }) {
   const base = {
-    records_get: (kind, id) => repo4.get(kind, id),
-    records_list: (kind) => repo4.list(kind),
-    records_put: (kind, id, body) => repo4.put(kind, id, body),
+    records_get: (kind, id) => repo3.get(kind, id),
+    records_list: (kind) => repo3.list(kind),
+    records_put: (kind, id, body) => repo3.put(kind, id, body),
     // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
     // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
-    records_put_labeled: (kind, id, body, labels) => repo4.put_labeled(kind, id, body, labels),
+    records_put_labeled: (kind, id, body, labels) => repo3.put_labeled(kind, id, body, labels),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
-    records_invalidate_period_cache: (kind, period) => repo4.invalidate_period_cache(kind, period),
-    records_delete: (kind, id) => repo4.delete(kind, id),
+    records_invalidate_period_cache: (kind, period) => repo3.invalidate_period_cache(kind, period),
+    records_delete: (kind, id) => repo3.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     records_get_meta: (key) => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,
     records_put_meta: (key, body) => window.__vdg_io ? window.__vdg_io.cache_put_meta(key, body) : null,
     // H4-d: the two bespoke stores (month-partitioned, no `kind` records_list can route to) the
     // workspace backup export reaches directly — same repo object, dedicated dump methods
     // (store::bootstrap::wasm_repo_stores::fx_list_all/awb_list_all).
-    records_fx_list_all: () => repo4.fx_list_all(),
-    records_awb_list_all: () => repo4.awb_list_all(),
+    records_fx_list_all: () => repo3.fx_list_all(),
+    records_awb_list_all: () => repo3.awb_list_all(),
     prefs_get: async (key) => {
       const v = localStorage.getItem(`${PREFS_NS}:${key}`);
       return v == null ? null : JSON.parse(v);
@@ -2800,19 +2800,19 @@ var OUTCOME_DEGRADED = "degraded";
 var NEEDS_RECONNECT_EVENT = "vdg:auth-needs-reconnect";
 var SIGNIN_REQUEST_EVENT = "vdg:auth-signin-request";
 var _signinListenerWired = false;
-function composeAuth(wasm3) {
+function composeAuth(wasm4) {
   const sessionRoles = {
-    currentSalesRepId: () => wasm3.auth_session_roles({}).token ?? null,
-    currentRoles: () => wasm3.auth_session_roles({}).roles,
+    currentSalesRepId: () => wasm4.auth_session_roles({}).token ?? null,
+    currentRoles: () => wasm4.auth_session_roles({}).roles,
     // session_principal.rs's own `resolved()` -- tells an empty currentRoles() apart from a
     // probe that never got an answer (see session-roles.js's own doc comment).
-    currentRolesResolved: () => !!wasm3.auth_session_roles({}).resolved,
-    hasRole: (role) => wasm3.auth_has_role({ role }).has,
-    setResolvedRoles: (token, roles) => wasm3.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
+    currentRolesResolved: () => !!wasm4.auth_session_roles({}).resolved,
+    hasRole: (role) => wasm4.auth_has_role({ role }).has,
+    setResolvedRoles: (token, roles) => wasm4.auth_set_resolved_roles({ token: token ?? null, roles: roles ?? null }).token ?? null
   };
   bindSessionRoles(sessionRoles);
   const detectRoleViaServer = async (user, options = {}) => {
-    const reply = await wasm3.auth_detect_role({ user: user ?? null, force: !!options.force });
+    const reply = await wasm4.auth_detect_role({ user: user ?? null, force: !!options.force });
     if (!reply.ok) throw takeAuthError() || new Error(reply.error || "auth: the workspace authority did not answer");
     return reply.role;
   };
@@ -2822,12 +2822,12 @@ function composeAuth(wasm3) {
     return result.value;
   };
   const signIn = (onSignedIn) => mountLoginScreen(async (user) => {
-    await wasm3.auth_adopt_session({ email: user.email });
+    await wasm4.auth_adopt_session({ email: user.email });
     await detectOrThrow(user, "auth-gate:loginCb");
     onSignedIn(user);
   });
   const requireAuth2 = async (onSignedIn) => {
-    const verdict = await wasm3.auth_require_auth({});
+    const verdict = await wasm4.auth_require_auth({});
     if (verdict.outcome === OUTCOME_SIGNED_IN) {
       await detectOrThrow(verdict.user, "auth-gate:requireAuth");
       await onSignedIn(verdict.user);
@@ -2840,7 +2840,7 @@ function composeAuth(wasm3) {
     }
     signIn(onSignedIn);
   };
-  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaServer, clearRoleCache: () => wasm3.auth_clear_role_cache({}) });
+  bindAuthGate({ requireAuth: requireAuth2, detectRoleViaServer, clearRoleCache: () => wasm4.auth_clear_role_cache({}) });
   if (!_signinListenerWired) {
     _signinListenerWired = true;
     window.addEventListener(SIGNIN_REQUEST_EVENT, () => signIn(() => location.reload()));
@@ -3091,13 +3091,13 @@ async function apiFetchOnce(method, path, body = void 0, extraHeaders = {}) {
 var backend = { detectBackend, apiFetch: apiFetch2, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
 
 // output/web/js.tmp/implementations/storage/implementations/server/server-role.js
-function repo3() {
-  const r = window.__vdg_repo;
-  if (!r?.auth_fetch_me) throw new Error("WASM repo not ready");
-  return r;
+function wasm2() {
+  const m = window.__vdg_wasm;
+  if (!m?.auth_fetch_me) throw new Error("WASM module not loaded");
+  return m;
 }
 async function probeRole(_user, _wsName) {
-  return await repo3().auth_fetch_me();
+  return await wasm2().auth_fetch_me();
 }
 var serverWorkspaceAuthority = { probeRole };
 
@@ -4567,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.53 (9f6b4b65)";
+var APP_VERSION = "v0.4.54 (b2e10631)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4637,17 +4637,17 @@ function initConflictModal() {
       </div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    const repo4 = window.__vdg_repo;
+    const repo3 = window.__vdg_repo;
     const mergeBase = merged && typeof merged === "object" ? merged : null;
     dlg.querySelector("#keep-mine").addEventListener("click", async () => {
       const mine = { ...mergeBase ?? local, _rev: remote?._rev };
       for (const c of conflicts || []) mine[c.field] = c.local_val;
-      await repo4?.put(kind, id, mine);
+      await repo3?.put(kind, id, mine);
       dlg.close();
       dlg.remove();
     });
     dlg.querySelector("#use-theirs").addEventListener("click", async () => {
-      await repo4?.put(kind, id, { ...mergeBase ?? remote, _rev: remote?._rev });
+      await repo3?.put(kind, id, { ...mergeBase ?? remote, _rev: remote?._rev });
       dlg.close();
       dlg.remove();
     });
@@ -4695,11 +4695,11 @@ function initMergeToast() {
         dlg.remove();
       };
       dlg.querySelector("#merge-undo").onclick = async () => {
-        const repo4 = window.__vdg_repo;
-        const current = await repo4?.get(kind, id);
+        const repo3 = window.__vdg_repo;
+        const current = await repo3?.get(kind, id);
         if (current) {
           for (const c of fields) current[c.field] = c.local_val;
-          await repo4.put(kind, id, current);
+          await repo3.put(kind, id, current);
         }
         dlg.close();
         dlg.remove();
@@ -4878,24 +4878,24 @@ function bindRoutePrefetch(impl) {
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/cache.js
-function composeCache(wasm3) {
+function composeCache(wasm4) {
   bindBulkOrchestrator({
     bulkPut: async (_repo, kind, entities) => {
       if (!entities?.length) return;
-      const res = await wasm3.cache_bulk_put({ kind, entities });
+      const res = await wasm4.cache_bulk_put({ kind, entities });
       if (!res.ok) throw new Error(res.error || `bulkPut(${kind}): stopped after ${res.written}`);
     }
   });
   bindMasterRegistry({
     // A role set, not one role — a Manager+SalesRep is judged on the whole hand, not one hat.
-    canWriteMaster: (kind, roles) => wasm3.cache_can_write_master({ kind, roles: roles || [] }).allowed
+    canWriteMaster: (kind, roles) => wasm4.cache_can_write_master({ kind, roles: roles || [] }).allowed
   });
   bindMasterDeduper({
-    findMatch: (name, existing) => wasm3.cache_find_match({ name, existing: existing || [] })
+    findMatch: (name, existing) => wasm4.cache_find_match({ name, existing: existing || [] })
   });
   bindRoutePrefetch({
     prefetchDashboard: async () => {
-      await wasm3.cache_route_prefetch({});
+      await wasm4.cache_route_prefetch({});
     }
   });
 }
@@ -4932,58 +4932,58 @@ function stampRows(reply) {
 function applyPredicate(rows, predicate) {
   return typeof predicate === "function" ? rows.filter(predicate) : rows;
 }
-function composeData(wasm3) {
-  const joinLoaded = async (_repo, envelopes) => stampRows(await wasm3.data_join_loaded({ envelopes: envelopes || [] }));
+function composeData(wasm4) {
+  const joinLoaded = async (_repo, envelopes) => stampRows(await wasm4.data_join_loaded({ envelopes: envelopes || [] }));
   bindShipmentRepo({
     putShipment: async (_repo, shipment) => {
-      const reply = throwIfRefused(await wasm3.data_put_shipment({ shipment }));
+      const reply = throwIfRefused(await wasm4.data_put_shipment({ shipment }));
       return { envelope: reply.envelope, revenue: reply.revenue };
     },
     putEnvelope: async (_repo, ref, shipmentLike) => {
-      const reply = throwIfRefused(await wasm3.data_put_envelope({ shipment_ref: ref, shipment: shipmentLike }));
+      const reply = throwIfRefused(await wasm4.data_put_envelope({ shipment_ref: ref, shipment: shipmentLike }));
       return reply.envelope;
     },
     getEnvelope: async (_repo, ref) => {
-      const reply = await wasm3.data_get_envelope({ shipment_ref: ref });
+      const reply = await wasm4.data_get_envelope({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return reply.record;
     },
     listEnvelopes: async (_repo, predicate = null) => {
-      const reply = await wasm3.data_list_envelopes({});
+      const reply = await wasm4.data_list_envelopes({});
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return applyPredicate(reply.rows, predicate);
     },
     deleteShipment: async (_repo, ref) => {
-      throwIfRefused(await wasm3.data_delete_shipment({ shipment_ref: ref }));
+      throwIfRefused(await wasm4.data_delete_shipment({ shipment_ref: ref }));
     },
     // NOT throwIfRefused: a rollback that could only undo part of a failed create is an ANSWER,
     // and the caller is already holding the error that matters. Throwing here would replace it —
     // the exact failure this whole path was built to stop.
-    rollbackShipmentCreate: async (_repo, ref) => await wasm3.data_rollback_shipment_create({ shipment_ref: ref }),
+    rollbackShipmentCreate: async (_repo, ref) => await wasm4.data_rollback_shipment_create({ shipment_ref: ref }),
     getShipment: async (_repo, ref) => {
-      const reply = await wasm3.data_get_shipment({ shipment_ref: ref });
+      const reply = await wasm4.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
     // Filter the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
     // cross-fork revenue read for everybody else's.
-    listShipments: async (repo4, predicate = null) => {
-      const reply = await wasm3.data_list_envelopes({});
+    listShipments: async (repo3, predicate = null) => {
+      const reply = await wasm4.data_list_envelopes({});
       if (!reply.ok) throw new Error(reply.error || "the read failed");
-      return joinLoaded(repo4, applyPredicate(reply.rows, predicate));
+      return joinLoaded(repo3, applyPredicate(reply.rows, predicate));
     },
     joinLoaded,
     anyRevenueVisible: (rows) => (rows || []).some((row) => row?.[REVENUE_SEEN])
   });
   bindWriteGate({
     assertWritable: async (_repo, etd, kind = KIND_SHIPMENT) => {
-      const refusal = gateError(await wasm3.data_write_gate({ etd: etd ?? null, kind }));
+      const refusal = gateError(await wasm4.data_write_gate({ etd: etd ?? null, kind }));
       if (refusal) throw refusal;
     }
   });
   bindBillingPublish({
     publishBilling: async (_repo, shipment, { publishedBy = null, publishedAt = null } = {}) => {
-      const reply = await wasm3.data_publish_billing({
+      const reply = await wasm4.data_publish_billing({
         shipment,
         published_by: publishedBy,
         published_at: publishedAt
@@ -4991,20 +4991,20 @@ function composeData(wasm3) {
       if (!reply.ok) throw new Error(reply.error || "publish failed");
       return reply.snapshot;
     },
-    readPublishedFor: async (_repo, shipment) => (await wasm3.data_published_for({ shipment })).rows,
-    currentRevision: async (_repo, shipment) => (await wasm3.data_current_revision({ shipment })).record
+    readPublishedFor: async (_repo, shipment) => (await wasm4.data_published_for({ shipment })).rows,
+    currentRevision: async (_repo, shipment) => (await wasm4.data_current_revision({ shipment })).record
   });
   bindRepoQuery({
     listWhere: async (_repo, kind, predicate = null) => {
-      const reply = await wasm3.data_list_where({ kind, column: null, equals: null, ignore_case: false });
+      const reply = await wasm4.data_list_where({ kind, column: null, equals: null, ignore_case: false });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return applyPredicate(reply.rows, predicate);
     }
   });
   bindPnlLineId({
-    pnlLineId: (ref, index) => wasm3.data_pnl_line_id({ shipment_ref: ref, index }).id,
+    pnlLineId: (ref, index) => wasm4.data_pnl_line_id({ shipment_ref: ref, index }).id,
     deletePnlLinesFor: async (_repo, ref) => {
-      const reply = await wasm3.data_delete_pnl_lines({ shipment_ref: ref });
+      const reply = await wasm4.data_delete_pnl_lines({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the cleanup failed");
       return reply.deleted;
     }
@@ -5021,36 +5021,36 @@ function _rowIdx(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 }
-function composeSync(wasm3) {
+function composeSync(wasm4) {
   bindAuditLog({
-    verifyAuditChain: async (rows) => (await wasm3.sync_audit_verify_chain({ rows: rows || [] })).problems
+    verifyAuditChain: async (rows) => (await wasm4.sync_audit_verify_chain({ rows: rows || [] })).problems
   });
   bindDueSoon({
-    computeDueSoonRows: async (salesId) => (await wasm3.sync_due_soon_rows({ sales_id: salesId ?? null })).rows
+    computeDueSoonRows: async (salesId) => (await wasm4.sync_due_soon_rows({ sales_id: salesId ?? null })).rows
   });
   bindJobTracker(jobTracker);
   bindWmaEngine({
     predict: (state, descriptionText, classifyKindFn) => {
       const descKind = descriptionText && descriptionText.trim() && classifyKindFn ? classifyKindFn(descriptionText) : null;
-      return wasm3.sync_wma_predict({ state, desc_kind: descKind }).kind;
+      return wasm4.sync_wma_predict({ state, desc_kind: descKind }).kind;
     },
     onEvent: (state, observed, predicted) => _absorb(
       state,
-      wasm3.sync_wma_on_event({ state, observed, predicted: predicted ?? null, now_ms: Date.now() }).state
+      wasm4.sync_wma_on_event({ state, observed, predicted: predicted ?? null, now_ms: Date.now() }).state
     ),
     dismissPrediction: (state, predictedKind) => _absorb(
       state,
-      wasm3.sync_wma_dismiss({ state, predicted_kind: predictedKind }).state
+      wasm4.sync_wma_dismiss({ state, predicted_kind: predictedKind }).state
     )
   });
   bindWmaStore({
-    loadKindWmaState: async (_store2, repId, rowIdx) => (await wasm3.sync_wma_load({
+    loadKindWmaState: async (_store2, repId, rowIdx) => (await wasm4.sync_wma_load({
       rep_id: String(repId ?? ""),
       row_idx: _rowIdx(rowIdx),
       now_ms: Date.now()
     })).state,
     saveKindWmaState: async (_store2, repId, rowIdx, state) => {
-      const reply = await wasm3.sync_wma_save({ rep_id: String(repId ?? ""), row_idx: _rowIdx(rowIdx), state });
+      const reply = await wasm4.sync_wma_save({ rep_id: String(repId ?? ""), row_idx: _rowIdx(rowIdx), state });
       if (!reply.ok) console.warn("[wma] save failed:", reply.error);
     }
   });
@@ -5076,10 +5076,10 @@ var msOf = (value) => value instanceof Date ? value.getTime() : Number(value ?? 
 function trendWeekLabel(week) {
   return `W${week.ordinal} (${fmtDate(new Date(week.start_ms))})`;
 }
-function composeManager(wasm3) {
+function composeManager(wasm4) {
   bindPnlComposer({
     compose: ({ shipments = [], pnlLines = [], period = "", dims = [] } = {}) => {
-      const reply = wasm3.manager_pnl_pivot({
+      const reply = wasm4.manager_pnl_pivot({
         shipments,
         pnl_lines: pnlLines,
         period,
@@ -5091,8 +5091,8 @@ function composeManager(wasm3) {
       });
       return { rows: withDims(reply.rows), grandTotals: reply.grandTotals, groupedShipments: reply.groupedShipments };
     },
-    composeBuySellBreakdown: (pnlLines, refs) => wasm3.manager_pnl_buy_sell({ pnl_lines: pnlLines || [], refs: refs || [] }).rows,
-    filterByDims: (shipments, rowDims) => wasm3.manager_pnl_drill({
+    composeBuySellBreakdown: (pnlLines, refs) => wasm4.manager_pnl_buy_sell({ pnl_lines: pnlLines || [], refs: refs || [] }).rows,
+    filterByDims: (shipments, rowDims) => wasm4.manager_pnl_drill({
       shipments: shipments || [],
       row_dims: toPairs(rowDims),
       tz_offset_min: tz(),
@@ -5102,7 +5102,7 @@ function composeManager(wasm3) {
   });
   bindAirPnlComposer({
     composeAir: ({ shipments = [], pnlLines = [], dims = [] } = {}) => {
-      const reply = wasm3.manager_air_pnl({
+      const reply = wasm4.manager_air_pnl({
         shipments,
         pnl_lines: pnlLines,
         dims,
@@ -5114,7 +5114,7 @@ function composeManager(wasm3) {
     }
   });
   bindAirInvoiceComposer({
-    composeAirInvoice: (awbs, airRates, carriers) => wasm3.manager_air_invoice({
+    composeAirInvoice: (awbs, airRates, carriers) => wasm4.manager_air_invoice({
       awbs: awbs || [],
       air_rates: airRates || [],
       carriers: carriers || []
@@ -5124,10 +5124,10 @@ function composeManager(wasm3) {
     // F1: fxRatesBuy is currency -> buying closing rate for `today` (131 is an asset).
     // cash-flow.js fetches it (fetchClosingRatesBuy) before calling this; an absent/empty map
     // leaves every row's amount at its last-booked amount_vnd, same as before this landed.
-    composeAR: ({ billingEntities = [], today, fxRatesBuy = {} } = {}) => wasm3.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz(), fx_rates_buy: fxRatesBuy }),
-    composeAP: ({ pnlLines = [] } = {}) => wasm3.manager_ap_payables({ pnl_lines: pnlLines, tz_offset_min: tz() }),
+    composeAR: ({ billingEntities = [], today, fxRatesBuy = {} } = {}) => wasm4.manager_ar_aging({ billing: billingEntities, today_ms: msOf(today), tz_offset_min: tz(), fx_rates_buy: fxRatesBuy }),
+    composeAP: ({ pnlLines = [] } = {}) => wasm4.manager_ap_payables({ pnl_lines: pnlLines, tz_offset_min: tz() }),
     composeTimeline: ({ billingEntities = [], shipments = [], today } = {}) => {
-      const reply = wasm3.manager_ar_timeline({
+      const reply = wasm4.manager_ar_timeline({
         billing: billingEntities,
         shipments,
         today_ms: msOf(today),
@@ -5137,7 +5137,7 @@ function composeManager(wasm3) {
     }
   });
   bindCommissionCalculator({
-    computeCommissions: (shipments, pnlLines, rules, advanceLog, periodKey) => wasm3.manager_commissions({
+    computeCommissions: (shipments, pnlLines, rules, advanceLog, periodKey) => wasm4.manager_commissions({
       shipments: shipments || [],
       pnl_lines: pnlLines || [],
       rules: asArray(rules),
@@ -5146,7 +5146,7 @@ function composeManager(wasm3) {
       tz_offset_min: tz(),
       manager_label: managerLabel()
     }).rows,
-    computeSparkline: (shipments, pnlLines, salesId, monthCount) => wasm3.manager_commission_sparkline({
+    computeSparkline: (shipments, pnlLines, salesId, monthCount) => wasm4.manager_commission_sparkline({
       shipments: shipments || [],
       pnl_lines: pnlLines || [],
       sales_id: salesId || "",
@@ -5155,14 +5155,14 @@ function composeManager(wasm3) {
       tz_offset_min: tz(),
       manager_label: managerLabel()
     }).values,
-    buildPeriodKey: (mode, date) => wasm3.manager_period_key({ mode: mode || "month", at_ms: msOf(date), tz_offset_min: tz() }).key
+    buildPeriodKey: (mode, date) => wasm4.manager_period_key({ mode: mode || "month", at_ms: msOf(date), tz_offset_min: tz() }).key
   });
   bindCommissionComposer({
-    compose: async () => ({ rules: (await wasm3.manager_commission_rules({ all: true })).rules })
+    compose: async () => ({ rules: (await wasm4.manager_commission_rules({ all: true })).rules })
   });
   bindCustomer360Composer({
     compose: (customerId, customers, shipments, billing, exceptions) => {
-      const reply = wasm3.manager_customer360({
+      const reply = wasm4.manager_customer360({
         customer_id: customerId || "",
         customers: customers || [],
         shipments: shipments || [],
@@ -5188,10 +5188,10 @@ function composeManager(wasm3) {
         }))
       };
     },
-    compose360: (shipments) => wasm3.manager_customer_mode_mix({ shipments: shipments || [] })
+    compose360: (shipments) => wasm4.manager_customer_mode_mix({ shipments: shipments || [] })
   });
   bindDashboardComposer({
-    compose: (repo4, period, salesFilter, mode = "All") => wasm3.manager_dashboard({
+    compose: (repo3, period, salesFilter, mode = "All") => wasm4.manager_dashboard({
       period: period || "",
       sales_filter: salesFilter ?? null,
       mode,
@@ -5200,23 +5200,23 @@ function composeManager(wasm3) {
     })
   });
   bindExceptionComposer({
-    computeSortedExceptions: (exceptions) => wasm3.manager_exceptions_sorted({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).exceptions,
+    computeSortedExceptions: (exceptions) => wasm4.manager_exceptions_sorted({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).exceptions,
     computeTrends: (exceptions) => {
-      const reply = wasm3.manager_exception_trends({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() });
+      const reply = wasm4.manager_exception_trends({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() });
       return {
         weeks: reply.weeks.map(trendWeekLabel),
         datasets: reply.datasets.map((ds) => ({ label: ds.label_key ? t(ds.label_key) : ds.label, data: ds.data }))
       };
     },
-    computeMttr: (exceptions) => wasm3.manager_exception_mttr({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows.map((r) => ({ type: r.typeKey ? t(r.typeKey) : r.type, avgHours: r.avgHours })),
-    computePerSalesRate: (exceptions) => wasm3.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
-    computeEscalated: (severity) => wasm3.manager_exception_escalate({ severity: severity || "" }).severity
+    computeMttr: (exceptions) => wasm4.manager_exception_mttr({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows.map((r) => ({ type: r.typeKey ? t(r.typeKey) : r.type, avgHours: r.avgHours })),
+    computePerSalesRate: (exceptions) => wasm4.manager_exception_per_sales({ exceptions: exceptions || [], now_ms: Date.now(), tz_offset_min: tz() }).rows,
+    computeEscalated: (severity) => wasm4.manager_exception_escalate({ severity: severity || "" }).severity
   });
   bindSelfApprovedComposer({
-    compose: (decisions, { period = "", from = null, to = null } = {}) => wasm3.manager_self_approved_review({ decisions: decisions || [], period, from, to }).rows
+    compose: (decisions, { period = "", from = null, to = null } = {}) => wasm4.manager_self_approved_review({ decisions: decisions || [], period, from, to }).rows
   });
   bindDocumentBoardComposer({
-    composeDocumentBoard: (documents, shippingInstructions, arrivalNotices, releaseOrders) => wasm3.manager_document_board({
+    composeDocumentBoard: (documents, shippingInstructions, arrivalNotices, releaseOrders) => wasm4.manager_document_board({
       documents: documents || [],
       shipping_instructions: shippingInstructions || [],
       arrival_notices: arrivalNotices || [],
@@ -5226,26 +5226,26 @@ function composeManager(wasm3) {
     })
   });
   bindDemDetComposer({
-    overview: (instances) => wasm3.manager_demdet_overview({ instances: instances || [], now_ms: Date.now(), tz_offset_min: tz() })
+    overview: (instances) => wasm4.manager_demdet_overview({ instances: instances || [], now_ms: Date.now(), tz_offset_min: tz() })
   });
   bindManifestComposer({
-    overview: (manifests) => wasm3.manager_manifest_overview({ manifests: manifests || [], now_ms: Date.now(), tz_offset_min: tz() })
+    overview: (manifests) => wasm4.manager_manifest_overview({ manifests: manifests || [], now_ms: Date.now(), tz_offset_min: tz() })
   });
   bindLedgerAggregator({
-    trialBalance: (chart, legsByAccount, asOfDate) => wasm3.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
-    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm3.manager_ledger_pnl({
+    trialBalance: (chart, legsByAccount, asOfDate) => wasm4.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
+    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm4.manager_ledger_pnl({
       chart: chart || [],
       legs_by_account: legsByAccount || {},
       date_from: dateFrom || "",
       date_to: dateTo || ""
     }),
-    pnlMonthlyBreakdown: (chart, legsByAccount, year) => wasm3.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
-    balanceSheet: (chart, legsByAccount, asOfDate) => wasm3.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
-    entryTotals: (legs) => wasm3.manager_ledger_entry_totals({ legs: legs || [] })
+    pnlMonthlyBreakdown: (chart, legsByAccount, year) => wasm4.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
+    balanceSheet: (chart, legsByAccount, asOfDate) => wasm4.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
+    entryTotals: (legs) => wasm4.manager_ledger_entry_totals({ legs: legs || [] })
   });
   bindLedgerComposer({
-    groupChartByType: (accounts) => wasm3.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
-    filterLegs: (legs, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "" } = {}) => wasm3.manager_ledger_filter_legs({
+    groupChartByType: (accounts) => wasm4.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
+    filterLegs: (legs, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "" } = {}) => wasm4.manager_ledger_filter_legs({
       legs: legs || [],
       date_from: dateFrom || "",
       date_to: dateTo || "",
@@ -5253,26 +5253,26 @@ function composeManager(wasm3) {
       max_amount: maxAmount === "" || maxAmount == null ? null : Number(maxAmount),
       search: search || ""
     }).legs,
-    computeRunningBalances: (legs, balanceSide, opening = 0) => wasm3.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || "", opening: Number(opening) || 0 }).legs,
-    buildLedgerCSV: (rows) => wasm3.manager_ledger_csv({ rows: rows || [] }).csv
+    computeRunningBalances: (legs, balanceSide, opening = 0) => wasm4.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || "", opening: Number(opening) || 0 }).legs,
+    buildLedgerCSV: (rows) => wasm4.manager_ledger_csv({ rows: rows || [] }).csv
   });
   bindLedgerReconciler({
-    runAndRecord: (_ledgerRepo, year) => wasm3.manager_ledger_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
+    runAndRecord: (_ledgerRepo, year) => wasm4.manager_ledger_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
     // Boot calls this unawaited: a reconciliation that cannot run must never wedge the boot.
     maybeAutoReconcile: (_ledgerRepo, year) => {
-      wasm3.manager_ledger_auto_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }).catch((err) => {
+      wasm4.manager_ledger_auto_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }).catch((err) => {
         console.error("[ledger-reconciler] auto-reconcile failed:", err);
       });
     }
   });
   bindLedgerRepost({
-    planRepost: (_entityRepo, _ledgerRepo, year) => wasm3.manager_ledger_plan_repost({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
-    applyRepost: (_ledgerRepo, plan) => wasm3.manager_ledger_apply_repost({ plan }),
-    purgeOrphans: (_ledgerRepo, plan, year) => wasm3.manager_ledger_purge_orphans({ plan, year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() })
+    planRepost: (_entityRepo, _ledgerRepo, year) => wasm4.manager_ledger_plan_repost({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
+    applyRepost: (_ledgerRepo, plan) => wasm4.manager_ledger_apply_repost({ plan }),
+    purgeOrphans: (_ledgerRepo, plan, year) => wasm4.manager_ledger_purge_orphans({ plan, year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() })
   });
   bindNotificationComposer({
     computeFromEvent: ({ kind = "", id = "" } = {}, entities) => {
-      const reply = wasm3.manager_notification_from_event({
+      const reply = wasm4.manager_notification_from_event({
         kind,
         id,
         entity: entities?.get?.(`${kind}::${id}`) ?? null,
@@ -5280,17 +5280,17 @@ function composeManager(wasm3) {
       });
       return reply.notification ? stampNotification(reply.notification) : null;
     },
-    computeTimeBased: (shipments, today) => wasm3.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
+    computeTimeBased: (shipments, today) => wasm4.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
   });
   bindUserAuditLogComposer({
-    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm3.manager_audit_log_range({ records: records || [], from, to }).records,
-    sortByTimestampDesc: (records) => wasm3.manager_audit_log_sort({ records: records || [] }).records,
-    buildAuditLogCsv: (records) => wasm3.manager_audit_log_csv({ records: records || [] }).csv
+    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm4.manager_audit_log_range({ records: records || [], from, to }).records,
+    sortByTimestampDesc: (records) => wasm4.manager_audit_log_sort({ records: records || [] }).records,
+    buildAuditLogCsv: (records) => wasm4.manager_audit_log_csv({ records: records || [] }).csv
   });
   bindUsersViewComposer({
-    isValidEmail: (email) => wasm3.manager_email_valid({ email: email || "" }).valid,
-    filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm3.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
-    sortUsersByEmail: (users) => wasm3.manager_users_sort({ users: users || [] }).users
+    isValidEmail: (email) => wasm4.manager_email_valid({ email: email || "" }).valid,
+    filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm4.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
+    sortUsersByEmail: (users) => wasm4.manager_users_sort({ users: users || [] }).users
   });
 }
 function stampNotification(draft) {
@@ -5313,71 +5313,71 @@ function raise(reply) {
 function roleList(roles) {
   return (Array.isArray(roles) ? roles : [roles]).filter(Boolean);
 }
-function composeGovernance(wasm3) {
+function composeGovernance(wasm4) {
   bindRouteGuard({
     routeGuard: (route, roles) => {
-      const verdict = wasm3.governance_route_guard({ route: route ?? "", roles: roleList(roles) });
+      const verdict = wasm4.governance_route_guard({ route: route ?? "", roles: roleList(roles) });
       return verdict.allow ? "allow" : { redirect: verdict.redirect, reason: verdict.reason };
     },
-    homeRouteForRole: (roles) => wasm3.governance_home_route({ roles: roleList(roles) }).route,
-    filterSidebarItems: (items, roles) => wasm3.governance_filter_sidebar({ items: items || [], roles: roleList(roles) }).items,
-    resolveUserRoles: (record) => wasm3.governance_user_roles({ record: record ?? null }).roles,
-    normalizeRole: (role) => wasm3.governance_normalize_role({ role: role ?? null }).role,
+    homeRouteForRole: (roles) => wasm4.governance_home_route({ roles: roleList(roles) }).route,
+    filterSidebarItems: (items, roles) => wasm4.governance_filter_sidebar({ items: items || [], roles: roleList(roles) }).items,
+    resolveUserRoles: (record) => wasm4.governance_user_roles({ record: record ?? null }).roles,
+    normalizeRole: (role) => wasm4.governance_normalize_role({ role: role ?? null }).role,
     // The Rust principal (session_principal, via auth_session_roles) — ONE source, not a boot
     // mirror plus a browser-memory fallback.
-    currentUserRoles: () => wasm3.auth_session_roles({}).roles,
-    currentUserRole: () => wasm3.auth_session_roles({}).roles[0] || ROLE_READ_ONLY,
-    currentUserId: () => wasm3.auth_session_roles({}).token || UNKNOWN_USER_ID,
-    currentUserEmail: () => wasm3.auth_session_roles({}).email || ""
+    currentUserRoles: () => wasm4.auth_session_roles({}).roles,
+    currentUserRole: () => wasm4.auth_session_roles({}).roles[0] || ROLE_READ_ONLY,
+    currentUserId: () => wasm4.auth_session_roles({}).token || UNKNOWN_USER_ID,
+    currentUserEmail: () => wasm4.auth_session_roles({}).email || ""
   });
   bindActionGuard({
-    can: (action) => wasm3.governance_action_guard({ action, roles: [] }).allow,
-    allowedActions: () => wasm3.governance_allowed_actions({ roles: [] }).actions
+    can: (action) => wasm4.governance_action_guard({ action, roles: [] }).allow,
+    allowedActions: () => wasm4.governance_allowed_actions({ roles: [] }).actions
   });
   bindWorkspaceSettings({
-    readSettings: async () => (await wasm3.governance_load_settings({ local_only: true })).settings,
-    loadWorkspaceSettings: async (wsName) => (await wasm3.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
+    readSettings: async () => (await wasm4.governance_load_settings({ local_only: true })).settings,
+    loadWorkspaceSettings: async (wsName) => (await wasm4.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
     saveWorkspaceSettings: async (settings) => {
-      const saved = raise(await wasm3.governance_save_settings({ settings }));
+      const saved = raise(await wasm4.governance_save_settings({ settings }));
       window.__vdg_workspace_settings = saved.settings;
       return saved.settings;
     }
   });
   bindPeriodClose({
     getCurrentPeriodLock: async (_repo, period) => {
-      const lock = await wasm3.governance_find_lock({ period_key: period ?? null });
+      const lock = await wasm4.governance_find_lock({ period_key: period ?? null });
       return lock.locked ? { locked: true, record: lock.record } : { locked: false };
     },
-    loadClosedPeriods: async () => (await wasm3.governance_locked_periods({})).keys,
-    listCloseRecords: async () => (await wasm3.governance_close_records({})).records,
-    runPreCloseChecks: async (_repo, period) => raise(await wasm3.governance_pre_close_checks({ period })).checks,
-    closePeriod: async (_repo, period, user, checklist, ledgerRepo3 = null) => raise(await wasm3.governance_close_period({
+    loadClosedPeriods: async () => (await wasm4.governance_locked_periods({})).keys,
+    listCloseRecords: async () => (await wasm4.governance_close_records({})).records,
+    runPreCloseChecks: async (_repo, period) => raise(await wasm4.governance_pre_close_checks({ period })).checks,
+    closePeriod: async (_repo, period, user, checklist, ledgerRepo3 = null) => raise(await wasm4.governance_close_period({
       period,
       user: user ?? null,
       checklist: checklist ?? [],
       with_ledger: !!ledgerRepo3
     })),
-    reopenPeriod: async (_repo, period, reason, user) => raise(await wasm3.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
+    reopenPeriod: async (_repo, period, reason, user) => raise(await wasm4.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
   });
   bindPeriodLockRegistry({
-    readLockedPeriods: async () => (await wasm3.governance_locked_periods({})).locks,
-    lockedPeriodKeys: async () => (await wasm3.governance_locked_periods({})).keys,
-    findLock: async (_repo, periodKey) => (await wasm3.governance_find_lock({ period_key: periodKey ?? null })).record ?? null,
-    lockPeriod: async (_repo, periodKey, user) => raise(await wasm3.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
-    unlockPeriod: async (_repo, periodKey) => raise(await wasm3.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
+    readLockedPeriods: async () => (await wasm4.governance_locked_periods({})).locks,
+    lockedPeriodKeys: async () => (await wasm4.governance_locked_periods({})).keys,
+    findLock: async (_repo, periodKey) => (await wasm4.governance_find_lock({ period_key: periodKey ?? null })).record ?? null,
+    lockPeriod: async (_repo, periodKey, user) => raise(await wasm4.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
+    unlockPeriod: async (_repo, periodKey) => raise(await wasm4.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
   });
   bindPeriodOpeningBalance({
-    previousPeriod: (period) => wasm3.governance_period_math({ period: period ?? null }).previous,
-    nextPeriod: (period) => wasm3.governance_period_math({ period: period ?? null }).next,
+    previousPeriod: (period) => wasm4.governance_period_math({ period: period ?? null }).previous,
+    nextPeriod: (period) => wasm4.governance_period_math({ period: period ?? null }).next,
     periodBounds: (period) => {
-      const math = wasm3.governance_period_math({ period: period ?? null });
+      const math = wasm4.governance_period_math({ period: period ?? null });
       return math.bounds_start ? { start: math.bounds_start, end: math.bounds_end } : null;
     },
-    dayBefore: (date) => wasm3.governance_period_math({ date: date ?? null }).day_before,
-    periodOfDate: (date) => wasm3.governance_period_math({ date: date ?? null }).period_of_date,
-    isPeriodStart: (date) => wasm3.governance_period_math({ date: date ?? null }).is_period_start,
+    dayBefore: (date) => wasm4.governance_period_math({ date: date ?? null }).day_before,
+    periodOfDate: (date) => wasm4.governance_period_math({ date: date ?? null }).period_of_date,
+    isPeriodStart: (date) => wasm4.governance_period_math({ date: date ?? null }).is_period_start,
     openingBalanceFor: (closeRecords, period, accountCode) => {
-      const found = wasm3.governance_opening_balance({
+      const found = wasm4.governance_opening_balance({
         close_records: closeRecords || [],
         period: period ?? null,
         account_code: accountCode ?? ""
@@ -5386,16 +5386,16 @@ function composeGovernance(wasm3) {
     }
   });
   bindDefaultCurrencyLock({
-    canEditDefaultCurrency: (shipments, period, periodClosed = false) => wasm3.governance_can_edit_default_currency({
+    canEditDefaultCurrency: (shipments, period, periodClosed = false) => wasm4.governance_can_edit_default_currency({
       shipments: shipments || [],
       period: period ?? null,
       period_closed: !!periodClosed
     }),
-    periodOf: (date) => wasm3.governance_period_of({ date: date == null ? null : String(date) }).period
+    periodOf: (date) => wasm4.governance_period_of({ date: date == null ? null : String(date) }).period
   });
   bindErrorLogStore({
-    listErrorRecords: async () => (await wasm3.governance_error_records({})).records,
-    purgeErrorMonth: async (month) => raise(await wasm3.governance_purge_error_month({ month }))
+    listErrorRecords: async () => (await wasm4.governance_error_records({})).records,
+    purgeErrorMonth: async (month) => raise(await wasm4.governance_purge_error_month({ month }))
   });
 }
 
@@ -5423,10 +5423,10 @@ function unwrap(reply, pick) {
   if (!reply.ok) throw new Error(t(reply.error));
   return pick(reply);
 }
-function composeFlowsAdmin(wasm3) {
+function composeFlowsAdmin(wasm4) {
   bindLicenseGate({
-    resolveLicenseState: () => wasm3.flows_license_resolve(EMPTY),
-    errorKindMessage: (kind, translate = t) => translate(wasm3.flows_license_error_key({ error_kind: kind ?? null }).key)
+    resolveLicenseState: () => wasm4.flows_license_resolve(EMPTY),
+    errorKindMessage: (kind, translate = t) => translate(wasm4.flows_license_error_key({ error_kind: kind ?? null }).key)
   });
   bindBackupExporter({
     // The operator emits progress as an i18n KEY plus its arguments; the translation is the ui's.
@@ -5435,47 +5435,47 @@ function composeFlowsAdmin(wasm3) {
       const relay = (e) => onProgress(e.detail.pct, t(e.detail.key, e.detail.args));
       window.addEventListener(BACKUP_PROGRESS_EVENT, relay);
       try {
-        return unwrap(await wasm3.flows_export_workspace(EMPTY), (r) => r.filename);
+        return unwrap(await wasm4.flows_export_workspace(EMPTY), (r) => r.filename);
       } finally {
         window.removeEventListener(BACKUP_PROGRESS_EVENT, relay);
       }
     }
   });
   bindUserProvisioning({
-    editProfile: async (userId, fields) => unwrap(await wasm3.flows_edit_profile({ user_id: String(userId), fields: fields || {} }), (r) => r.user)
+    editProfile: async (userId, fields) => unwrap(await wasm4.flows_edit_profile({ user_id: String(userId), fields: fields || {} }), (r) => r.user)
   });
   bindLedgerPoster({
     buildEntriesFromShipment: (shipment, chart, rules) => unwrap(
-      wasm3.flows_build_entries_from_shipment({ source: shipment || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
+      wasm4.flows_build_entries_from_shipment({ source: shipment || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
       (r) => r.entries
     ),
     buildEntriesFromCommission: (commissionEntry, chart, rules) => unwrap(
-      wasm3.flows_build_entries_from_commission({ source: commissionEntry || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
+      wasm4.flows_build_entries_from_commission({ source: commissionEntry || {}, chart_of_accounts: chart || [], posting_rules: rules || {} }),
       (r) => r.entries
     ),
     buildReversalEntry: (legs, chart, actorId) => unwrap(
-      wasm3.flows_build_reversal_entry({ legs: legs || [], chart_of_accounts: chart || [], actor_id: actorId ?? null }),
+      wasm4.flows_build_reversal_entry({ legs: legs || [], chart_of_accounts: chart || [], actor_id: actorId ?? null }),
       (r) => r.entry
     ),
-    postShipment: async (shipment) => unwrap(await wasm3.flows_post_shipment({ shipment: shipment || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
-    postCommission: async (commissionEntry) => unwrap(await wasm3.flows_post_commission({ commission_entry: commissionEntry || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
+    postShipment: async (shipment) => unwrap(await wasm4.flows_post_shipment({ shipment: shipment || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
+    postCommission: async (commissionEntry) => unwrap(await wasm4.flows_post_commission({ commission_entry: commissionEntry || {} }), (r) => ({ posted: r.posted, entryIds: r.entry_ids })),
     postReversal: async (entryId, actorId) => unwrap(
-      await wasm3.flows_post_reversal({ entry_id: String(entryId), actor_id: actorId ?? null }),
+      await wasm4.flows_post_reversal({ entry_id: String(entryId), actor_id: actorId ?? null }),
       (r) => ({ posted: r.posted, entryIds: r.entry_ids })
     )
   });
   bindPnlCommit({
-    commitPnlReport: async (report) => unwrap(await wasm3.flows_commit_pnl_report({ report: report || {} }), (r) => ({
+    commitPnlReport: async (report) => unwrap(await wasm4.flows_commit_pnl_report({ report: report || {} }), (r) => ({
       created_shipments: r.created_shipments,
       created_lines: r.created_lines,
       new_customers: r.new_customers,
       new_carriers: r.new_carriers
     })),
     computeAndPersistSalesCommission: async (shipment, pnlLines) => unwrap(
-      await wasm3.flows_sales_commission({ shipment: shipment || {}, pnl_lines: pnlLines || [] }),
+      await wasm4.flows_sales_commission({ shipment: shipment || {}, pnl_lines: pnlLines || [] }),
       (r) => r.persisted
     ),
-    slugify: (text) => wasm3.flows_slugify({ text: text ?? null }).slug
+    slugify: (text) => wasm4.flows_slugify({ text: text ?? null }).slug
   });
 }
 
@@ -5484,32 +5484,32 @@ var ENTITY_CHANGED_EVENT = "vdg:entity-changed";
 var KIND_USER = "user";
 var REASON_CANCELLED = "cancelled";
 var EMPTY2 = {};
-function composeFlows(wasm3) {
+function composeFlows(wasm4) {
   bindSalesRepDerivation({
-    deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) => wasm3.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
-    selfRepCandidate: (roles, token) => wasm3.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
-    customerRepFor: (customerName, customers) => wasm3.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep
+    deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) => wasm4.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
+    selfRepCandidate: (roles, token) => wasm4.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
+    customerRepFor: (customerName, customers) => wasm4.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep
   });
   bindAirRateCalculator({
-    computeChargeableKg: (actual, l, w, h) => wasm3.flows_chargeable_kg({ actual, l, w, h }).chargeable_kg,
+    computeChargeableKg: (actual, l, w, h) => wasm4.flows_chargeable_kg({ actual, l, w, h }).chargeable_kg,
     computeFreight: (actual, l, w, h, breaks) => {
-      const r = wasm3.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
+      const r = wasm4.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
       return r.matched ? r.freight_total : null;
     },
     calcResult: (actual, l, w, h, breaks) => {
-      const r = wasm3.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
+      const r = wasm4.flows_air_calc({ actual, l, w, h, breaks: breaks || [] });
       return r.matched ? { chargeableKg: r.chargeable_kg, tier: r.tier, freightTotal: r.freight_total } : null;
     }
   });
   bindPnlGate({
-    lineVnd: (amount, currency, fxRate, bookCurrency) => wasm3.flows_pnl_line_vnd({
+    lineVnd: (amount, currency, fxRate, bookCurrency) => wasm4.flows_pnl_line_vnd({
       amount: Number(amount) || 0,
       currency: currency || "",
       fx_rate: Number(fxRate) || 0,
       book_currency: bookCurrency || ""
     }).vnd,
     vndInvariant: (lines, commissionNetAfterTax, bookCurrency) => {
-      const r = wasm3.flows_pnl_vnd_invariant({
+      const r = wasm4.flows_pnl_vnd_invariant({
         lines: lines || [],
         commission_net_after_tax: commissionNetAfterTax || [],
         book_currency: bookCurrency || ""
@@ -5517,7 +5517,7 @@ function composeFlows(wasm3) {
       return { match: r.match, expected: r.expected, actual: r.actual, delta: r.delta };
     },
     fxDeviation: (currency, fxRate, referenceRate) => {
-      const r = wasm3.flows_pnl_fx_deviation({
+      const r = wasm4.flows_pnl_fx_deviation({
         currency: currency || "",
         fx_rate: Number(fxRate) || 0,
         reference_rate: referenceRate == null ? null : Number(referenceRate)
@@ -5527,7 +5527,7 @@ function composeFlows(wasm3) {
   });
   bindQuoteTotals({
     compute: (lines, commissionNetAfterTax) => {
-      const r = wasm3.flows_quote_totals({
+      const r = wasm4.flows_quote_totals({
         lines: (lines || []).map((l) => ({
           vnd_pay: l.vnd_pay || 0,
           vnd_collect: l.vnd_collect || 0,
@@ -5547,29 +5547,29 @@ function composeFlows(wasm3) {
     }
   });
   bindNoteLines({
-    derive: (pnlLineRows, noteType) => wasm3.flows_note_lines({ lines: pnlLineRows || [], note_type: noteType || "" })
+    derive: (pnlLineRows, noteType) => wasm4.flows_note_lines({ lines: pnlLineRows || [], note_type: noteType || "" })
   });
   bindFsmIngest({
-    registerFsmEntity: (ref, state) => wasm3.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
-    rehydrateFsmStates: () => wasm3.flows_rehydrate_fsm(EMPTY2),
-    persistAdvancedState: (_repo, ref, state) => wasm3.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null })
+    registerFsmEntity: (ref, state) => wasm4.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
+    rehydrateFsmStates: () => wasm4.flows_rehydrate_fsm(EMPTY2),
+    persistAdvancedState: (_repo, ref, state) => wasm4.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null })
   });
   bindFsmAutoAdvance({
-    autoAdvanceShipment: async (_repo, shipment) => (await wasm3.flows_auto_advance({ shipment: shipment || {} })).advanced_to ?? null
+    autoAdvanceShipment: async (_repo, shipment) => (await wasm4.flows_auto_advance({ shipment: shipment || {} })).advanced_to ?? null
   });
   bindJobNoGen({
-    assignJobNo: async (_repo, repCode) => (await wasm3.flows_assign_job_no({ rep_code: String(repCode || "") })).job_no,
-    formatJobNo: (repCode, localSeq) => wasm3.flows_format_job_no({ rep_code: String(repCode || ""), local_seq: Number(localSeq) || 0 }).job_no,
-    nextLocalSeq: async (_repo, repCode) => (await wasm3.flows_next_local_seq({ rep_code: String(repCode || "") })).seq,
-    repoMaxSeq: async (_repo, repCode) => (await wasm3.flows_repo_max_seq({ rep_code: String(repCode || "") })).seq
+    assignJobNo: async (_repo, repCode) => (await wasm4.flows_assign_job_no({ rep_code: String(repCode || "") })).job_no,
+    formatJobNo: (repCode, localSeq) => wasm4.flows_format_job_no({ rep_code: String(repCode || ""), local_seq: Number(localSeq) || 0 }).job_no,
+    nextLocalSeq: async (_repo, repCode) => (await wasm4.flows_next_local_seq({ rep_code: String(repCode || "") })).seq,
+    repoMaxSeq: async (_repo, repCode) => (await wasm4.flows_repo_max_seq({ rep_code: String(repCode || "") })).seq
   });
   bindRepCodeRegistry({
-    isValidRepCode: (code) => wasm3.flows_rep_code_valid({ code: code ?? null }).valid,
-    assignRepCode: async () => (await wasm3.flows_assign_rep_code(EMPTY2)).code,
-    ensureRepCode: async (user) => (await wasm3.flows_ensure_rep_code({ user: user || {} })).code,
+    isValidRepCode: (code) => wasm4.flows_rep_code_valid({ code: code ?? null }).valid,
+    assignRepCode: async () => (await wasm4.flows_assign_rep_code(EMPTY2)).code,
+    ensureRepCode: async (user) => (await wasm4.flows_ensure_rep_code({ user: user || {} })).code,
     // The form's existing contract is a throw carrying the message it shows.
     assertRepCodeAssignable: async (code, ownerId) => {
-      const verdict = await wasm3.flows_assert_rep_code({ code: code ?? null, owner_id: ownerId ?? null });
+      const verdict = await wasm4.flows_assert_rep_code({ code: code ?? null, owner_id: ownerId ?? null });
       if (!verdict.ok) throw new Error(t(verdict.error_key));
     }
   });
@@ -5579,15 +5579,15 @@ function composeFlows(wasm3) {
     // owns shaping, colour-hashing and the 5-minute cache.
     getActiveSalesReps: async () => {
       const { users } = await listUsers({ role: ROLE_SALES_REP });
-      return (await wasm3.flows_active_sales_reps({ rows: users || [], force: false })).reps;
+      return (await wasm4.flows_active_sales_reps({ rows: users || [], force: false })).reps;
     },
-    getSalesRepByPrefix: (reps, prefix) => wasm3.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
-    clearRegistryCache: () => wasm3.flows_clear_sales_registry(EMPTY2)
+    getSalesRepByPrefix: (reps, prefix) => wasm4.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
+    clearRegistryCache: () => wasm4.flows_clear_sales_registry(EMPTY2)
   });
   window.addEventListener(ENTITY_CHANGED_EVENT, (e) => {
-    if (e.detail?.kind === KIND_USER) wasm3.flows_clear_sales_registry(EMPTY2);
+    if (e.detail?.kind === KIND_USER) wasm4.flows_clear_sales_registry(EMPTY2);
   });
-  const analytics = (shipments, lines) => wasm3.flows_sales_analytics({ shipments: shipments || [], lines: lines || [] });
+  const analytics = (shipments, lines) => wasm4.flows_sales_analytics({ shipments: shipments || [], lines: lines || [] });
   bindSalesAnalyticsCompute({
     computeKpis: (shipments, lines) => analytics(shipments, lines).kpis,
     computeLeaderboard: (shipments, lines) => analytics(shipments, lines).leaderboard,
@@ -5600,30 +5600,30 @@ function composeFlows(wasm3) {
     commissionPct: analytics([], []).commission_pct
   });
   bindShipmentStateAliases({
-    ensureShipmentStateAliases: async () => (await wasm3.flows_ensure_state_aliases(EMPTY2)).rows
+    ensureShipmentStateAliases: async () => (await wasm4.flows_ensure_state_aliases(EMPTY2)).rows
   });
   bindShipmentStateMigrator({
     migrateLegacyShipmentState: async (_repo, aliasRows) => {
-      const r = await wasm3.flows_migrate_shipment_states({ alias_rows: aliasRows || [] });
+      const r = await wasm4.flows_migrate_shipment_states({ alias_rows: aliasRows || [] });
       return { found: r.found, migrated: r.migrated, skippedUnresolved: r.skipped_unresolved };
     }
   });
   bindShipmentVoidDelete({
-    chooseShipmentAffordance: (shipment) => wasm3.flows_shipment_affordance({ shipment: shipment || {} }).affordance,
+    chooseShipmentAffordance: (shipment) => wasm4.flows_shipment_affordance({ shipment: shipment || {} }).affordance,
     // Two steps on purpose: Rust decides what the caller may do, the view asks, Rust acts.
     runShipmentAffordance: async ({ shipment, canVoid, confirm }) => {
-      const plan = wasm3.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(canVoid) });
+      const plan = wasm4.flows_void_plan({ shipment: shipment || {}, is_manager: Boolean(canVoid) });
       if (!plan.confirmable) return { mutated: false, reason: plan.reason };
       const ok = await confirm(plan.affordance);
       if (!ok) return { mutated: false, reason: REASON_CANCELLED };
-      const applied = await wasm3.flows_void_apply({ shipment: shipment || {}, affordance: plan.affordance });
+      const applied = await wasm4.flows_void_apply({ shipment: shipment || {}, affordance: plan.affordance });
       if (!applied.ok) throw new Error(applied.error);
       return { mutated: true, affordance: plan.affordance };
     }
   });
   bindQuoteOrchestrator({
     generateQuoteId: async (_repo, salesRepId) => {
-      const r = await wasm3.flows_generate_quote_id({ sales_rep_id: salesRepId ?? null });
+      const r = await wasm4.flows_generate_quote_id({ sales_rep_id: salesRepId ?? null });
       if (!r.ok) throw new Error(r.error);
       return r.id;
     },
@@ -5631,38 +5631,38 @@ function composeFlows(wasm3) {
     // commercial owner (SalesRepDerivation) — the two diverge whenever someone other than the
     // customer's assigned rep keys the quote in.
     saveDraft: async (_repo, actorId, salesRepId, formData) => {
-      const r = await wasm3.flows_save_quote_draft({ actor_id: actorId ?? null, sales_rep_id: salesRepId ?? null, form: formData || {} });
+      const r = await wasm4.flows_save_quote_draft({ actor_id: actorId ?? null, sales_rep_id: salesRepId ?? null, form: formData || {} });
       if (!r.ok) throw new Error(r.error);
       return { id: r.id, quote: r.quote, pending_manager_approval: r.pending_manager_approval };
     },
     sendToCustomer: async (_repo, quote) => {
-      const r = await wasm3.flows_send_quote({ quote: quote || {} });
+      const r = await wasm4.flows_send_quote({ quote: quote || {} });
       if (!r.ok) throw new Error(r.error);
       return r.quote;
     },
     markAccepted: async (_repo, quote) => {
-      const r = await wasm3.flows_accept_quote({ quote: quote || {} });
+      const r = await wasm4.flows_accept_quote({ quote: quote || {} });
       if (!r.ok) throw new Error(r.error);
       return r.quote;
     },
-    checkAlreadyConverted: async (_repo, quoteId) => (await wasm3.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null
+    checkAlreadyConverted: async (_repo, quoteId) => (await wasm4.flows_quote_converted({ quote_id: quoteId ?? null })).shipment ?? null
   });
   bindQuoteVoidDelete({
-    chooseQuoteAffordance: (quote) => wasm3.flows_quote_affordance({ quote: quote || {} }).affordance,
+    chooseQuoteAffordance: (quote) => wasm4.flows_quote_affordance({ quote: quote || {} }).affordance,
     // Two steps on purpose: Rust decides what the caller may do, the view asks, Rust acts.
     runQuoteAffordance: async ({ quote, canWrite, confirm }) => {
-      const plan = wasm3.flows_quote_delete_plan({ quote: quote || {}, can_write: Boolean(canWrite) });
+      const plan = wasm4.flows_quote_delete_plan({ quote: quote || {}, can_write: Boolean(canWrite) });
       if (!plan.confirmable) return { mutated: false, reason: plan.reason };
       const ok = await confirm(plan.affordance);
       if (!ok) return { mutated: false, reason: REASON_CANCELLED };
-      const applied = await wasm3.flows_quote_delete_apply({ quote: quote || {}, affordance: plan.affordance });
+      const applied = await wasm4.flows_quote_delete_apply({ quote: quote || {}, affordance: plan.affordance });
       if (!applied.ok) throw new Error(applied.error);
       return { mutated: true, affordance: plan.affordance };
     }
   });
   bindApprovalOrchestrator({
     decide: async (approvalId, decisionValue, comment, delegatedTo) => {
-      const r = await wasm3.flows_approval_decide({
+      const r = await wasm4.flows_approval_decide({
         approval_id: approvalId,
         decision: decisionValue,
         comment: comment || null,
@@ -5672,25 +5672,25 @@ function composeFlows(wasm3) {
       return { selfApproved: r.self_approved };
     }
   });
-  composeFlowsAdmin(wasm3);
+  composeFlowsAdmin(wasm4);
 }
 
 // output/web/js.tmp/implementations/storage/implementations/repos/fx-rate-repo.js
 var FxRateStoreRepo = class {
   _repo() {
-    const repo4 = window.__vdg_repo;
-    if (!repo4?.fx_months_to_ingest) throw new Error("WASM repo not ready");
-    return repo4;
+    const repo3 = window.__vdg_repo;
+    if (!repo3?.fx_months_to_ingest) throw new Error("WASM repo not ready");
+    return repo3;
   }
   _wasm() {
-    const wasm3 = window.__vdg_wasm;
-    if (!wasm3?.fx_rate_get) throw new Error("WASM not ready");
-    return wasm3;
+    const wasm4 = window.__vdg_wasm;
+    if (!wasm4?.fx_rate_get) throw new Error("WASM not ready");
+    return wasm4;
   }
   async _ensureAllMonthsLoaded() {
-    const wasm3 = this._wasm();
+    const wasm4 = this._wasm();
     for (const { ym, content } of await this._repo().fx_months_to_ingest()) {
-      wasm3.fx_rate_ingest_month(ym, content);
+      wasm4.fx_rate_ingest_month(ym, content);
     }
   }
   /** direction: 'Buy'|'Sell' — Circular 200 values assets at the buying rate and liabilities
@@ -5743,9 +5743,9 @@ var FxRateStoreRepo = class {
 // output/web/js.tmp/implementations/storage/implementations/repos/awb-repo.js
 var AwbStoreRepo = class {
   _repo() {
-    const repo4 = window.__vdg_repo;
-    if (!repo4?.awb_list_by_month) throw new Error("WASM repo not ready");
-    return repo4;
+    const repo3 = window.__vdg_repo;
+    if (!repo3?.awb_list_by_month) throw new Error("WASM repo not ready");
+    return repo3;
   }
   async listByMonth(ym) {
     return await this._repo().awb_list_by_month(ym);
@@ -5808,8 +5808,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=9f6b4b65", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=9f6b4b65", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=b2e10631", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=b2e10631", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -5844,14 +5844,14 @@ function composePlatformUi() {
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/index.js
-function composeUi(wasm3) {
-  composeAuth(wasm3);
-  composeCache(wasm3);
-  composeData(wasm3);
-  composeSync(wasm3);
-  composeManager(wasm3);
-  composeGovernance(wasm3);
-  composeFlows(wasm3);
+function composeUi(wasm4) {
+  composeAuth(wasm4);
+  composeCache(wasm4);
+  composeData(wasm4);
+  composeSync(wasm4);
+  composeManager(wasm4);
+  composeGovernance(wasm4);
+  composeFlows(wasm4);
   composeStorageUi();
   composePlatformUi();
 }
@@ -6083,14 +6083,14 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   const ioPort = createIoPort(serverApi, user.email);
   const warmResult = await safeAwait(ioPort.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
   if (!warmResult.ok) return _storeUnresponsive("repo-init:sqlite-warm");
-  const repo4 = new wasmMod.WasmEntityRepo(ioPort);
-  window.__vdg_repo = repo4;
+  const repo3 = new wasmMod.WasmEntityRepo(ioPort);
+  window.__vdg_repo = repo3;
   window.__vdg_server_api = serverApi;
   window.__vdg_store = localStore();
   window.__vdg_io = ioPort;
-  wasmMod.freight_app_init(createPlatform({ repo: repo4 }));
+  wasmMod.freight_app_init(createPlatform({ repo: repo3 }));
   composeUi(wasmMod);
-  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo4), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
+  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo3), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
   if (!rehydrateResult.ok) return _storeUnresponsive("fsm-rehydrate");
   fsm.dispatch(BootEvent.REPO_BUILT);
   stepRef.value = STEP_LICENSE_GATE;
@@ -6104,10 +6104,10 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   stepRef.value = STEP_BOOT_APP;
   bootFn(user, db);
   fsm.dispatch(BootEvent.RENDERED);
-  _deferredInit(user, db, serverApi, repo4);
+  _deferredInit(user, db, serverApi, repo3);
   return { db, poller: null, auditLog: null };
 }
-async function _deferredInit(user, db, serverApi, repo4) {
+async function _deferredInit(user, db, serverApi, repo3) {
   const store = localStore();
   try {
     if (store) {
@@ -6121,8 +6121,8 @@ async function _deferredInit(user, db, serverApi, repo4) {
       if (locale !== "vi") await loadLocale(locale);
     }
     const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-33U5YCHQ.js");
-    startDeltaTick({ getRepo: () => repo4 });
-    startOutboxDrain({ getRepo: () => repo4 });
+    startDeltaTick({ getRepo: () => repo3 });
+    startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
     const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-DBXQERUK.js");
     window.__vdg_audit_log = createAuditLog({
@@ -6145,17 +6145,17 @@ async function _deferredInit(user, db, serverApi, repo4) {
         window.removeEventListener("vdg:server-health", retryPrincipalOnReconnect);
         return;
       }
-      wasm2().auth_resolve_principal({ email: user.email }).catch(() => {
+      wasm3().auth_resolve_principal({ email: user.email }).catch(() => {
       });
     };
     window.addEventListener("vdg:server-health", retryPrincipalOnReconnect);
-    wasm2().auth_resolve_principal({ email: user.email }).catch(() => {
+    wasm3().auth_resolve_principal({ email: user.email }).catch(() => {
     });
   } catch (err) {
     console.warn("[VDG] deferred init error:", err.message);
   }
 }
-function wasm2() {
+function wasm3() {
   return window.__vdg_wasm;
 }
 
@@ -6585,10 +6585,10 @@ async function main() {
   }
   try {
     await composeStorage();
-    const wasm3 = await wasmReady;
-    wasm3.freight_app_init(createPlatform({ repo: null }));
+    const wasm4 = await wasmReady;
+    wasm4.freight_app_init(createPlatform({ repo: null }));
     configureAuthPlatform({ renderLoginPage });
-    composeAuth(wasm3);
+    composeAuth(wasm4);
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
     if (err?.name === "RoleProbeTimeoutError") {
