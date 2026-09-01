@@ -90,9 +90,10 @@ import {
   getEnvelope,
   getShipment,
   listEnvelopes,
+  overwriteCommissionEntries,
   putShipment,
   rollbackShipmentCreate
-} from "./chunk-Q3NWEQ2V.js";
+} from "./chunk-IOR2W5EP.js";
 import {
   getActiveSalesReps
 } from "./chunk-YFN2XPGT.js";
@@ -3034,7 +3035,6 @@ function _recomputeWaterfall(root, userConfig) {
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new/submit-orchestrator.js
 var KIND_USER = "user";
 var WARN_PNL_LINES_MISSING = "pnl_lines_empty";
-var MAX_CE_CLEANUP = 20;
 var INITIAL_LEDGER_VERSION = 1;
 function _defaultLedgerRepo() {
   return typeof window !== "undefined" ? window.__vdg_ledger_repo : void 0;
@@ -3169,23 +3169,14 @@ async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _defaultLed
   await putShipment(repo, shipment);
   await _healJobNoCollision(repo, shipment, salesRepId);
   await registerFsmEntity(ref, shipment.state);
-  for (let i = 1; i <= MAX_CE_CLEANUP; i++) {
-    await repo.delete("commission_entry", `${ref}-CE${i}`);
-  }
-  await repo.delete("commission_entry", `${ref}-CR1`);
-  const commLines = state.commission_lines || [];
-  const written = [];
-  for (let i = 0; i < commLines.length; i++) {
-    const record = {
-      ...commLines[i],
-      shipment_ref: ref,
-      occurred_at: todayLocal(),
-      created_by: salesRepId || null,
-      _ledger_version: shipment._ledger_version
-    };
-    await repo.put("commission_entry", `${ref}-CE${i + 1}`, record);
-    written.push(record);
-  }
+  const commissions = await overwriteCommissionEntries(repo, {
+    shipment_ref: ref,
+    lines: state.commission_lines || [],
+    ledger_version: shipment._ledger_version,
+    occurred_at: todayLocal(),
+    created_by: salesRepId || null
+  });
+  if (!commissions?.ok) console.warn("[VDG] commission overwrite left rows behind:", commissions?.skipped);
   if (publish) await _handOverToAccounting(repo, shipment);
   await _deletePnlLines(repo, ref);
   await _writePnlLines(repo, ref, shipment, shipment._ledger_version);

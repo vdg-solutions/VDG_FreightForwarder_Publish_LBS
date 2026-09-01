@@ -4,7 +4,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 import { buildShipment, deriveDirection } from './shipment-builder.js';
 import { pnlLineId, deletePnlLinesFor } from '../../../core_abstractions/ports/data/pnl-line-id.js';
-import { putShipment, rollbackShipmentCreate, getEnvelope, listEnvelopes } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { putShipment, rollbackShipmentCreate, overwriteCommissionEntries, getEnvelope, listEnvelopes } from '../../../core_abstractions/ports/data/shipment-repo.js';
 import { ensureShipmentStateAliases } from '../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../../core_abstractions/ports/flows/fsm-ingest.js';
 import { autoAdvanceShipment } from '../../../core_abstractions/ports/flows/fsm-auto-advance.js';
@@ -14,8 +14,6 @@ import { todayLocal } from '../../../../kernel/core_abstractions/util/today-loca
 
 const KIND_USER = 'user';
 const WARN_PNL_LINES_MISSING = 'pnl_lines_empty';
-// AC-08: max number of CE keys to attempt deletion during commission overwrite
-const MAX_CE_CLEANUP = 20;
 const INITIAL_LEDGER_VERSION = 1; // F-23-03 pm-decisions.md Q3: envelope-only field
 
 // window is undefined under node:test (this module is imported there directly) — guard
@@ -274,25 +272,19 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
   await _healJobNoCollision(repo, shipment, salesRepId);
   await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state
 
-  // Commission overwrite: delete existing CE records then write new set (PM-locked strategy).
-  for (let i = 1; i <= MAX_CE_CLEANUP; i++) {
-    await repo.delete('commission_entry', `${ref}-CE${i}`);
-  }
-  await repo.delete('commission_entry', `${ref}-CR1`);  // pre-F-15-59 compat
-
-  const commLines = state.commission_lines || [];
-  const written = [];
-  for (let i = 0; i < commLines.length; i++) {
-    const record = {
-      ...commLines[i],
-      shipment_ref:    ref,
-      occurred_at:     todayLocal(),
-      created_by:      salesRepId || null,
-      _ledger_version: shipment._ledger_version,
-    };
-    await repo.put('commission_entry', `${ref}-CE${i + 1}`, record);
-    written.push(record);
-  }
+  // Commission overwrite: ONE call. Which ids to sweep, that the sweep covers the full range so a
+  // shortened set leaves nothing behind, the pre-F-15-59 `-CR1` compatibility, and the row shape
+  // are all decisions — they live in `commission_entries.rs` (owner law 2026-09-01), not here.
+  // They also used to be stated twice: this loop's `MAX_CE_CLEANUP` and the rollback operator's
+  // own copy of the same bound.
+  const commissions = await overwriteCommissionEntries(repo, {
+    shipment_ref: ref,
+    lines: state.commission_lines || [],
+    ledger_version: shipment._ledger_version,
+    occurred_at: todayLocal(),
+    created_by: salesRepId || null,
+  });
+  if (!commissions?.ok) console.warn('[VDG] commission overwrite left rows behind:', commissions?.skipped); // DEV
 
   // F-37-05: an amendment publishes a NEW REVISION. Never an overwrite - Accounting may already
   // have raised an invoice from the previous one, and changing the figures under it is exactly

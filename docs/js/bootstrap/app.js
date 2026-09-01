@@ -237,7 +237,7 @@ import {
   deleteShipment,
   putEnvelope,
   putShipment
-} from "./chunk-Q3NWEQ2V.js";
+} from "./chunk-IOR2W5EP.js";
 import {
   bindSalesRegistry
 } from "./chunk-YFN2XPGT.js";
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 29a465c0">v0.4.56 (29a465c0)</span>
+        <span class="font-mono whitespace-nowrap" title="build b685b84e">v0.4.57 (b685b84e)</span>
       </div>
     `;
   }
@@ -2312,7 +2312,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.56 (29a465c0)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.57 (b685b84e)</div>
         </div>
       </div>
     </div>`;
@@ -4453,7 +4453,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-TODV6DTY.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-CMILUGCT.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4469,14 +4469,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-P2764B4T.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-UPIM76OP.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-P2764B4T.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-UPIM76OP.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4578,7 +4578,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.56 (29a465c0)";
+var APP_VERSION = "v0.4.57 (b685b84e)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4807,8 +4807,8 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-HL3DU6FG.js"),
-  "/shipments": () => import("./shipments-HMEWHDDL.js"),
+  "/dashboard": () => import("./dashboard-OGUQX34Q.js"),
+  "/shipments": () => import("./shipments-OJNJRGS6.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-2SUK5ZXY.js"),
   "/finance": () => import("./finance-dashboard-XARJ36ZW.js"),
@@ -4816,8 +4816,8 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-SGLKGZCR.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-MO2VWUWY.js"),
-  "/sales/analytics": () => import("./sales-analytics-QDT5QQ2H.js"),
+  "/sales/me": () => import("./sales-me-P2S6XLEQ.js"),
+  "/sales/analytics": () => import("./sales-analytics-73QOTSUJ.js"),
   "/sales/quote/new": () => import("./sales-quote-new-ODI237IK.js"),
   "/sales/quote": () => import("./sales-quote-list-EAHS6J3Y.js"),
   "/masters/customers": () => import("./masters-customers-SOEWXZND.js"),
@@ -4837,8 +4837,8 @@ var VIEWS = {
   "/manager/audit": () => import("./audit-YZBBMNU5.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-5E7WJGCQ.js"),
-  "/manager/finance/commissions": () => import("./commissions-5BGPBET6.js"),
+  "/manager/sales": () => import("./sales-AZZPV2MW.js"),
+  "/manager/finance/commissions": () => import("./commissions-UU5FPDW4.js"),
   "/manager/commission-rules": () => import("./commission-rules-562YSF6U.js"),
   "/manager/exceptions": () => import("./exceptions-57GTL7YN.js"),
   // E-15
@@ -4875,7 +4875,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-7PSYSSJF.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-CQ5YVYMR.js"),
+  "/accounting/settings": () => import("./settings-MMFEN43G.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06
@@ -4971,6 +4971,7 @@ function composeData(wasm4) {
     // and the caller is already holding the error that matters. Throwing here would replace it —
     // the exact failure this whole path was built to stop.
     rollbackShipmentCreate: async (_repo, ref) => await wasm4.data_rollback_shipment_create({ shipment_ref: ref }),
+    overwriteCommissionEntries: async (_repo, req) => await wasm4.data_overwrite_commission_entries(req),
     getShipment: async (_repo, ref) => {
       const reply = await wasm4.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
@@ -5819,8 +5820,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=29a465c0", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=29a465c0", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=b685b84e", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=b685b84e", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6485,7 +6486,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-S4BA6OXY.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-U3OM4D3K.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6493,7 +6494,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-EEVDWKAO.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-RNPYND6T.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6501,7 +6502,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-RKPJ4KFT.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-DSUL257Q.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;

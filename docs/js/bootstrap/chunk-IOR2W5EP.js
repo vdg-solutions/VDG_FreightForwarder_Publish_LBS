@@ -15,6 +15,7 @@ var getEnvelope = (...a) => _i().getEnvelope(...a);
 var listEnvelopes = (...a) => _i().listEnvelopes(...a);
 var deleteShipment = (...a) => _i().deleteShipment(...a);
 var rollbackShipmentCreate = (...a) => _i().rollbackShipmentCreate(...a);
+var overwriteCommissionEntries = (...a) => _i().overwriteCommissionEntries(...a);
 var getShipment = (...a) => _i().getShipment(...a);
 var listShipments = (...a) => _i().listShipments(...a);
 
@@ -28,6 +29,7 @@ export {
   listEnvelopes,
   deleteShipment,
   rollbackShipmentCreate,
+  overwriteCommissionEntries,
   getShipment,
   listShipments
 };

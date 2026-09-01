@@ -22,7 +22,7 @@ import "./chunk-NGKBNKFN.js";
 import {
   KIND_SHIPMENT,
   listShipments
-} from "./chunk-Q3NWEQ2V.js";
+} from "./chunk-IOR2W5EP.js";
 import {
   safeMasterLoad
 } from "./chunk-2CUGKPB3.js";

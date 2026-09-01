@@ -359,6 +359,12 @@ export function data_list_envelopes(req: any): Promise<any>;
 
 export function data_list_where(req: any): Promise<any>;
 
+/**
+ * Replace a shipment's whole commission-entry set — the delete-then-write procedure, its id
+ * scheme and its record shape, all decided in `CommissionEntries` rather than in a view file.
+ */
+export function data_overwrite_commission_entries(req: any): Promise<any>;
+
 export function data_pnl_line_id(req: any): any;
 
 export function data_publish_billing(req: any): Promise<any>;
@@ -1037,6 +1043,7 @@ export interface InitOutput {
     readonly data_join_loaded: (a: number) => number;
     readonly data_list_envelopes: (a: number) => number;
     readonly data_list_where: (a: number) => number;
+    readonly data_overwrite_commission_entries: (a: number) => number;
     readonly data_pnl_line_id: (a: number, b: number) => void;
     readonly data_publish_billing: (a: number) => number;
     readonly data_published_for: (a: number) => number;
@@ -1329,9 +1336,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13974: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13976: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10025: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13999: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_14001: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10050: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

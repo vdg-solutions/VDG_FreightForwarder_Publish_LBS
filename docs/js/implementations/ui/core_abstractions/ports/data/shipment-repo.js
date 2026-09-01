@@ -50,6 +50,9 @@ export const deleteShipment = (...a) => _i().deleteShipment(...a);
 /// (repo, ref) -> void. Undo a create that failed part-way — gated on `shipment.create`, the
 /// authority that wrote the record, not on the manager-only Void/Delete affordance.
 export const rollbackShipmentCreate = (...a) => _i().rollbackShipmentCreate(...a);
+/// (repo, {shipment_ref, lines, ledger_version, occurred_at, created_by}) -> {ok, skipped}.
+/// Replaces the whole commission-entry set; the id scheme and record shape are wasm's.
+export const overwriteCommissionEntries = (...a) => _i().overwriteCommissionEntries(...a);
 /// (repo, ref) -> the shipment rejoined with whatever revenue this reader can see, or null.
 export const getShipment = (...a) => _i().getShipment(...a);
 /// (repo, predicate?) -> joined shipments.

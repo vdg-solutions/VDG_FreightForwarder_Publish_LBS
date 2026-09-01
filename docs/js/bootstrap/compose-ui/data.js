@@ -87,6 +87,8 @@ export function composeData(wasm) {
     // the exact failure this whole path was built to stop.
     rollbackShipmentCreate: async (_repo, ref) =>
       await wasm.data_rollback_shipment_create({ shipment_ref: ref }),
+    overwriteCommissionEntries: async (_repo, req) =>
+      await wasm.data_overwrite_commission_entries(req),
     getShipment: async (_repo, ref) => {
       const reply = await wasm.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || 'the read failed');
