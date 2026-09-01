@@ -49,7 +49,7 @@ export function roleCheckboxesHtml(current = [], labelFor = (r) => r) {
 
 let _impl = null;
 
-/// Root bootstrap binds { deriveFork, allocateFork, isValidEmail, filterUsers,
+/// Root bootstrap binds { isValidEmail, filterUsers,
 /// sortUsersByEmail } once.
 export function bindUsersViewComposer(impl) { _impl = impl; }
 
@@ -58,10 +58,6 @@ function _i() {
   return _impl;
 }
 
-/// (email) -> the fork name the address implies
-export const deriveFork = (...a) => _i().deriveFork(...a);
-/// (email, users) -> an unused fork; #30: the fork is ALLOCATED, never typed by a manager
-export const allocateFork = (...a) => _i().allocateFork(...a);
 /// (email) -> well-formed enough to submit (Google OAuth is the real identity check)
 export const isValidEmail = (...a) => _i().isValidEmail(...a);
 /// (users, { search, role, activeFilter }) -> the matching users

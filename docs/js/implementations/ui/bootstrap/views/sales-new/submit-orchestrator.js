@@ -177,17 +177,6 @@ async function _mintFreeShipmentRef(repo, dir, salesRepId) {
   return await repo.mint_shipment_ref(dir, String(salesRepId || ''));
 }
 
-// Rollback steps run for their effect, never for their verdict — see submitForm's catch block.
-// A step that cannot run leaves an orphan the repost/reconcile pass already knows how to clean,
-// which is strictly better than losing the error that caused the rollback in the first place.
-async function _bestEffort(step) {
-  try {
-    await step();
-  } catch (cleanupErr) {
-    console.warn('[VDG] rollback step failed, original error preserved:', cleanupErr?.message || cleanupErr);
-  }
-}
-
 // validate → buildShipment → repo.put → commission_entries → post ledger → return
 // { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every repo.put this
 // call made (compensating delete, not a real transaction — pm-decisions.md Q3).
@@ -219,7 +208,6 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   // F-15-59: commission_lines is the ground-truth (embedded in shipment payload via
   // buildShipment); write one commission_entry row per line, mirrors updateForm.
   const commLines = shipment.commission_lines || [];
-  const writtenCe = [];
 
   try {
     for (let i = 0; i < commLines.length; i++) {
@@ -232,7 +220,6 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
         _ledger_version:   INITIAL_LEDGER_VERSION,
       };
       await repo.put('commission_entry', key, record);
-      writtenCe.push({ key, record });
     }
 
     // Materialize pnl_line entities so the Shipments list + analytics see this manual P&L.
@@ -244,16 +231,13 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
     if (publish) await _handOverToAccounting(repo, shipment);
     // Draft or Publish Pending: persist only. Accounting logic is now handled asynchronously by WASM.
   } catch (err) {
-    // Every step BEST-EFFORT, and `err` rethrown no matter what any of them does. This block used
-    // to `await deleteShipment(...)` first: that call is gated on `shipment.delete`, which is
-    // Manager-only, so for the CS and SalesRep desks it THREW — taking the two cleanups below with
-    // it and replacing the real failure with "access.action.denied:shipment.delete". The envelope
-    // written at putShipment then survived forever, and every retry minted a new ref and stranded
-    // another one: duplicate rows carrying no revenue, opening a blank detail panel. A rollback
-    // that can fail louder than the thing it is rolling back hides the only error worth reading.
-    await _bestEffort(() => rollbackShipmentCreate(repo, ref));
-    for (const { key } of writtenCe) await _bestEffort(() => repo.delete('commission_entry', key));
-    await _bestEffort(() => _deletePnlLines(repo, ref));
+    // ONE call, and `err` rethrown whatever it answers. Which records the compensation removes, in
+    // what order, and that a failing step never cancels the ones after it, are decisions — they
+    // live in shipment_create_rollback.rs (owner law 2026-09-01), not here. What JS keeps is the
+    // part that is genuinely UI: preserving the error the user needs to read, and saying out loud
+    // when the cleanup left something behind instead of letting an orphan go unmentioned.
+    const undo = await rollbackShipmentCreate(repo, ref).catch((e) => ({ ok: false, skipped: [e?.message || String(e)] }));
+    if (!undo?.ok) console.warn('[VDG] rollback left records behind:', undo?.skipped); // DEV
     throw err;
   }
 

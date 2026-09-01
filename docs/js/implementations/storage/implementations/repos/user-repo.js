@@ -37,7 +37,7 @@ export class UserStoreRepo extends UserRepoPort {
   async upsert(user) {
     const result = await this._repo().users_upsert(JSON.stringify(user));
     if (result?.added) {
-      this._userAuditLog?.write(USER_AUDIT_ADD_USER, user.email, null, { role: user.role, fork: user.fork }, []);
+      this._userAuditLog?.write(USER_AUDIT_ADD_USER, user.email, null, { role: user.role }, []);
     }
     return result;
   }
@@ -48,7 +48,7 @@ export class UserStoreRepo extends UserRepoPort {
       this._userAuditLog?.write(
         USER_AUDIT_DEACTIVATE_USER,
         email,
-        { role: result.prev?.role, fork: result.prev?.fork },
+        { role: result.prev?.role },
         { active: false },
         [],
       );

@@ -10,6 +10,23 @@ const UNKNOWN_OP_MESSAGE = 'unknown workspace op';
 function userRepo()   { return window.__vdg_user_repo || null; }
 function ledgerRepo() { return window.__vdg_ledger_repo || null; }
 
+// This file's own header says "raw passthrough, no decisions" — `userRepo()?.get(...) ?? null`
+// broke that promise twice over. A repo that is not mounted YET, and a read that came back with
+// nothing, both produced `null`, and `resolve_principal` reads a null grant as a decided "this
+// account holds no roles". That is the same collapse that locked every non-Manager out of the app
+// through the HTTP layer (CDB-API-08's 404), arriving by a second route that has nothing to do
+// with a status code: a boot-order race.
+//
+// Throwing is the honest answer. Rust already separates the two — `ResolvePrincipal::resolve`
+// keeps the roles it holds on `Err(_)` and only republishes on a value — so an unmounted repo
+// must reach it as a failure, never as an empty answer.
+const REPO_NOT_MOUNTED = 'user repo not mounted yet';
+function requireUserRepo() {
+  const repo = userRepo();
+  if (!repo) throw new Error(REPO_NOT_MOUNTED);
+  return repo;
+}
+
 /// The status and the rate-limit flag travel with the error instead of being flattened to a
 /// string, so a caller can tell a retryable Drive 429 apart from a real failure.
 async function workspaceTry(op, args) {
@@ -36,13 +53,13 @@ export const governancePlatform = {
   governance_workspace_try: workspaceTry,
   governance_workspace_name: async () => activeWorkspaceName() || '',
 
-  governance_users_list:   async ()       => (await userRepo()?.list()) ?? [],
-  governance_users_get:    async (email)  => (await userRepo()?.get(email)) ?? null,
-  governance_users_upsert: async (record) => (await userRepo()?.upsert(record)) ?? record,
-  governance_users_remove: async (email)  => { await userRepo()?.remove(email); },
+  governance_users_list:   async ()       => await requireUserRepo().list(),
+  governance_users_get:    async (email)  => await requireUserRepo().get(email),
+  governance_users_upsert: async (record) => await requireUserRepo().upsert(record),
+  governance_users_remove: async (email)  => { await requireUserRepo().remove(email); },
   // H4-e: the raw, restorable grant shape (no Users-screen role/workspace/created_at/active
   // projection) — the workspace backup export's own reach (UserStoreRepo.listRaw()).
-  governance_users_list_raw: async ()     => (await userRepo()?.listRaw()) ?? [],
+  governance_users_list_raw: async ()     => await requireUserRepo().listRaw(),
 
   governance_audit_append: async (kind, subject, action, detail) => {
     window.__vdg_audit_log?.append(kind, subject, action, detail);

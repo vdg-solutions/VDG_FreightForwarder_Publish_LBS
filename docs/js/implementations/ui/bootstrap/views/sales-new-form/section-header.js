@@ -2,7 +2,6 @@
 
 import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
-import { isAccountId } from '../../../../kernel/core_abstractions/util/account-id.js';
 import { getCurrentUser } from '../../../../storage/core_abstractions/identity.js';
 import { deriveDirection } from '../sales-new/shipment-builder.js';
 // the header fallback literal lives in ONE place; three copies is what the cross-side guards police
@@ -128,7 +127,7 @@ function repOptionLabel(r) {
 
 function repSel(reps, selected, currentUser) {
   const known  = (reps || []).some((r) => r.prefix === selected);
-  const legacy = selected && !known && isAccountId(selected)
+  const legacy = selected && !known && window.__vdg_wasm?.access_is_account(selected)
     ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : '';
   const opts = (reps || []).map((r) =>
     `<option value="${r.prefix}"${r.prefix === selected ? ' selected' : ''}>${repOptionLabel(r)}</option>`).join('');

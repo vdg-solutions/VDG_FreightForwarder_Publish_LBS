@@ -84,7 +84,7 @@ function buildColDefs(root) {
   return [
     { field: "email", headerName: t("email"), flex: 1 },
     { field: "name", headerName: t("name"), width: 160 },
-    { field: "sales_code", headerName: t("admin.users.column.fork"), width: 100 },
+    { field: "sales_code", headerName: t("admin.users.column.sales_code"), width: 100 },
     { field: "commission_pct_override", headerName: t("users.edit.field.commission_override"), width: 140 },
     {
       field: "last_login_at",

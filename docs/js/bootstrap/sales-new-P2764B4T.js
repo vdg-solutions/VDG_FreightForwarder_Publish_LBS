@@ -51,7 +51,7 @@ import {
 } from "./chunk-Z6T6WECV.js";
 import {
   ROLE_LABEL_KEYS
-} from "./chunk-P5SY6HRX.js";
+} from "./chunk-V332J5YU.js";
 import {
   DEFAULT_CURRENCY_FIELD,
   readSettings
@@ -284,12 +284,6 @@ function _lineToDraft(ln, s) {
   };
 }
 
-// output/web/js.tmp/implementations/kernel/core_abstractions/util/account-id.js
-function isAccountId(token) {
-  const s = String(token ?? "");
-  return s.includes("@") && !/\s/.test(s) && s === s.toLowerCase();
-}
-
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new/shipment-builder.js
 var SOURCE_ORIGIN = "form-entry";
 var PARSER_ID = "form-v1";
@@ -519,7 +513,7 @@ function repOptionLabel(r) {
 }
 function repSel(reps, selected, currentUser) {
   const known = (reps || []).some((r) => r.prefix === selected);
-  const legacy = selected && !known && isAccountId(selected) ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : "";
+  const legacy = selected && !known && window.__vdg_wasm?.access_is_account(selected) ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : "";
   const opts = (reps || []).map((r) => `<option value="${r.prefix}"${r.prefix === selected ? " selected" : ""}>${repOptionLabel(r)}</option>`).join("");
   return `<select name="sales_rep" class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs">
     <option value="">${t("sales_new.select_placeholder")}</option>${legacy}${opts}
@@ -3124,13 +3118,6 @@ async function _mintFreeShipmentRef(repo, dir, salesRepId) {
   if (!repo?.mint_shipment_ref) throw new Error("WASM repo not ready");
   return await repo.mint_shipment_ref(dir, String(salesRepId || ""));
 }
-async function _bestEffort(step) {
-  try {
-    await step();
-  } catch (cleanupErr) {
-    console.warn("[VDG] rollback step failed, original error preserved:", cleanupErr?.message || cleanupErr);
-  }
-}
 async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultLedgerRepo(), opts = {}) {
   if (!repo) throw new Error("Repo not available");
   const publish = opts.publish !== false;
@@ -3148,7 +3135,6 @@ async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultLedgerRe
     warnings.push(WARN_PNL_LINES_MISSING);
   }
   const commLines = shipment.commission_lines || [];
-  const writtenCe = [];
   try {
     for (let i = 0; i < commLines.length; i++) {
       const key = `${ref}-CE${i + 1}`;
@@ -3160,14 +3146,12 @@ async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultLedgerRe
         _ledger_version: INITIAL_LEDGER_VERSION
       };
       await repo.put("commission_entry", key, record);
-      writtenCe.push({ key, record });
     }
     await _writePnlLines(repo, ref, shipment, INITIAL_LEDGER_VERSION);
     if (publish) await _handOverToAccounting(repo, shipment);
   } catch (err) {
-    await _bestEffort(() => rollbackShipmentCreate(repo, ref));
-    for (const { key } of writtenCe) await _bestEffort(() => repo.delete("commission_entry", key));
-    await _bestEffort(() => _deletePnlLines(repo, ref));
+    const undo = await rollbackShipmentCreate(repo, ref).catch((e) => ({ ok: false, skipped: [e?.message || String(e)] }));
+    if (!undo?.ok) console.warn("[VDG] rollback left records behind:", undo?.skipped);
     throw err;
   }
   const advancedTo = await autoAdvanceShipment(repo, shipment);

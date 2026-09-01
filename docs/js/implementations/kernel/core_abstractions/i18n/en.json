@@ -944,7 +944,7 @@
   "admin.users.column.email": "Email",
   "admin.users.column.display_name": "Display Name",
   "admin.users.column.role": "Role",
-  "admin.users.column.fork": "Home folder",
+  "admin.users.column.sales_code": "Sales code",
   "admin.users.prefix.auto_hint": "Assigned automatically from the email. A clash adds 4 digits.",
   "admin.users.fork.fixed_hint": "Fixed — this is where this person's data lives.",
   "admin.users.column.active": "Status",

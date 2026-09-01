@@ -15,11 +15,8 @@ export const BRIDGE_EXPORTS = [
   'get_transition_log',
   'import_booking_excel_wasm',
   'verify_license',
-  'permission_can_pull',
-  'permission_can_push',
   'permission_can_merge',
-  'permission_can_push_own_fork',
-  'permission_resolve_grants',
+  'access_is_account',
   // #28: route/nav authority — route-guard.js reads these; without globalizing them it falls back
   // to window.__vdg_wasm and a boot path that skipped the loader would silently deny every route.
   'access_can_route',
@@ -64,8 +61,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL('pkg/vdg_freight.js?v=299388d2', document.baseURI).href);
-      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=299388d2', document.baseURI).href;
+      const mod = await import(new URL('pkg/vdg_freight.js?v=6c0564b9', document.baseURI).href);
+      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=6c0564b9', document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

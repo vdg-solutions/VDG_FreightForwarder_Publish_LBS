@@ -6,7 +6,6 @@
 // file only answers and acts. The timeouts stay here too, so no timer leaks into an inner layer.
 import { getCurrentUser, signOut, wasPreviouslySignedIn, rebuildSessionFromStoredToken, ROLE_CACHE_KEY }
   from '../../implementations/storage/core_abstractions/identity.js';
-import { rememberGrantAreas, GRANT_AREAS_KEY } from '../../implementations/storage/core_abstractions/grant-file.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { workspaceAuthority } from '../../implementations/storage/core_abstractions/workspace-authority.js';
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
@@ -61,7 +60,6 @@ export const authPlatform = {
   auth_sign_out:                async () => { await signOut(); },
   auth_set_store_scope:         async (email) => { setStoreScope(email); },
   auth_active_workspace_name:   async () => activeWorkspaceName() || null,
-  auth_remember_grant_areas:    async (areas) => { rememberGrantAreas(areas ?? []); },
 
   // F-57-01 AC-04: does this browser already hold at least one synced entity row? Runs before
   // repo-init, straight to the SQLite singleton (which opens the worker + creates the schema on
@@ -93,7 +91,6 @@ export const authPlatform = {
     // E-43: the grant manifest answers the same question as the role cache and is written by the
     // same probe. Dropping one without the other leaves a session holding folder ids for access it
     // may no longer have.
-    try { localStorage.removeItem(GRANT_AREAS_KEY); } catch { /* nothing stored */ }
   },
 
   // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is

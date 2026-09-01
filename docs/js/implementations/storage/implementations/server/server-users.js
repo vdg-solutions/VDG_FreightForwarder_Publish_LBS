@@ -1,6 +1,6 @@
 // server-users.js — F-46-03: user management moves server-side. Three thin calls onto
-// vdg-server's /api/users routes; the server does the grant write + fork-folder create in one
-// request now (no more read-grant / CAS-write-grant / create-fork-folder round trips from here).
+// vdg-server's /api/users routes; the server writes the grant row in one request (no read-grant
+// / CAS-write-grant round trip from here, and no folder to create -- collections are flat).
 //
 // GET is the safe projection (email, display_name, roles, active) any signed-in account may read
 // — the sales-rep picker's source. `includeInactive` also returns deactivated rows and is

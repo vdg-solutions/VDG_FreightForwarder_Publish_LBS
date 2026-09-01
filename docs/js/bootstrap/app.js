@@ -155,7 +155,7 @@ import {
 } from "./chunk-Z6T6WECV.js";
 import {
   bindUsersViewComposer
-} from "./chunk-P5SY6HRX.js";
+} from "./chunk-V332J5YU.js";
 import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 299388d2">v0.4.51 (299388d2)</span>
+        <span class="font-mono whitespace-nowrap" title="build 6c0564b9">v0.4.52 (6c0564b9)</span>
       </div>
     `;
   }
@@ -1025,8 +1025,8 @@ function renderSwBanner(host) {
 async function handleFileUpload(host, e) {
   const file = e.target.files?.[0];
   if (!file) return;
-  const repo3 = window.__vdg_repo;
-  if (!repo3) return;
+  const repo4 = window.__vdg_repo;
+  if (!repo4) return;
   window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.processing") } }));
   try {
     const text = await file.text();
@@ -1035,7 +1035,7 @@ async function handleFileUpload(host, e) {
     let count = 0;
     for (const item of data) {
       if (!item?.id) throw new Error('Import item missing "id" field.');
-      await putEnvelope(repo3, item.id, item);
+      await putEnvelope(repo4, item.id, item);
       count++;
       if (count % 500 === 0) {
         window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "info", message: t("topbar.import.progress", { count, total: data.length }) } }));
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.51 (299388d2)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.52 (6c0564b9)</div>
         </div>
       </div>
     </div>`;
@@ -2366,31 +2366,7 @@ function storageApi() {
   return _api;
 }
 
-// output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
-var _impl3 = null;
-function bindKeyValueStore(impl) {
-  _impl3 = impl;
-}
-function _i3() {
-  if (!_impl3) throw new Error("kernel/key-value: no adapter bound (the kernel bootstrap binds it)");
-  return _impl3;
-}
-var kvSet = (...a) => _i3().setItem(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/grant-file.js
-var GRANT_AREAS_KEY = "vdg.grant.areas";
-function rememberGrantAreas(areas) {
-  if (!Array.isArray(areas) || areas.length === 0) return;
-  try {
-    kvSet(GRANT_AREAS_KEY, JSON.stringify(areas));
-  } catch {
-  }
-}
-
 // output/web/js.tmp/implementations/storage/core_abstractions/workspace-authority.js
-var VERDICT_MANAGER = "manager";
-var VERDICT_GRANT = "grant";
-var VERDICT_NOT_PROVISIONED = "not_provisioned";
 var _adapter = null;
 function bindWorkspaceAuthority(adapter) {
   _adapter = adapter;
@@ -2436,9 +2412,6 @@ var authPlatform = {
     setStoreScope(email);
   },
   auth_active_workspace_name: async () => activeWorkspaceName() || null,
-  auth_remember_grant_areas: async (areas) => {
-    rememberGrantAreas(areas ?? []);
-  },
   // F-57-01 AC-04: does this browser already hold at least one synced entity row? Runs before
   // repo-init, straight to the SQLite singleton (which opens the worker + creates the schema on
   // first op). Any failure (no OPFS, timeout) reads as "no cache" — the safe fall-through.
@@ -2466,10 +2439,6 @@ var authPlatform = {
   },
   auth_cache_clear: async () => {
     localStorage.removeItem(ROLE_CACHE_KEY);
-    try {
-      localStorage.removeItem(GRANT_AREAS_KEY);
-    } catch {
-    }
   },
   // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is
   // announcement-only now — a real change fires the event, the chrome re-renders and re-reads.
@@ -2563,70 +2532,7 @@ var cachePlatform = {
 
 // output/web/js.tmp/bootstrap/platform/data.js
 var AUDIT_STORE_REVENUE = "revenue_audit_log";
-var JSONL_SUFFIX = ".jsonl";
-var _scans = /* @__PURE__ */ new Map();
-function ioPort() {
-  return window.__vdg_io || null;
-}
-function isAnsweredStatus(status) {
-  const wasm3 = window.__vdg_wasm;
-  if (!wasm3?.governance_classify_read_status) return false;
-  return wasm3.governance_classify_read_status({ status: status ?? null }).decided;
-}
-async function readForkBundles(dir) {
-  const io2 = ioPort();
-  if (!io2) return [];
-  let listing;
-  try {
-    listing = await io2.ws_list_dir(dir);
-  } catch (err) {
-    if (isAnsweredStatus(err?.status)) return [];
-    throw err;
-  }
-  if (!listing?.files?.length) return [];
-  const bodies = [];
-  for (const file of listing.files) {
-    if (!file.name.endsWith(JSONL_SUFFIX)) continue;
-    try {
-      window.__vdg_repo?.network_rate_check();
-    } catch {
-      break;
-    }
-    let res;
-    try {
-      res = await io2.ws_read_file(dir, file.name);
-    } catch (err) {
-      if (isAnsweredStatus(err?.status)) continue;
-      throw err;
-    }
-    if (!res?.found) continue;
-    bodies.push(String(res.content));
-  }
-  return bodies;
-}
 var dataPlatform = {
-  /// Every *.jsonl body in one fork folder. A folder this reader was never granted (403/404)
-  /// yields [] — "no file" is the correct answer. A folder that could not be READ (401/429/5xx/
-  /// transport) throws instead of yielding [] — see readForkBundles/isAnsweredStatus above.
-  data_fork_read_jsonl: async (dir, ttlMs) => {
-    const hit = _scans.get(dir);
-    if (ttlMs > 0 && hit && Date.now() - hit.at < ttlMs) return hit.bodies;
-    const bodies = await readForkBundles(dir);
-    if (ttlMs > 0) _scans.set(dir, { at: Date.now(), bodies });
-    return bodies;
-  },
-  data_clear_fork_scan: async (prefix) => {
-    if (!prefix) {
-      _scans.clear();
-      return;
-    }
-    for (const dir of [..._scans.keys()]) {
-      if (dir.startsWith(`users/${prefix}/`)) _scans.delete(dir);
-    }
-  },
-  /// The identity the fork paths are actually built from — `_resolveFolder` builds `users/{prefix}`
-  /// from the io port's own userEmail, and a mirror of it can be stale.
-  data_io_user_email: async () => ioPort()?.userEmail || "",
   /// The licence claim the boot gate stamped; null when it has not run.
   data_license_status: async () => window.__vdg_license_status ?? null,
   /// Append one shipment change list to the trail its readers already hold.
@@ -2698,6 +2604,12 @@ function userRepo() {
 function ledgerRepo2() {
   return window.__vdg_ledger_repo || null;
 }
+var REPO_NOT_MOUNTED = "user repo not mounted yet";
+function requireUserRepo() {
+  const repo4 = userRepo();
+  if (!repo4) throw new Error(REPO_NOT_MOUNTED);
+  return repo4;
+}
 async function workspaceTry(op2, args) {
   const api = storageApi();
   if (typeof api[op2] !== "function") {
@@ -2720,15 +2632,15 @@ async function workspaceTry(op2, args) {
 var governancePlatform = {
   governance_workspace_try: workspaceTry,
   governance_workspace_name: async () => activeWorkspaceName() || "",
-  governance_users_list: async () => await userRepo()?.list() ?? [],
-  governance_users_get: async (email) => await userRepo()?.get(email) ?? null,
-  governance_users_upsert: async (record) => await userRepo()?.upsert(record) ?? record,
+  governance_users_list: async () => await requireUserRepo().list(),
+  governance_users_get: async (email) => await requireUserRepo().get(email),
+  governance_users_upsert: async (record) => await requireUserRepo().upsert(record),
   governance_users_remove: async (email) => {
-    await userRepo()?.remove(email);
+    await requireUserRepo().remove(email);
   },
   // H4-e: the raw, restorable grant shape (no Users-screen role/workspace/created_at/active
   // projection) — the workspace backup export's own reach (UserStoreRepo.listRaw()).
-  governance_users_list_raw: async () => await userRepo()?.listRaw() ?? [],
+  governance_users_list_raw: async () => await requireUserRepo().listRaw(),
   governance_audit_append: async (kind, subject, action, detail) => {
     window.__vdg_audit_log?.append(kind, subject, action, detail);
   },
@@ -2737,45 +2649,19 @@ var governancePlatform = {
   },
   governance_ledger_accounts: async () => await ledgerRepo2()?.chartOfAccounts() ?? [],
   governance_ledger_balance: async (account, asOf) => {
-    const repo3 = ledgerRepo2();
-    if (!repo3) throw new Error("ledger repo not ready");
-    return repo3.getBalance(account, asOf);
+    const repo4 = ledgerRepo2();
+    if (!repo4) throw new Error("ledger repo not ready");
+    return repo4.getBalance(account, asOf);
   },
   // F1: reuses the same fx-rates domain island the FX admin screen and the sales-new P&L form
   // resolve through — period close asks for a number the same way a P&L line does.
   governance_fx_closing_rate: async (date, pair, direction) => fxRateRepo.getRate(date, pair, direction)
 };
 
-// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
-var _impl4 = null;
-function bindBackend(impl) {
-  _impl4 = impl;
-}
-function _i4() {
-  if (!_impl4) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
-  return _impl4;
-}
-var apiFetch = (...a) => _i4().apiFetch(...a);
-var rememberSessionToken = (...a) => _i4().rememberSessionToken(...a);
-var adoptSessionToken = (...a) => _i4().adoptSessionToken(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
-var ApiError = class extends Error {
-  constructor(status, message, params) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.params = params || {};
-  }
-};
-
 // output/web/js.tmp/bootstrap/platform/flows.js
 var JSZIP_CDN = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 var ZIP_COMPRESSION = "DEFLATE";
 var ZIP_LEVEL = 6;
-var HTTP_TRANSPORT_FAILURE = 0;
-var HTTP_NOT_FOUND = 404;
-var HTTP_CONFLICT = 409;
 function wasm() {
   return window.__vdg_wasm;
 }
@@ -2830,43 +2716,15 @@ var flowsPlatform = {
     URL.revokeObjectURL(url);
     return { ok: true };
   },
-  // Read-or-create a CharterDB record (jobno_lease.rs's per-rep-code counter file): `dirId` names
-  // the collection, `name` is the record id — the same `${collection}/${id}` addressing
-  // ws_read_file/ws_write_file already use, so the `id` handed back here round-trips through
-  // flows_cas_upload below. etag/content ride along too (the CAS loop's compare-and-swap target),
-  // captured straight from the GET/POST response instead of a separate getFile round trip. A 409
-  // on create just means another device seeded it first — the record is there either way, which is
-  // exactly what "get or create" asks for, but with no etag of its own to hand back: the caller's
-  // next CAS attempt re-reads and gets one then.
-  flows_get_or_create_file: async (dirId, name, content) => {
-    const collection = normCollection(dirId);
-    try {
-      const existing = await apiFetch("GET", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(name)}`);
-      return { id: `${collection}/${name}`, etag: existing.etag ?? null, content: existing.content ?? null };
-    } catch (err) {
-      if (!(err instanceof ApiError) || err.status !== HTTP_NOT_FOUND) throw err;
-    }
-    try {
-      const created = await apiFetch("POST", `/records/${encodeURIComponent(collection)}`, { id: name, owner: currentUserEmail(), content });
-      return { id: `${collection}/${name}`, etag: created.etag ?? null, content: created.content ?? content };
-    } catch (err) {
-      if (!(err instanceof ApiError) || err.status !== HTTP_CONFLICT) throw err;
-    }
-    return { id: `${collection}/${name}` };
-  },
-  // A lost CAS race (412) is an expected outcome of a counter claim, so it answers instead of
-  // throwing — the operator decides whether to retry. `fileId` is the `${collection}/${name}` id
-  // flows_get_or_create_file above hands back; CharterDB's own If-Match does the compare-and-swap.
-  flows_cas_upload: async (fileId, name, body, etag) => {
-    const suffix = `/${name}`;
-    const collection = String(fileId || "").endsWith(suffix) ? fileId.slice(0, -suffix.length) : "";
-    try {
-      await apiFetch("PUT", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(name)}`, { content: body }, { "If-Match": etag });
-      return { ok: true, status: HTTP_TRANSPORT_FAILURE };
-    } catch (err) {
-      return { ok: false, status: err?.status ?? HTTP_TRANSPORT_FAILURE };
-    }
-  },
+  // Read-or-create a CharterDB record (jobno_lease.rs's per-rep-code counter file). The HTTP is
+  // Rust's (store::implementations::http_flows) — this dispatches and supplies the one fact the
+  // shell owns, the signed-in email that becomes the new record's declared owner.
+  flows_get_or_create_file: async (dirId, name, content) => await repo2().flows_get_or_create_record(normCollection(dirId), name, content, currentUserEmail()),
+  // `fileId` is the `${collection}/${name}` id flows_get_or_create_file hands back. Splitting it
+  // is Rust's now too (http_request::split_file_id, on the LAST separator — a collection may
+  // contain one, which the JS suffix-strip here got right only by accident). `name` stays in the
+  // signature because jobno_lease.rs's port declares it; the id already carries it.
+  flows_cas_upload: async (fileId, name, body, etag) => await repo2().flows_cas_put(fileId, body, etag),
   flows_shipments_call: async (op2, args) => {
     const call = SHIPMENT_OPS[op2];
     if (!call) throw new Error(`flows_shipments_call: unknown op ${op2}`);
@@ -2881,26 +2739,26 @@ var flowsPlatform = {
 
 // output/web/js.tmp/bootstrap/platform/index.js
 var PREFS_NS = "prefs";
-function createPlatform({ repo: repo3 }) {
+function createPlatform({ repo: repo4 }) {
   const base = {
-    records_get: (kind, id) => repo3.get(kind, id),
-    records_list: (kind) => repo3.list(kind),
-    records_put: (kind, id, body) => repo3.put(kind, id, body),
+    records_get: (kind, id) => repo4.get(kind, id),
+    records_list: (kind) => repo4.list(kind),
+    records_put: (kind, id, body) => repo4.put(kind, id, body),
     // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
     // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
-    records_put_labeled: (kind, id, body, labels) => repo3.put_labeled(kind, id, body, labels),
+    records_put_labeled: (kind, id, body, labels) => repo4.put_labeled(kind, id, body, labels),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
-    records_invalidate_period_cache: (kind, period) => repo3.invalidate_period_cache(kind, period),
-    records_delete: (kind, id) => repo3.delete(kind, id),
+    records_invalidate_period_cache: (kind, period) => repo4.invalidate_period_cache(kind, period),
+    records_delete: (kind, id) => repo4.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     records_get_meta: (key) => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,
     records_put_meta: (key, body) => window.__vdg_io ? window.__vdg_io.cache_put_meta(key, body) : null,
     // H4-d: the two bespoke stores (month-partitioned, no `kind` records_list can route to) the
     // workspace backup export reaches directly — same repo object, dedicated dump methods
     // (store::bootstrap::wasm_repo_stores::fx_list_all/awb_list_all).
-    records_fx_list_all: () => repo3.fx_list_all(),
-    records_awb_list_all: () => repo3.awb_list_all(),
+    records_fx_list_all: () => repo4.fx_list_all(),
+    records_awb_list_all: () => repo4.awb_list_all(),
     prefs_get: async (key) => {
       const v = localStorage.getItem(`${PREFS_NS}:${key}`);
       return v == null ? null : JSON.parse(v);
@@ -2989,64 +2847,87 @@ function composeAuth(wasm3) {
   }
 }
 
+// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
+var _impl3 = null;
+function bindBackend(impl) {
+  _impl3 = impl;
+}
+function _i3() {
+  if (!_impl3) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
+  return _impl3;
+}
+var apiFetch = (...a) => _i3().apiFetch(...a);
+var rememberSessionToken = (...a) => _i3().rememberSessionToken(...a);
+var adoptSessionToken = (...a) => _i3().adoptSessionToken(...a);
+
 // output/web/js.tmp/implementations/storage/core_abstractions/server-session.js
 var SERVER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
-var _impl5 = null;
+var _impl4 = null;
 function bindServerSession(impl) {
+  _impl4 = impl;
+}
+function _i4() {
+  if (!_impl4) throw new Error("storage/server-session: no adapter bound (the storage bootstrap binds it)");
+  return _impl4;
+}
+var serverSessionIdentity = (...a) => _i4().serverSessionIdentity(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/popup-guard.js
+var _impl5 = null;
+function bindPopupGuard(impl) {
   _impl5 = impl;
 }
 function _i5() {
-  if (!_impl5) throw new Error("storage/server-session: no adapter bound (the storage bootstrap binds it)");
+  if (!_impl5) throw new Error("storage/popup-guard: no adapter bound (the storage bootstrap binds it)");
   return _impl5;
 }
-var serverSessionIdentity = (...a) => _i5().serverSessionIdentity(...a);
-
-// output/web/js.tmp/implementations/storage/core_abstractions/popup-guard.js
-var _impl6 = null;
-function bindPopupGuard(impl) {
-  _impl6 = impl;
-}
-function _i6() {
-  if (!_impl6) throw new Error("storage/popup-guard: no adapter bound (the storage bootstrap binds it)");
-  return _impl6;
-}
-var ensureWindowOpen = (...a) => _i6().ensureWindowOpen(...a);
+var ensureWindowOpen = (...a) => _i5().ensureWindowOpen(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/token-anchor.js
 var ANCHOR_EVT_POPUP_BLOCKED = "popup-blocked";
 var ANCHOR_EVT_SIGNIN_REQUIRED = "signin-required";
-var _impl7 = null;
+var _impl6 = null;
 function bindTokenAnchorFactory(impl) {
-  _impl7 = impl;
+  _impl6 = impl;
 }
-function _i7() {
-  if (!_impl7) throw new Error("storage/token-anchor: no adapter bound (the storage bootstrap binds it)");
-  return _impl7;
+function _i6() {
+  if (!_impl6) throw new Error("storage/token-anchor: no adapter bound (the storage bootstrap binds it)");
+  return _impl6;
 }
-var createTokenAnchor = (...a) => _i7().createTokenAnchor(...a);
+var createTokenAnchor = (...a) => _i6().createTokenAnchor(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/token.js
 var ACCESS_TOKEN_ISSUED_KEY = "vdg.auth.access_token_issued";
-var _impl8 = null;
+var _impl7 = null;
 function bindTokenAuthority(impl) {
+  _impl7 = impl;
+}
+function _i7() {
+  if (!_impl7) throw new Error("storage/token: no adapter bound (the storage bootstrap binds it)");
+  return _impl7;
+}
+var reconnectInteractive = (...a) => _i7().reconnectInteractive(...a);
+
+// output/web/js.tmp/implementations/storage/core_abstractions/events.js
+var _impl8 = null;
+function bindEventBus(impl) {
   _impl8 = impl;
 }
 function _i8() {
-  if (!_impl8) throw new Error("storage/token: no adapter bound (the storage bootstrap binds it)");
+  if (!_impl8) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
   return _impl8;
 }
-var reconnectInteractive = (...a) => _i8().reconnectInteractive(...a);
+var dispatchAppEvent = (...a) => _i8().dispatchAppEvent(...a);
 
-// output/web/js.tmp/implementations/storage/core_abstractions/events.js
-var _impl9 = null;
-function bindEventBus(impl) {
-  _impl9 = impl;
-}
-function _i9() {
-  if (!_impl9) throw new Error("storage/events: no adapter bound (the storage bootstrap binds it)");
-  return _impl9;
-}
-var dispatchAppEvent = (...a) => _i9().dispatchAppEvent(...a);
+// output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
+var ApiError = class extends Error {
+  constructor(status, message, params) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.params = params || {};
+  }
+};
 
 // output/web/js.tmp/implementations/storage/implementations/server/backend.js
 var HEALTH_PATH = "/api/health";
@@ -3209,17 +3090,21 @@ async function apiFetchOnce(method, path, body = void 0, extraHeaders = {}) {
 }
 var backend = { detectBackend, apiFetch: apiFetch2, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
 
+// output/web/js.tmp/implementations/storage/implementations/server/server-role.js
+function repo3() {
+  const r = window.__vdg_repo;
+  if (!r?.auth_fetch_me) throw new Error("WASM repo not ready");
+  return r;
+}
+async function probeRole(_user, _wsName) {
+  return await repo3().auth_fetch_me();
+}
+var serverWorkspaceAuthority = { probeRole };
+
 // output/web/js.tmp/implementations/storage/implementations/server/server-session.js
 async function serverSessionIdentity2() {
-  try {
-    console.log("[Auth] Fetching /me to check server session...");
-    const me = await apiFetch("GET", "/me");
-    console.log("[Auth] /me response:", me);
-    return me?.email ? { email: me.email, name: me.name || "" } : null;
-  } catch (e) {
-    console.error("[Auth] serverSessionIdentity failed (401 or unreachable):", e);
-    return null;
-  }
+  const me = await probeRole(null, null);
+  return me?.email ? { email: me.email, name: me.name || "" } : null;
 }
 var serverSession = { serverSessionIdentity: serverSessionIdentity2 };
 
@@ -3238,24 +3123,6 @@ async function createUser({ email, display_name, roles }) {
 async function patchUser(email, body) {
   return apiFetch("PATCH", `${USERS_PATH}/${encodeURIComponent(email)}`, body);
 }
-
-// output/web/js.tmp/implementations/kernel/core_abstractions/util/fork-id.js
-function forkId(email) {
-  return (email || "").trim().toLowerCase();
-}
-
-// output/web/js.tmp/implementations/storage/implementations/server/server-role.js
-async function probeRole(user, _wsName) {
-  const me = await apiFetch("GET", "/me");
-  const roles = Array.isArray(me?.roles) ? me.roles.filter(Boolean) : [];
-  const areas = Array.isArray(me?.areas) ? me.areas.map((a) => ({ path: a.path, folder_id: a.folder_id })) : [];
-  if (roles.length > 0) {
-    return { kind: VERDICT_GRANT, token: String(me.fork || forkId(user.email)).toUpperCase(), roles, areas };
-  }
-  if (me?.is_owner) return { kind: VERDICT_MANAGER };
-  return { kind: VERDICT_NOT_PROVISIONED };
-}
-var serverWorkspaceAuthority = { probeRole };
 
 // output/web/js.tmp/implementations/storage/core_abstractions/io-port-shared.js
 var UNKNOWN_AUTHOR = "unknown";
@@ -3319,14 +3186,12 @@ var KIND_PATH_OVERRIDES = {
 };
 
 // output/web/js.tmp/implementations/storage/implementations/server/server-io-adapters.js
-var HTTP_NOT_FOUND2 = 404;
+var HTTP_NOT_FOUND = 404;
 var HTTP_PRECONDITION = 412;
 var CAS_FAILED_MSG = "412 Precondition Failed";
 var ServerIoPort = class extends SharedIoPort {
-  // `fork` accepted for call-site compatibility (createIoPort passes one) but unused: it only
-  // ever fed document_collection_kind's users/{fork}/{kind} prefix-strip, which had no caller
-  // left once the change feed started reporting `collection` directly (CDB-CF-03) instead of a
-  // folder id needing that reverse lookup.
+  // The third argument is accepted for call-site compatibility (createIoPort passes one) and is
+  // unused: it named a per-user folder, and collections are flat.
   constructor(serverApi, userEmail, _fork = null) {
     super(userEmail);
     this.serverApi = serverApi;
@@ -3338,7 +3203,7 @@ var ServerIoPort = class extends SharedIoPort {
       if (!res?.id) return { found: false, content: "", etag: null, version: null, owner: null };
       return { found: true, content: res.content ?? "", etag: res.etag ?? null, version: res.version, owner: res.owner ?? null };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
         return { found: false, content: "", etag: null, version: null, owner: null };
       }
       throw err;
@@ -3393,7 +3258,7 @@ var ServerIoPort = class extends SharedIoPort {
       await apiFetch("DELETE", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
       return true;
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) return false;
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) return false;
       throw err;
     }
   }
@@ -3411,7 +3276,7 @@ var ServerIoPort = class extends SharedIoPort {
       const res = await apiFetch("GET", url);
       return { records: res?.records ?? [], next_cursor: res?.next_cursor ?? null, has_more: res?.has_more ?? false };
     } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND2) {
+      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
         return { records: [], next_cursor: null, has_more: false };
       }
       throw err;
@@ -3728,16 +3593,16 @@ function createTokenAnchor2({
 var tokenAnchorFactory = { createTokenAnchor: createTokenAnchor2 };
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/base64.js
-var _impl10 = null;
+var _impl9 = null;
 function bindBase64(impl) {
-  _impl10 = impl;
+  _impl9 = impl;
 }
-function _i10() {
-  if (!_impl10) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
-  return _impl10;
+function _i9() {
+  if (!_impl9) throw new Error("kernel/base64: no adapter bound (the kernel bootstrap binds it)");
+  return _impl9;
 }
-var b64Decode = (...a) => _i10().decode(...a);
-var b64Encode = (...a) => _i10().encode(...a);
+var b64Decode = (...a) => _i9().decode(...a);
+var b64Encode = (...a) => _i9().encode(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/id-token.js
 var TOKEN_KEY = "vdg.auth.id_token";
@@ -4285,17 +4150,23 @@ function createIoPort(serverApi, userEmail, forkPrefix) {
   return new ServerIoPort(serverApi, userEmail, forkPrefix);
 }
 
+// output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
+var _impl10 = null;
+function bindKeyValueStore(impl) {
+  _impl10 = impl;
+}
+
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/visibility.js
 var _impl11 = null;
 function bindVisibility(impl) {
   _impl11 = impl;
 }
-function _i11() {
+function _i10() {
   if (!_impl11) throw new Error("kernel/visibility: no adapter bound (the kernel bootstrap binds it)");
   return _impl11;
 }
-var isPageVisible = (...a) => _i11().isPageVisible(...a);
-var onVisibilityChange = (...a) => _i11().onVisibilityChange(...a);
+var isPageVisible = (...a) => _i10().isPageVisible(...a);
+var onVisibilityChange = (...a) => _i10().onVisibilityChange(...a);
 
 // output/web/js.tmp/implementations/kernel/implementations/browser-platform.js
 var browserClock = {
@@ -4589,14 +4460,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-AGUG4JCH.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-P2764B4T.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-AGUG4JCH.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-P2764B4T.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4698,7 +4569,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.51 (299388d2)";
+var APP_VERSION = "v0.4.52 (6c0564b9)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4768,17 +4639,17 @@ function initConflictModal() {
       </div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    const repo3 = window.__vdg_repo;
+    const repo4 = window.__vdg_repo;
     const mergeBase = merged && typeof merged === "object" ? merged : null;
     dlg.querySelector("#keep-mine").addEventListener("click", async () => {
       const mine = { ...mergeBase ?? local, _rev: remote?._rev };
       for (const c of conflicts || []) mine[c.field] = c.local_val;
-      await repo3?.put(kind, id, mine);
+      await repo4?.put(kind, id, mine);
       dlg.close();
       dlg.remove();
     });
     dlg.querySelector("#use-theirs").addEventListener("click", async () => {
-      await repo3?.put(kind, id, { ...mergeBase ?? remote, _rev: remote?._rev });
+      await repo4?.put(kind, id, { ...mergeBase ?? remote, _rev: remote?._rev });
       dlg.close();
       dlg.remove();
     });
@@ -4826,11 +4697,11 @@ function initMergeToast() {
         dlg.remove();
       };
       dlg.querySelector("#merge-undo").onclick = async () => {
-        const repo3 = window.__vdg_repo;
-        const current = await repo3?.get(kind, id);
+        const repo4 = window.__vdg_repo;
+        const current = await repo4?.get(kind, id);
         if (current) {
           for (const c of fields) current[c.field] = c.local_val;
-          await repo3.put(kind, id, current);
+          await repo4.put(kind, id, current);
         }
         dlg.close();
         dlg.remove();
@@ -4964,7 +4835,7 @@ var VIEWS = {
   // E-15
   "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
-  "/manager/users": () => import("./users-4GPN5FGL.js"),
+  "/manager/users": () => import("./users-CUNMJCVN.js"),
   // E-15 F-15-36
   "/manager/fx-rates": () => import("./fx-rates-NJZOGB3Y.js"),
   "/manager/settings": () => import("./settings-6PVD7RFG.js"),
@@ -4997,7 +4868,7 @@ var VIEWS = {
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-CQ5YVYMR.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-MZPR7NQU.js"),
+  "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06
   "/admin/users/audit-log": () => import("./user-audit-log-view-2BVILWHD.js")
 };
@@ -5087,9 +4958,10 @@ function composeData(wasm3) {
     deleteShipment: async (_repo, ref) => {
       throwIfRefused(await wasm3.data_delete_shipment({ shipment_ref: ref }));
     },
-    rollbackShipmentCreate: async (_repo, ref) => {
-      throwIfRefused(await wasm3.data_rollback_shipment_create({ shipment_ref: ref }));
-    },
+    // NOT throwIfRefused: a rollback that could only undo part of a failed create is an ANSWER,
+    // and the caller is already holding the error that matters. Throwing here would replace it —
+    // the exact failure this whole path was built to stop.
+    rollbackShipmentCreate: async (_repo, ref) => await wasm3.data_rollback_shipment_create({ shipment_ref: ref }),
     getShipment: async (_repo, ref) => {
       const reply = await wasm3.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
@@ -5097,10 +4969,10 @@ function composeData(wasm3) {
     },
     // Filter the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
     // cross-fork revenue read for everybody else's.
-    listShipments: async (repo3, predicate = null) => {
+    listShipments: async (repo4, predicate = null) => {
       const reply = await wasm3.data_list_envelopes({});
       if (!reply.ok) throw new Error(reply.error || "the read failed");
-      return joinLoaded(repo3, applyPredicate(reply.rows, predicate));
+      return joinLoaded(repo4, applyPredicate(reply.rows, predicate));
     },
     joinLoaded,
     anyRevenueVisible: (rows) => (rows || []).some((row) => row?.[REVENUE_SEEN])
@@ -5190,7 +5062,6 @@ function composeSync(wasm3) {
 var MANAGER_ROLE_LABEL_KEY = "admin.users.role.manager";
 var MONTHS_PER_YEAR = 12;
 var MONTH_SAMPLE_YEAR = 2e3;
-var PREFIX_SEED_RANGE = 1e4;
 var MARGIN_PCT_DIGITS = 1;
 var tz = () => -(/* @__PURE__ */ new Date()).getTimezoneOffset();
 function managerLabel() {
@@ -5322,7 +5193,7 @@ function composeManager(wasm3) {
     compose360: (shipments) => wasm3.manager_customer_mode_mix({ shipments: shipments || [] })
   });
   bindDashboardComposer({
-    compose: (repo3, period, salesFilter, mode = "All") => wasm3.manager_dashboard({
+    compose: (repo4, period, salesFilter, mode = "All") => wasm3.manager_dashboard({
       period: period || "",
       sales_filter: salesFilter ?? null,
       mode,
@@ -5419,14 +5290,6 @@ function composeManager(wasm3) {
     buildAuditLogCsv: (records) => wasm3.manager_audit_log_csv({ records: records || [] }).csv
   });
   bindUsersViewComposer({
-    deriveFork: (email) => wasm3.manager_fork({ email: email || "" }).fork,
-    // Allocation itself is Rust (freight/core_abstractions/fork.rs); this only feeds it the forks
-    // already in use and a random starting suffix, because randomness is the browser's.
-    allocateFork: (email, users) => wasm3.fork_allocate(
-      email,
-      JSON.stringify((users || []).map((u) => u.fork).filter(Boolean)),
-      Math.floor(Math.random() * PREFIX_SEED_RANGE)
-    ),
     isValidEmail: (email) => wasm3.manager_email_valid({ email: email || "" }).valid,
     filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm3.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
     sortUsersByEmail: (users) => wasm3.manager_users_sort({ users: users || [] }).users
@@ -5548,12 +5411,12 @@ var _impl13 = null;
 function bindLicenseGate(impl) {
   _impl13 = impl;
 }
-function _i12() {
+function _i11() {
   if (!_impl13) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
   return _impl13;
 }
-var resolveLicenseState = (...a) => _i12().resolveLicenseState(...a);
-var errorKindMessage = (...a) => _i12().errorKindMessage(...a);
+var resolveLicenseState = (...a) => _i11().resolveLicenseState(...a);
+var errorKindMessage = (...a) => _i11().errorKindMessage(...a);
 
 // output/web/js.tmp/bootstrap/compose-ui/flows-admin.js
 var BACKUP_PROGRESS_EVENT = "vdg:backup-progress";
@@ -5817,9 +5680,9 @@ function composeFlows(wasm3) {
 // output/web/js.tmp/implementations/storage/implementations/repos/fx-rate-repo.js
 var FxRateStoreRepo = class {
   _repo() {
-    const repo3 = window.__vdg_repo;
-    if (!repo3?.fx_months_to_ingest) throw new Error("WASM repo not ready");
-    return repo3;
+    const repo4 = window.__vdg_repo;
+    if (!repo4?.fx_months_to_ingest) throw new Error("WASM repo not ready");
+    return repo4;
   }
   _wasm() {
     const wasm3 = window.__vdg_wasm;
@@ -5882,9 +5745,9 @@ var FxRateStoreRepo = class {
 // output/web/js.tmp/implementations/storage/implementations/repos/awb-repo.js
 var AwbStoreRepo = class {
   _repo() {
-    const repo3 = window.__vdg_repo;
-    if (!repo3?.awb_list_by_month) throw new Error("WASM repo not ready");
-    return repo3;
+    const repo4 = window.__vdg_repo;
+    if (!repo4?.awb_list_by_month) throw new Error("WASM repo not ready");
+    return repo4;
   }
   async listByMonth(ym) {
     return await this._repo().awb_list_by_month(ym);
@@ -5917,11 +5780,8 @@ var BRIDGE_EXPORTS = [
   "get_transition_log",
   "import_booking_excel_wasm",
   "verify_license",
-  "permission_can_pull",
-  "permission_can_push",
   "permission_can_merge",
-  "permission_can_push_own_fork",
-  "permission_resolve_grants",
+  "access_is_account",
   // #28: route/nav authority — route-guard.js reads these; without globalizing them it falls back
   // to window.__vdg_wasm and a boot path that skipped the loader would silently deny every route.
   "access_can_route",
@@ -5950,8 +5810,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=299388d2", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=299388d2", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=6c0564b9", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=6c0564b9", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6227,17 +6087,17 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
   const serverApi = storageApi();
-  const ioPort2 = createIoPort(serverApi, user.email, _forkPrefixFromSession());
-  const warmResult = await safeAwait(ioPort2.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
+  const ioPort = createIoPort(serverApi, user.email, _forkPrefixFromSession());
+  const warmResult = await safeAwait(ioPort.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
   if (!warmResult.ok) return _storeUnresponsive("repo-init:sqlite-warm");
-  const repo3 = new wasmMod.WasmEntityRepo(ioPort2);
-  window.__vdg_repo = repo3;
+  const repo4 = new wasmMod.WasmEntityRepo(ioPort);
+  window.__vdg_repo = repo4;
   window.__vdg_server_api = serverApi;
   window.__vdg_store = localStore();
-  window.__vdg_io = ioPort2;
-  wasmMod.freight_app_init(createPlatform({ repo: repo3 }));
+  window.__vdg_io = ioPort;
+  wasmMod.freight_app_init(createPlatform({ repo: repo4 }));
   composeUi(wasmMod);
-  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo3), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
+  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo4), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
   if (!rehydrateResult.ok) return _storeUnresponsive("fsm-rehydrate");
   fsm.dispatch(BootEvent.REPO_BUILT);
   stepRef.value = STEP_LICENSE_GATE;
@@ -6251,10 +6111,10 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   stepRef.value = STEP_BOOT_APP;
   bootFn(user, db);
   fsm.dispatch(BootEvent.RENDERED);
-  _deferredInit(user, db, serverApi, repo3);
+  _deferredInit(user, db, serverApi, repo4);
   return { db, poller: null, auditLog: null };
 }
-async function _deferredInit(user, db, serverApi, repo3) {
+async function _deferredInit(user, db, serverApi, repo4) {
   const store = localStore();
   try {
     if (store) {
@@ -6268,8 +6128,8 @@ async function _deferredInit(user, db, serverApi, repo3) {
       if (locale !== "vi") await loadLocale(locale);
     }
     const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-33U5YCHQ.js");
-    startDeltaTick({ getRepo: () => repo3 });
-    startOutboxDrain({ getRepo: () => repo3 });
+    startDeltaTick({ getRepo: () => repo4 });
+    startOutboxDrain({ getRepo: () => repo4 });
     startHealthPoll();
     const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-DBXQERUK.js");
     window.__vdg_audit_log = createAuditLog({
@@ -6285,7 +6145,7 @@ async function _deferredInit(user, db, serverApi, repo3) {
     bindLedgerRepo(ledgerRepo3);
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
-    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-6CO7BZ2N.js");
+    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-FYEBQSQ4.js");
     window.__vdg_user_repo = new UserServerRepo(userAuditLog);
     const retryPrincipalOnReconnect = () => {
       if (currentRolesResolved()) {

@@ -8,10 +8,8 @@ const HTTP_PRECONDITION      = 412;
 const CAS_FAILED_MSG         = '412 Precondition Failed';
 
 export class ServerIoPort extends SharedIoPort {
-  // `fork` accepted for call-site compatibility (createIoPort passes one) but unused: it only
-  // ever fed document_collection_kind's users/{fork}/{kind} prefix-strip, which had no caller
-  // left once the change feed started reporting `collection` directly (CDB-CF-03) instead of a
-  // folder id needing that reverse lookup.
+  // The third argument is accepted for call-site compatibility (createIoPort passes one) and is
+  // unused: it named a per-user folder, and collections are flat.
   constructor(serverApi, userEmail, _fork = null) {
     super(userEmail);
     this.serverApi = serverApi;
@@ -154,7 +152,7 @@ export class ServerIoPort extends SharedIoPort {
   // ── where things live ─────────────────────────────────────────────────────
 
   _kindPath(kind) {
-    // CharterDB: flat collections — no user fork hierarchy
+    // CharterDB: flat collections, addressed by name
     return KIND_PATH_OVERRIDES[kind] ?? kind;
   }
 

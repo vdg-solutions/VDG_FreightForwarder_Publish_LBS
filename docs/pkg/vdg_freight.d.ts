@@ -12,6 +12,11 @@ export class CustomerIndex {
 export class WasmEntityRepo {
     free(): void;
     [Symbol.dispose](): void;
+    /**
+     * The raw `/me` body, fetched in Rust. `server-role.js` used to call it with `apiFetch` and
+     * derive the verdict itself — including a JS copy of `derive_fork`. Both are gone.
+     */
+    auth_fetch_me(): Promise<any>;
     awb_append(awb_json: string): Promise<any>;
     awb_delete(awb_no: string, ym: string): Promise<any>;
     /**
@@ -29,6 +34,17 @@ export class WasmEntityRepo {
      * already covers every period for those.
      */
     ensure_period_loaded(kind: string, period: string): Promise<any>;
+    /**
+     * Compare-and-swap through CharterDB's own `If-Match`. A lost race (412) ANSWERS rather than
+     * failing — jobno_lease.rs re-reads and claims again on exactly that status.
+     */
+    flows_cas_put(file_id: string, body: string, etag: string): Promise<any>;
+    /**
+     * Read the counter record or seed it. `owner` is the shell's signed-in identity — the one
+     * fact JS still supplies, and not a CharterDB read (CDB-DM-04: an owner is declared, never
+     * minted server-side from the session).
+     */
+    flows_get_or_create_record(collection: string, name: string, content: string, owner: string): Promise<any>;
     /**
      * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
      */
@@ -190,6 +206,13 @@ export function access_can_route(route: string, roles: string): boolean;
 
 export function access_home_route(roles: string): string;
 
+/**
+ * Is this token an ACCOUNT — the thing a person signs in as? The sales-rep select stores it on a
+ * job, and `account-id.js` used to answer it with a JS copy of the rule (its own header said
+ * "Mirrors Rust"). One rule, one place.
+ */
+export function access_is_account(token: string): boolean;
+
 export function access_redirect_for(route: string, roles: string): string;
 
 /**
@@ -307,11 +330,6 @@ export function commission_waterfall(margin_vnd: number, com_deductions_vnd: num
 export function compute_dashboard_exceptions(shipments_json: string, now_ms: number, tz_offset_min: number): any;
 
 export function compute_due_soon(billing_json: string, today_str: string, warn_days: number): any;
-
-/**
- * Drops the remembered cross-fork scans, for the delta path.
- */
-export function data_clear_fork_scan(req: any): Promise<any>;
 
 export function data_current_revision(req: any): Promise<any>;
 
@@ -486,12 +504,6 @@ export function fmt_date_display(iso: string): string;
 export function fmt_date_pattern_hint(): string;
 
 /**
- * `taken_json` is the JSON array of forks already in use; `seed` is a caller-supplied random
- * 0..9999 so two managers adding at once don't both pick the same suffix.
- */
-export function fork_allocate(email: string, taken_json: string, seed: number): string;
-
-/**
  * Installed once by js/bootstrap (after the wasm module is ready and the repo exists).
  */
 export function freight_app_init(platform: any): void;
@@ -540,8 +552,6 @@ export function governance_action_guard(req: any): any;
 export function governance_allowed_actions(req: any): any;
 
 export function governance_can_edit_default_currency(req: any): any;
-
-export function governance_classify_read_status(req: any): any;
 
 export function governance_close_period(req: any): Promise<any>;
 
@@ -650,8 +660,6 @@ export function manager_exception_trends(req: any): any;
 
 export function manager_exceptions_sorted(req: any): any;
 
-export function manager_fork(req: any): any;
-
 export function manager_ledger_apply_repost(req: any): Promise<any>;
 
 export function manager_ledger_auto_reconcile(req: any): Promise<any>;
@@ -701,18 +709,6 @@ export function manager_users_filter(req: any): any;
 export function manager_users_sort(req: any): any;
 
 export function permission_can_merge(role: string, ref_name: string): boolean;
-
-export function permission_can_pull(role: string, ref_name: string): boolean;
-
-export function permission_can_push(role: string, ref_name: string): boolean;
-
-export function permission_can_push_own_fork(role: string): boolean;
-
-/**
- * Returns Vec<PermissionEntry> as JSON (`[{path, access}]`) — role-assignment-service.js's
- * resolveAcl() consumes this directly, replacing the role-drive-acl.json fetch.
- */
-export function permission_resolve_grants(role: string, fork?: string | null): any;
 
 /**
  * Minor-unit digit count for `currency` — DISPLAY only; storage keeps full precision.
@@ -985,6 +981,7 @@ export interface InitOutput {
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly access_can_route: (a: number, b: number, c: number, d: number) => number;
     readonly access_home_route: (a: number, b: number, c: number) => void;
+    readonly access_is_account: (a: number, b: number) => number;
     readonly access_redirect_for: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly access_roles_from_record: (a: number, b: number, c: number) => void;
     readonly apply_fsm_event: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1019,7 +1016,6 @@ export interface InitOutput {
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly data_clear_fork_scan: (a: number) => number;
     readonly data_current_revision: (a: number) => number;
     readonly data_delete_pnl_lines: (a: number) => number;
     readonly data_delete_shipment: (a: number) => number;
@@ -1093,7 +1089,6 @@ export interface InitOutput {
     readonly flows_void_plan: (a: number, b: number) => void;
     readonly fmt_date_display: (a: number, b: number, c: number) => void;
     readonly fmt_date_pattern_hint: (a: number) => void;
-    readonly fork_allocate: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly freight_app_init: (a: number) => void;
     readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1107,7 +1102,6 @@ export interface InitOutput {
     readonly governance_action_guard: (a: number, b: number) => void;
     readonly governance_allowed_actions: (a: number, b: number) => void;
     readonly governance_can_edit_default_currency: (a: number, b: number) => void;
-    readonly governance_classify_read_status: (a: number, b: number) => void;
     readonly governance_close_period: (a: number) => number;
     readonly governance_close_records: (a: number) => number;
     readonly governance_error_records: (a: number) => number;
@@ -1154,7 +1148,6 @@ export interface InitOutput {
     readonly manager_exception_per_sales: (a: number, b: number) => void;
     readonly manager_exception_trends: (a: number, b: number) => void;
     readonly manager_exceptions_sorted: (a: number, b: number) => void;
-    readonly manager_fork: (a: number, b: number) => void;
     readonly manager_ledger_apply_repost: (a: number) => number;
     readonly manager_ledger_auto_reconcile: (a: number) => number;
     readonly manager_ledger_balance_sheet: (a: number, b: number) => void;
@@ -1180,10 +1173,6 @@ export interface InitOutput {
     readonly manager_users_filter: (a: number, b: number) => void;
     readonly manager_users_sort: (a: number, b: number) => void;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly permission_can_pull: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly permission_can_push: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly permission_can_push_own_fork: (a: number, b: number, c: number) => void;
-    readonly permission_resolve_grants: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly pnl_currency_exponent: (a: number, b: number) => number;
     readonly pnl_fx_cache_clear: () => void;
     readonly pnl_fx_cache_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
@@ -1251,6 +1240,7 @@ export interface InitOutput {
     readonly validate_uom_label: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;
     readonly verify_license: (a: number, b: number, c: bigint) => number;
+    readonly wasmentityrepo_auth_fetch_me: (a: number) => number;
     readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_awb_list_all: (a: number) => number;
@@ -1258,6 +1248,8 @@ export interface InitOutput {
     readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
     readonly wasmentityrepo_ensure_period_loaded: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_flows_cas_put: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasmentityrepo_flows_get_or_create_record: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly wasmentityrepo_fx_apply_writes: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_fx_delete_entry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_fx_invalidate_month: (a: number, b: number, c: number) => void;
@@ -1325,9 +1317,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13980: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13982: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10034: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13975: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13977: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10026: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

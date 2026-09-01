@@ -155,7 +155,7 @@ async function _deferredInit(user, db, serverApi, repo) {
 
     // The staff-table record is the final word on this session's principal, and it lands AFTER
     // the ACL-probe snapshot auth_set_resolved_roles already wrote (it can disagree, and it wins).
-    // Rust reads the record, derives the roles and the fork, and republishes the whole principal —
+    // Rust reads the record, derives the roles, and republishes the whole principal —
     // this call carries the email and nothing else.
     //
     // A lookup that fails (server unreachable at this exact moment) now leaves the session

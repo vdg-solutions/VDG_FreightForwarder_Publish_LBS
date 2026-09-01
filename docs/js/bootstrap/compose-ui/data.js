@@ -82,9 +82,11 @@ export function composeData(wasm) {
     deleteShipment: async (_repo, ref) => {
       throwIfRefused(await wasm.data_delete_shipment({ shipment_ref: ref }));
     },
-    rollbackShipmentCreate: async (_repo, ref) => {
-      throwIfRefused(await wasm.data_rollback_shipment_create({ shipment_ref: ref }));
-    },
+    // NOT throwIfRefused: a rollback that could only undo part of a failed create is an ANSWER,
+    // and the caller is already holding the error that matters. Throwing here would replace it —
+    // the exact failure this whole path was built to stop.
+    rollbackShipmentCreate: async (_repo, ref) =>
+      await wasm.data_rollback_shipment_create({ shipment_ref: ref }),
     getShipment: async (_repo, ref) => {
       const reply = await wasm.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || 'the read failed');

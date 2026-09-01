@@ -1,16 +1,15 @@
 // workspace-authority.js — port: who is this signed-in account for the active workspace, as the
 // storage authority sees it. ONE question, answered by the bound adapter: GET /api/me, where the
-// server already applied the ownership/grant/fork rules (implementations/server/server-role.js).
+// server already applied the ownership/grant rules; server-role.js only carries the body.
 // The verdict is data; the auth-gate (freight_app) turns it into session roles + caches. The
 // adapter never touches the app's caches — that is what keeps a second adapter (Firebase, a plain
 // server login) a one-file job.
 
-/// Verdicts. `token` is the fork token the rest of the app keys on (MANAGER sentinel or the
+/// Verdicts. `token` is the ACCOUNT the rest of the app keys on (MANAGER sentinel or the
 /// user's prefix upper-cased); `roles` the role names; `areas` the folder-id manifest an
 /// employee's data layer starts from ({ path, folder_id }[]).
 export const VERDICT_MANAGER = 'manager';
 export const VERDICT_GRANT = 'grant';
-export const VERDICT_FORK = 'fork';
 export const VERDICT_NOT_PROVISIONED = 'not_provisioned';
 
 /// E-43: "could not determine" is NOT "not provisioned" — the adapter throws this when the
