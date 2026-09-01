@@ -244,6 +244,18 @@ export function auth_require_auth(req: any): Promise<any>;
  */
 export function auth_resolve_principal(req: any): Promise<any>;
 
+/**
+ * `DELETE /session` — resolves `{ ok, status }`, never rejects: sign-out proceeds locally
+ * whatever the server said.
+ */
+export function auth_session_close(): Promise<any>;
+
+/**
+ * `POST /session` — resolves `{ token: string|null }`; rejects on any refusal so the sign-in
+ * flow fails whole instead of minting a local identity with no server session behind it.
+ */
+export function auth_session_open(google_token: string): Promise<any>;
+
 export function auth_session_roles(req: any): any;
 
 export function auth_set_resolved_roles(req: any): any;
@@ -812,6 +824,18 @@ export function run(sql: string, params_json: string): void;
 export function select(sql: string, params_json: string): string;
 
 /**
+ * Periodic poll: resolves the `vdg:server-health` detail, or `null` when this tick got no
+ * answer. Never rejects.
+ */
+export function server_health_poll(): Promise<any>;
+
+/**
+ * Boot-time probe: resolves the `vdg:server-health` detail to dispatch, or `null` when the
+ * server answered healthy. Never rejects — an outage IS the resolved value.
+ */
+export function server_health_probe(): Promise<any>;
+
+/**
  * E-40 — the owner's rule: "dữ liệu đủ thì đẩy qua". From the entity's stored state, keep
  * advancing while the NEXT hop has a non-empty requirement list and EVERY row is affirmatively
  * Met by the record (Unknown never advances — auto needs positive evidence; the manual button
@@ -929,6 +953,15 @@ export function sync_wma_predict(req: any): any;
 
 export function sync_wma_save(req: any): Promise<any>;
 
+export function users_directory_create(email: string, display_name: string, roles_json: string): Promise<any>;
+
+/**
+ * `GET /users` — `role`/`include_inactive` empty/false means "not asked".
+ */
+export function users_directory_list(role: string, include_inactive: boolean): Promise<any>;
+
+export function users_directory_patch(email: string, body_json: string): Promise<any>;
+
 export function validate_airline_iata(code: string): boolean;
 
 export function validate_airline_icao(code: string): boolean;
@@ -998,6 +1031,8 @@ export interface InitOutput {
     readonly auth_has_role: (a: number, b: number) => void;
     readonly auth_require_auth: (a: number) => number;
     readonly auth_resolve_principal: (a: number) => number;
+    readonly auth_session_close: () => number;
+    readonly auth_session_open: (a: number, b: number) => number;
     readonly auth_session_roles: (a: number, b: number) => void;
     readonly auth_set_resolved_roles: (a: number, b: number) => void;
     readonly cache_bulk_put: (a: number) => number;
@@ -1198,6 +1233,8 @@ export interface InitOutput {
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly server_health_poll: () => number;
+    readonly server_health_probe: () => number;
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_move_to: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1232,6 +1269,9 @@ export interface InitOutput {
     readonly sync_wma_on_event: (a: number, b: number) => void;
     readonly sync_wma_predict: (a: number, b: number) => void;
     readonly sync_wma_save: (a: number) => number;
+    readonly users_directory_create: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+    readonly users_directory_list: (a: number, b: number, c: number) => number;
+    readonly users_directory_patch: (a: number, b: number, c: number, d: number) => number;
     readonly validate_airline_iata: (a: number, b: number) => number;
     readonly validate_airline_icao: (a: number, b: number) => number;
     readonly validate_airport_iata: (a: number, b: number) => number;
@@ -1322,9 +1362,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13902: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13904: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_9943: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13985: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13987: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_10026: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

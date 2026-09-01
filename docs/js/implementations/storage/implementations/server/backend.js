@@ -1,79 +1,59 @@
 // backend.js — the ONE storage authority this page talks to: vdg-server. The client is
 // server-only (2026-08-30) — it never falls back to Google Drive, in any mode, for any reason.
-// API_BASE names the server origin (today a Cloudflare Worker) when stamped at publish; empty
-// means same-origin (a local vdg-server run). A cross-origin API carries the session cookie with
-// Auth is a bearer-style header, never a cookie — see CREDENTIALS_MODE below.
+//
+// No requests are built here anymore. Every freight-server call left for Rust on 2026-09-01
+// (freight_http: /session, /users, /health; me_http: /me; the records API through
+// charterdb-client). What remains is the shell's own half: where the session token LIVES
+// (sessionStorage — http_io::session_token reads the same key), and the boot-time backend memo.
 
 import { API_BASE } from '../../core_abstractions/workspace-config.js';
 
-const HEALTH_PATH        = '/api/health';
-const ME_PATH            = '/me';
-const API_PREFIX         = '/api';
-// 'omit', always. Auth rides the X-Vdg-Session HEADER (see apiFetch below), which the server
-// reads FIRST (dispatch.rs: `from_header.or(from_cookie)`) — the cookie was only ever a second
-// copy of a token that already lives in localStorage, so HttpOnly bought nothing an XSS could
-// not read anyway. Meanwhile a cross-site cookie is exactly what browsers now refuse: Edge's
-// Tracking Prevention blocked storage for this origin and the health probe hung its full 30s.
-// The app is on github.io and the API on workers.dev BY DESIGN — a decentralised deployment puts
-// the store on another site, and a header is the credential that survives that. Omitting
-// credentials also deletes CSRF outright: nothing is sent ambiently, so nothing can be forged.
-const CREDENTIALS_MODE   = 'omit';
-const PROBE_TIMEOUT_MS   = 1500;
-// Longer than the health probe on purpose: a timeout here does no harm (the fallback token simply
-// stays), while a cold Durable Object answering /me in two seconds would otherwise be read as
-// "this browser blocks the cookie" on every sign-in.
-const COOKIE_PROBE_TIMEOUT_MS = 4000;
-// Backstop past the AbortController deadline below — only fires if abort() itself fails to
-// unblock a stuck fetch (browser bug territory), so this never races the real timeout.
-const TRANSPORT_SAFE_AWAIT_MARGIN_MS = 5000;
-const BACKEND_SERVER     = 'server';
-const SESSION_TOKEN_HEADER = 'X-Vdg-Session';
-// The page (github.io) and the API (workers.dev) are different SITES, so the session cookie is a
-// third-party cookie: InPrivate, Safari and strict tracking protection drop it, and the user then
-// loops on 401 after a SUCCESSFUL sign-in. Keep the same server-minted token in sessionStorage as
-// a second delivery route — window-scoped, gone when the window closes, and unnecessary once the
-// app and the API share one site.
-//
-// It is a FALLBACK, so it must exist only where it is actually needed. A token sitting in
-// sessionStorage is readable by any script on the page, which is precisely what the HttpOnly
-// cookie is not — so keeping a copy for a browser whose cookie works fine gives up that
-// protection for nothing. adoptSessionToken() below settles that per browser, once, by asking.
-const SESSION_TOKEN_KEY  = 'vdg.session-token';
-const BACKEND_KEY        = 'vdg.backend'; // sessionStorage: survives reload, not a new tab on another origin
+const BACKEND_SERVER = 'server';
+// The page (github.io) and the API (workers.dev) are different SITES, so a session cookie would
+// be third-party and dropped by InPrivate/Safari/strict tracking protection. The server-minted
+// token therefore rides the X-Vdg-Session header, read back from here by Rust
+// (http_io::session_token). sessionStorage on purpose: window-scoped, gone when the window
+// closes — a localStorage copy outlived the tab and was readable by every tab on this origin.
+const SESSION_TOKEN_KEY = 'vdg.session-token';
+const BACKEND_KEY       = 'vdg.backend'; // sessionStorage: survives reload, not a new tab on another origin
+const SERVER_HEALTH_EVENT = 'vdg:server-health';
+const WASM_READY_EVENT    = 'vdg:wasm-ready';
 
 let _backend = null;
 
 /// There is exactly one backend, so this never decides WHICH authority to use — only whether it
 /// is reachable yet. A build stamped with API_BASE skips the probe entirely (cross-origin server,
-/// publish-time fact). A same-origin build (local vdg-server, or one not up yet) probes /api/health
-/// for visibility only: a failed/timed-out probe here used to switch the app into a Drive-direct
-/// mode whose adapter no longer exists — a server hiccup then silently ran with the user's own
-/// Google token, behind the server's back, no ACL check on the way in. An outage now reads as an
-/// outage: the probe result never changes the backend, and an unreachable server surfaces the same
-/// way any other failed server call does (apiFetch's ApiError, the sync engine's own
-/// sync_health::is_unreachable()) — nudged along here via the same 'vdg:server-health' event
-/// apiFetch already dispatches, so the topbar doesn't have to wait for the first real request.
+/// publish-time fact). A same-origin build (local vdg-server, or one not up yet) probes
+/// /api/health for visibility only: the probe result never changes the backend, and an
+/// unreachable server surfaces the same way any other failed server call does — nudged along here
+/// via the same 'vdg:server-health' event the poll dispatches, so the topbar doesn't have to wait
+/// for the first real request.
 async function detectBackend() {
   if (_backend) return _backend;
   if (API_BASE) { _backend = BACKEND_SERVER; return _backend; } // stamped = server, unconditionally
   const remembered = _readRemembered();
   if (remembered) { _backend = remembered; return _backend; }
-  const ctrl  = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
-  const { ok, value: res } = await safeAwait(
-    fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE }),
-    PROBE_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
-    undefined,
-    'detectBackend:health',
-  );
-  clearTimeout(timer);
-  const body = ok && res.ok ? await res.json().catch(() => null) : null;
-  if (!(body && body.ok === true) && typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('vdg:server-health', { detail: { unreachable: true } }));
-  }
+  _probeWhenWasmReady();
   _backend = BACKEND_SERVER; // the only backend — the probe never changes this
   try { sessionStorage.setItem(BACKEND_KEY, _backend); } catch { /* storage-less context */ }
   return _backend;
+}
+
+// The probe and its verdict are Rust's (freight_http::health_probe — resolves the event detail,
+// or null for healthy); this only fires the event it hands back. composeStorage runs before the
+// wasm module has resolved, so a visibility-only signal waits for vdg:wasm-ready rather than
+// blocking boot on it.
+function _probeWhenWasmReady() {
+  if (typeof window === 'undefined') return;
+  const fire = () => {
+    window.__vdg_wasm.server_health_probe()
+      .then((detail) => {
+        if (detail) window.dispatchEvent(new CustomEvent(SERVER_HEALTH_EVENT, { detail }));
+      })
+      .catch((e) => { console.warn('[VDG] health probe failed:', e?.message || e); });
+  };
+  if (window.__vdg_wasm?.server_health_probe) { fire(); return; }
+  window.addEventListener(WASM_READY_EVENT, fire, { once: true });
 }
 
 function _readRemembered() {
@@ -83,32 +63,7 @@ function _readRemembered() {
 /// Test seam.
 function _resetBackend() { _backend = null; try { sessionStorage.removeItem(BACKEND_KEY); } catch { /* none */ } }
 
-import { ApiError } from '../../core_abstractions/api-error.js';
-import { safeAwait } from '../../../kernel/core_abstractions/util/safe-await.js';
-
-/// JSON in, JSON out, session token in a header. A non-2xx is an ApiError carrying the status the
-/// server chose (401 sign-in, 403 acl, 404, 409, 412 CAS) for callers to branch on.
-/// sessionStorage ONLY. The token used to be written to localStorage as well, which meant it
-/// outlived the tab, survived a reboot, and was readable by every other tab on this origin — a
-/// week-long credential in the most durable place the browser offers. sessionStorage dies with the
-/// tab, so closing it ends the session on that machine whether or not anyone signed out.
-function readSessionToken() {
-  try {
-    // A token written by an older build is still in localStorage; take it once so this change does
-    // not sign anyone out, then delete it. Migration, not a fallback: the next read finds only
-    // sessionStorage.
-    const legacy = localStorage.getItem(SESSION_TOKEN_KEY);
-    if (legacy) {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
-      if (!sessionStorage.getItem(SESSION_TOKEN_KEY)) sessionStorage.setItem(SESSION_TOKEN_KEY, legacy);
-    }
-    return sessionStorage.getItem(SESSION_TOKEN_KEY) || '';
-  } catch {
-    return ''; // storage-less context (private mode, embedded webview) — no token is a valid answer
-  }
-}
-
-/// Called by the sign-in flow with whatever POST /session returned.
+/// Called by the sign-in flow with the token auth_session_open handed back.
 async function adoptSessionToken(token) {
   rememberSessionToken(token);
 }
@@ -129,106 +84,5 @@ function rememberSessionToken(token) {
   }
 }
 
-const API_FETCH_TIMEOUT_MS = 30000;
-/// A Durable Object cold start costs 15-17s on this plan; measured live 2026-08-31, roughly one
-/// call in ten, against a warm median of ~150ms. That is transient by construction — the retry
-/// lands on the now-warm object — so one retry converts nearly every cold-start stall into a
-/// success instead of failing a whole sync tick. Only SAFE (idempotent) methods retry: replaying a
-/// POST would double-write.
-const API_RETRY_SAFE_METHODS = ['GET', 'HEAD'];
-const API_RETRY_ATTEMPTS     = 2;
-const API_RETRY_BACKOFF_MS   = 400;
-
-// Wall-clock ISO-8601 w/ ms — same spelling as the Rust side's Clock::now_iso(), so a pasted
-// dump interleaving both never looks like two clocks disagreeing.
-function _nowIso() { return new Date().toISOString(); }
-
-// Requests interleave (concurrent fetches resolve out of order) and DevTools timestamps don't
-// survive copy-paste — this id + wall-clock + duration on both log lines is what lets a pasted
-// dump be read back into request/response pairs. Per-tab counter: short and monotonic beats a UUID
-// for something a human has to eyeball in a scrollback dump.
-let _apiReqSeq = 0;
-
-/// Retries a transport failure (timeout / dead network) once for a safe method. A non-2xx REPLY is
-/// never retried — the server answered, and a 4xx would answer the same way again.
-async function apiFetch(method, path, body = undefined, extraHeaders = {}) {
-  const maxAttempts = API_RETRY_SAFE_METHODS.includes(method.toUpperCase()) ? API_RETRY_ATTEMPTS : 1;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await apiFetchOnce(method, path, body, extraHeaders);
-    } catch (err) {
-      // status 0 is this file's own "transport never delivered" marker (below). Anything else is
-      // a real answer from the server and must surface unchanged, first time, every time.
-      if (err?.status !== 0 || attempt >= maxAttempts) throw err;
-      console.warn(`[API] ${method} ${path} transport failed (${err.message}) — one retry in ${API_RETRY_BACKOFF_MS}ms`);
-      await new Promise((r) => setTimeout(r, API_RETRY_BACKOFF_MS));
-    }
-  }
-}
-
-async function apiFetchOnce(method, path, body = undefined, extraHeaders = {}) {
-  const url = `${API_BASE}${API_PREFIX}${path}`;
-  const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
-  const token = readSessionToken();
-  if (token) opts.headers[SESSION_TOKEN_HEADER] = token;
-  if (body !== undefined) {
-    opts.headers['Content-Type'] = 'application/json';
-    opts.body = JSON.stringify(body);
-  }
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(new Error('fetch timeout (30s)')), API_FETCH_TIMEOUT_MS);
-  opts.signal = ctrl.signal;
-  const reqId = `r${++_apiReqSeq}`;
-  const startedAtMs = Date.now();
-  console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
-  const { ok, value: res, error } = await safeAwait(
-    fetch(url, opts),
-    API_FETCH_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
-    undefined,
-    `apiFetch:${method}:${path}`,
-  );
-  clearTimeout(timer);
-  if (!ok) {
-    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, error);
-    // status 0 — read_verdict::classify_status (Rust) reads this as UNDECIDABLE, never as a
-    // negative answer. Do not turn a dead network into "there is nothing here".
-    throw new ApiError(0, `server unreachable: ${error.message}`);
-  }
-  console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
-  const backlogHeader = res.headers?.get('x-replication-backlog');
-  const providerHeader = res.headers?.get('x-secondary-provider') || res.headers?.get('x-replication-provider');
-  if (backlogHeader !== null && backlogHeader !== undefined) {
-    const backlog_depth = parseInt(backlogHeader, 10);
-    if (!Number.isNaN(backlog_depth) && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vdg:server-health', {
-        detail: { backlog_depth, provider: providerHeader || undefined },
-      }));
-    }
-  }
-  const text = await res.text();
-  let json = null;
-  try { json = text ? JSON.parse(text) : null; } catch { json = null; }
-  if (path === '/health' && json && typeof window !== 'undefined') {
-    const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
-    const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
-    // No invented fallback: dispatch.rs names the real mirror tier (drive_port.provider_name(),
-    // "Google Drive" or "GitHub"); when the server didn't say, the client doesn't know — null,
-    // and the chip renders neutral "secondary backup" wording instead of asserting a provider.
-    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? null;
-    // See server-io-adapters.js's own note: quarantine removes a row from backlog_depth, so the
-    // backlog alone cannot tell a drained queue from an abandoned one.
-    const server_quarantined_depth = json.mirror?.quarantined_depth ?? 0;
-    window.dispatchEvent(new CustomEvent('vdg:server-health', {
-      detail: { backlog_depth, server_quarantined_depth, oldest_pending_age_ms, provider },
-    }));
-  }
-  if (!res.ok) {
-    // CDB-API-09: json.reason is a CODE, not a sentence (json.params its substitution values) --
-    // carried through so a caller can render `users.error.<code>` instead of showing the code.
-    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`, json?.params);
-  }
-  return json;
-}
-
 /// What the storage bootstrap binds behind the backend port.
-export const backend = { detectBackend, apiFetch, rememberSessionToken, adoptSessionToken, _resetBackend };
+export const backend = { detectBackend, rememberSessionToken, adoptSessionToken, _resetBackend };

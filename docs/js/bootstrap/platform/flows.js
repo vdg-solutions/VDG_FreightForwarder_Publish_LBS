@@ -16,7 +16,7 @@ function wasm() { return window.__vdg_wasm; }
 function repo()  { return window.__vdg_repo; }
 
 // jobno_lease.rs's `dir_id` used to be a Drive folder id; CharterDB has no folder tree, so it is
-// read here as a collection PATH instead — same reinterpretation server-io-adapters.js's
+// read here as a collection PATH instead — same reinterpretation http_io.rs's
 // ws_read_file/ws_write_file already made for `dirPath`. Collapses to '' for a bare id.
 function normCollection(dirId) {
   return String(dirId || '').replace(/^\/+|\/+$/g, '');

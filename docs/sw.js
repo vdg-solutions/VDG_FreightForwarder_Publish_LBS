@@ -2,7 +2,7 @@
 // auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v20b8a58a';
+const STATIC_CACHE     = 'vdg-static-v52bfc9b8';
 // Build-hash-versioned, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
@@ -95,7 +95,6 @@ const BOOT_GRAPH = [
   'js/implementations/kernel/core_abstractions/version.js',
   'js/implementations/kernel/implementations/browser-platform.js',
   'js/implementations/storage/bootstrap/compose.js',
-  'js/implementations/storage/core_abstractions/api-error.js',
   'js/implementations/storage/core_abstractions/backend.js',
   'js/implementations/storage/core_abstractions/events.js',
   'js/implementations/storage/core_abstractions/id-token.js',
@@ -109,7 +108,6 @@ const BOOT_GRAPH = [
   'js/implementations/storage/core_abstractions/priced-envelope.js',
   'js/implementations/storage/core_abstractions/profile-cache.js',
   'js/implementations/storage/core_abstractions/server-session.js',
-  'js/implementations/storage/core_abstractions/storage-layout.js',
   'js/implementations/storage/core_abstractions/token-anchor.js',
   'js/implementations/storage/core_abstractions/token.js',
   'js/implementations/storage/core_abstractions/user-directory.js',
@@ -129,7 +127,6 @@ const BOOT_GRAPH = [
   'js/implementations/storage/implementations/repos/awb-repo.js',
   'js/implementations/storage/implementations/repos/fx-rate-repo.js',
   'js/implementations/storage/implementations/server/backend.js',
-  'js/implementations/storage/implementations/server/server-io-adapters.js',
   'js/implementations/storage/implementations/server/server-role.js',
   'js/implementations/storage/implementations/server/server-session.js',
   'js/implementations/storage/implementations/server/server-users.js',
@@ -258,7 +255,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps 20b8a58a → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps 52bfc9b8 → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

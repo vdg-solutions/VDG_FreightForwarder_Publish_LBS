@@ -120,9 +120,15 @@ function startOutboxDrain({ win = window, getRepo = () => window.__vdg_repo } = 
   };
 }
 var HEALTH_POLL_MS = 6e4;
-function startHealthPoll({ getIo = () => window.__vdg_io } = {}) {
+var HEALTH_EVENT = "vdg:server-health";
+function startHealthPoll({ getWasm = () => window.__vdg_wasm } = {}) {
   const tick = () => {
-    getIo()?.poll_health?.().catch(() => {
+    const poll = getWasm()?.server_health_poll;
+    if (!poll) return;
+    poll().then((detail) => {
+      if (detail) window.dispatchEvent(new CustomEvent(HEALTH_EVENT, { detail }));
+    }).catch((e) => {
+      console.warn("[VDG] health poll failed:", e?.message || e);
     });
   };
   tick();

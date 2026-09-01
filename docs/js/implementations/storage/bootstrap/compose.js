@@ -14,12 +14,12 @@ import { bindLocalStore } from '../core_abstractions/local-store.js';
 import { bindEventBus } from '../core_abstractions/events.js';
 import { bindWorkspaceAuthority } from '../core_abstractions/workspace-authority.js';
 import { bindUserDirectory } from '../core_abstractions/user-directory.js';
+import { SharedIoPort } from '../core_abstractions/io-port-shared.js';
 
 import { backend } from '../implementations/server/backend.js';
 import { serverSession } from '../implementations/server/server-session.js';
 import { createUser, listUsers, patchUser } from '../implementations/server/server-users.js';
 import { serverWorkspaceAuthority } from '../implementations/server/server-role.js';
-import { ServerIoPort } from '../implementations/server/server-io-adapters.js';
 import { popupGuard } from '../implementations/auth/window-open-guard.js';
 import { profileCache } from '../implementations/auth/profile-cache.js';
 import { tokenAnchorFactory } from '../implementations/auth/token-anchor.js';
@@ -65,9 +65,12 @@ export async function composeStorage() {
   return backendKind;
 }
 
-/// The IoPort the wasm repo runs on: same contract either way, only where the bytes go differs.
+/// The IoPort the wasm repo runs on. Only the LOCAL half lives in JS (cache tier, event bus,
+/// author identity, ledger repo — io-port-shared.js); every network method of the port is
+/// implemented in Rust (js_io.rs overrides them onto http_io), so the old ServerIoPort — a
+/// complete second copy of the wire contract — is gone rather than kept in step.
 export function createIoPort(userEmail) {
-  return new ServerIoPort(userEmail);
+  return new SharedIoPort(userEmail);
 }
 
 

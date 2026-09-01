@@ -153,14 +153,23 @@ export function startOutboxDrain({ win = window, getRepo = () => window.__vdg_re
 }
 
 // ── server health chip ───────────────────────────────────────────────────────
-// F-58-02: used to ride every Changes-feed page inside the delta engine (server-io-adapters.js),
-// roughly doubling its HTTP volume for a signal that only needs to move a few times a minute. One
-// slow independent timer instead — the io port's poll_health() already dispatches vdg:server-health
-// itself, so this owns nothing but the interval.
+// F-58-02: used to ride every Changes-feed page inside the delta engine, roughly doubling its
+// HTTP volume for a signal that only needs to move a few times a minute. One slow independent
+// timer instead. The poll and its verdict are Rust's (freight_http::health_poll — resolves the
+// event detail, or null when this tick got no answer); this owns the interval and the dispatch.
 const HEALTH_POLL_MS = 60_000;
+const HEALTH_EVENT   = 'vdg:server-health';
 
-export function startHealthPoll({ getIo = () => window.__vdg_io } = {}) {
-  const tick = () => { getIo()?.poll_health?.().catch(() => {}); };
+export function startHealthPoll({ getWasm = () => window.__vdg_wasm } = {}) {
+  const tick = () => {
+    const poll = getWasm()?.server_health_poll;
+    if (!poll) return; // wasm not up yet — the next tick finds it
+    poll()
+      .then((detail) => {
+        if (detail) window.dispatchEvent(new CustomEvent(HEALTH_EVENT, { detail }));
+      })
+      .catch((e) => { console.warn('[VDG] health poll failed:', e?.message || e); });
+  };
   tick();
   const timer = setInterval(tick, HEALTH_POLL_MS);
   timer?.unref?.();

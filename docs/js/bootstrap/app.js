@@ -27,7 +27,7 @@ import {
 } from "./chunk-GRBWOHUK.js";
 import {
   jobTracker
-} from "./chunk-W6DMNGKQ.js";
+} from "./chunk-YFGWKASP.js";
 import {
   bindManifestComposer
 } from "./chunk-3FXNTAAE.js";
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 20b8a58a">v0.4.60 (20b8a58a)</span>
+        <span class="font-mono whitespace-nowrap" title="build 52bfc9b8">v0.4.61 (52bfc9b8)</span>
       </div>
     `;
   }
@@ -2344,7 +2344,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.60 (20b8a58a)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.61 (52bfc9b8)</div>
         </div>
       </div>
     </div>`;
@@ -2846,7 +2846,6 @@ function _i3() {
   if (!_impl3) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
   return _impl3;
 }
-var apiFetch = (...a) => _i3().apiFetch(...a);
 var rememberSessionToken = (...a) => _i3().rememberSessionToken(...a);
 var adoptSessionToken = (...a) => _i3().adoptSessionToken(...a);
 
@@ -2909,212 +2908,6 @@ function _i8() {
 }
 var dispatchAppEvent = (...a) => _i8().dispatchAppEvent(...a);
 
-// output/web/js.tmp/implementations/storage/core_abstractions/api-error.js
-var ApiError = class extends Error {
-  constructor(status, message, params) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.params = params || {};
-  }
-};
-
-// output/web/js.tmp/implementations/storage/implementations/server/backend.js
-var HEALTH_PATH = "/api/health";
-var API_PREFIX = "/api";
-var CREDENTIALS_MODE = "omit";
-var PROBE_TIMEOUT_MS = 1500;
-var TRANSPORT_SAFE_AWAIT_MARGIN_MS = 5e3;
-var BACKEND_SERVER = "server";
-var SESSION_TOKEN_HEADER = "X-Vdg-Session";
-var SESSION_TOKEN_KEY = "vdg.session-token";
-var BACKEND_KEY = "vdg.backend";
-var _backend = null;
-async function detectBackend() {
-  if (_backend) return _backend;
-  if (API_BASE) {
-    _backend = BACKEND_SERVER;
-    return _backend;
-  }
-  const remembered = _readRemembered();
-  if (remembered) {
-    _backend = remembered;
-    return _backend;
-  }
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
-  const { ok, value: res } = await safeAwait(
-    fetch(`${API_BASE}${HEALTH_PATH}`, { signal: ctrl.signal, credentials: CREDENTIALS_MODE }),
-    PROBE_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
-    void 0,
-    "detectBackend:health"
-  );
-  clearTimeout(timer);
-  const body = ok && res.ok ? await res.json().catch(() => null) : null;
-  if (!(body && body.ok === true) && typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("vdg:server-health", { detail: { unreachable: true } }));
-  }
-  _backend = BACKEND_SERVER;
-  try {
-    sessionStorage.setItem(BACKEND_KEY, _backend);
-  } catch {
-  }
-  return _backend;
-}
-function _readRemembered() {
-  try {
-    return sessionStorage.getItem(BACKEND_KEY);
-  } catch {
-    return null;
-  }
-}
-function _resetBackend() {
-  _backend = null;
-  try {
-    sessionStorage.removeItem(BACKEND_KEY);
-  } catch {
-  }
-}
-function readSessionToken() {
-  try {
-    const legacy = localStorage.getItem(SESSION_TOKEN_KEY);
-    if (legacy) {
-      localStorage.removeItem(SESSION_TOKEN_KEY);
-      if (!sessionStorage.getItem(SESSION_TOKEN_KEY)) sessionStorage.setItem(SESSION_TOKEN_KEY, legacy);
-    }
-    return sessionStorage.getItem(SESSION_TOKEN_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-async function adoptSessionToken2(token) {
-  rememberSessionToken2(token);
-}
-function rememberSessionToken2(token) {
-  try {
-    if (token) {
-      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
-    } else {
-      sessionStorage.removeItem(SESSION_TOKEN_KEY);
-    }
-    localStorage.removeItem(SESSION_TOKEN_KEY);
-  } catch {
-  }
-}
-var API_FETCH_TIMEOUT_MS = 3e4;
-var API_RETRY_SAFE_METHODS = ["GET", "HEAD"];
-var API_RETRY_ATTEMPTS = 2;
-var API_RETRY_BACKOFF_MS = 400;
-function _nowIso() {
-  return (/* @__PURE__ */ new Date()).toISOString();
-}
-var _apiReqSeq = 0;
-async function apiFetch2(method, path, body = void 0, extraHeaders = {}) {
-  const maxAttempts = API_RETRY_SAFE_METHODS.includes(method.toUpperCase()) ? API_RETRY_ATTEMPTS : 1;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await apiFetchOnce(method, path, body, extraHeaders);
-    } catch (err) {
-      if (err?.status !== 0 || attempt >= maxAttempts) throw err;
-      console.warn(`[API] ${method} ${path} transport failed (${err.message}) \u2014 one retry in ${API_RETRY_BACKOFF_MS}ms`);
-      await new Promise((r) => setTimeout(r, API_RETRY_BACKOFF_MS));
-    }
-  }
-}
-async function apiFetchOnce(method, path, body = void 0, extraHeaders = {}) {
-  const url = `${API_BASE}${API_PREFIX}${path}`;
-  const opts = { method, credentials: CREDENTIALS_MODE, headers: { ...extraHeaders } };
-  const token = readSessionToken();
-  if (token) opts.headers[SESSION_TOKEN_HEADER] = token;
-  if (body !== void 0) {
-    opts.headers["Content-Type"] = "application/json";
-    opts.body = JSON.stringify(body);
-  }
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(new Error("fetch timeout (30s)")), API_FETCH_TIMEOUT_MS);
-  opts.signal = ctrl.signal;
-  const reqId = `r${++_apiReqSeq}`;
-  const startedAtMs = Date.now();
-  console.log(`[API][${reqId}][${_nowIso()}] Fetching ${method} ${url}...`);
-  const { ok, value: res, error } = await safeAwait(
-    fetch(url, opts),
-    API_FETCH_TIMEOUT_MS + TRANSPORT_SAFE_AWAIT_MARGIN_MS,
-    void 0,
-    `apiFetch:${method}:${path}`
-  );
-  clearTimeout(timer);
-  if (!ok) {
-    console.error(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Fetch failed for ${method} ${url}:`, error);
-    throw new ApiError(0, `server unreachable: ${error.message}`);
-  }
-  console.log(`[API][${reqId}][${_nowIso()} +${Date.now() - startedAtMs}ms] Response from ${method} ${url}:`, res.status);
-  const backlogHeader = res.headers?.get("x-replication-backlog");
-  const providerHeader = res.headers?.get("x-secondary-provider") || res.headers?.get("x-replication-provider");
-  if (backlogHeader !== null && backlogHeader !== void 0) {
-    const backlog_depth = parseInt(backlogHeader, 10);
-    if (!Number.isNaN(backlog_depth) && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("vdg:server-health", {
-        detail: { backlog_depth, provider: providerHeader || void 0 }
-      }));
-    }
-  }
-  const text = await res.text();
-  let json = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
-  }
-  if (path === "/health" && json && typeof window !== "undefined") {
-    const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
-    const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
-    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? null;
-    const server_quarantined_depth = json.mirror?.quarantined_depth ?? 0;
-    window.dispatchEvent(new CustomEvent("vdg:server-health", {
-      detail: { backlog_depth, server_quarantined_depth, oldest_pending_age_ms, provider }
-    }));
-  }
-  if (!res.ok) {
-    throw new ApiError(res.status, json?.reason || json?.error?.message || `${res.status} ${res.statusText}`, json?.params);
-  }
-  return json;
-}
-var backend = { detectBackend, apiFetch: apiFetch2, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
-
-// output/web/js.tmp/implementations/storage/implementations/server/server-role.js
-function wasm2() {
-  const m = window.__vdg_wasm;
-  if (!m?.auth_fetch_me) throw new Error("WASM module not loaded");
-  return m;
-}
-async function probeRole(_user, _wsName) {
-  return await wasm2().auth_fetch_me();
-}
-var serverWorkspaceAuthority = { probeRole };
-
-// output/web/js.tmp/implementations/storage/implementations/server/server-session.js
-async function serverSessionIdentity2() {
-  const me = await probeRole(null, null);
-  return me?.email ? { email: me.email, name: me.name || "" } : null;
-}
-var serverSession = { serverSessionIdentity: serverSessionIdentity2 };
-
-// output/web/js.tmp/implementations/storage/implementations/server/server-users.js
-var USERS_PATH = "/users";
-async function listUsers2({ role, includeInactive } = {}) {
-  const params = new URLSearchParams();
-  if (role) params.set("role", role);
-  if (includeInactive) params.set("include_inactive", "true");
-  const qs = params.toString() ? `?${params.toString()}` : "";
-  return apiFetch("GET", `${USERS_PATH}${qs}`);
-}
-async function createUser({ email, display_name, roles }) {
-  return apiFetch("POST", USERS_PATH, { email, display_name, roles });
-}
-async function patchUser(email, body) {
-  return apiFetch("PATCH", `${USERS_PATH}/${encodeURIComponent(email)}`, body);
-}
-
 // output/web/js.tmp/implementations/storage/core_abstractions/io-port-shared.js
 var UNKNOWN_AUTHOR = "unknown";
 var SharedIoPort = class {
@@ -3170,213 +2963,110 @@ var SharedIoPort = class {
   }
 };
 
-// output/web/js.tmp/implementations/storage/core_abstractions/storage-layout.js
-var KIND_PATH_OVERRIDES = {
-  error_log: "_shared/error-log",
-  audit_log: "_shared/logs/audit-log"
-};
-
-// output/web/js.tmp/implementations/storage/implementations/server/server-io-adapters.js
-var HTTP_NOT_FOUND = 404;
-var HTTP_PRECONDITION = 412;
-var CAS_FAILED_MSG = "412 Precondition Failed";
-var ServerIoPort = class extends SharedIoPort {
-  constructor(userEmail) {
-    super(userEmail);
+// output/web/js.tmp/implementations/storage/implementations/server/backend.js
+var BACKEND_SERVER = "server";
+var SESSION_TOKEN_KEY = "vdg.session-token";
+var BACKEND_KEY = "vdg.backend";
+var SERVER_HEALTH_EVENT = "vdg:server-health";
+var WASM_READY_EVENT = "vdg:wasm-ready";
+var _backend = null;
+async function detectBackend() {
+  if (_backend) return _backend;
+  if (API_BASE) {
+    _backend = BACKEND_SERVER;
+    return _backend;
   }
-  // ── Native CharterDB API ──────────────────────────────────────────────────
-  async record_read(collection, id) {
-    try {
-      const res = await apiFetch("GET", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
-      if (!res?.id) return { found: false, content: "", etag: null, version: null, owner: null };
-      return { found: true, content: res.content ?? "", etag: res.etag ?? null, version: res.version, owner: res.owner ?? null };
-    } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { found: false, content: "", etag: null, version: null, owner: null };
-      }
-      throw err;
-    }
+  const remembered = _readRemembered();
+  if (remembered) {
+    _backend = remembered;
+    return _backend;
   }
-  // CDB-DM-15: `labels` is wire-opaque JSON object text (`{"k":"v",...}`), the same shape
-  // `record_list`'s own filter speaks -- CREATE-only, parsed and sent only on the POST branch.
-  // The server's Update body has no labels field at all (`deny_unknown_fields`), so it is never
-  // even attempted on the PUT branches below, whatever this caller passed.
-  // `owner` is the caller's declared owner (CDB-DM-04) -- this adapter is a thin relay, it never
-  // mints one from the signed-in session. A create with no owner declared is a caller bug, not a
-  // session-identity fallback (that mint was the defect: CS keying a job in on a rep's behalf
-  // silently became the record CS owns).
-  async record_write(collection, id, content, etag = null, labels = "", owner = null) {
-    if (!etag && !owner) throw new Error(`record_write: ${collection}/${id} create with no owner declared`);
-    try {
-      if (etag) {
-        const res = await apiFetch(
-          "PUT",
-          `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
-          { content },
-          { "If-Match": etag }
-        );
-        return { id: res.id, etag: res.etag, version: res.version };
-      }
-      const createBody = labels ? { id, content, owner, labels: JSON.parse(labels) } : { id, content, owner };
-      try {
-        const res = await apiFetch(
-          "POST",
-          `/records/${encodeURIComponent(collection)}`,
-          createBody
-        );
-        return { id: res.id, etag: res.etag, version: res.version };
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 409) {
-          const res = await apiFetch(
-            "PUT",
-            `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`,
-            { content }
-          );
-          return { id: res.id, etag: res.etag, version: res.version };
-        }
-        throw err;
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_PRECONDITION) throw new Error(CAS_FAILED_MSG);
-      throw err;
-    }
+  _probeWhenWasmReady();
+  _backend = BACKEND_SERVER;
+  try {
+    sessionStorage.setItem(BACKEND_KEY, _backend);
+  } catch {
   }
-  async record_delete(collection, id) {
-    try {
-      await apiFetch("DELETE", `/records/${encodeURIComponent(collection)}/${encodeURIComponent(id)}`);
-      return true;
-    } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) return false;
-      throw err;
-    }
+  return _backend;
+}
+function _probeWhenWasmReady() {
+  if (typeof window === "undefined") return;
+  const fire = () => {
+    window.__vdg_wasm.server_health_probe().then((detail) => {
+      if (detail) window.dispatchEvent(new CustomEvent(SERVER_HEALTH_EVENT, { detail }));
+    }).catch((e) => {
+      console.warn("[VDG] health probe failed:", e?.message || e);
+    });
+  };
+  if (window.__vdg_wasm?.server_health_probe) {
+    fire();
+    return;
   }
-  // CDB-Q-02, param order matches TransportPort::list_records(collection, owner, cursor, limit)
-  // 1:1 -- `ws_list_dir` below calls this with only `collection` (every default applies) so its
-  // own single-page, unfiltered listing is unaffected by this order. `labels` -- CDB-Q-19's
-  // wire-opaque JSON object text, same shape `record_write`'s own labels param speaks.
-  async record_list(collection, owner = null, cursor = null, limit = 1e3, labels = "") {
-    const path = this._normPath(collection);
-    try {
-      let url = `/records/${encodeURIComponent(path)}?limit=${limit}`;
-      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`;
-      if (owner) url += `&owner=${encodeURIComponent(owner)}`;
-      if (labels) url += `&labels=${encodeURIComponent(labels)}`;
-      const res = await apiFetch("GET", url);
-      return { records: res?.records ?? [], next_cursor: res?.next_cursor ?? null, has_more: res?.has_more ?? false };
-    } catch (err) {
-      if (err instanceof ApiError && err.status === HTTP_NOT_FOUND) {
-        return { records: [], next_cursor: null, has_more: false };
-      }
-      throw err;
-    }
-  }
-  async changes(since = "0", limit = null, includeContent = false) {
-    let url = `/changes?since=${encodeURIComponent(since)}`;
-    if (limit) url += `&limit=${limit}`;
-    if (includeContent) url += "&include_content=true";
-    const res = await apiFetch("GET", url);
-    return res;
-  }
-  async start_cursor() {
-    const res = await apiFetch("GET", "/changes/start");
-    return res?.next_cursor || "0";
-  }
-  async poll_health() {
-    try {
-      const res = await apiFetch("GET", "/health");
-      if (res && typeof window !== "undefined") {
-        const backlog_depth = res.mirror?.backlog_depth ?? res.replication_backlog ?? 0;
-        const oldest_pending_age_ms = res.mirror?.oldest_pending_age_ms ?? null;
-        const provider = res.mirror?.provider ?? res.secondary_provider ?? "Google Drive";
-        const server_quarantined_depth = res.mirror?.quarantined_depth ?? 0;
-        window.dispatchEvent(new CustomEvent("vdg:server-health", {
-          detail: {
-            backlog_depth,
-            server_quarantined_depth,
-            oldest_pending_age_ms,
-            provider
-          }
-        }));
-      }
-      return res;
-    } catch {
-      return null;
-    }
-  }
-  // ── where things live ─────────────────────────────────────────────────────
-  _kindPath(kind) {
-    return KIND_PATH_OVERRIDES[kind] ?? kind;
-  }
-  _normPath(path) {
-    return String(path || "").replace(/^\/+|\/+$/g, "");
-  }
-  // document_read/document_write/document_list/document_read_file (the bundle grain's period-file
-  // API, and the per-record fetch that briefly replaced it) are gone with
-  // sync_bundle/pull_kind_by_listing and sync_delta.rs's move onto TransportPort (ws_read_file,
-  // via fetch_record) on the Rust side — every registered kind is per-record now
-  // (cache_policy::PER_RECORD_REGISTRY).
-  _parseFileId(fileId) {
-    const norm = String(fileId || "").replace(/\/+/g, "/");
-    if (!norm.includes("/")) return { col: "", id: norm };
-    const idx = norm.lastIndexOf("/");
-    return { col: norm.slice(0, idx), id: norm.slice(idx + 1) };
-  }
-  // F-58-02: poll_health() used to fire here too — once per Changes page, roughly doubling the
-  // delta engine's HTTP volume for a signal nobody needed at that cadence. The read routes
-  // (RecordGet/RecordList/Changes) carry no x-replication-backlog header (only RecordCreate/
-  // RecordUpdate stamp it — server/src/bootstrap/edge/dispatch.rs), so the read-only sync path
-  // never saw it that way either. Health now polls on its own slow timer (sync-schedulers.js
-  // startHealthPoll) instead of riding every page fetch.
-  // CDB-CF-03/CF-15: CharterDB already reports collection/id/owner/version/event and (per
-  // CDB-CF-15) whether the caller has caught up on every /changes page — passed straight through,
-  // raw, so TransportPort::fetch_changes (charter_transport_bridge.rs) does the one real shaping
-  // this deserves, not a JS-side re-derivation that used to collapse the event into a bare
-  // `removed` boolean and drop `owner` entirely.
-  async changes_feed(pageToken, limit, includeContent) {
-    return this.changes(pageToken || "0", limit, includeContent);
-  }
-  async changes_cursor() {
-    const cursor = await this.start_cursor();
-    return { cursor };
-  }
-  // ── path-addressed workspace files ────────────────────────────────────────
-  async ws_list_dir(dirPath) {
-    const collection = this._normPath(dirPath);
-    const res = await this.record_list(collection);
-    return {
-      files: res.records.map((r) => ({
-        id: `${collection}/${r.id}`,
-        name: r.id,
-        version: String(r.version)
-      }))
-    };
-  }
-  async ws_read_file(dirPath, fileName) {
-    const collection = this._normPath(dirPath);
-    const r = await this.record_read(collection, fileName);
-    if (!r.found) return { found: false, id: null, etag: null, version: null, owner: null, content: "" };
-    return { found: true, id: `${collection}/${fileName}`, etag: r.etag, version: r.version, owner: r.owner, content: r.content };
-  }
-  async ws_write_file(dirPath, fileName, content, fileId, etag, labels = "", owner = null) {
-    const collection = this._normPath(dirPath);
-    const r = await this.record_write(collection, fileName, content, etag, labels, owner);
-    return { id: fileName, etag: r.etag, version: r.version };
-  }
-  async ws_delete_file(fileId) {
-    const { col, id } = this._parseFileId(fileId);
-    await this.record_delete(col, id);
+  window.addEventListener(WASM_READY_EVENT, fire, { once: true });
+}
+function _readRemembered() {
+  try {
+    return sessionStorage.getItem(BACKEND_KEY);
+  } catch {
     return null;
   }
-  // CDB-DM-16: declare (or redeclare) one collection's label vocabulary -- the registry entry
-  // a labelled create/Relabel is checked against before it is ever authorized.
-  async declare_collection(collection, labelKeysJson, owner) {
-    const res = await apiFetch("PUT", `/collections/${encodeURIComponent(collection)}`, {
-      label_keys: JSON.parse(labelKeysJson),
-      owner
-    });
-    return { id: res?.id ?? collection };
+}
+function _resetBackend() {
+  _backend = null;
+  try {
+    sessionStorage.removeItem(BACKEND_KEY);
+  } catch {
   }
-};
+}
+async function adoptSessionToken2(token) {
+  rememberSessionToken2(token);
+}
+function rememberSessionToken2(token) {
+  try {
+    if (token) {
+      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch {
+  }
+}
+var backend = { detectBackend, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-role.js
+function wasm2() {
+  const m = window.__vdg_wasm;
+  if (!m?.auth_fetch_me) throw new Error("WASM module not loaded");
+  return m;
+}
+async function probeRole(_user, _wsName) {
+  return await wasm2().auth_fetch_me();
+}
+var serverWorkspaceAuthority = { probeRole };
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-session.js
+async function serverSessionIdentity2() {
+  const me = await probeRole(null, null);
+  return me?.email ? { email: me.email, name: me.name || "" } : null;
+}
+var serverSession = { serverSessionIdentity: serverSessionIdentity2 };
+
+// output/web/js.tmp/implementations/storage/implementations/server/server-users.js
+function wasmApi() {
+  const m = window.__vdg_wasm;
+  if (!m?.users_directory_list) throw new Error("WASM module not loaded");
+  return m;
+}
+async function listUsers2({ role, includeInactive } = {}) {
+  return wasmApi().users_directory_list(role || "", !!includeInactive);
+}
+async function createUser({ email, display_name, roles }) {
+  return wasmApi().users_directory_create(email, display_name, JSON.stringify(roles));
+}
+async function patchUser(email, body) {
+  return wasmApi().users_directory_patch(email, JSON.stringify(body));
+}
 
 // output/web/js.tmp/implementations/storage/implementations/auth/window-open-guard.js
 var BLANK_SRC = "about:blank";
@@ -3802,6 +3492,11 @@ var AUTH_STORAGE_KEYS = Object.freeze([
   // display profile & server session token
 ]);
 var _currentUser = null;
+function wasmApi2() {
+  const m = window.__vdg_wasm;
+  if (!m?.auth_session_open) throw new Error("WASM module not loaded");
+  return m;
+}
 function getCurrentUser2() {
   if (_currentUser) return _currentUser;
   const stored = localStorage.getItem(TOKEN_KEY);
@@ -3814,7 +3509,9 @@ function getCurrentUser2() {
 function signOut2() {
   for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k);
   _currentUser = null;
-  return apiFetch("DELETE", "/session").catch((e) => {
+  return Promise.resolve().then(() => wasmApi2().auth_session_close()).then((res) => {
+    if (!res?.ok) console.warn("sign-out: server session not ended: HTTP", res?.status);
+  }).catch((e) => {
     console.warn("sign-out: server session not ended:", e?.message || e);
   }).finally(() => rememberSessionToken(""));
 }
@@ -3856,7 +3553,7 @@ async function hydrateSessionFromToken2(resp) {
   _persistAccessToken(resp);
   const expSec = Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1e3);
   console.log("[Auth] POSTing to /session");
-  const opened = await apiFetch("POST", "/session", { token: resp.access_token });
+  const opened = await wasmApi2().auth_session_open(resp.access_token);
   console.log("[Auth] /session POST result:", opened);
   if (opened?.token) {
     console.log("[Auth] Adopting session token...");
@@ -4147,7 +3844,7 @@ async function composeStorage() {
   return backendKind;
 }
 function createIoPort(userEmail) {
-  return new ServerIoPort(userEmail);
+  return new SharedIoPort(userEmail);
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
@@ -4306,15 +4003,18 @@ function renderServerAccessGateScreen(container, { reason, actionFailed = false,
 }
 
 // output/web/js.tmp/bootstrap/boot/server-gate.js
-var SERVER_ERROR_NAME = "ApiError";
-var HTTP_UNAUTHORIZED = 401;
+var BOOT_GATE_PROP = "bootGate";
+var GATE_SESSION = "session";
+var GATE_OUTAGE = "outage";
+var REASON_BY_KIND = {
+  [GATE_SESSION]: SERVER_ACCESS_REASON_SESSION,
+  [GATE_OUTAGE]: SERVER_ACCESS_REASON_TRANSIENT
+};
 var EVT_RECONNECT_REQUEST = "vdg:auth-reconnect-request";
 var EVT_RECONNECTED = "vdg:auth-reconnected";
 var EVT_NEEDS_RECONNECT = "vdg:auth-needs-reconnect";
 function serverGateReason(err) {
-  if (err?.name !== SERVER_ERROR_NAME) return null;
-  if (err.status === HTTP_UNAUTHORIZED) return SERVER_ACCESS_REASON_SESSION;
-  return SERVER_ACCESS_REASON_TRANSIENT;
+  return REASON_BY_KIND[err?.[BOOT_GATE_PROP]?.kind] ?? null;
 }
 function requestReconnect(onSettled, win = window) {
   let settled = false;
@@ -4569,7 +4269,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.60 (20b8a58a)";
+var APP_VERSION = "v0.4.61 (52bfc9b8)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5811,8 +5511,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=20b8a58a", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=20b8a58a", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=52bfc9b8", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=52bfc9b8", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6109,7 +5809,7 @@ async function _deferredInit(user, db, repo3) {
       const locale = prefsResult.ok ? prefsResult.value?.locale || "vi" : "vi";
       if (locale !== "vi") await loadLocale(locale);
     }
-    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-KMG7KRS2.js");
+    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-KSOFVZ65.js");
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
@@ -6598,7 +6298,7 @@ async function main() {
       serverBackend: true,
       onSignIn: () => mountLoginScreen(() => location.reload())
     })) {
-      console.error("[VDG] boot stopped on Server", err.status, err.message);
+      console.error("[VDG] boot stopped on Server", err);
       return;
     }
     handleUnrecognizedBootError(err, _resolveBootFallbackMount());

@@ -2,7 +2,7 @@
 // F-15-20 merged into F-15-19 R3: single OAuth2 popup grants identity (server build has no
 // Drive scope to ask for — see signin-button.js).
 
-import { apiFetch, adoptSessionToken, rememberSessionToken } from '../../core_abstractions/backend.js';
+import { adoptSessionToken, rememberSessionToken } from '../../core_abstractions/backend.js';
 import { SERVER_SESSION_TTL_MS, serverSessionIdentity } from '../../core_abstractions/server-session.js';
 import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_abstractions/profile-cache.js';
 // The synthetic id-token codec (parse/build) is core — no GIS, no client id, no storage.
@@ -28,6 +28,15 @@ export const AUTH_STORAGE_KEYS = Object.freeze([
 
 let _currentUser = null; // in-memory cache after parse
 
+// The wasm MODULE, not the repo store — sign-in runs before the repo exists, and wasm-loader.js
+// has set window.__vdg_wasm by the time any session call fires (same reasoning as server-role.js).
+// The /session requests and their verdicts are Rust's (freight_http); this file only wires them.
+function wasmApi() {
+  const m = window.__vdg_wasm;
+  if (!m?.auth_session_open) throw new Error('WASM module not loaded');
+  return m;
+}
+
 // ── public API ────────────────────────────────────────────────────────────────
 
 function getCurrentUser() {
@@ -50,9 +59,12 @@ function getCurrentUser() {
 function signOut() {
   for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k); // F-15-50 AC-01
   _currentUser = null;
-  // The DELETE must carry the session (apiFetch attaches cookie + header), so the token is only
-  // dropped afterwards — win or lose.
-  return apiFetch('DELETE', '/session')
+  // The DELETE must carry the session (Rust attaches the header), so the token is only dropped
+  // afterwards — win or lose. auth_session_close never rejects; ok:false is an outage to log,
+  // never a reason to keep local state.
+  return Promise.resolve()
+    .then(() => wasmApi().auth_session_close())
+    .then((res) => { if (!res?.ok) console.warn('sign-out: server session not ended: HTTP', res?.status); })
     .catch((e) => { console.warn('sign-out: server session not ended:', e?.message || e); })
     .finally(() => rememberSessionToken(''));
 }
@@ -118,11 +130,10 @@ async function hydrateSessionFromToken(resp) {
   // identity anyway — "signed in" locally, no server session ever created, and the very state
   // this file exists to recover from. Both callers (signin-button.js, token-refresh.js) already
   // catch a hydrate rejection and show it, not reload into a fresh copy of the same dead end.
-  const opened = await apiFetch('POST', '/session', { token: resp.access_token });
+  const opened = await wasmApi().auth_session_open(resp.access_token);
   console.log('[Auth] /session POST result:', opened);
-  // Cookie first; the token is kept only if THIS browser refuses the third-party cookie
-  // (InPrivate, Safari, strict tracking protection) — adoptSessionToken asks, then drops it
-  // wherever the cookie already works.
+  // The verdict is Rust's (freight_wire::adopted_token): token is the header credential for
+  // every later request, null when there is nothing to adopt.
   if (opened?.token) {
     console.log('[Auth] Adopting session token...');
     await adoptSessionToken(opened.token);
