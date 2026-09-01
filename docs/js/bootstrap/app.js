@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 6c0564b9">v0.4.52 (6c0564b9)</span>
+        <span class="font-mono whitespace-nowrap" title="build 9f6b4b65">v0.4.53 (9f6b4b65)</span>
       </div>
     `;
   }
@@ -2304,7 +2304,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.52 (6c0564b9)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.53 (9f6b4b65)</div>
         </div>
       </div>
     </div>`;
@@ -3190,9 +3190,7 @@ var HTTP_NOT_FOUND = 404;
 var HTTP_PRECONDITION = 412;
 var CAS_FAILED_MSG = "412 Precondition Failed";
 var ServerIoPort = class extends SharedIoPort {
-  // The third argument is accepted for call-site compatibility (createIoPort passes one) and is
-  // unused: it named a per-user folder, and collections are flat.
-  constructor(serverApi, userEmail, _fork = null) {
+  constructor(serverApi, userEmail) {
     super(userEmail);
     this.serverApi = serverApi;
   }
@@ -4146,8 +4144,8 @@ async function composeStorage() {
   bindWorkspaceAuthority(serverWorkspaceAuthority);
   return backendKind;
 }
-function createIoPort(serverApi, userEmail, forkPrefix) {
-  return new ServerIoPort(serverApi, userEmail, forkPrefix);
+function createIoPort(serverApi, userEmail) {
+  return new ServerIoPort(serverApi, userEmail);
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
@@ -4569,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.52 (6c0564b9)";
+var APP_VERSION = "v0.4.53 (9f6b4b65)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5810,8 +5808,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=6c0564b9", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=6c0564b9", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=9f6b4b65", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=9f6b4b65", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -6057,11 +6055,6 @@ function renderBootPhase(state) {
 }
 
 // output/web/js.tmp/bootstrap/boot/repo-init-steps.js
-var SENTINEL_TOKEN = /^__.*__$/;
-function _forkPrefixFromSession() {
-  const token = currentSalesRepId();
-  return token && !SENTINEL_TOKEN.test(token) ? token.toLowerCase() : null;
-}
 var CACHE_OP_TIMEOUT_MS = 8e3;
 var PREFS_META_KEY2 = "preferences";
 var REPO_HANG_SEAM_KEY = "vdg.test.repoHangMs";
@@ -6087,7 +6080,7 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
   const serverApi = storageApi();
-  const ioPort = createIoPort(serverApi, user.email, _forkPrefixFromSession());
+  const ioPort = createIoPort(serverApi, user.email);
   const warmResult = await safeAwait(ioPort.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
   if (!warmResult.ok) return _storeUnresponsive("repo-init:sqlite-warm");
   const repo4 = new wasmMod.WasmEntityRepo(ioPort);

@@ -8,9 +8,7 @@ const HTTP_PRECONDITION      = 412;
 const CAS_FAILED_MSG         = '412 Precondition Failed';
 
 export class ServerIoPort extends SharedIoPort {
-  // The third argument is accepted for call-site compatibility (createIoPort passes one) and is
-  // unused: it named a per-user folder, and collections are flat.
-  constructor(serverApi, userEmail, _fork = null) {
+  constructor(serverApi, userEmail) {
     super(userEmail);
     this.serverApi = serverApi;
   }

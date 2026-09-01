@@ -9,13 +9,6 @@ import { composeUi } from '../compose-ui/index.js';
 import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
 import { bindLedgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 
-const SENTINEL_TOKEN = /^__.*__$/;
-
-function _forkPrefixFromSession() {
-  const token = currentSalesRepId();
-  return token && !SENTINEL_TOKEN.test(token) ? token.toLowerCase() : null;
-}
-
 import { setStoreScope, localStore } from '../../implementations/storage/core_abstractions/local-store.js';
 import { loadLocale } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { APP_VERSION } from '../../implementations/kernel/core_abstractions/version.js';
@@ -69,7 +62,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
   const serverApi = storageApi(); // Use storageApi to get server API
-  const ioPort = createIoPort(serverApi, user.email, _forkPrefixFromSession());
+  const ioPort = createIoPort(serverApi, user.email);
 
   // Boot-critical canary: fail fast, honestly, before sinking work into a repo/FSM/license-gate
   // built on a store that can't answer. A timeout here is NOT evidence of a lock (that classified

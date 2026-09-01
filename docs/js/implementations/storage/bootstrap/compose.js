@@ -73,8 +73,8 @@ export async function composeStorage() {
 }
 
 /// The IoPort the wasm repo runs on: same contract either way, only where the bytes go differs.
-export function createIoPort(serverApi, userEmail, forkPrefix) {
-  return new ServerIoPort(serverApi, userEmail, forkPrefix);
+export function createIoPort(serverApi, userEmail) {
+  return new ServerIoPort(serverApi, userEmail);
 }
 
 
