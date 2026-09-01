@@ -97,12 +97,23 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   fsm.dispatch(BootEvent.RENDERED);
 
   // 7. Deferred init
-  _deferredInit(user, db, serverApi, repo);
+  //
+  // `serverApi` used to sit in this argument list. It was not a parameter of this function, not
+  // imported, and not declared anywhere — the only other mention in the file is _deferredInit's
+  // OWN parameter name, a different scope. JS evaluates arguments BEFORE the call, so this line
+  // threw ReferenceError and killed everything below it: the delta tick, the outbox drain, the
+  // health poll, the audit trails and the role re-resolve. All of it, silently — because
+  // BootEvent.RENDERED fires two lines above, so the UI came up looking fine.
+  //
+  // That is what shipped as v0.4.58: no incremental sync (one desk showed 11 shipments while
+  // another showed 13), queued writes that never left (Publish spun forever), and a green sync
+  // chip, green because nothing was left running to report otherwise.
+  _deferredInit(user, db, repo);
 
   return { db, poller: null, auditLog: null };
 }
 
-async function _deferredInit(user, db, serverApi, repo) {
+async function _deferredInit(user, db, repo) {
   const store = localStore();
   try {
     if (store) {

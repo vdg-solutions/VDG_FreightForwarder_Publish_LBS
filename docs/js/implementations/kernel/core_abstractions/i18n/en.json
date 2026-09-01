@@ -185,6 +185,8 @@
   "sales_new.badge.publish_pending": "Pending Publish",
   "sales_new.etd_eta_warn": "ETD must be before ETA",
   "sales_new.validation.no_bill": "At least one of MBL / HBL / Job File No is required",
+  "sales_new.validation.bill_awb_invalid": "Not a valid air waybill: for an AIR product the MBL/HBL must look like 123-45678901 (3-digit carrier, 8-digit serial whose last digit is the serial mod 7). Change Product if this is not an air shipment.",
+  "sales_new.validation.mode_product_conflict": "Mode and Product disagree: an AIR mode needs the AIR product, and a SEA mode needs a sea product. Product is what decides whether an air waybill number is required.",
   "sales_new.validation.no_customer": "Customer is required",
   "sales_new.validation.no_lines": "At least 1 P&L line with an amount > 0 is required",
   "sales_new.warn.pnl_lines_missing": "P&L data incomplete — please check",

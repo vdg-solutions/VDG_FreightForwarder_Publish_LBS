@@ -2750,6 +2750,7 @@ function validateShipmentForm(state, { publish = true } = {}) {
     sales_rep: state.sales_rep || "",
     direction: state.direction || "",
     product: state.product || "",
+    mode: state.mode || "",
     closing_si_bad_input: !!state.closing_si_bad_input,
     closing_cy_bad_input: !!state.closing_cy_bad_input,
     book_currency: state.book_currency || "",

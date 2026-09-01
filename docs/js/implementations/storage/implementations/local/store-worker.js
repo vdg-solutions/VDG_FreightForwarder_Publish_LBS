@@ -6,9 +6,9 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: 63cebe9f is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: 20b8a58a is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=63cebe9f', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=20b8a58a', import.meta.url).href;
 
 // durability_verdict.rs contract — verdict kinds sqlite_init returns. Named here only to relay
 // and log; the classification itself happened in Rust.
