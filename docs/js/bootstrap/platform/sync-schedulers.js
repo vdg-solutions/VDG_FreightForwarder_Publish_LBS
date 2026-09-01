@@ -59,8 +59,7 @@ function _announce(jobState) {
 }
 
 // ── delta tick ────────────────────────────────────────────────────────────────
-// The 30s pull over store's delta engine (repo.sync_delta). The hourly Drive-quota check
-// rides one of these ticks — Rust says which.
+// The 30s pull over store's delta engine (repo.sync_delta).
 
 export function startDeltaTick({ getRepo = () => window.__vdg_repo } = {}) {
   let state = {};
@@ -84,9 +83,6 @@ export function startDeltaTick({ getRepo = () => window.__vdg_repo } = {}) {
     state = plan.state;
     if (plan.clear_timer) clearTimeout(timer);
     if (plan.job_state) _announce(plan.job_state);
-    if (plan.check_quota) {
-      w.sync_quota_check({}).catch(() => { /* headroom chip is best-effort; next hour retries */ });
-    }
     if (plan.schedule_ms !== null && plan.schedule_ms !== undefined) {
       timer = setTimeout(tick, plan.schedule_ms);
       timer?.unref?.();

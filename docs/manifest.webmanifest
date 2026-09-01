@@ -1,7 +1,7 @@
 {
   "name": "VDG Freight — NVOCC Console",
   "short_name": "VDG Freight",
-  "description": "Quản lý lô hàng, báo giá, P&L và sổ cái cho freight forwarder — local-first, dữ liệu trên Google Drive.",
+  "description": "Quản lý lô hàng, báo giá, P&L và sổ cái cho freight forwarder — local-first, đồng bộ qua máy chủ.",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",

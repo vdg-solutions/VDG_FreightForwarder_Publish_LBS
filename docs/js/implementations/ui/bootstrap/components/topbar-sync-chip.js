@@ -6,6 +6,20 @@ export const SYNC_HEALTHY_PENDING_THRESHOLD = 10;
 export const SYNC_HEALTHY_RECENT_MS         = 30_000;
 export const SYNC_STUCK_NOTIFY_MS           = 5 * 60_000;
 
+// durability_verdict.rs contract — the store's own verdict on whether local writes survive a
+// reload ({kind, mode, cause?}, relayed via vdg:store-durability). JS only maps kind → chip
+// state; the classification (unknown modes included — Rust fails those closed) happened in Rust.
+export const DURABILITY_VOLATILE = 'volatile';
+export const DURABILITY_REBUILT  = 'rebuilt';
+
+// volatile cause → tooltip key; a cause this build doesn't know gets the generic wording rather
+// than a raw key on screen.
+const VOLATILE_CAUSE_TO_TOOLTIP_KEY = {
+  no_opfs:    'topbar.sync.tooltip.volatile_no_opfs',
+  stale_self: 'topbar.sync.tooltip.volatile_stale_self',
+};
+const VOLATILE_TOOLTIP_FALLBACK_KEY = 'topbar.sync.tooltip.volatile';
+
 // Color → Tailwind class map (used by AC-01/03 introspection)
 export const DOT_CLASS = {
   green:       'bg-emerald-500',
@@ -20,6 +34,11 @@ export const DOT_CLASS = {
   unreachable: 'bg-red-500',   // H4-b: the server cannot be reached at all — as alarming as
                                 // offline, but its own STATE key so decideChipAction/tooltip
                                 // never reuse the signin/reconnect wording 'red' carries
+  volatile:    'bg-rose-700',  // the local store is RAM (durability_verdict.rs) — every queued
+                                // write dies with the tab; same decided-severe shade family as
+                                // quarantined, never the transient offline red
+  rebuilt:     'bg-amber-400', // the on-disk cache (old outbox included) was dropped for a
+                                // schema change — a local wipe re-syncing, not a failure
 };
 
 // State color → i18n semantic label key (AC-07)
@@ -32,6 +51,8 @@ export const STATE_TO_LABEL_KEY = {
   pending:     'auth_pending', // F-50-01 AC-10 — distinct key, never reuses offline/healthy
   quarantined: 'quarantined',
   unreachable: 'unreachable',  // H4-b — own key, never folded into 'offline' or 'retrying'
+  volatile:    'volatile',     // own key — "not saved on this machine" is neither offline nor retrying
+  rebuilt:     'rebuilt',
 };
 
 // AC-07 — aria-label builder; pure, testable without DOM
@@ -55,12 +76,18 @@ export function buildAriaLabel(state, outboxCount, t, serverBacklog = 0) {
 // not a render).
 export function computeChipState({
   pending, syncFailed, unreachable = false, quarantined, backoff429, offline, signedOut, lastSyncMs, now,
-  authReconnect, authPending,
-  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
+  authReconnect, authPending, storeDurability = null,
+  serverBacklog = 0, serverOldestPendingAgeMs = null,
 }) {
   if (authReconnect) return 'red';          // F-29-13 AC-05 — genuine reconnect need
   if (offline || signedOut) return 'red';
   if (pending > 0 && lastSyncMs > 0 && (now - lastSyncMs) > SYNC_STUCK_NOTIFY_MS) return 'red';
+  // The local store is RAM (durability_verdict.rs: no OPFS, a stale-handle fallback, or a mode
+  // this build doesn't know — Rust fails those closed): EVERY queued write dies with the tab, the
+  // outbox included. Outranks quarantined (some rows parked is narrower than the whole store
+  // volatile); only the red trio ranks higher, because signing in / getting network back is the
+  // way anything gets to the server at all.
+  if (storeDurability?.kind === DURABILITY_VOLATILE) return 'volatile';
   // A quarantined row is Rust's own decided, permanent fact (outbox.rs::quarantine_group) — no
   // amount of waiting fixes it, so it outranks every other domain signal and must never fold
   // into "just still retrying" or, worse, the healthy "nothing pending" case.
@@ -82,6 +109,9 @@ export function computeChipState({
   if (syncFailed) return 'orange';
   if (pending > 0 && lastSyncMs === 0) return 'yellow'; // F-19-80 D-B — never-synced baseline with pending backlog must not be green
   if (pending > 0) return 'yellow';
+  // One-time boot fact: the schema rebuild dropped the cache AND the old outbox. Shown whenever
+  // nothing more urgent is, so a local wipe never reads as an ordinary green boot.
+  if (storeDurability?.kind === DURABILITY_REBUILT) return 'rebuilt';
   if (serverBacklog > 0) return 'backing_up';
   return 'green';
 }
@@ -119,22 +149,30 @@ export function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNoti
 // user/online added for red-signedOut and red-offline branch (F-19-19)
 export function buildChipTitle({
   state, ago, lastError, t, user, online, authReconnect, popupBlocked, quarantinedCount = 0,
-  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
+  storeDurability = null,
+  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = null,
 }) {
   if (state === 'red' && popupBlocked)    return t('auth.popup_blocked');              // F-49-01 — ad-blocker nulled window.open
   if (state === 'red' && authReconnect)   return t('topbar.sync.tooltip.reconnect');   // F-29-13 AC-05
   if (state === 'red' && !user)   return t('topbar.sync.tooltip.click_to_signin');
   if (state === 'red' && !online) return t('topbar.sync.tooltip.waiting_network');
+  if (state === 'volatile') {
+    return t(VOLATILE_CAUSE_TO_TOOLTIP_KEY[storeDurability?.cause] ?? VOLATILE_TOOLTIP_FALLBACK_KEY);
+  }
+  if (state === 'rebuilt')        return t('topbar.sync.tooltip.rebuilt');
   if (state === 'quarantined')    return t('topbar.sync.tooltip.quarantined').replace('{n}', String(quarantinedCount));
   if (state === 'pending')        return t('topbar.sync.tooltip.auth_pending'); // F-50-01 AC-10 — calm, no "hết hạn"/expired wording
+  // The provider comes from /api/health's own `mirror.provider` (dispatch.rs:
+  // drive_port.provider_name() — "Google Drive" or "GitHub"). Until the server has said it, the
+  // client does not know it and must not invent one — neutral "secondary" wording instead.
   if (state === 'backing_up') {
     return t('topbar.sync.tooltip.backing_up')
-      .replace('{provider}', serverProvider || 'Google Drive')
+      .replace('{provider}', serverProvider || t('topbar.sync.provider.secondary'))
       .replace('{n}', String(serverBacklog));
   }
   if (state === 'orange' && serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== undefined && serverOldestPendingAgeMs > 300_000) {
     return t('topbar.sync.tooltip.backup_retry')
-      .replace('{provider}', serverProvider || 'Google Drive');
+      .replace('{provider}', serverProvider || t('topbar.sync.provider.secondary'));
   }
   const stateKey  = STATE_TO_LABEL_KEY[state] ?? 'healthy';
   const stateText = t(`topbar.sync.state.${stateKey}`);
@@ -158,8 +196,8 @@ export function buildChipTitle({
 export function renderSyncChip({
   html, state, pending, lastSyncMs, now, online,
   ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect, popupBlocked,
-  quarantinedCount = 0,
-  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = 'Google Drive',
+  quarantinedCount = 0, storeDurability = null,
+  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = null,
   syncing = false, // vdg:sync-started (charter_event_bridge.rs) — a pass is in flight even with no backlog
 }) {
   const dotClass   = DOT_CLASS[state] ?? DOT_CLASS.green;
@@ -169,7 +207,7 @@ export function renderSyncChip({
   const ago        = formatLastSyncAgo(lastSyncMs, now);
   const titleText  = buildChipTitle({
     state, ago, lastError, t, user, online, authReconnect, popupBlocked, quarantinedCount,
-    serverBacklog, serverOldestPendingAgeMs, serverProvider,
+    storeDurability, serverBacklog, serverOldestPendingAgeMs, serverProvider,
   });
 
   return html`
@@ -209,6 +247,9 @@ export function decideChipAction({ state, user, online, lastError, authReconnect
   if (state === 'pending')                    return CHIP_ACTION.NOOP; // F-50-01 AC-12 — click isn't swallowed: the window-level gesture listener still fires independently
   // A quarantined row needs a code fix, not a retry — nothing behind this click could resolve it.
   if (state === 'quarantined')                return CHIP_ACTION.NOOP;
+  // Volatile store: the one useful act is pushing the outbox to the server NOW, before the tab
+  // (and the RAM database under it) goes away. 'rebuilt' takes the same default further down.
+  if (state === 'volatile')                   return CHIP_ACTION.SYNC_NOW;
   if (state === 'red' && authReconnect)       return CHIP_ACTION.SIGNIN;
   if (state === 'red' && !user)               return CHIP_ACTION.SIGNIN;
   if (state === 'red' && !online)             return CHIP_ACTION.WAITING_NETWORK;

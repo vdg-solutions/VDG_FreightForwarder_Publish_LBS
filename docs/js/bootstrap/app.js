@@ -27,7 +27,7 @@ import {
 } from "./chunk-GRBWOHUK.js";
 import {
   jobTracker
-} from "./chunk-K3L3PCZY.js";
+} from "./chunk-W6DMNGKQ.js";
 import {
   bindManifestComposer
 } from "./chunk-3FXNTAAE.js";
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build b685b84e">v0.4.57 (b685b84e)</span>
+        <span class="font-mono whitespace-nowrap" title="build 63cebe9f">v0.4.58 (63cebe9f)</span>
       </div>
     `;
   }
@@ -723,6 +723,13 @@ function resolveBreadcrumb(hash, _locale, t2) {
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar-sync-chip.js
 var SYNC_STUCK_NOTIFY_MS = 5 * 6e4;
+var DURABILITY_VOLATILE = "volatile";
+var DURABILITY_REBUILT = "rebuilt";
+var VOLATILE_CAUSE_TO_TOOLTIP_KEY = {
+  no_opfs: "topbar.sync.tooltip.volatile_no_opfs",
+  stale_self: "topbar.sync.tooltip.volatile_stale_self"
+};
+var VOLATILE_TOOLTIP_FALLBACK_KEY = "topbar.sync.tooltip.volatile";
 var DOT_CLASS = {
   green: "bg-emerald-500",
   yellow: "bg-amber-400",
@@ -735,10 +742,17 @@ var DOT_CLASS = {
   // a decided, permanent refusal (outbox.rs::quarantine_group) —
   // its own shade, never the plain 'red' used for an ordinary
   // offline/reconnect wait that resolves on its own
-  unreachable: "bg-red-500"
+  unreachable: "bg-red-500",
   // H4-b: the server cannot be reached at all — as alarming as
   // offline, but its own STATE key so decideChipAction/tooltip
   // never reuse the signin/reconnect wording 'red' carries
+  volatile: "bg-rose-700",
+  // the local store is RAM (durability_verdict.rs) — every queued
+  // write dies with the tab; same decided-severe shade family as
+  // quarantined, never the transient offline red
+  rebuilt: "bg-amber-400"
+  // the on-disk cache (old outbox included) was dropped for a
+  // schema change — a local wipe re-syncing, not a failure
 };
 var STATE_TO_LABEL_KEY = {
   green: "healthy",
@@ -749,8 +763,11 @@ var STATE_TO_LABEL_KEY = {
   pending: "auth_pending",
   // F-50-01 AC-10 — distinct key, never reuses offline/healthy
   quarantined: "quarantined",
-  unreachable: "unreachable"
+  unreachable: "unreachable",
   // H4-b — own key, never folded into 'offline' or 'retrying'
+  volatile: "volatile",
+  // own key — "not saved on this machine" is neither offline nor retrying
+  rebuilt: "rebuilt"
 };
 function buildAriaLabel(state, outboxCount, t2, serverBacklog = 0) {
   const key = STATE_TO_LABEL_KEY[state] ?? "healthy";
@@ -774,13 +791,14 @@ function computeChipState({
   now,
   authReconnect,
   authPending,
+  storeDurability = null,
   serverBacklog = 0,
-  serverOldestPendingAgeMs = null,
-  serverProvider = "Google Drive"
+  serverOldestPendingAgeMs = null
 }) {
   if (authReconnect) return "red";
   if (offline || signedOut) return "red";
   if (pending > 0 && lastSyncMs > 0 && now - lastSyncMs > SYNC_STUCK_NOTIFY_MS) return "red";
+  if (storeDurability?.kind === DURABILITY_VOLATILE) return "volatile";
   if (quarantined) return "quarantined";
   if (authPending) return "pending";
   if (unreachable) return "unreachable";
@@ -791,6 +809,7 @@ function computeChipState({
   if (syncFailed) return "orange";
   if (pending > 0 && lastSyncMs === 0) return "yellow";
   if (pending > 0) return "yellow";
+  if (storeDurability?.kind === DURABILITY_REBUILT) return "rebuilt";
   if (serverBacklog > 0) return "backing_up";
   return "green";
 }
@@ -819,21 +838,26 @@ function buildChipTitle({
   authReconnect,
   popupBlocked,
   quarantinedCount = 0,
+  storeDurability = null,
   serverBacklog = 0,
   serverOldestPendingAgeMs = null,
-  serverProvider = "Google Drive"
+  serverProvider = null
 }) {
   if (state === "red" && popupBlocked) return t2("auth.popup_blocked");
   if (state === "red" && authReconnect) return t2("topbar.sync.tooltip.reconnect");
   if (state === "red" && !user) return t2("topbar.sync.tooltip.click_to_signin");
   if (state === "red" && !online) return t2("topbar.sync.tooltip.waiting_network");
+  if (state === "volatile") {
+    return t2(VOLATILE_CAUSE_TO_TOOLTIP_KEY[storeDurability?.cause] ?? VOLATILE_TOOLTIP_FALLBACK_KEY);
+  }
+  if (state === "rebuilt") return t2("topbar.sync.tooltip.rebuilt");
   if (state === "quarantined") return t2("topbar.sync.tooltip.quarantined").replace("{n}", String(quarantinedCount));
   if (state === "pending") return t2("topbar.sync.tooltip.auth_pending");
   if (state === "backing_up") {
-    return t2("topbar.sync.tooltip.backing_up").replace("{provider}", serverProvider || "Google Drive").replace("{n}", String(serverBacklog));
+    return t2("topbar.sync.tooltip.backing_up").replace("{provider}", serverProvider || t2("topbar.sync.provider.secondary")).replace("{n}", String(serverBacklog));
   }
   if (state === "orange" && serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== void 0 && serverOldestPendingAgeMs > 3e5) {
-    return t2("topbar.sync.tooltip.backup_retry").replace("{provider}", serverProvider || "Google Drive");
+    return t2("topbar.sync.tooltip.backup_retry").replace("{provider}", serverProvider || t2("topbar.sync.provider.secondary"));
   }
   const stateKey = STATE_TO_LABEL_KEY[state] ?? "healthy";
   const stateText = t2(`topbar.sync.state.${stateKey}`);
@@ -864,9 +888,10 @@ function renderSyncChip({
   authReconnect,
   popupBlocked,
   quarantinedCount = 0,
+  storeDurability = null,
   serverBacklog = 0,
   serverOldestPendingAgeMs = null,
-  serverProvider = "Google Drive",
+  serverProvider = null,
   syncing = false
   // vdg:sync-started (charter_event_bridge.rs) — a pass is in flight even with no backlog
 }) {
@@ -885,6 +910,7 @@ function renderSyncChip({
     authReconnect,
     popupBlocked,
     quarantinedCount,
+    storeDurability,
     serverBacklog,
     serverOldestPendingAgeMs,
     serverProvider
@@ -921,6 +947,7 @@ function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === "backing_up") return CHIP_ACTION.NOOP;
   if (state === "pending") return CHIP_ACTION.NOOP;
   if (state === "quarantined") return CHIP_ACTION.NOOP;
+  if (state === "volatile") return CHIP_ACTION.SYNC_NOW;
   if (state === "red" && authReconnect) return CHIP_ACTION.SIGNIN;
   if (state === "red" && !user) return CHIP_ACTION.SIGNIN;
   if (state === "red" && !online) return CHIP_ACTION.WAITING_NETWORK;
@@ -1084,6 +1111,13 @@ function createSyncHandlers(host) {
         });
       }
     },
+    // vdg:store-durability (store-client.js) — Rust's own verdict on whether local writes
+    // survive a reload (durability_verdict.rs). Held as-is for the chip to render; the
+    // volatile/rebuilt classification already happened in Rust, nothing is derived here.
+    onStoreDurability: (e) => {
+      host._storeDurability = e.detail ?? null;
+      host.requestUpdate();
+    },
     onServerHealth: (e) => {
       if (e.detail?.unreachable) {
         host._serverBacklog = 0;
@@ -1127,6 +1161,7 @@ function attachSyncListeners(host) {
   window.addEventListener("vdg:delta-synced", host._syncHandlers.onDeltaSynced);
   window.addEventListener("vdg:sync-error", host._syncHandlers.onSyncError);
   window.addEventListener("vdg:server-health", host._syncHandlers.onServerHealth);
+  window.addEventListener("vdg:store-durability", host._syncHandlers.onStoreDurability);
   host._stuckTickId = setInterval(() => recomputeAndMaybeNotify(host), STUCK_RECHECK_INTERVAL_MS);
 }
 function detachSyncListeners(host) {
@@ -1135,6 +1170,7 @@ function detachSyncListeners(host) {
   window.removeEventListener("vdg:delta-synced", host._syncHandlers.onDeltaSynced);
   window.removeEventListener("vdg:sync-error", host._syncHandlers.onSyncError);
   window.removeEventListener("vdg:server-health", host._syncHandlers.onServerHealth);
+  window.removeEventListener("vdg:store-durability", host._syncHandlers.onStoreDurability);
   clearInterval(host._stuckTickId);
 }
 
@@ -1157,7 +1193,6 @@ var VdgTopbar = class extends LitElement2 {
     _swUpdate: { type: Boolean, state: true },
     _locale: { type: String, state: true },
     _mobile: { type: Boolean, state: true },
-    _quotaWarn: { type: Boolean, state: true },
     _lastSyncMs: { type: Number, state: true },
     _lastPullMs: { type: Number, state: true },
     _retrying: { type: Boolean, state: true },
@@ -1179,6 +1214,8 @@ var VdgTopbar = class extends LitElement2 {
     // vdg:sync-started (charter_event_bridge.rs)
     _quarantinedCount: { type: Number, state: true },
     // outbox.rs's own decided, permanent refusal count
+    _storeDurability: { type: Object, state: true },
+    // durability_verdict.rs verdict; null until the store opens
     _serverQuarantined: { type: Number, state: true }
     // charterdb's mirror.quarantined_depth (CDB-DUR-09)
   };
@@ -1197,7 +1234,6 @@ var VdgTopbar = class extends LitElement2 {
     this._swUpdate = false;
     this._locale = currentLocale();
     this._mobile = window.innerWidth < 768;
-    this._quotaWarn = false;
     this._lastSyncMs = 0;
     this._lastPullMs = 0;
     this._retrying = false;
@@ -1214,7 +1250,8 @@ var VdgTopbar = class extends LitElement2 {
     this._authPending = false;
     this._serverBacklog = 0;
     this._serverOldestPendingAgeMs = null;
-    this._serverProvider = "Google Drive";
+    this._serverProvider = null;
+    this._storeDurability = window.__vdg_storeDurability ?? null;
     this._syncing = false;
     this._quarantinedCount = 0;
     this._serverQuarantined = 0;
@@ -1254,9 +1291,6 @@ var VdgTopbar = class extends LitElement2 {
     };
     this._onBreakpt = (e) => {
       this._mobile = e.detail.mobile;
-    };
-    this._onQuotaWarn = () => {
-      this._quotaWarn = true;
     };
     this._onOnline = () => {
       this._online = true;
@@ -1299,7 +1333,6 @@ var VdgTopbar = class extends LitElement2 {
     window.addEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
     window.addEventListener("hashchange", this._onHashChange);
     window.addEventListener("vdg:breakpoint-changed", this._onBreakpt);
-    window.addEventListener("vdg:quota-warning", this._onQuotaWarn);
     attachSyncListeners(this);
     window.addEventListener("online", this._onOnline);
     window.addEventListener("offline", this._onOffline);
@@ -1329,7 +1362,6 @@ var VdgTopbar = class extends LitElement2 {
     window.removeEventListener(ROLES_RESOLVED_EVENT, this._onRolesResolved);
     window.removeEventListener("hashchange", this._onHashChange);
     window.removeEventListener("vdg:breakpoint-changed", this._onBreakpt);
-    window.removeEventListener("vdg:quota-warning", this._onQuotaWarn);
     detachSyncListeners(this);
     window.removeEventListener("online", this._onOnline);
     window.removeEventListener("offline", this._onOffline);
@@ -1433,12 +1465,12 @@ var VdgTopbar = class extends LitElement2 {
       now,
       authReconnect: this._authReconnect,
       authPending: this._authPending,
+      storeDurability: this._storeDurability,
       serverBacklog: this._serverBacklog,
-      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
-      serverProvider: this._serverProvider
+      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
-    const labelText = state === "red" && this._authReconnect ? t("topbar.sync.label.signin") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "unreachable" ? t("topbar.sync.state.unreachable") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "quarantined" ? t("topbar.sync.state.quarantined") : state === "orange" ? t("topbar.sync.state.retrying") : t("topbar.sync.label");
+    const labelText = state === "red" && this._authReconnect ? t("topbar.sync.label.signin") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "unreachable" ? t("topbar.sync.state.unreachable") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "quarantined" ? t("topbar.sync.state.quarantined") : state === "volatile" ? t("topbar.sync.state.volatile") : state === "rebuilt" ? t("topbar.sync.state.rebuilt") : state === "orange" ? t("topbar.sync.state.retrying") : t("topbar.sync.label");
     return html4`
       ${renderSwBanner(this)}
       <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
@@ -1457,7 +1489,6 @@ var VdgTopbar = class extends LitElement2 {
         </div>
 
         <div class="flex items-center gap-2">
-          ${this._quotaWarn ? html4`<a href="https://one.google.com/storage" target="_blank" rel="noreferrer" class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1 px-2.5 rounded-md text-[11px] font-medium text-red-700 hover:bg-red-50 ring-1 ring-red-200" title="${t("topbar.quota.title")}">⚠ ${t("topbar.quota.label")}</a>` : ""}
           ${renderSyncChip({
       html: html4,
       state,
@@ -1473,6 +1504,7 @@ var VdgTopbar = class extends LitElement2 {
       authReconnect: this._authReconnect,
       popupBlocked: this._popupBlocked,
       quarantinedCount: quarantinedTotal,
+      storeDurability: this._storeDurability,
       serverBacklog: this._serverBacklog,
       serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
       serverProvider: this._serverProvider,
@@ -2312,7 +2344,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.57 (b685b84e)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.58 (63cebe9f)</div>
         </div>
       </div>
     </div>`;
@@ -2362,16 +2394,6 @@ function sqlCountEntities() {
 }
 function localStore() {
   return _s();
-}
-
-// output/web/js.tmp/implementations/storage/core_abstractions/storage-api.js
-var _api = null;
-function bindStorageApi(api) {
-  _api = api;
-}
-function storageApi() {
-  if (!_api) throw new Error("storage/storage-api: no adapter bound (the storage bootstrap binds it)");
-  return _api;
 }
 
 // output/web/js.tmp/implementations/storage/core_abstractions/workspace-authority.js
@@ -2605,7 +2627,6 @@ var managerPlatform = {
 };
 
 // output/web/js.tmp/bootstrap/platform/governance.js
-var UNKNOWN_OP_MESSAGE = "unknown workspace op";
 function userRepo() {
   return window.__vdg_user_repo || null;
 }
@@ -2618,27 +2639,7 @@ function requireUserRepo() {
   if (!repo3) throw new Error(REPO_NOT_MOUNTED);
   return repo3;
 }
-async function workspaceTry(op2, args) {
-  const api = storageApi();
-  if (typeof api[op2] !== "function") {
-    return { ok: false, error: { message: `${UNKNOWN_OP_MESSAGE}: ${op2}` } };
-  }
-  try {
-    const value = await api[op2](...Array.isArray(args) ? args : [args]);
-    return { ok: true, value: value ?? null };
-  } catch (err) {
-    return {
-      ok: false,
-      error: {
-        message: err?.message ?? String(err),
-        status: err?.status ?? null,
-        rate_limited: err?.rateLimited === true
-      }
-    };
-  }
-}
 var governancePlatform = {
-  governance_workspace_try: workspaceTry,
   governance_workspace_name: async () => activeWorkspaceName() || "",
   governance_users_list: async () => await requireUserRepo().list(),
   governance_users_get: async (email) => await requireUserRepo().get(email),
@@ -2651,9 +2652,6 @@ var governancePlatform = {
   governance_users_list_raw: async () => await requireUserRepo().listRaw(),
   governance_audit_append: async (kind, subject, action, detail) => {
     window.__vdg_audit_log?.append(kind, subject, action, detail);
-  },
-  governance_user_audit_write: async (action, email, before, after, driveOps) => {
-    window.__vdg_user_audit_log?.write(action, email, before, after, driveOps);
   },
   governance_ledger_accounts: async () => await ledgerRepo2()?.chartOfAccounts() ?? [],
   governance_ledger_balance: async (account, asOf) => {
@@ -2781,22 +2779,6 @@ function createPlatform({ repo: repo3 }) {
       (console[level] || console.log)(`[freight_app] ${message}`);
     },
     now_ms: () => Date.now(),
-    workspace_call: async (op2, args) => {
-      const api = storageApi();
-      if (typeof api[op2] !== "function") throw new Error(`workspace_call: unknown op ${op2}`);
-      return api[op2](...Array.isArray(args) ? args : [args]);
-    },
-    http_json: async (method, url, body) => {
-      const { ok, value: res, error } = await safeAwait(
-        fetch(url, { method, headers: { "content-type": "application/json" }, body: method === "GET" ? void 0 : JSON.stringify(body) }),
-        SAFE_AWAIT_DEFAULT_MS,
-        void 0,
-        `http_json:${method}:${url}`
-      );
-      if (!ok) throw error;
-      const text = await res.text();
-      return { status: res.status, ok: res.ok, body: text ? JSON.parse(text) : null };
-    },
     store: localStore
   };
   return { ...base, ...authPlatform, ...cachePlatform, ...dataPlatform, ...syncPlatform, ...managerPlatform, ...governancePlatform, ...flowsPlatform };
@@ -3086,7 +3068,7 @@ async function apiFetchOnce(method, path, body = void 0, extraHeaders = {}) {
   if (path === "/health" && json && typeof window !== "undefined") {
     const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
     const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
-    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? "Google Drive";
+    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? null;
     const server_quarantined_depth = json.mirror?.quarantined_depth ?? 0;
     window.dispatchEvent(new CustomEvent("vdg:server-health", {
       detail: { backlog_depth, server_quarantined_depth, oldest_pending_age_ms, provider }
@@ -3199,9 +3181,8 @@ var HTTP_NOT_FOUND = 404;
 var HTTP_PRECONDITION = 412;
 var CAS_FAILED_MSG = "412 Precondition Failed";
 var ServerIoPort = class extends SharedIoPort {
-  constructor(serverApi, userEmail) {
+  constructor(userEmail) {
     super(userEmail);
-    this.serverApi = serverApi;
   }
   // ── Native CharterDB API ──────────────────────────────────────────────────
   async record_read(collection, id) {
@@ -4107,12 +4088,23 @@ function send(op2, extra, timeoutMs) {
     _dispatch(msg);
   });
 }
+var STORE_DURABILITY_EVENT = "vdg:store-durability";
+function _announceDurability(verdict) {
+  if (!verdict || typeof window === "undefined") return;
+  window.__vdg_storeDurability = verdict;
+  window.dispatchEvent(new CustomEvent(STORE_DURABILITY_EVENT, { detail: verdict }));
+}
 function ensureReady() {
   ensureTransport();
-  if (!_ready) _ready = send("init", {}, INIT_TIMEOUT_MS).catch((e) => {
-    _ready = null;
-    throw e;
-  });
+  if (!_ready) {
+    _ready = send("init", {}, INIT_TIMEOUT_MS).then((verdict) => {
+      _announceDurability(verdict);
+      return verdict;
+    }).catch((e) => {
+      _ready = null;
+      throw e;
+    });
+  }
   return _ready;
 }
 async function op(name, extra) {
@@ -4151,12 +4143,11 @@ bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new Cust
 bindUserDirectory({ listUsers: listUsers2, createUser, patchUser });
 async function composeStorage() {
   const backendKind = await backend.detectBackend();
-  bindStorageApi({});
   bindWorkspaceAuthority(serverWorkspaceAuthority);
   return backendKind;
 }
-function createIoPort(serverApi, userEmail) {
-  return new ServerIoPort(serverApi, userEmail);
+function createIoPort(userEmail) {
+  return new ServerIoPort(userEmail);
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
@@ -4578,7 +4569,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.57 (b685b84e)";
+var APP_VERSION = "v0.4.58 (63cebe9f)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -5347,8 +5338,8 @@ function composeGovernance(wasm4) {
     allowedActions: () => wasm4.governance_allowed_actions({ roles: [] }).actions
   });
   bindWorkspaceSettings({
-    readSettings: async () => (await wasm4.governance_load_settings({ local_only: true })).settings,
-    loadWorkspaceSettings: async (wsName) => (await wasm4.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
+    readSettings: async () => (await wasm4.governance_load_settings({})).settings,
+    loadWorkspaceSettings: async () => (await wasm4.governance_load_settings({})).settings,
     saveWorkspaceSettings: async (settings) => {
       const saved = raise(await wasm4.governance_save_settings({ settings }));
       window.__vdg_workspace_settings = saved.settings;
@@ -5820,8 +5811,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=b685b84e", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=b685b84e", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=63cebe9f", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=63cebe9f", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -5964,21 +5955,13 @@ var BootEvent = {
   LICENSE_OK: "license_ok",
   LICENSE_GATE: "license_gate",
   // gate withheld proceed (screen shown)
-  RENDERED: "rendered",
-  AUTH_NEEDED: "auth_needed",
-  // Drive 401
-  DRIVE_FAILED: "drive_failed"
-  // Drive 403 / 5xx / network
+  RENDERED: "rendered"
 };
 var BootErrorKind = {
   STORAGE: "storage",
   // IDB open failed/blocked
-  APP_LOAD: "app_load",
+  APP_LOAD: "app_load"
   // wasm fetch/instantiate failed
-  AUTH: "auth",
-  // 401 — reconnect
-  DRIVE: "drive"
-  // 403 / 5xx / network
 };
 var toError = (kind) => (payload) => ({ state: BootState.ERROR, kind, cause: payload });
 var TRANSITIONS = {
@@ -5992,14 +5975,10 @@ var TRANSITIONS = {
     [BootEvent.WASM_FAILED]: toError(BootErrorKind.APP_LOAD)
   },
   [BootState.PROVISIONING]: {
-    [BootEvent.PROVISIONED]: BootState.BUILDING_REPO,
-    [BootEvent.AUTH_NEEDED]: toError(BootErrorKind.AUTH),
-    [BootEvent.DRIVE_FAILED]: toError(BootErrorKind.DRIVE)
+    [BootEvent.PROVISIONED]: BootState.BUILDING_REPO
   },
   [BootState.BUILDING_REPO]: {
-    [BootEvent.REPO_BUILT]: BootState.GATING_LICENSE,
-    [BootEvent.AUTH_NEEDED]: toError(BootErrorKind.AUTH),
-    [BootEvent.DRIVE_FAILED]: toError(BootErrorKind.DRIVE)
+    [BootEvent.REPO_BUILT]: BootState.GATING_LICENSE
   },
   [BootState.GATING_LICENSE]: {
     [BootEvent.LICENSE_OK]: BootState.RENDERING,
@@ -6091,13 +6070,11 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   if (_hangMs > 0) await new Promise((r) => setTimeout(r, _hangMs));
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
-  const serverApi = storageApi();
-  const ioPort = createIoPort(serverApi, user.email);
+  const ioPort = createIoPort(user.email);
   const warmResult = await safeAwait(ioPort.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
   if (!warmResult.ok) return _storeUnresponsive("repo-init:sqlite-warm");
   const repo3 = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo = repo3;
-  window.__vdg_server_api = serverApi;
   window.__vdg_store = localStore();
   window.__vdg_io = ioPort;
   wasmMod.freight_app_init(createPlatform({ repo: repo3 }));
@@ -6119,7 +6096,7 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   _deferredInit(user, db, serverApi, repo3);
   return { db, poller: null, auditLog: null };
 }
-async function _deferredInit(user, db, serverApi, repo3) {
+async function _deferredInit(user, db, serverApi2, repo3) {
   const store = localStore();
   try {
     if (store) {
@@ -6132,11 +6109,11 @@ async function _deferredInit(user, db, serverApi, repo3) {
       const locale = prefsResult.ok ? prefsResult.value?.locale || "vi" : "vi";
       if (locale !== "vi") await loadLocale(locale);
     }
-    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-33U5YCHQ.js");
+    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-KMG7KRS2.js");
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-DBXQERUK.js");
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-NZ2GI2Q3.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.(),
       getRole: () => currentSalesRepId()
@@ -6150,7 +6127,7 @@ async function _deferredInit(user, db, serverApi, repo3) {
     bindLedgerRepo(ledgerRepo3);
     const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
     window.__vdg_user_audit_log = userAuditLog;
-    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-FYEBQSQ4.js");
+    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-X6IPJZKE.js");
     window.__vdg_user_repo = new UserServerRepo(userAuditLog);
     const retryPrincipalOnReconnect = () => {
       if (currentRolesResolved()) {

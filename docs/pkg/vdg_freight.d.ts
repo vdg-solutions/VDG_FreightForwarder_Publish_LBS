@@ -114,17 +114,6 @@ export class WasmEntityRepo {
     list(kind: string, owner?: string | null): Promise<any>;
     mint_quote_ref(salt: string): Promise<any>;
     mint_shipment_ref(direction: string, salt: string): Promise<any>;
-    /**
-     * The SAME network-call budget `SyncDeltaOperator::rate_gate()` checks — exposed
-     * synchronously (no I/O of its own, so no Promise) so a per-record fan-out that lives
-     * entirely on the JS side can check in before each download instead of growing a second
-     * counter. F-58-02 follow-up: `dataPlatform.readForkBundles`
-     * (js/bootstrap/platform/data.js) issues one `ws_read_file` per `.jsonl` bundle in a fork
-     * scan and never re-enters Rust between files — this is the choke point it calls into so
-     * that loop draws from the same budget a sync tick does. Throws when the shared budget is
-     * spent; the caller's loop must stop exactly as it would on a real IoPort failure.
-     */
-    network_rate_check(): void;
     constructor(io: any);
     /**
      * (pending, quarantined) outbox row counts — the wasm boundary's initial-mount query so a
@@ -154,8 +143,7 @@ export class WasmEntityRepo {
      * Every kind currently failing this session (`sync_health::mark_failed`, armed from both
      * the pull side — `SyncDeltaOperator::bootstrap_once`/`run_delta` — and the push side —
      * `OutboxOperator::emit_sync_error`). Synchronous: it is an in-memory thread_local read, no
-     * I/O, same shape as `network_rate_check` above — a view or the topbar can check it on
-     * every render without a Promise round trip.
+     * I/O — a view or the topbar can check it on every render without a Promise round trip.
      */
     sync_failed_kinds(): any;
     /**
@@ -234,7 +222,7 @@ export function auth_detect_role(req: any): Promise<any>;
  * the verdict itself — including a JS copy of `derive_fork`. Both are gone.
  *
  * A FREE export, not a method on the repo store, and that is the whole point. It never read
- * `self`: `http_io::fetch_me()` takes the API base from `option_env!` and the session from the
+ * `self`: `me_http::fetch_me()` takes the API base from `option_env!` and the session from the
  * cookie, so no repo state was ever involved. Hanging it off the store nonetheless invented a
  * dependency that boot cannot satisfy — `requireAuth` runs BEFORE `runRepoInit`, so
  * `window.__vdg_repo` does not exist yet when the auth gate probes, and every cold-cache boot
@@ -536,13 +524,13 @@ export function fx_rate_get(date_str: string, pair: string, direction: string): 
 
 /**
  * Push JSONL content for a month into WASM cache. `ym` = "YYYY-MM".
- * Pass empty string when Drive file is absent.
+ * Pass empty string when the month file is absent.
  */
 export function fx_rate_ingest_month(ym: string, content: string): void;
 
 /**
- * Validate entry, enforce accountant-only write gate, queue Drive write.
- * Returns `[{path, line}]` — JS appends each line to Drive.
+ * Validate entry, enforce accountant-only write gate, queue the write.
+ * Returns `[{path, line}]` — JS appends each line via the store (ws_write_file -> CharterDB).
  */
 export function fx_rate_prepare_append(entry_json: string, role: string): any;
 
@@ -861,16 +849,18 @@ export function shipment_phases(entity_id: string, shipment_json: string): strin
  * project law that business decisions live in wasm). JS supplies facts it alone holds; this is
  * not one of them.
  *
- * Returns which mode the store ended up in: "opfs" (normal), "memory-disabled" (this context has
- * no OPFS at all), or "memory-stale-self" (a dead context's handles never let go in time, but
- * Web Locks proved no LIVE tab is holding them — self-heals, no user action needed). A genuine
- * conflict (no exclusivity guarantee, budget exhausted) is the one case returned as an Err —
- * that is the only situation a "close the other tab" message would ever be true.
+ * Returns the durability VERDICT (durability_verdict.rs) for the mode the store landed in:
+ * "opfs" → durable (normal); "opfs-rebuilt" → durable, but the on-disk cache was dropped;
+ * "memory-disabled" (this context has no OPFS at all) and "memory-stale-self" (a dead context's
+ * handles never let go in time, but Web Locks proved no LIVE tab is holding them) → volatile.
+ * A genuine conflict (no exclusivity guarantee, budget exhausted) is the one case returned as an
+ * Err — that is the only situation a "close the other tab" message would ever be true.
  *
- * Every mode except "opfs" means **writes do not survive a reload**. The caller must say so out
- * loud rather than let the app look normal while the database is RAM.
+ * A volatile store means **writes do not survive a reload**. The verdict — not the raw mode
+ * string — is what crosses to JS, so the chip says it out loud instead of the app looking normal
+ * while the database is RAM.
  */
-export function sqlite_init(scope: string, has_lock_exclusivity: boolean): Promise<string>;
+export function sqlite_init(scope: string, has_lock_exclusivity: boolean): Promise<any>;
 
 /**
  * Explicit lifecycle release — called from JS on `pagehide`, right before this document's worker
@@ -924,8 +914,6 @@ export function sync_due_soon_rows(req: any): Promise<any>;
 export function sync_error_capture(req: any): Promise<any>;
 
 export function sync_job_event(req: any): any;
-
-export function sync_quota_check(req: any): Promise<any>;
 
 export function sync_user_audit_read(req: any): Promise<any>;
 
@@ -1237,7 +1225,6 @@ export interface InitOutput {
     readonly sync_due_soon_rows: (a: number) => number;
     readonly sync_error_capture: (a: number) => number;
     readonly sync_job_event: (a: number, b: number) => void;
-    readonly sync_quota_check: (a: number) => number;
     readonly sync_user_audit_read: (a: number) => number;
     readonly sync_user_audit_write: (a: number) => number;
     readonly sync_wma_dismiss: (a: number, b: number) => void;
@@ -1299,7 +1286,6 @@ export interface InitOutput {
     readonly wasmentityrepo_list: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_mint_quote_ref: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_mint_shipment_ref: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly wasmentityrepo_network_rate_check: (a: number, b: number) => void;
     readonly wasmentityrepo_new: (a: number) => number;
     readonly wasmentityrepo_outbox_snapshot: (a: number) => number;
     readonly wasmentityrepo_pref_get_state: (a: number, b: number, c: number) => number;
@@ -1336,9 +1322,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13999: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_14001: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10050: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_13902: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_13904: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_9943: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

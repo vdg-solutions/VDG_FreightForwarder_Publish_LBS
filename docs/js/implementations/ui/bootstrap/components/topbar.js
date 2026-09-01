@@ -40,7 +40,6 @@ class VdgTopbar extends LitElement {
     _swUpdate:       { type: Boolean, state: true },
     _locale:         { type: String,  state: true },
     _mobile:         { type: Boolean, state: true },
-    _quotaWarn:      { type: Boolean, state: true },
     _lastSyncMs:     { type: Number,  state: true },
     _lastPullMs:     { type: Number,  state: true },
     _retrying:       { type: Boolean, state: true },
@@ -58,6 +57,7 @@ class VdgTopbar extends LitElement {
     _serverProvider:           { type: String,  state: true },
     _syncing:                  { type: Boolean, state: true }, // vdg:sync-started (charter_event_bridge.rs)
     _quarantinedCount:         { type: Number,  state: true }, // outbox.rs's own decided, permanent refusal count
+    _storeDurability:          { type: Object,  state: true }, // durability_verdict.rs verdict; null until the store opens
     _serverQuarantined:        { type: Number,  state: true }, // charterdb's mirror.quarantined_depth (CDB-DUR-09)
   };
 
@@ -69,12 +69,13 @@ class VdgTopbar extends LitElement {
     this._exceptionCount = 0;  this._approvalCount = 0;
     this._notifCount = 0;   this._menuOpen = false;   this._outboxCount = 0;   this._dueSoonCount = 0;
     this._swUpdate = false; this._locale = currentLocale(); this._mobile = window.innerWidth < 768;
-    this._quotaWarn = false; this._lastSyncMs = 0; this._lastPullMs = 0;
+    this._lastSyncMs = 0; this._lastPullMs = 0;
     this._retrying = false; this._retryStreak = 0; this._backoff429 = false;
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
     this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
-    this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = 'Google Drive';
+    this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = null;
+    this._storeDurability = window.__vdg_storeDurability ?? null; // store-client.js keeps the last verdict here
     this._syncing = false;
     this._quarantinedCount = 0; this._serverQuarantined = 0;
 
@@ -99,7 +100,6 @@ class VdgTopbar extends LitElement {
     this._onRolesResolved = () => this.requestUpdate();
     this._onHashChange    = () => { this._computeBreadcrumb(); };
     this._onBreakpt       = (e) => { this._mobile = e.detail.mobile; };
-    this._onQuotaWarn     = () => { this._quotaWarn = true; };
     this._onOnline        = () => { this._online = true;  recomputeAndMaybeNotify(this); };
     this._onOffline       = () => { this._online = false; recomputeAndMaybeNotify(this); };
     this._onNeedsReconnect = () => { this._authReconnect = true; this._authPending = false; }; this._onReconnected = () => { this._authReconnect = false; this._popupBlocked = false; this._authPending = false; };
@@ -123,7 +123,6 @@ class VdgTopbar extends LitElement {
     window.addEventListener(ROLES_RESOLVED_EVENT,      this._onRolesResolved);
     window.addEventListener('hashchange',              this._onHashChange);
     window.addEventListener('vdg:breakpoint-changed',  this._onBreakpt);
-    window.addEventListener('vdg:quota-warning',       this._onQuotaWarn);
     attachSyncListeners(this);
     window.addEventListener('online', this._onOnline); window.addEventListener('offline', this._onOffline);
     window.addEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect); window.addEventListener('vdg:auth-reconnected', this._onReconnected); window.addEventListener('vdg:auth-popup-blocked', this._onPopupBlocked); window.addEventListener('vdg:auth-refresh-pending', this._onAuthPending);
@@ -148,7 +147,6 @@ class VdgTopbar extends LitElement {
     window.removeEventListener(ROLES_RESOLVED_EVENT,      this._onRolesResolved);
     window.removeEventListener('hashchange',              this._onHashChange);
     window.removeEventListener('vdg:breakpoint-changed',  this._onBreakpt);
-    window.removeEventListener('vdg:quota-warning',       this._onQuotaWarn);
     detachSyncListeners(this);
     window.removeEventListener('online', this._onOnline); window.removeEventListener('offline', this._onOffline);
     window.removeEventListener('vdg:auth-needs-reconnect', this._onNeedsReconnect);
@@ -236,9 +234,9 @@ class VdgTopbar extends LitElement {
       pending: this._outboxCount, syncFailed, unreachable, quarantined: quarantinedTotal > 0,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
+      storeDurability: this._storeDurability,
       serverBacklog: this._serverBacklog,
       serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
-      serverProvider: this._serverProvider,
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
     // B-38-03-01: in reconnect state the label IS the affordance — "Đồng bộ" next to a red
@@ -252,6 +250,8 @@ class VdgTopbar extends LitElement {
       : (state === 'unreachable') ? t('topbar.sync.state.unreachable')
       : (state === 'backing_up') ? t('topbar.sync.state.backing_up')
       : (state === 'quarantined') ? t('topbar.sync.state.quarantined')
+      : (state === 'volatile') ? t('topbar.sync.state.volatile')
+      : (state === 'rebuilt') ? t('topbar.sync.state.rebuilt')
       : (state === 'orange') ? t('topbar.sync.state.retrying')
       : t('topbar.sync.label');
 
@@ -273,13 +273,13 @@ class VdgTopbar extends LitElement {
         </div>
 
         <div class="flex items-center gap-2">
-          ${this._quotaWarn ? html`<a href="https://one.google.com/storage" target="_blank" rel="noreferrer" class="hidden md:inline-flex h-9 py-0 border-0 box-border items-center gap-1 px-2.5 rounded-md text-[11px] font-medium text-red-700 hover:bg-red-50 ring-1 ring-red-200" title="${t('topbar.quota.title')}">⚠ ${t('topbar.quota.label')}</a>` : ''}
           ${renderSyncChip({
             html, state, pending: this._outboxCount,
             lastSyncMs: displayLastSyncMs(this._lastSyncMs, this._lastPullMs), now,
             online: this._online, ariaLabel, labelText, lastError: this._lastError, t, user,
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
             quarantinedCount: quarantinedTotal,
+            storeDurability: this._storeDurability,
             serverBacklog: this._serverBacklog,
             serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
             serverProvider: this._serverProvider,

@@ -1,5 +1,5 @@
 // user-directory.js — port: server-side user management (F-46-03). GET/POST/PATCH /api/users —
-// UI views import THIS, never the server adapter directly (storage-api.js's own rule, same reason).
+// UI views import THIS, never the server adapter directly.
 
 let _impl = null;
 

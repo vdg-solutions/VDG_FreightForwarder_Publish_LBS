@@ -206,7 +206,7 @@ export async function render(root) {
   await reload();
 
   // F-28-12: maintainer diff+Approve/Reject or the proposer's own-pending banner (AC-02/03).
-  // AC-02: bounded — listPending()/getRefState() can each stall on driveFetch; a timeout
+  // AC-02: bounded — listPending()/getRefState() can each stall on a slow store read; a timeout
   // resolves to the panel's empty state instead of hanging the render.
   const pendingEl = root.querySelector('#ar-pending');
   async function refreshPending() {

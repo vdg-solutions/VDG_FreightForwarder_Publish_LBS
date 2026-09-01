@@ -12,7 +12,6 @@ import { bindOAuthProvider } from '../core_abstractions/oauth.js';
 import { bindIdentityProvider } from '../core_abstractions/identity.js';
 import { bindLocalStore } from '../core_abstractions/local-store.js';
 import { bindEventBus } from '../core_abstractions/events.js';
-import { bindStorageApi } from '../core_abstractions/storage-api.js';
 import { bindWorkspaceAuthority } from '../core_abstractions/workspace-authority.js';
 import { bindUserDirectory } from '../core_abstractions/user-directory.js';
 
@@ -62,19 +61,13 @@ export function isMockMode() {
 /// (backend.js's own vdg:server-health dispatch), never a switch to a different backend.
 export async function composeStorage() {
   const backendKind = await backend.detectBackend();
-  // The Drive REST shim is gone: every live caller now speaks CharterDB directly (apiFetch, or
-  // the ws_* record API through ServerIoPort). Nothing implements this port anymore — bound empty
-  // so storageApi() still resolves for the handle repo-init-steps.js threads through unused, and
-  // the workspace_call/governance_workspace_try op dispatchers keep answering "unknown op" per call
-  // instead of the whole boot throwing at bind time.
-  bindStorageApi({});
   bindWorkspaceAuthority(serverWorkspaceAuthority);
   return backendKind;
 }
 
 /// The IoPort the wasm repo runs on: same contract either way, only where the bytes go differs.
-export function createIoPort(serverApi, userEmail) {
-  return new ServerIoPort(serverApi, userEmail);
+export function createIoPort(userEmail) {
+  return new ServerIoPort(userEmail);
 }
 
 

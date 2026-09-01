@@ -211,7 +211,10 @@ async function apiFetchOnce(method, path, body = undefined, extraHeaders = {}) {
   if (path === '/health' && json && typeof window !== 'undefined') {
     const backlog_depth = json.mirror?.backlog_depth ?? json.replication_backlog ?? 0;
     const oldest_pending_age_ms = json.mirror?.oldest_pending_age_ms ?? null;
-    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? 'Google Drive';
+    // No invented fallback: dispatch.rs names the real mirror tier (drive_port.provider_name(),
+    // "Google Drive" or "GitHub"); when the server didn't say, the client doesn't know — null,
+    // and the chip renders neutral "secondary backup" wording instead of asserting a provider.
+    const provider = json.mirror?.provider ?? json.secondary_provider ?? providerHeader ?? null;
     // See server-io-adapters.js's own note: quarantine removes a row from backlog_depth, so the
     // backlog alone cannot tell a drained queue from an abandoned one.
     const server_quarantined_depth = json.mirror?.quarantined_depth ?? 0;

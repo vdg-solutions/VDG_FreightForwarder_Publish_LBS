@@ -63,10 +63,6 @@ function startDeltaTick({ getRepo = () => window.__vdg_repo } = {}) {
     state = plan.state;
     if (plan.clear_timer) clearTimeout(timer);
     if (plan.job_state) _announce(plan.job_state);
-    if (plan.check_quota) {
-      w.sync_quota_check({}).catch(() => {
-      });
-    }
     if (plan.schedule_ms !== null && plan.schedule_ms !== void 0) {
       timer = setTimeout(tick, plan.schedule_ms);
       timer?.unref?.();

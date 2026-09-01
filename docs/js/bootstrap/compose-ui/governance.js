@@ -50,9 +50,8 @@ export function composeGovernance(wasm) {
   });
 
   bindWorkspaceSettings({
-    readSettings: async () => (await wasm.governance_load_settings({ local_only: true })).settings,
-    loadWorkspaceSettings: async (wsName) =>
-      (await wasm.governance_load_settings({ workspace: wsName ?? null, local_only: false })).settings,
+    readSettings: async () => (await wasm.governance_load_settings({})).settings,
+    loadWorkspaceSettings: async () => (await wasm.governance_load_settings({})).settings,
     saveWorkspaceSettings: async (settings) => {
       const saved = raise(await wasm.governance_save_settings({ settings }));
       // What already-mounted views read; the delta tick brings OTHER machines up to date.

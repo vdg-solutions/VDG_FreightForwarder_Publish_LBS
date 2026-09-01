@@ -1,5 +1,6 @@
 // Sync-pipeline listener lifecycle — vdg:sync-started/complete/error, vdg:delta-synced,
-// vdg:server-health, and the stuck-notification recheck timer built on top of them.
+// vdg:server-health, vdg:store-durability, and the stuck-notification recheck timer built on top
+// of them.
 //
 // Split out of topbar.js at the 350-line cap (backlog/wiki/file-size-doctrine.md). The seam: this
 // is a small state machine with its own subscribe/unsubscribe lifecycle (connectedCallback wires
@@ -55,6 +56,10 @@ export function createSyncHandlers(host) {
           .catch(() => { /* best-effort — the next outbox event corrects it if this read fails */ });
       }
     },
+    // vdg:store-durability (store-client.js) — Rust's own verdict on whether local writes
+    // survive a reload (durability_verdict.rs). Held as-is for the chip to render; the
+    // volatile/rebuilt classification already happened in Rust, nothing is derived here.
+    onStoreDurability: (e) => { host._storeDurability = e.detail ?? null; host.requestUpdate(); },
     onServerHealth: (e) => {
       // A probe that could not reach the server carries no backlog number, and the one we last
       // read is now unknowable — not zero, not still valid. Left standing it froze at whatever it
@@ -109,7 +114,7 @@ export function recomputeAndMaybeNotify(host) {
   host.requestUpdate();
 }
 
-/// Adds the 5 sync-pipeline listeners + starts the stuck-recheck interval. `host._syncHandlers`
+/// Adds the 6 sync-pipeline listeners + starts the stuck-recheck interval. `host._syncHandlers`
 /// must already hold the set built by createSyncHandlers (constructor time).
 export function attachSyncListeners(host) {
   window.addEventListener('vdg:sync-started',  host._syncHandlers.onSyncStarted);
@@ -117,6 +122,7 @@ export function attachSyncListeners(host) {
   window.addEventListener('vdg:delta-synced',  host._syncHandlers.onDeltaSynced);
   window.addEventListener('vdg:sync-error',    host._syncHandlers.onSyncError);
   window.addEventListener('vdg:server-health', host._syncHandlers.onServerHealth);
+  window.addEventListener('vdg:store-durability', host._syncHandlers.onStoreDurability);
   host._stuckTickId = setInterval(() => recomputeAndMaybeNotify(host), STUCK_RECHECK_INTERVAL_MS);
 }
 
@@ -126,5 +132,6 @@ export function detachSyncListeners(host) {
   window.removeEventListener('vdg:delta-synced',  host._syncHandlers.onDeltaSynced);
   window.removeEventListener('vdg:sync-error',    host._syncHandlers.onSyncError);
   window.removeEventListener('vdg:server-health', host._syncHandlers.onServerHealth);
+  window.removeEventListener('vdg:store-durability', host._syncHandlers.onStoreDurability);
   clearInterval(host._stuckTickId);
 }

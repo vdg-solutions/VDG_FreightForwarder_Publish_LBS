@@ -251,10 +251,25 @@ function send(op, extra, timeoutMs) {
   });
 }
 
+// Rust's durability verdict for the local store ({kind, mode, cause?} — durability_verdict.rs,
+// relayed verbatim as the 'init' op's result). Kept on window so the topbar reads it even when it
+// mounts after init resolved, and re-announced whenever the engine (re)opens — a respawn can land
+// in a different mode.
+const STORE_DURABILITY_EVENT = 'vdg:store-durability';
+function _announceDurability(verdict) {
+  if (!verdict || typeof window === 'undefined') return;
+  window.__vdg_storeDurability = verdict;
+  window.dispatchEvent(new CustomEvent(STORE_DURABILITY_EVENT, { detail: verdict }));
+}
+
 // One open handshake, shared by every caller. A failed open clears the memo so a later op retries.
 function ensureReady() {
   ensureTransport();
-  if (!_ready) _ready = send('init', {}, INIT_TIMEOUT_MS).catch((e) => { _ready = null; throw e; });
+  if (!_ready) {
+    _ready = send('init', {}, INIT_TIMEOUT_MS)
+      .then((verdict) => { _announceDurability(verdict); return verdict; })
+      .catch((e) => { _ready = null; throw e; });
+  }
   return _ready;
 }
 

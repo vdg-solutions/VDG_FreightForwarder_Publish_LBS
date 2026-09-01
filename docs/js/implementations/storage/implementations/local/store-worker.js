@@ -6,9 +6,14 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: b685b84e is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: 63cebe9f is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=b685b84e', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=63cebe9f', import.meta.url).href;
+
+// durability_verdict.rs contract — verdict kinds sqlite_init returns. Named here only to relay
+// and log; the classification itself happened in Rust.
+const DURABILITY_VOLATILE = 'volatile';
+const DURABILITY_REBUILT  = 'rebuilt';
 
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.
@@ -17,6 +22,9 @@ const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=b685b84e', import.
 // (sahpool_lock_policy.rs); this worker never guesses that itself.
 let _ready = null;
 let _mod   = null;
+// Rust's durability verdict ({kind, mode, cause?} — durability_verdict.rs), captured at init and
+// handed back as the 'init' op's result so the main thread can show it in the sync chip.
+let _durability = null;
 function ready(scope, hasLockExclusivity) {
   if (_ready) return _ready;
   if (!scope) return Promise.reject(new Error('sqlite: missing store scope — the database is per-account'));
@@ -29,13 +37,14 @@ function ready(scope, hasLockExclusivity) {
   _ready = (async () => {
     _mod = await import(WASM_URL);
     await _mod.default();
-    const mode = await _mod.sqlite_init(scope, !!hasLockExclusivity);
-    // 'memory-*' means this session's writes die with the tab. Never silent: a store that looks
-    // normal and forgets everything on reload reads to the user as lost work, and to whoever
-    // debugs it as anything at all.
-    if (mode.startsWith('memory')) {
-      console.warn(`[store-worker] sqlite mode=${mode} — running on :memory:, writes will NOT survive a reload`);
-    } else if (mode === 'opfs-rebuilt') {
+    _durability = await _mod.sqlite_init(scope, !!hasLockExclusivity);
+    // The verdict — not a mode-string parse — is the surfacing: store-client.js relays it to the
+    // sync chip, which stays painted for the whole session. These warns are only the devtools
+    // trace of the same fact.
+    if (_durability?.kind === DURABILITY_VOLATILE) {
+      // This session's writes die with the tab (the outbox included).
+      console.warn(`[store-worker] sqlite mode=${_durability.mode} — running on :memory:, writes will NOT survive a reload`);
+    } else if (_durability?.kind === DURABILITY_REBUILT) {
       // The file on disk was some other build's shape (schema_policy.rs). It was dropped and
       // recreated, so this account re-bootstraps from the server — including anything the old
       // outbox still held. Loud on purpose; it is a local wipe, not a normal boot.
@@ -63,7 +72,7 @@ function runOp(m) {
           store_list_notifications, store_put_notification,
           store_count_entities } = _mod;
   switch (m.op) {
-    case 'init':              return null;
+    case 'init':              return _durability;
     case 'get':               return store_get(m.kind, m.id);
     case 'list':              return store_list(m.kind);
     case 'put':               store_put(m.kind, m.id, m.body); return null;

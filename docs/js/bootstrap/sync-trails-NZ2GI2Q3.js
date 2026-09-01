@@ -50,7 +50,7 @@ function createAuditLog({ getUser, getRole }) {
 function createUserAuditLog({ getUser }) {
   let queue = Promise.resolve();
   return {
-    write(action, targetEmail, before, after, driveOps = []) {
+    write(action, targetEmail, before, after) {
       queue = queue.then(async () => {
         const w = wasm();
         if (!w?.sync_user_audit_write) throw new Error("wasm bridge not ready \u2014 audit entry not persisted");
@@ -59,7 +59,6 @@ function createUserAuditLog({ getUser }) {
           target_email: targetEmail,
           before: before ?? null,
           after: after ?? null,
-          drive_ops: driveOps ?? [],
           actor_email: getUser?.()?.email ?? null
         });
         if (!reply.ok) throw new Error(reply.error || "user audit write failed");

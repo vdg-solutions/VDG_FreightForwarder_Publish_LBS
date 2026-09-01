@@ -6,7 +6,6 @@
 // the platform already emits:
 //   IndexedDB open  → onsuccess / onerror / onblocked
 //   wasm fetch      → resolve / reject  (+ progress bytes for the affordance)
-//   Drive REST      → HTTP status (200 / 401 / 403 / 5xx) / network reject
 // The UI renders the CURRENT state (real progress), never a blind spinner. A wall-clock is allowed
 // ONLY as a last-resort anti-hang backstop for a genuinely wedged socket — never as the mechanism
 // that decides a step's success/failure.
@@ -33,16 +32,12 @@ export const BootEvent = {
   LICENSE_OK:      'license_ok',
   LICENSE_GATE:    'license_gate',     // gate withheld proceed (screen shown)
   RENDERED:        'rendered',
-  AUTH_NEEDED:     'auth_needed',      // Drive 401
-  DRIVE_FAILED:    'drive_failed',     // Drive 403 / 5xx / network
 };
 
-// ERROR kinds → let the UI pick the right screen (retry / reconnect / permission), no guessing.
+// ERROR kinds → let the UI pick the right screen (retry / reconnect), no guessing.
 export const BootErrorKind = {
   STORAGE: 'storage',   // IDB open failed/blocked
   APP_LOAD: 'app_load', // wasm fetch/instantiate failed
-  AUTH:    'auth',      // 401 — reconnect
-  DRIVE:   'drive',     // 403 / 5xx / network
 };
 
 const toError = (kind) => (payload) => ({ state: BootState.ERROR, kind, cause: payload });
@@ -60,13 +55,9 @@ const TRANSITIONS = {
   },
   [BootState.PROVISIONING]: {
     [BootEvent.PROVISIONED]:  BootState.BUILDING_REPO,
-    [BootEvent.AUTH_NEEDED]:  toError(BootErrorKind.AUTH),
-    [BootEvent.DRIVE_FAILED]: toError(BootErrorKind.DRIVE),
   },
   [BootState.BUILDING_REPO]: {
     [BootEvent.REPO_BUILT]:   BootState.GATING_LICENSE,
-    [BootEvent.AUTH_NEEDED]:  toError(BootErrorKind.AUTH),
-    [BootEvent.DRIVE_FAILED]: toError(BootErrorKind.DRIVE),
   },
   [BootState.GATING_LICENSE]: {
     [BootEvent.LICENSE_OK]:   BootState.RENDERING,

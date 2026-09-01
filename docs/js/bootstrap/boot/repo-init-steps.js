@@ -6,7 +6,6 @@ import { safeAwait } from '../../implementations/kernel/core_abstractions/util/s
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
 import { createPlatform } from '../platform/index.js';
 import { composeUi } from '../compose-ui/index.js';
-import { storageApi } from '../../implementations/storage/core_abstractions/storage-api.js';
 import { bindLedgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 
 import { setStoreScope, localStore } from '../../implementations/storage/core_abstractions/local-store.js';
@@ -61,8 +60,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // 3. Build repo
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
-  const serverApi = storageApi(); // Use storageApi to get server API
-  const ioPort = createIoPort(serverApi, user.email);
+  const ioPort = createIoPort(user.email);
 
   // Boot-critical canary: fail fast, honestly, before sinking work into a repo/FSM/license-gate
   // built on a store that can't answer. A timeout here is NOT evidence of a lock (that classified
@@ -73,7 +71,6 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
 
   const repo = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo      = repo;
-  window.__vdg_server_api = serverApi;
   window.__vdg_store     = localStore();
   window.__vdg_io        = ioPort;
 

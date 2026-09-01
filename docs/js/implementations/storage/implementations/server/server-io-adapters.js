@@ -8,9 +8,8 @@ const HTTP_PRECONDITION      = 412;
 const CAS_FAILED_MSG         = '412 Precondition Failed';
 
 export class ServerIoPort extends SharedIoPort {
-  constructor(serverApi, userEmail) {
+  constructor(userEmail) {
     super(userEmail);
-    this.serverApi = serverApi;
   }
 
   // ── Native CharterDB API ──────────────────────────────────────────────────
