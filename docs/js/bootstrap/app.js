@@ -159,6 +159,9 @@ import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
 import {
+  bindMarginPct
+} from "./chunk-GZ7LN4BC.js";
+import {
   toLocalDateStr,
   todayLocal
 } from "./chunk-7INC2TTZ.js";
@@ -215,6 +218,9 @@ import {
   bindDocumentBoardComposer
 } from "./chunk-3XGTMFEQ.js";
 import {
+  bindFinanceDashboardComposer
+} from "./chunk-2OXEHGGR.js";
+import {
   bindSalesReads
 } from "./chunk-EEMMQROU.js";
 import {
@@ -247,7 +253,7 @@ import {
 } from "./chunk-T2XEYG3A.js";
 import {
   bindMasterRepo
-} from "./chunk-NRZYXZMH.js";
+} from "./chunk-XLNZASZM.js";
 import {
   bindSessionRoles,
   currentRoles,
@@ -613,7 +619,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build e608a3fa">v0.4.64 (e608a3fa)</span>
+        <span class="font-mono whitespace-nowrap" title="build 2a08e5cd">v0.4.65 (2a08e5cd)</span>
       </div>
     `;
   }
@@ -2369,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.64 (e608a3fa)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.65 (2a08e5cd)</div>
         </div>
       </div>
     </div>`;
@@ -3009,8 +3015,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=e608a3fa", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e608a3fa", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=2a08e5cd", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=2a08e5cd", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4381,7 +4387,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-2OIOPWSX.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-N7FXK4ON.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4389,14 +4395,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-S2PQOAPP.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-6OOY3YCS.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-S2PQOAPP.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-6OOY3YCS.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4498,7 +4504,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.64 (e608a3fa)";
+var APP_VERSION = "v0.4.65 (2a08e5cd)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4751,7 +4757,7 @@ var VIEWS = {
   "/shipments": () => import("./shipments-P5VA4TKE.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-KCM6MBAN.js"),
-  "/finance": () => import("./finance-dashboard-V4Y3AMO6.js"),
+  "/finance": () => import("./finance-dashboard-UFCYYKU6.js"),
   "/finance/credit": () => import("./credit-dashboard-Z43BZ656.js"),
   "/finance/demdet": () => import("./demdet-ZUTAAMXG.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
@@ -4760,9 +4766,9 @@ var VIEWS = {
   "/sales/analytics": () => import("./sales-analytics-M3A2IPUA.js"),
   "/sales/quote/new": () => import("./sales-quote-new-WFONS4TE.js"),
   "/sales/quote": () => import("./sales-quote-list-EAHS6J3Y.js"),
-  "/masters/customers": () => import("./masters-customers-5L4P6UTO.js"),
-  "/masters/carriers": () => import("./masters-carriers-WF6BGLCT.js"),
-  "/masters/services": () => import("./masters-services-TZGENFGR.js"),
+  "/masters/customers": () => import("./masters-customers-RUVEJCBJ.js"),
+  "/masters/carriers": () => import("./masters-carriers-3VMF4SKQ.js"),
+  "/masters/services": () => import("./masters-services-E6U7V3LK.js"),
   "/help": () => import("./help-IKAUORGB.js"),
   "/pending-access": () => import("./pending-access-7DMAML24.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
@@ -4770,7 +4776,7 @@ var VIEWS = {
   "/manager/dashboard": () => import("./dashboard-WO75SJKX.js"),
   "/manager/pipeline": () => import("./pipeline-42YDRBXY.js"),
   "/manager/approvals": () => import("./approvals-ECACSPKI.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-RVYLRQFZ.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-HBXLLPCO.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-VHDCCII3.js"),
   "/manager/finance/close-period": () => import("./close-period-VU27GZGX.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-2HHAP7F4.js"),
@@ -4791,23 +4797,23 @@ var VIEWS = {
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-6L34GTAS.js"),
-  "/masters/flights": () => import("./flights-7L5MQDF4.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-BHFWYV6Y.js"),
+  "/masters/airports": () => import("./airports-HC3ZQN34.js"),
+  "/masters/flights": () => import("./flights-PKB6FFEX.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-UVNMDWJM.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-ROUN6W6J.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-5CLVQSWR.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-SMSZQYUQ.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-JCM25ZFS.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-HOCLUJ4N.js"),
+  "/masters/uld-types": () => import("./uld-types-QLN6FVI4.js"),
   "/manager/manifest": () => import("./manifest-ZVYAZKFZ.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-YA7YDQAB.js"),
+  "/masters/air-rates": () => import("./air-rates-KKK52WIM.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-WT7MBFO4.js"),
-  "/masters/local-charges": () => import("./local-charges-XHQ5GC7X.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-VYVUAKW4.js"),
+  "/masters/local-charges": () => import("./local-charges-OT2IJRMK.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-EA44FRIC.js"),
+  "/masters/shipment-states": () => import("./shipment-states-YHRKPHFI.js"),
   "/quotes/air-calc": () => import("./air-calc-K2VHRPQW.js"),
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-ZO3JZGHF.js"),
@@ -4881,7 +4887,8 @@ function bindMastersData(wasm4) {
   bindMasterRepo({
     saveMaster: async (kind, entity) => orThrow(await wasm4.data_save_master({ kind, entity })).record,
     listMasters: async (kind) => orThrow(await wasm4.data_list_masters({ kind })).rows,
-    getMaster: async (kind, id) => orThrow(await wasm4.data_get_master({ kind, id })).record ?? null
+    getMaster: async (kind, id) => orThrow(await wasm4.data_get_master({ kind, id })).record ?? null,
+    deleteMaster: async (kind, id) => orThrow(await wasm4.data_delete_master({ kind, id })).deleted
   });
 }
 
@@ -5290,6 +5297,8 @@ function composeManager(wasm4) {
       return { rows: withDims(reply.rows), grandTotals: reply.grandTotals };
     }
   });
+  bindMarginPct({ marginPct: (margin, revenue) => wasm4.manager_margin_pct(margin, revenue) });
+  bindFinanceDashboardComposer({ financeDashboard: (pnlLines) => wasm4.manager_finance_dashboard({ pnl_lines: pnlLines || [] }) });
   bindAirInvoiceComposer({
     composeAirInvoice: (awbs, airRates, carriers) => wasm4.manager_air_invoice({
       awbs: awbs || [],
@@ -6430,7 +6439,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-MRAHYCM3.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-3N6GZGZE.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;

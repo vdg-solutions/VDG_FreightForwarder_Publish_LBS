@@ -3,7 +3,7 @@
 // Sales tra cứu biểu phí local charge theo hãng tàu; tên Việt, VAT kép, search alias.
 
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
-import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
+import { listMasters, saveMaster, deleteMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { currentUserRole, currentUserRoles } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
@@ -211,7 +211,7 @@ export async function render(root) {
       if (!ok) return;
       charges = charges.filter((i) => i.id !== delBtn.dataset.id);
       body.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await repo.delete(KIND, delBtn.dataset.id);
+      await deleteMaster(KIND, delBtn.dataset.id);
     }
   });
 }

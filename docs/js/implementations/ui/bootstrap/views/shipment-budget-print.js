@@ -1,11 +1,11 @@
 // F-12-08 — budget-style "PROFIT-LOSS BUDGET" per-shipment print form
-import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import '../components/print-button.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../kernel/core_abstractions/util/today-local.js';
 import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { listPnlLinesFor } from '../../core_abstractions/ports/data/sales-reads.js';
 
 const COMPANY_NAME    = 'VDG FREIGHT SERVICES CO., LTD';
 const COMPANY_ADDRESS = '123 Nguyen Hue, District 1, Ho Chi Minh City, Vietnam';
@@ -19,12 +19,18 @@ async function loadShipment(ref) {
   return getShipment(repo, ref);
 }
 
+// Through the port, not `listWhere(repo, 'pnl_line', ...)`. Two things were wrong with that.
+// It named a collection in the view, and it carried its own idea of which rows belong to a job --
+// `l.shipment_ref === ref`, where the rule in wasm (`pnl_line_id.rs`, via sales_reads::
+// pnl_lines_for) matches by `shipment_ref` OR by an id in either scheme, "so a note printed off an
+// imported job finds its zero-padded rows too". The view's narrower copy silently dropped exactly
+// those rows: an imported job printed a budget with money lines missing and nothing said so.
+//
+// The failure is NOT swallowed into `[]` either. This document is sent to a customer; a read
+// outage that renders as "no charges" prints a financial statement that is wrong rather than
+// absent. It throws, and the caller renders the not-found panel instead of a plausible lie.
 async function loadLines(ref) {
-  const repo = window.__vdg_repo;
-  if (!repo) return [];
-  try {
-    return await listWhere(repo, 'pnl_line', (l) => l.shipment_ref === ref);
-  } catch { return []; }
+  return await listPnlLinesFor(ref);
 }
 
 // ── formatters ────────────────────────────────────────────────────────────────

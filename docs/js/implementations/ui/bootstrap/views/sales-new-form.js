@@ -19,6 +19,7 @@ import { docsExtHtml, DOCS_EXT_FIELDS, wireCargoItemsTable, collectCargoItems,
          wireContainersTable, collectContainers } from './sales-new-form/section-docs-ext.js';
 import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
 import { renderActionBar } from './sales-new-form/action-bar.js';
+import { marginPct } from '../../core_abstractions/ports/manager/margin-pct.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
 import { summarizeLineCurrencies, resolveHeaderCurrency } from './sales-new-form/pnl-line-fx.js';
@@ -295,7 +296,7 @@ function _recomputeWaterfall(root, userConfig) {
   }
   if (qPct) {
     if (sr > 0) {
-      const pct = (wf.margin / sr) * 100;
+      const pct = marginPct(wf.margin, sr);
       qPct.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
       qPct.className = `text-sm font-bold ${pct >= 0 ? 'text-emerald-700' : 'text-red-600'} mt-0.5`;
     } else {

@@ -506,6 +506,13 @@ export function data_customer360_inputs(req: any): Promise<any>;
 
 export function data_delete_commission_rule(req: any): Promise<any>;
 
+/**
+ * Remove one row of one registered master kind — through the SAME registry + writer gate `save`
+ * takes. The views reached the platform's generic delete before this existed, which asked the
+ * registry nothing.
+ */
+export function data_delete_master(req: any): Promise<any>;
+
 export function data_delete_pnl_lines(req: any): Promise<any>;
 
 export function data_delete_shipment(req: any): Promise<any>;
@@ -861,6 +868,14 @@ export function manager_exception_trends(req: any): any;
 
 export function manager_exceptions_sorted(req: any): any;
 
+/**
+ * F-19-59: the finance dashboard's P&L by charge code, plus its totals.
+ *
+ * Pure like `manager_pnl_pivot` — the lines come in the request. The order of `rows` is part of
+ * the answer (best margin first), not something the shell re-decides.
+ */
+export function manager_finance_dashboard(req: any): any;
+
 export function manager_ledger_apply_repost(req: any): Promise<any>;
 
 export function manager_ledger_auto_reconcile(req: any): Promise<any>;
@@ -890,6 +905,20 @@ export function manager_ledger_running_balances(req: any): any;
 export function manager_ledger_trial_balance(req: any): any;
 
 export function manager_manifest_overview(req: any): any;
+
+/**
+ * The one margin-percent convention (`manager_rules::margin_pct`).
+ *
+ * Exported because the shell had THREE copies of it — pivot-table.js, finance-dashboard.js and
+ * sales-new-form.js each re-derived `margin / revenue * 100` — and they did not agree on the
+ * case that decides whether a figure is shown at all: at zero revenue one answered 0, one
+ * answered null, and one rendered nothing. Rust has always answered 0. A number a manager reads
+ * off two screens must not depend on which screen computed it.
+ *
+ * Plain args rather than a request DTO: it is arithmetic over two numbers the caller already
+ * holds, and a JSON round-trip per rendered row would be the slower answer to the same question.
+ */
+export function manager_margin_pct(margin: number, revenue: number): number;
 
 export function manager_notification_from_event(req: any): any;
 
@@ -1293,6 +1322,7 @@ export interface InitOutput {
     readonly data_current_revision: (a: number) => number;
     readonly data_customer360_inputs: (a: number) => number;
     readonly data_delete_commission_rule: (a: number) => number;
+    readonly data_delete_master: (a: number) => number;
     readonly data_delete_pnl_lines: (a: number) => number;
     readonly data_delete_shipment: (a: number) => number;
     readonly data_exception_caseload: (a: number) => number;
@@ -1468,6 +1498,7 @@ export interface InitOutput {
     readonly manager_exception_per_sales: (a: number, b: number) => void;
     readonly manager_exception_trends: (a: number, b: number) => void;
     readonly manager_exceptions_sorted: (a: number, b: number) => void;
+    readonly manager_finance_dashboard: (a: number, b: number) => void;
     readonly manager_ledger_apply_repost: (a: number) => number;
     readonly manager_ledger_auto_reconcile: (a: number) => number;
     readonly manager_ledger_balance_sheet: (a: number, b: number) => void;
@@ -1483,6 +1514,7 @@ export interface InitOutput {
     readonly manager_ledger_running_balances: (a: number, b: number) => void;
     readonly manager_ledger_trial_balance: (a: number, b: number) => void;
     readonly manager_manifest_overview: (a: number, b: number) => void;
+    readonly manager_margin_pct: (a: number, b: number) => number;
     readonly manager_notification_from_event: (a: number, b: number) => void;
     readonly manager_notifications_time_based: (a: number, b: number) => void;
     readonly manager_period_key: (a: number, b: number) => void;
@@ -1674,9 +1706,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15355: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15357: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11335: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15409: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15411: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11389: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

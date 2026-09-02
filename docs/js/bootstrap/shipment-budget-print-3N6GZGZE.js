@@ -3,9 +3,6 @@ import {
 } from "./chunk-OCM54TMO.js";
 import "./chunk-2X6PKTEY.js";
 import {
-  listWhere
-} from "./chunk-EPS4ANRF.js";
-import {
   todayLocal
 } from "./chunk-7INC2TTZ.js";
 import {
@@ -13,6 +10,9 @@ import {
 } from "./chunk-M3ODLRBG.js";
 import "./chunk-NGKBNKFN.js";
 import "./chunk-H2H4WJDI.js";
+import {
+  listPnlLinesFor
+} from "./chunk-EEMMQROU.js";
 import {
   getShipment
 } from "./chunk-4VNIIBNV.js";
@@ -30,13 +30,7 @@ async function loadShipment(ref) {
   return getShipment(repo, ref);
 }
 async function loadLines(ref) {
-  const repo = window.__vdg_repo;
-  if (!repo) return [];
-  try {
-    return await listWhere(repo, "pnl_line", (l) => l.shipment_ref === ref);
-  } catch {
-    return [];
-  }
+  return await listPnlLinesFor(ref);
 }
 function fmt(v) {
   return v != null && v !== "" ? String(v) : "\u2014";

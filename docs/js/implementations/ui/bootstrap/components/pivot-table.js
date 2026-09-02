@@ -4,6 +4,7 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { DIM_OPTIONS } from '../../core_abstractions/ports/manager/pnl-composer.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { dimLabel } from '../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
+import { marginPct } from '../../core_abstractions/ports/manager/margin-pct.js';
 
 const DEFAULT_DIMS = ['period', 'sales_rep'];
 
@@ -181,8 +182,8 @@ class VdgPivotTable extends LitElement {
       },
       { revenue_vnd: 0, cost_vnd: 0, margin_vnd: 0, shipment_count: 0 },
     );
-    const pct           = totals.revenue_vnd > 0
-      ? (totals.margin_vnd / totals.revenue_vnd) * 100 : 0;
+    // The convention lives in wasm (manager_rules::margin_pct); this row used to restate it.
+    const pct           = marginPct(totals.margin_vnd, totals.revenue_vnd);
     const cls           = totals.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
     const shipmentTotal = totals.shipment_count;
     return html`

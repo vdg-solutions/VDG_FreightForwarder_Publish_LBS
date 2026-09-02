@@ -6,6 +6,8 @@
 import { t, fmtDate } from '../../implementations/kernel/core_abstractions/i18n/index.js';
 import { ROLE_MANAGER } from '../../implementations/kernel/core_abstractions/roles.js';
 import { currentUserEmail } from '../../implementations/ui/core_abstractions/ports/governance/route-guard.js';
+import { bindMarginPct } from '../../implementations/ui/core_abstractions/ports/manager/margin-pct.js';
+import { bindFinanceDashboardComposer } from '../../implementations/ui/core_abstractions/ports/manager/finance-dashboard-composer.js';
 import { bindAirInvoiceComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-invoice-composer.js';
 import { bindAirPnlComposer } from '../../implementations/ui/core_abstractions/ports/manager/air-pnl-composer.js';
 import { bindArComposer } from '../../implementations/ui/core_abstractions/ports/manager/ar-composer.js';
@@ -88,6 +90,14 @@ export function composeManager(wasm) {
       return { rows: withDims(reply.rows), grandTotals: reply.grandTotals };
     },
   });
+
+  // Synchronous: called per rendered row, so an async hop per cell would trade a correctness
+
+  // fix for a visible one.
+
+  bindMarginPct({ marginPct: (margin, revenue) => wasm.manager_margin_pct(margin, revenue) });
+
+  bindFinanceDashboardComposer({ financeDashboard: (pnlLines) => wasm.manager_finance_dashboard({ pnl_lines: pnlLines || [] }) });
 
   bindAirInvoiceComposer({
     composeAirInvoice: (awbs, airRates, carriers) => wasm.manager_air_invoice({

@@ -61,6 +61,9 @@ import {
   readSettings
 } from "./chunk-IIUQ3SOM.js";
 import {
+  marginPct
+} from "./chunk-GZ7LN4BC.js";
+import {
   todayLocal
 } from "./chunk-7INC2TTZ.js";
 import {
@@ -3031,7 +3034,7 @@ function _recomputeWaterfall(root, userConfig) {
   }
   if (qPct) {
     if (sr > 0) {
-      const pct = wf.margin / sr * 100;
+      const pct = marginPct(wf.margin, sr);
       qPct.textContent = `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
       qPct.className = `text-sm font-bold ${pct >= 0 ? "text-emerald-700" : "text-red-600"} mt-0.5`;
     } else {

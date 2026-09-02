@@ -15,6 +15,9 @@ import {
   filterByDims
 } from "./chunk-V4KY2AGW.js";
 import {
+  marginPct
+} from "./chunk-GZ7LN4BC.js";
+import {
   todayLocal
 } from "./chunk-7INC2TTZ.js";
 import {
@@ -245,7 +248,7 @@ var VdgPivotTable = class extends LitElement {
       },
       { revenue_vnd: 0, cost_vnd: 0, margin_vnd: 0, shipment_count: 0 }
     );
-    const pct = totals.revenue_vnd > 0 ? totals.margin_vnd / totals.revenue_vnd * 100 : 0;
+    const pct = marginPct(totals.margin_vnd, totals.revenue_vnd);
     const cls = totals.margin_vnd >= 0 ? "text-emerald-600" : "text-red-500";
     const shipmentTotal = totals.shipment_count;
     return html`

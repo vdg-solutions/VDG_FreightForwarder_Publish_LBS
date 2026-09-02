@@ -4,7 +4,7 @@ import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-r
 import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
 import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
-import { listMasters, saveMaster } from '../../core_abstractions/ports/data/master-repo.js';
+import { listMasters, saveMaster, deleteMaster } from '../../core_abstractions/ports/data/master-repo.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
@@ -100,7 +100,7 @@ export async function render(root) {
       title: t('masters_customers.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
     });
     if (!ok) return;
-    await repo.delete(KIND, entity.id);
+    await deleteMaster(KIND, entity.id);
     items = items.filter((i) => i.id !== entity.id);
     api?.setGridOption('rowData', items);
   }

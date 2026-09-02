@@ -1,6 +1,6 @@
 import {
   createPricedGovernancePanel
-} from "./chunk-ZBXDJ5ZC.js";
+} from "./chunk-5SXE3TKQ.js";
 import {
   SECOND_EYES_FIELD,
   readSettings
@@ -18,9 +18,10 @@ import {
   canWriteMaster
 } from "./chunk-T2XEYG3A.js";
 import {
+  deleteMaster,
   listMasters,
   saveMaster
-} from "./chunk-NRZYXZMH.js";
+} from "./chunk-XLNZASZM.js";
 import "./chunk-JAZY43GR.js";
 import {
   showConfirm
@@ -384,7 +385,7 @@ async function render(root) {
       if (!ok) return;
       charges = charges.filter((i) => i.id !== delBtn.dataset.id);
       body.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await repo.delete(KIND, delBtn.dataset.id);
+      await deleteMaster(KIND, delBtn.dataset.id);
     }
   });
 }

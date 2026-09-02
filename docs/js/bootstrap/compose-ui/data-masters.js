@@ -18,5 +18,6 @@ export function bindMastersData(wasm) {
     saveMaster: async (kind, entity) => orThrow(await wasm.data_save_master({ kind, entity })).record,
     listMasters: async (kind) => orThrow(await wasm.data_list_masters({ kind })).rows,
     getMaster: async (kind, id) => orThrow(await wasm.data_get_master({ kind, id })).record ?? null,
+    deleteMaster: async (kind, id) => orThrow(await wasm.data_delete_master({ kind, id })).deleted,
   });
 }

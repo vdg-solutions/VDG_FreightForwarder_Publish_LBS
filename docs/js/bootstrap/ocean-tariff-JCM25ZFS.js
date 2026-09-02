@@ -7,9 +7,10 @@ import {
   canWriteMaster
 } from "./chunk-T2XEYG3A.js";
 import {
+  deleteMaster,
   listMasters,
   saveMaster
-} from "./chunk-NRZYXZMH.js";
+} from "./chunk-XLNZASZM.js";
 import {
   currentRoles
 } from "./chunk-NQTRREKJ.js";
@@ -293,7 +294,7 @@ async function render(root) {
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);
       root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await repo.delete(KIND, delBtn.dataset.id);
+      await deleteMaster(KIND, delBtn.dataset.id);
     }
   });
 }

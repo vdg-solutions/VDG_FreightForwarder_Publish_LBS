@@ -22,7 +22,7 @@ import {
 import {
   listMasters,
   saveMaster
-} from "./chunk-NRZYXZMH.js";
+} from "./chunk-XLNZASZM.js";
 import "./chunk-7DW526V3.js";
 import {
   showConfirm
@@ -300,7 +300,7 @@ async function renderCustomersMaster(root) {
     document.body.appendChild(wizard);
   });
   try {
-    const { render: renderCusts } = await import("./masters-customers-5L4P6UTO.js");
+    const { render: renderCusts } = await import("./masters-customers-RUVEJCBJ.js");
     await renderCusts(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.customer_load")}</div>`;
@@ -314,7 +314,7 @@ async function renderCarriersMaster(root) {
   root.innerHTML = "";
   root.appendChild(delegate);
   try {
-    const { render: renderCarriers } = await import("./masters-carriers-WF6BGLCT.js");
+    const { render: renderCarriers } = await import("./masters-carriers-3VMF4SKQ.js");
     await renderCarriers(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.carrier_load")}</div>`;

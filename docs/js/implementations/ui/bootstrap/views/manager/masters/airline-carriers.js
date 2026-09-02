@@ -6,7 +6,7 @@ import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
-import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
+import { listMasters, saveMaster, deleteMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 
 const KIND        = 'airline-carriers';
 const KIND_PREFIX = 'ACR';
@@ -176,7 +176,7 @@ export async function render(root) {
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);
       root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await repo.delete(KIND, delBtn.dataset.id);
+      await deleteMaster(KIND, delBtn.dataset.id);
     }
   });
 }

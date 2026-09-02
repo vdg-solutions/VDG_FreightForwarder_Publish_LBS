@@ -9,9 +9,11 @@ function _i() {
 }
 var saveMaster = (...a) => _i().saveMaster(...a);
 var listMasters = (...a) => _i().listMasters(...a);
+var deleteMaster = (...a) => _i().deleteMaster(...a);
 
 export {
   bindMasterRepo,
   saveMaster,
-  listMasters
+  listMasters,
+  deleteMaster
 };

@@ -19,9 +19,10 @@ import {
   canWriteMaster
 } from "./chunk-T2XEYG3A.js";
 import {
+  deleteMaster,
   listMasters,
   saveMaster
-} from "./chunk-NRZYXZMH.js";
+} from "./chunk-XLNZASZM.js";
 import {
   currentRoles
 } from "./chunk-NQTRREKJ.js";
@@ -226,7 +227,7 @@ async function render(root) {
       destructive: true
     });
     if (!ok) return;
-    await repo.delete(KIND, entity.id);
+    await deleteMaster(KIND, entity.id);
     items = items.filter((i) => i.id !== entity.id);
     api?.setGridOption("rowData", items);
   }

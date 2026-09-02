@@ -11,7 +11,7 @@
 
 let _impl = null;
 
-/// Root bootstrap binds { saveMaster, listMasters, getMaster } once.
+/// Root bootstrap binds { saveMaster, listMasters, getMaster, deleteMaster } once.
 export function bindMasterRepo(impl) { _impl = impl; }
 
 function _i() {
@@ -26,3 +26,7 @@ export const saveMaster = (...a) => _i().saveMaster(...a);
 export const listMasters = (...a) => _i().listMasters(...a);
 /// (kind, id) -> the row, or null when there is no such row (an answer, not a failure).
 export const getMaster = (...a) => _i().getMaster(...a);
+/// (kind, id) -> true once removed. Throws when the kind is unregistered or the signed-in role is
+/// not one of its writers — the same gate `saveMaster` takes, because deleting is a write. The
+/// screens used to call the platform's generic `repo.delete(KIND, id)`, which asked neither.
+export const deleteMaster = (...a) => _i().deleteMaster(...a);
