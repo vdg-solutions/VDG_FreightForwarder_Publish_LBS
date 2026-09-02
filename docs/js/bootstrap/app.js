@@ -619,7 +619,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build b1e4d57a">v0.4.66 (b1e4d57a)</span>
+        <span class="font-mono whitespace-nowrap" title="build c8bc5791">v0.4.67 (c8bc5791)</span>
       </div>
     `;
   }
@@ -2195,28 +2195,6 @@ var VdgCmdPalette = class extends LitElement9 {
   }
   async _search(q) {
     const candidates = [...paletteActions()];
-    const lru = window.__vdg_lru;
-    if (lru) {
-      try {
-        const ships = lru.getAll?.("shipment") || [];
-        ships.forEach((s) => candidates.push({
-          label: `${s.shipment_ref || s.id} \xB7 ${s.customer_name || s.customer || ""}`,
-          kind: "shipment",
-          id: s.id,
-          action: null,
-          shortcut: null
-        }));
-        const custs = lru.getAll?.("customers") || [];
-        custs.forEach((c) => candidates.push({
-          label: c.name || c.id,
-          kind: "customers",
-          id: c.id,
-          action: null,
-          shortcut: null
-        }));
-      } catch {
-      }
-    }
     const scored = candidates.map((c) => ({ ...c, score: fuzzyScore(c.label, q) })).filter((c) => c.score > 0).sort((a, b) => b.score - a.score).slice(0, PALETTE_MAX_RESULTS);
     return scored.length ? scored : await this._loadRecent();
   }
@@ -2375,7 +2353,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.66 (b1e4d57a)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.67 (c8bc5791)</div>
         </div>
       </div>
     </div>`;
@@ -3015,8 +2993,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=b1e4d57a", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=b1e4d57a", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=c8bc5791", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=c8bc5791", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4387,7 +4365,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-N7FXK4ON.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-GIRH7QRD.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4395,14 +4373,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-6OOY3YCS.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-RRJG4DHU.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-6OOY3YCS.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-RRJG4DHU.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4504,7 +4482,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.66 (b1e4d57a)";
+var APP_VERSION = "v0.4.67 (c8bc5791)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4766,9 +4744,9 @@ var VIEWS = {
   "/sales/analytics": () => import("./sales-analytics-M3A2IPUA.js"),
   "/sales/quote/new": () => import("./sales-quote-new-WFONS4TE.js"),
   "/sales/quote": () => import("./sales-quote-list-EAHS6J3Y.js"),
-  "/masters/customers": () => import("./masters-customers-RUVEJCBJ.js"),
-  "/masters/carriers": () => import("./masters-carriers-3VMF4SKQ.js"),
-  "/masters/services": () => import("./masters-services-E6U7V3LK.js"),
+  "/masters/customers": () => import("./masters-customers-6LVIVJ3I.js"),
+  "/masters/carriers": () => import("./masters-carriers-25ACI65R.js"),
+  "/masters/services": () => import("./masters-services-OJHORGV2.js"),
   "/help": () => import("./help-IKAUORGB.js"),
   "/pending-access": () => import("./pending-access-7DMAML24.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
@@ -4797,21 +4775,21 @@ var VIEWS = {
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-HC3ZQN34.js"),
-  "/masters/flights": () => import("./flights-PKB6FFEX.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-UVNMDWJM.js"),
+  "/masters/airports": () => import("./airports-U4WZM3Y3.js"),
+  "/masters/flights": () => import("./flights-5PX4657W.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-ZWRW5ALA.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-5CLVQSWR.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-2PQBVPOW.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-JCM25ZFS.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-PYMLXXPC.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-QLN6FVI4.js"),
+  "/masters/uld-types": () => import("./uld-types-OP4IZ376.js"),
   "/manager/manifest": () => import("./manifest-ZVYAZKFZ.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-KKK52WIM.js"),
+  "/masters/air-rates": () => import("./air-rates-QCTUK67N.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-VYVUAKW4.js"),
-  "/masters/local-charges": () => import("./local-charges-OT2IJRMK.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-P7YZC5DR.js"),
+  "/masters/local-charges": () => import("./local-charges-L7HWH22Y.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
   "/masters/shipment-states": () => import("./shipment-states-YHRKPHFI.js"),
   "/quotes/air-calc": () => import("./air-calc-K2VHRPQW.js"),

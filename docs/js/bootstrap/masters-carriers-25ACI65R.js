@@ -185,7 +185,13 @@ async function render(root) {
       destructive: true
     });
     if (!ok) return;
-    await deleteMaster(KIND, entity.id);
+    try {
+      await deleteMaster(KIND, entity.id);
+    } catch (err) {
+      await showConfirm({ title: t("masters.delete_failed"), confirmLabel: t("common.action.ok"), cancelLabel: "" });
+      console.warn("delete refused", err);
+      return;
+    }
     items = items.filter((i) => i.id !== entity.id);
     api?.setGridOption("rowData", items);
   }

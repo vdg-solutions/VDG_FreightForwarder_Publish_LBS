@@ -300,7 +300,7 @@ async function renderCustomersMaster(root) {
     document.body.appendChild(wizard);
   });
   try {
-    const { render: renderCusts } = await import("./masters-customers-RUVEJCBJ.js");
+    const { render: renderCusts } = await import("./masters-customers-6LVIVJ3I.js");
     await renderCusts(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.customer_load")}</div>`;
@@ -314,7 +314,7 @@ async function renderCarriersMaster(root) {
   root.innerHTML = "";
   root.appendChild(delegate);
   try {
-    const { render: renderCarriers } = await import("./masters-carriers-3VMF4SKQ.js");
+    const { render: renderCarriers } = await import("./masters-carriers-25ACI65R.js");
     await renderCarriers(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.carrier_load")}</div>`;

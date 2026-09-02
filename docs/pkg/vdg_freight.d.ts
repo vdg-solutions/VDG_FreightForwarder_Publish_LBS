@@ -1111,6 +1111,13 @@ export function shipment_move_to(entity_id: string, to_state: string, shipment_j
 export function shipment_phases(entity_id: string, shipment_json: string): string;
 
 /**
+ * Which product the chosen mode implies. `null` = leave the field as the operator set it; a
+ * string (possibly empty) = set it to that. See `product_for_mode` for why SEA answers `null`
+ * rather than picking one of its three products.
+ */
+export function shipment_product_for_mode(mode: string, current_product: string): string | undefined;
+
+/**
  * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
  * `scope` partitions the pool per account — an empty scope is refused rather than silently
  * falling back to a shared database. `has_lock_exclusivity` is the one fact only JS can supply:
@@ -1568,6 +1575,7 @@ export interface InitOutput {
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_move_to: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_product_for_mode: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly sqlite_init: (a: number, b: number, c: number) => number;
     readonly sqlite_release: () => void;
     readonly store_count_entities: (a: number) => void;
@@ -1706,9 +1714,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15409: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15411: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11389: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15433: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15435: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11413: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

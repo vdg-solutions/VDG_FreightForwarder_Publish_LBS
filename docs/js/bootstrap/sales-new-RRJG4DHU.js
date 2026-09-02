@@ -742,7 +742,7 @@ function _applyMode(root, mode) {
   });
 }
 var LB_TO_KG = 0.45359237;
-var EMPTY_QUERY_SUGGESTIONS = 5;
+var EMPTY_QUERY_SUGGESTIONS = 20;
 function _toKg(value, uom) {
   return uom === "LB" ? value * LB_TO_KG : value;
 }
@@ -783,6 +783,12 @@ function wireHeaderSection(root, onChanged) {
   }, 0));
   modeEl?.addEventListener("change", () => {
     _applyMode(root, modeEl.value);
+    const productEl = root.querySelector("[name=product]");
+    const derived = window.__vdg_wasm?.shipment_product_for_mode?.(modeEl.value || "", productEl?.value || "");
+    if (productEl && derived !== null && derived !== void 0 && productEl.value !== derived) {
+      productEl.value = derived;
+      productEl.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     onChanged?.();
   });
   const hblChk = root.querySelector("[name=has_hbl]");
@@ -847,6 +853,13 @@ function wireHeaderSection(root, onChanged) {
     custDropdown.innerHTML = "";
     if (results.length > 0) {
       results.forEach((r) => {
+        if (r._more) {
+          const hint = document.createElement("div");
+          hint.className = "px-3 py-2 text-xs text-slate-500 italic";
+          hint.textContent = t("sales_new.customer_more").replace("{n}", String(r._more));
+          custDropdown.appendChild(hint);
+          return;
+        }
         const div = document.createElement("div");
         div.className = "px-3 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b border-slate-100";
         const scoreHtml = r.score !== void 0 ? `<span class="text-[9px] text-slate-400">${t("common.score_label")} ${r.score.toFixed(2)}</span>` : "";
@@ -896,6 +909,9 @@ function wireHeaderSection(root, onChanged) {
           try {
             const list = await listCustomerMasters() || [];
             results2 = list.slice(0, EMPTY_QUERY_SUGGESTIONS).map((c) => ({ name: c.name }));
+            if (list.length > results2.length) {
+              results2.push({ name: "", _more: list.length - results2.length });
+            }
           } catch (e) {
             console.warn("Failed to list customers", e);
           }

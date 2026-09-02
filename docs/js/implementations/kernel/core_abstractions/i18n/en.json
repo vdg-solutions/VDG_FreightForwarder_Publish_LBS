@@ -914,6 +914,7 @@
   "sales_new.field.roe_buy": "ROE Buy",
   "sales_new.field.roe_sell": "ROE Sell",
   "sales_new.select_placeholder": "— Select —",
+  "sales_new.customer_more": "… and {n} more customers — type to search",
   "sales_new.col_add_row": "+ Add Row",
   "sales_new.col_description": "Description",
   "sales_new.col_buy_qty": "Buy Qty",
@@ -2122,5 +2123,7 @@
   "ledger.col_debit": "Debit",
   "ledger.col_credit": "Credit",
   "ledger.row_total": "TOTAL",
-  "ledger.discrepancy": "Discrepancy:"
+  "ledger.discrepancy": "Discrepancy:",
+  "masters.delete_failed": "This row could not be deleted — the record has no key, or you may not write this kind.",
+  "common.action.ok": "OK"
 }

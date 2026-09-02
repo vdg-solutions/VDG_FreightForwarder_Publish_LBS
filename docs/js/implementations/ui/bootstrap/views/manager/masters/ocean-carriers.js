@@ -171,7 +171,16 @@ export async function render(root) {
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);
       root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await deleteMaster(KIND, delBtn.dataset.id);
+      // A row whose key field is empty cannot be addressed, and `deleteMaster` throws on it.
+      // Unhandled, that throw left the row on screen with nothing said -- the exact
+      // "delete does nothing" the operator reported. A refusal is an ANSWER; it gets shown.
+      try {
+        await deleteMaster(KIND, delBtn.dataset.id);
+      } catch (err) {
+        await showConfirm({ title: t('masters.delete_failed'), confirmLabel: t('common.action.ok'), cancelLabel: '' });
+        console.warn('delete refused', err); // DEV
+        return;
+      }
     }
   });
 }

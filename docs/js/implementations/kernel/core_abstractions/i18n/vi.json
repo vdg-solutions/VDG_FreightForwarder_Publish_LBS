@@ -914,6 +914,7 @@
   "sales_new.field.roe_buy": "Tỷ giá Mua",
   "sales_new.field.roe_sell": "Tỷ giá Bán",
   "sales_new.select_placeholder": "— Chọn —",
+  "sales_new.customer_more": "… và {n} khách hàng nữa — gõ để tìm",
   "sales_new.col_add_row": "+ Thêm dòng",
   "sales_new.col_description": "Mô tả",
   "sales_new.col_buy_qty": "SL Mua",
@@ -2122,5 +2123,7 @@
   "ledger.col_debit": "Nợ (Debit)",
   "ledger.col_credit": "Có (Credit)",
   "ledger.row_total": "TỔNG",
-  "ledger.discrepancy": "Lệch (Discrepancy):"
+  "ledger.discrepancy": "Lệch (Discrepancy):",
+  "masters.delete_failed": "Không xoá được dòng này — bản ghi thiếu khoá hoặc bạn không có quyền.",
+  "common.action.ok": "OK"
 }

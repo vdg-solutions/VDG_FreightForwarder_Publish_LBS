@@ -122,29 +122,6 @@ class VdgCmdPalette extends LitElement {
   async _search(q) {
     const candidates = [...paletteActions()];
 
-    // L1 LRU shipments
-    const lru = window.__vdg_lru;
-    if (lru) {
-      try {
-        const ships = lru.getAll?.('shipment') || [];
-        ships.forEach((s) => candidates.push({
-          label:   `${s.shipment_ref || s.id} · ${s.customer_name || s.customer || ''}`,
-          kind:    'shipment',
-          id:      s.id,
-          action:  null,
-          shortcut: null,
-        }));
-        const custs = lru.getAll?.('customers') || [];
-        custs.forEach((c) => candidates.push({
-          label:   c.name || c.id,
-          kind:    'customers',
-          id:      c.id,
-          action:  null,
-          shortcut: null,
-        }));
-      } catch { /* LRU not available */ }
-    }
-
     const scored = candidates
       .map((c) => ({ ...c, score: fuzzyScore(c.label, q) }))
       .filter((c) => c.score > 0)

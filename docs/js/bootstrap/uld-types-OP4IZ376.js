@@ -241,7 +241,13 @@ async function render(root) {
       if (!ok) return;
       items = items.filter((i) => i.id !== delBtn.dataset.id);
       root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
-      await deleteMaster(KIND, delBtn.dataset.id);
+      try {
+        await deleteMaster(KIND, delBtn.dataset.id);
+      } catch (err) {
+        await showConfirm({ title: t("masters.delete_failed"), confirmLabel: t("common.action.ok"), cancelLabel: "" });
+        console.warn("delete refused", err);
+        return;
+      }
     }
   });
 }

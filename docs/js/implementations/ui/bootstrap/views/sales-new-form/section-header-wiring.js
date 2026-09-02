@@ -57,7 +57,11 @@ function _applyMode(root, mode) {
 const LB_TO_KG = 0.45359237;
 /// How many masters the dropdown offers before anything is typed, and how many hits the index
 /// returns for a query — one list length, so the box does not change height as you type.
-const EMPTY_QUERY_SUGGESTIONS = 5;
+// Was 5, against a customer list of 10+: a newly added account simply was not among the first
+// five and the picker said nothing, so it read as "my customer is missing". A cap is still needed
+// (the list grows unbounded), but it has to SAY it is capping -- see renderDropdown's overflow
+// row. 20 is what fits the panel without scrolling on the shortest supported viewport.
+const EMPTY_QUERY_SUGGESTIONS = 20;
 function _toKg(value, uom) {
   return uom === 'LB' ? value * LB_TO_KG : value;
 }
@@ -97,6 +101,17 @@ export function wireHeaderSection(root, onChanged) {
 
   modeEl?.addEventListener('change', () => {
     _applyMode(root, modeEl.value);
+    // The pairing rule lives in wasm (rulesets::shipment_publish_gate::product_for_mode) and used
+    // to run in one direction only: the gate REPORTED mode_product_conflict and left the operator
+    // to go fix it. Read forwards it sets the product the mode determines. `null` means leave the
+    // field as they set it -- SEA has three products and choosing one for them would put a value
+    // nobody typed onto a document.
+    const productEl = root.querySelector('[name=product]');
+    const derived = window.__vdg_wasm?.shipment_product_for_mode?.(modeEl.value || '', productEl?.value || '');
+    if (productEl && derived !== null && derived !== undefined && productEl.value !== derived) {
+      productEl.value = derived;
+      productEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     onChanged?.();
   });
   const hblChk = root.querySelector('[name=has_hbl]'); // F-32-01 DEFECT-02: HBL/D-O display toggle
@@ -172,6 +187,13 @@ export function wireHeaderSection(root, onChanged) {
       custDropdown.innerHTML = '';
       if (results.length > 0) {
           results.forEach(r => {
+              if (r._more) {
+                  const hint = document.createElement('div');
+                  hint.className = 'px-3 py-2 text-xs text-slate-500 italic';
+                  hint.textContent = t('sales_new.customer_more').replace('{n}', String(r._more));
+                  custDropdown.appendChild(hint);
+                  return;
+              }
               const div = document.createElement('div');
               div.className = 'px-3 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center border-b border-slate-100';
               const scoreHtml = r.score !== undefined ? `<span class="text-[9px] text-slate-400">${t('common.score_label')} ${(r.score).toFixed(2)}</span>` : '';
@@ -230,6 +252,11 @@ export function wireHeaderSection(root, onChanged) {
                   try {
                       const list = await listCustomerMasters() || [];
                       results = list.slice(0, EMPTY_QUERY_SUGGESTIONS).map(c => ({ name: c.name }));
+                      // Silent truncation is what made this read as data loss. If the list is
+                      // longer than the cap, say so instead of showing a prefix as if it were all.
+                      if (list.length > results.length) {
+                        results.push({ name: '', _more: list.length - results.length });
+                      }
                   } catch (e) { console.warn('Failed to list customers', e); } // DEV
               }
               renderDropdown(results, query);
