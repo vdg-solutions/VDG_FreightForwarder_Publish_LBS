@@ -12,6 +12,22 @@ export const SYNC_STUCK_NOTIFY_MS           = 5 * 60_000;
 export const DURABILITY_VOLATILE = 'volatile';
 export const DURABILITY_REBUILT  = 'rebuilt';
 
+// mirror_backlog_verdict.rs contract — the secondary (Drive) backup queue's own verdict
+// ({kind, age_ms}), relayed on vdg:server-health under this property. Drive is not on the write
+// path: a record is durable on the server before a mirror row exists, so a moving queue is
+// INFORMATION. "Is it moving?" is a decision and it is Rust's — these names are that module's
+// constants and mirror-backlog-verdict-drift.test.mjs fails if they stop matching it.
+export const MIRROR_BACKLOG_PROP = 'mirror_backlog';
+export const MIRROR_IDLE     = 'idle';
+export const MIRROR_DRAINING = 'draining';
+export const MIRROR_STALE    = 'stale';
+export const MIRROR_UNKNOWN  = 'unknown';
+
+// Backlog-age wording. Display only — the staleness DECISION is mirror_backlog_verdict.rs's, and
+// this file never compares an age to anything.
+const MS_PER_MINUTE    = 60_000;
+const MINUTES_PER_HOUR = 60;
+
 // volatile cause → tooltip key; a cause this build doesn't know gets the generic wording rather
 // than a raw key on screen.
 const VOLATILE_CAUSE_TO_TOOLTIP_KEY = {
@@ -24,7 +40,12 @@ const VOLATILE_TOOLTIP_FALLBACK_KEY = 'topbar.sync.tooltip.volatile';
 export const DOT_CLASS = {
   green:       'bg-emerald-500',
   yellow:      'bg-amber-400',
-  backing_up:  'bg-amber-400',
+  backing_up:  'bg-sky-500',   // informational, NOT amber: the record is already durable on the
+                                // server and the queue is moving. It wore the warning amber, which
+                                // is how a reader learns to ignore the dot that also carries a
+                                // quarantined row.
+  backup_stale: 'bg-amber-400', // the backup queue has stopped moving (mirror_backlog_verdict.rs)
+                                // — the one backlog shape that IS a warning short of quarantine
   orange:      'bg-orange-500',
   red:         'bg-red-500',
   pending:     'bg-slate-400', // F-50-01 — calm, distinct from red: expected structural wait, not a failure
@@ -46,6 +67,7 @@ export const STATE_TO_LABEL_KEY = {
   green:       'healthy',
   yellow:      'flushing',
   backing_up:  'backing_up',
+  backup_stale: 'backup_stale', // own key — "the backup stopped moving" is not "retrying"
   orange:      'retrying',
   red:         'offline',
   pending:     'auth_pending', // F-50-01 AC-10 — distinct key, never reuses offline/healthy
@@ -61,7 +83,7 @@ export function buildAriaLabel(state, outboxCount, t, serverBacklog = 0) {
   let suffix = '';
   if (outboxCount > 0) {
     suffix = ` (${t('topbar.sync.tooltip.pending').replace('{n}', outboxCount)})`;
-  } else if (state === 'backing_up' && serverBacklog > 0) {
+  } else if ((state === 'backing_up' || state === 'backup_stale') && serverBacklog > 0) {
     suffix = ` (${serverBacklog})`;
   }
   return `${t('topbar.sync.label')} — ${t(`topbar.sync.state.${key}`)}${suffix}`;
@@ -76,8 +98,7 @@ export function buildAriaLabel(state, outboxCount, t, serverBacklog = 0) {
 // not a render).
 export function computeChipState({
   pending, syncFailed, unreachable = false, quarantined, backoff429, offline, signedOut, lastSyncMs, now,
-  authReconnect, authPending, storeDurability = null,
-  serverBacklog = 0, serverOldestPendingAgeMs = null,
+  authReconnect, authPending, storeDurability = null, mirrorBacklog = null,
 }) {
   if (authReconnect) return 'red';          // F-29-13 AC-05 — genuine reconnect need
   if (offline || signedOut) return 'red';
@@ -95,24 +116,30 @@ export function computeChipState({
   if (authPending) return 'pending';        // F-50-01 AC-06 — expected structural popup-blocked wait
   // H4-b: `unreachable` is Rust's own sync_health::is_unreachable() — the whole-session delta
   // pull itself failing, never a single master kind's bootstrap miss. Ranked ABOVE the softer
-  // 'orange' signals below (a slow secondary backup / a rate-limit backoff / one narrow kind
-  // failing) because "nothing can reach the server" is strictly worse than any of those, and
-  // deliberately independent of `serverBacklog` (backing_up, further below) — that counter stays
-  // permanently non-zero while its own drain bug is open, and must never be read as an outage.
+  // 'orange' signals below (a rate-limit backoff / one narrow kind failing) because "nothing can
+  // reach the server" is strictly worse than any of those, and deliberately independent of the
+  // secondary backup's own backlog (further below) — a queue with rows in it says nothing about
+  // whether the server is reachable, and must never be read as an outage.
   if (unreachable) return 'unreachable';
-  if (serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== undefined && serverOldestPendingAgeMs > 300_000) {
-    return 'orange';
-  }
   if (backoff429) return 'orange';
   // syncFailed is Rust's own sync_health verdict — a real bootstrap/push attempt came back with
   // an error this session and has not since succeeded, never a JS-tracked streak.
   if (syncFailed) return 'orange';
   if (pending > 0 && lastSyncMs === 0) return 'yellow'; // F-19-80 D-B — never-synced baseline with pending backlog must not be green
   if (pending > 0) return 'yellow';
+  // Ranked below every signal above and above the informational ones below. A stalled SECONDARY
+  // copy is a real warning, but strictly less urgent than anything on the write path — a local
+  // outbox row is not on the server yet at all, and an 'orange' is the primary tier itself
+  // failing. Above 'rebuilt'/'backing_up' because those two report facts, not faults.
+  const mirrorKind = mirrorBacklog?.kind;
+  if (mirrorKind === MIRROR_STALE) return 'backup_stale';
   // One-time boot fact: the schema rebuild dropped the cache AND the old outbox. Shown whenever
   // nothing more urgent is, so a local wipe never reads as an ordinary green boot.
   if (storeDurability?.kind === DURABILITY_REBUILT) return 'rebuilt';
-  if (serverBacklog > 0) return 'backing_up';
+  // Two kinds, one rendering, deliberately: a timed queue that is moving and a queue Rust could
+  // not time at all (an older server with no `oldest_pending_age_ms`) are both "queued, no fault
+  // shown". They stay distinct in the verdict so neither can be widened into `stale` later.
+  if (mirrorKind === MIRROR_DRAINING || mirrorKind === MIRROR_UNKNOWN) return 'backing_up';
   return 'green';
 }
 
@@ -137,6 +164,14 @@ export function formatLastSyncAgo(lastSyncMs, now) {
   return `${Math.round(s / 60)}m`;
 }
 
+// How long the secondary backup's oldest queued item has been waiting, in words. Rendering only:
+// mirror_backlog_verdict.rs already decided whether that duration is a fault.
+export function formatBacklogAge(ageMs) {
+  if (ageMs === null || ageMs === undefined) return null;
+  const mins = Math.round(ageMs / MS_PER_MINUTE);
+  return mins < MINUTES_PER_HOUR ? `${mins}m` : `${Math.round(mins / MINUTES_PER_HOUR)}h`;
+}
+
 // AC-06 — pure stuck-notification gate (caller constructs Notification)
 export function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNotifiedStuckEpisode, permission }) {
   if (permission !== 'granted') return false;
@@ -149,8 +184,8 @@ export function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNoti
 // user/online added for red-signedOut and red-offline branch (F-19-19)
 export function buildChipTitle({
   state, ago, lastError, t, user, online, authReconnect, popupBlocked, quarantinedCount = 0,
-  storeDurability = null,
-  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = null,
+  storeDurability = null, mirrorBacklog = null,
+  serverBacklog = 0, serverProvider = null,
 }) {
   if (state === 'red' && popupBlocked)    return t('auth.popup_blocked');              // F-49-01 — ad-blocker nulled window.open
   if (state === 'red' && authReconnect)   return t('topbar.sync.tooltip.reconnect');   // F-29-13 AC-05
@@ -170,9 +205,15 @@ export function buildChipTitle({
       .replace('{provider}', serverProvider || t('topbar.sync.provider.secondary'))
       .replace('{n}', String(serverBacklog));
   }
-  if (state === 'orange' && serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== undefined && serverOldestPendingAgeMs > 300_000) {
-    return t('topbar.sync.tooltip.backup_retry')
-      .replace('{provider}', serverProvider || t('topbar.sync.provider.secondary'));
+  // The age is Rust's own `age_ms`, printed, not judged. `{ago}` falls back to the plain count
+  // wording if the verdict somehow carried no age — never a blank in the sentence.
+  if (state === 'backup_stale') {
+    const waited = formatBacklogAge(mirrorBacklog?.age_ms);
+    const key = waited ? 'topbar.sync.tooltip.backup_stale' : 'topbar.sync.tooltip.backup_stale_untimed';
+    return t(key)
+      .replace('{provider}', serverProvider || t('topbar.sync.provider.secondary'))
+      .replace('{ago}', waited ?? '')
+      .replace('{n}', String(serverBacklog));
   }
   const stateKey  = STATE_TO_LABEL_KEY[state] ?? 'healthy';
   const stateText = t(`topbar.sync.state.${stateKey}`);
@@ -196,8 +237,8 @@ export function buildChipTitle({
 export function renderSyncChip({
   html, state, pending, lastSyncMs, now, online,
   ariaLabel, labelText, lastError, t, onSyncNow, user, authReconnect, popupBlocked,
-  quarantinedCount = 0, storeDurability = null,
-  serverBacklog = 0, serverOldestPendingAgeMs = null, serverProvider = null,
+  quarantinedCount = 0, storeDurability = null, mirrorBacklog = null,
+  serverBacklog = 0, serverProvider = null,
   syncing = false, // vdg:sync-started (charter_event_bridge.rs) — a pass is in flight even with no backlog
 }) {
   const dotClass   = DOT_CLASS[state] ?? DOT_CLASS.green;
@@ -207,7 +248,7 @@ export function renderSyncChip({
   const ago        = formatLastSyncAgo(lastSyncMs, now);
   const titleText  = buildChipTitle({
     state, ago, lastError, t, user, online, authReconnect, popupBlocked, quarantinedCount,
-    storeDurability, serverBacklog, serverOldestPendingAgeMs, serverProvider,
+    storeDurability, mirrorBacklog, serverBacklog, serverProvider,
   });
 
   return html`
@@ -244,6 +285,10 @@ export const CHIP_ACTION = { NOOP:'noop', SIGNIN:'signin', WAITING_NETWORK:'wait
 export function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === 'yellow')                     return CHIP_ACTION.NOOP;
   if (state === 'backing_up')                 return CHIP_ACTION.NOOP;
+  // Only the server's own drain (its write kick and its alarm) moves the secondary queue — a
+  // client push cannot, and pretending otherwise is a placebo button. Same NOOP, same reason, as
+  // the quarantined case below.
+  if (state === 'backup_stale')               return CHIP_ACTION.NOOP;
   if (state === 'pending')                    return CHIP_ACTION.NOOP; // F-50-01 AC-12 — click isn't swallowed: the window-level gesture listener still fires independently
   // A quarantined row needs a code fix, not a retry — nothing behind this click could resolve it.
   if (state === 'quarantined')                return CHIP_ACTION.NOOP;

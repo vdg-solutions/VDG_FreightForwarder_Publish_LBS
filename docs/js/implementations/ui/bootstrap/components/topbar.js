@@ -53,7 +53,7 @@ class VdgTopbar extends LitElement {
     _authReconnect:            { type: Boolean, state: true },
     _popupBlocked:             { type: Boolean, state: true },  _authPending: { type: Boolean, state: true }, // F-49-01 ad-blocker hint + F-50-01 calm pending
     _serverBacklog:            { type: Number,  state: true },
-    _serverOldestPendingAgeMs: { type: Number,  state: true },
+    _mirrorBacklog:            { type: Object,  state: true }, // mirror_backlog_verdict.rs verdict; null until the first health poll
     _serverProvider:           { type: String,  state: true },
     _syncing:                  { type: Boolean, state: true }, // vdg:sync-started (charter_event_bridge.rs)
     _quarantinedCount:         { type: Number,  state: true }, // outbox.rs's own decided, permanent refusal count
@@ -74,7 +74,7 @@ class VdgTopbar extends LitElement {
     this._online = navigator.onLine; this._lastError = null;
     this._lastNotifiedStuckEpisode = 0; this._stuckTickId = null;
     this._breadcrumb = { group: '', view: '' }; this._managerMode = readMode(); this._authReconnect = false; this._popupBlocked = false; this._authPending = false;
-    this._serverBacklog = 0; this._serverOldestPendingAgeMs = null; this._serverProvider = null;
+    this._serverBacklog = 0; this._mirrorBacklog = null; this._serverProvider = null;
     this._storeDurability = window.__vdg_storeDurability ?? null; // store-client.js keeps the last verdict here
     this._syncing = false;
     this._quarantinedCount = 0; this._serverQuarantined = 0;
@@ -235,8 +235,7 @@ class VdgTopbar extends LitElement {
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,
       lastSyncMs: this._lastSyncMs, now, authReconnect: this._authReconnect, authPending: this._authPending,
       storeDurability: this._storeDurability,
-      serverBacklog: this._serverBacklog,
-      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
+      mirrorBacklog: this._mirrorBacklog,
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
     // B-38-03-01: in reconnect state the label IS the affordance — "Đồng bộ" next to a red
@@ -249,6 +248,7 @@ class VdgTopbar extends LitElement {
       : (state === 'red' && !this._online) ? t('topbar.sync.state.offline')
       : (state === 'unreachable') ? t('topbar.sync.state.unreachable')
       : (state === 'backing_up') ? t('topbar.sync.state.backing_up')
+      : (state === 'backup_stale') ? t('topbar.sync.state.backup_stale')
       : (state === 'quarantined') ? t('topbar.sync.state.quarantined')
       : (state === 'volatile') ? t('topbar.sync.state.volatile')
       : (state === 'rebuilt') ? t('topbar.sync.state.rebuilt')
@@ -280,8 +280,8 @@ class VdgTopbar extends LitElement {
             authReconnect: this._authReconnect, popupBlocked: this._popupBlocked,
             quarantinedCount: quarantinedTotal,
             storeDurability: this._storeDurability,
+            mirrorBacklog: this._mirrorBacklog,
             serverBacklog: this._serverBacklog,
-            serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
             serverProvider: this._serverProvider,
             syncing: this._syncing,
             onSyncNow: () => this._onChipClick(state),

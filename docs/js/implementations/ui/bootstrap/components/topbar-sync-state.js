@@ -9,7 +9,7 @@
 // reactive fields and this module only reads/writes them by name.
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-import { shouldFireStuckNotification } from './topbar-sync-chip.js';
+import { shouldFireStuckNotification, MIRROR_BACKLOG_PROP } from './topbar-sync-chip.js';
 
 export const STUCK_RECHECK_INTERVAL_MS = 30_000;
 
@@ -72,7 +72,10 @@ export function createSyncHandlers(host) {
         // zero. Holding a stale 1 here would paint "Cần xử lý" through an outage that says nothing
         // about whether anything is actually parked.
         host._serverQuarantined = 0;
-        host._serverOldestPendingAgeMs = null;
+        // Same rule again for the backup queue's verdict: a poll that never landed makes the last
+        // verdict unknowable. Dropping it is what stops a "backup stopped moving" warning from
+        // outliving the outage that produced it.
+        host._mirrorBacklog = null;
         host.requestUpdate();
         return;
       }
@@ -82,7 +85,9 @@ export function createSyncHandlers(host) {
       if (e.detail?.server_quarantined_depth !== undefined) {
         host._serverQuarantined = Number(e.detail.server_quarantined_depth) || 0;
       }
-      if (e.detail?.oldest_pending_age_ms !== undefined) host._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
+      // mirror_backlog_verdict.rs's own verdict on the secondary backup queue, held as-is for the
+      // chip to render. The draining/stale/cannot-tell classification already happened in Rust.
+      if (e.detail?.[MIRROR_BACKLOG_PROP] !== undefined) host._mirrorBacklog = e.detail[MIRROR_BACKLOG_PROP];
       if (e.detail?.provider) host._serverProvider = e.detail.provider;
       // F-58-02: sync_delta.rs only sends this field when one tick's own call count went above
       // its stated steady-state budget — reusing vdg:server-health rather than a new channel. It

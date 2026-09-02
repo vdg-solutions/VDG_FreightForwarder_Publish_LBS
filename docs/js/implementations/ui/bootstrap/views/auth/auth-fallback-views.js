@@ -21,7 +21,7 @@ export function renderLoadingBanner(mount) {
       localStorage.removeItem('vdg.role-cache');
       sessionStorage.removeItem('vdg.session-token');
       localStorage.removeItem('vdg.auth.user');
-    } catch {}
+    } catch { /* storage-less context (InPrivate, blocked site data) — the reload below is the real remedy */ }
     window.__vdg_auth?.signOut?.();
     location.reload();
   });

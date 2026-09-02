@@ -1,4 +1,7 @@
 import {
+  jobTracker
+} from "./chunk-YFGWKASP.js";
+import {
   bindLedgerRepo,
   ledgerRepo
 } from "./chunk-IBTSRPFB.js";
@@ -6,6 +9,9 @@ import {
   bindNoteLines
 } from "./chunk-SZYDA4BO.js";
 import "./chunk-2X6PKTEY.js";
+import {
+  bindShipmentStateMigrator
+} from "./chunk-NM5PQAZF.js";
 import {
   bindAirInvoiceComposer
 } from "./chunk-MKBTAKU7.js";
@@ -26,14 +32,11 @@ import {
   bindUserAuditLogComposer
 } from "./chunk-GRBWOHUK.js";
 import {
-  jobTracker
-} from "./chunk-YFGWKASP.js";
-import {
   bindManifestComposer
 } from "./chunk-3FXNTAAE.js";
 import {
-  bindShipmentStateMigrator
-} from "./chunk-NM5PQAZF.js";
+  bindErrorLogStore
+} from "./chunk-PGOTV4PU.js";
 import {
   bindBackupExporter
 } from "./chunk-HNTJLHIX.js";
@@ -47,6 +50,9 @@ import {
 import {
   bindAwbRepo
 } from "./chunk-LEXYJ5I6.js";
+import {
+  bindPeriodClose
+} from "./chunk-QL3VBJTQ.js";
 import {
   bindSelfApprovedComposer
 } from "./chunk-TBGPODD6.js";
@@ -73,9 +79,6 @@ import {
   bindBulkOrchestrator
 } from "./chunk-U4F5HOXH.js";
 import {
-  bindErrorLogStore
-} from "./chunk-PGOTV4PU.js";
-import {
   bindJobTracker
 } from "./chunk-T3Z2RENW.js";
 import {
@@ -96,9 +99,6 @@ import {
 import {
   bindArComposer
 } from "./chunk-64ESJPEU.js";
-import {
-  bindPeriodClose
-} from "./chunk-QL3VBJTQ.js";
 import {
   bindDemDetComposer
 } from "./chunk-A4QUGFDN.js";
@@ -160,16 +160,6 @@ import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
 import {
-  toLocalDateStr,
-  todayLocal
-} from "./chunk-7INC2TTZ.js";
-import {
-  bindSalesRepDerivation
-} from "./chunk-BDMZBHS4.js";
-import {
-  bindQuoteOrchestrator
-} from "./chunk-5UHUC2YB.js";
-import {
   UNKNOWN_USER_ID,
   bindRouteGuard,
   currentUserEmail,
@@ -181,6 +171,10 @@ import {
   routeGuard
 } from "./chunk-M3ODLRBG.js";
 import {
+  toLocalDateStr,
+  todayLocal
+} from "./chunk-7INC2TTZ.js";
+import {
   ROLES_RESOLVED_EVENT,
   ROLE_ACCOUNTANT,
   ROLE_AUDITOR,
@@ -190,6 +184,12 @@ import {
   ROLE_SALES_MANAGER,
   ROLE_SALES_REP
 } from "./chunk-NGKBNKFN.js";
+import {
+  bindSalesRepDerivation
+} from "./chunk-BDMZBHS4.js";
+import {
+  bindQuoteOrchestrator
+} from "./chunk-5UHUC2YB.js";
 import {
   bindShipmentVoidDelete
 } from "./chunk-ZCHT56IC.js";
@@ -239,11 +239,11 @@ import {
   putShipment
 } from "./chunk-IOR2W5EP.js";
 import {
-  bindSalesRegistry
-} from "./chunk-YFN2XPGT.js";
-import {
   bindMasterRegistry
 } from "./chunk-T2XEYG3A.js";
+import {
+  bindSalesRegistry
+} from "./chunk-YFN2XPGT.js";
 import {
   bindSessionRoles,
   currentRoles,
@@ -609,7 +609,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 52bfc9b8">v0.4.61 (52bfc9b8)</span>
+        <span class="font-mono whitespace-nowrap" title="build 11282ca4">v0.4.62 (11282ca4)</span>
       </div>
     `;
   }
@@ -725,6 +725,12 @@ function resolveBreadcrumb(hash, _locale, t2) {
 var SYNC_STUCK_NOTIFY_MS = 5 * 6e4;
 var DURABILITY_VOLATILE = "volatile";
 var DURABILITY_REBUILT = "rebuilt";
+var MIRROR_BACKLOG_PROP = "mirror_backlog";
+var MIRROR_DRAINING = "draining";
+var MIRROR_STALE = "stale";
+var MIRROR_UNKNOWN = "unknown";
+var MS_PER_MINUTE = 6e4;
+var MINUTES_PER_HOUR = 60;
 var VOLATILE_CAUSE_TO_TOOLTIP_KEY = {
   no_opfs: "topbar.sync.tooltip.volatile_no_opfs",
   stale_self: "topbar.sync.tooltip.volatile_stale_self"
@@ -733,7 +739,14 @@ var VOLATILE_TOOLTIP_FALLBACK_KEY = "topbar.sync.tooltip.volatile";
 var DOT_CLASS = {
   green: "bg-emerald-500",
   yellow: "bg-amber-400",
-  backing_up: "bg-amber-400",
+  backing_up: "bg-sky-500",
+  // informational, NOT amber: the record is already durable on the
+  // server and the queue is moving. It wore the warning amber, which
+  // is how a reader learns to ignore the dot that also carries a
+  // quarantined row.
+  backup_stale: "bg-amber-400",
+  // the backup queue has stopped moving (mirror_backlog_verdict.rs)
+  // — the one backlog shape that IS a warning short of quarantine
   orange: "bg-orange-500",
   red: "bg-red-500",
   pending: "bg-slate-400",
@@ -758,6 +771,8 @@ var STATE_TO_LABEL_KEY = {
   green: "healthy",
   yellow: "flushing",
   backing_up: "backing_up",
+  backup_stale: "backup_stale",
+  // own key — "the backup stopped moving" is not "retrying"
   orange: "retrying",
   red: "offline",
   pending: "auth_pending",
@@ -774,7 +789,7 @@ function buildAriaLabel(state, outboxCount, t2, serverBacklog = 0) {
   let suffix = "";
   if (outboxCount > 0) {
     suffix = ` (${t2("topbar.sync.tooltip.pending").replace("{n}", outboxCount)})`;
-  } else if (state === "backing_up" && serverBacklog > 0) {
+  } else if ((state === "backing_up" || state === "backup_stale") && serverBacklog > 0) {
     suffix = ` (${serverBacklog})`;
   }
   return `${t2("topbar.sync.label")} \u2014 ${t2(`topbar.sync.state.${key}`)}${suffix}`;
@@ -792,8 +807,7 @@ function computeChipState({
   authReconnect,
   authPending,
   storeDurability = null,
-  serverBacklog = 0,
-  serverOldestPendingAgeMs = null
+  mirrorBacklog = null
 }) {
   if (authReconnect) return "red";
   if (offline || signedOut) return "red";
@@ -802,15 +816,14 @@ function computeChipState({
   if (quarantined) return "quarantined";
   if (authPending) return "pending";
   if (unreachable) return "unreachable";
-  if (serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== void 0 && serverOldestPendingAgeMs > 3e5) {
-    return "orange";
-  }
   if (backoff429) return "orange";
   if (syncFailed) return "orange";
   if (pending > 0 && lastSyncMs === 0) return "yellow";
   if (pending > 0) return "yellow";
+  const mirrorKind = mirrorBacklog?.kind;
+  if (mirrorKind === MIRROR_STALE) return "backup_stale";
   if (storeDurability?.kind === DURABILITY_REBUILT) return "rebuilt";
-  if (serverBacklog > 0) return "backing_up";
+  if (mirrorKind === MIRROR_DRAINING || mirrorKind === MIRROR_UNKNOWN) return "backing_up";
   return "green";
 }
 function displayLastSyncMs(pushMs, pullMs) {
@@ -821,6 +834,11 @@ function formatLastSyncAgo(lastSyncMs, now) {
   const s = Math.round((now - lastSyncMs) / 1e3);
   if (s < 60) return `${s}s`;
   return `${Math.round(s / 60)}m`;
+}
+function formatBacklogAge(ageMs) {
+  if (ageMs === null || ageMs === void 0) return null;
+  const mins = Math.round(ageMs / MS_PER_MINUTE);
+  return mins < MINUTES_PER_HOUR ? `${mins}m` : `${Math.round(mins / MINUTES_PER_HOUR)}h`;
 }
 function shouldFireStuckNotification({ now, lastSyncMs, pending, lastNotifiedStuckEpisode, permission }) {
   if (permission !== "granted") return false;
@@ -839,8 +857,8 @@ function buildChipTitle({
   popupBlocked,
   quarantinedCount = 0,
   storeDurability = null,
+  mirrorBacklog = null,
   serverBacklog = 0,
-  serverOldestPendingAgeMs = null,
   serverProvider = null
 }) {
   if (state === "red" && popupBlocked) return t2("auth.popup_blocked");
@@ -856,8 +874,10 @@ function buildChipTitle({
   if (state === "backing_up") {
     return t2("topbar.sync.tooltip.backing_up").replace("{provider}", serverProvider || t2("topbar.sync.provider.secondary")).replace("{n}", String(serverBacklog));
   }
-  if (state === "orange" && serverOldestPendingAgeMs !== null && serverOldestPendingAgeMs !== void 0 && serverOldestPendingAgeMs > 3e5) {
-    return t2("topbar.sync.tooltip.backup_retry").replace("{provider}", serverProvider || t2("topbar.sync.provider.secondary"));
+  if (state === "backup_stale") {
+    const waited = formatBacklogAge(mirrorBacklog?.age_ms);
+    const key = waited ? "topbar.sync.tooltip.backup_stale" : "topbar.sync.tooltip.backup_stale_untimed";
+    return t2(key).replace("{provider}", serverProvider || t2("topbar.sync.provider.secondary")).replace("{ago}", waited ?? "").replace("{n}", String(serverBacklog));
   }
   const stateKey = STATE_TO_LABEL_KEY[state] ?? "healthy";
   const stateText = t2(`topbar.sync.state.${stateKey}`);
@@ -889,8 +909,8 @@ function renderSyncChip({
   popupBlocked,
   quarantinedCount = 0,
   storeDurability = null,
+  mirrorBacklog = null,
   serverBacklog = 0,
-  serverOldestPendingAgeMs = null,
   serverProvider = null,
   syncing = false
   // vdg:sync-started (charter_event_bridge.rs) — a pass is in flight even with no backlog
@@ -911,8 +931,8 @@ function renderSyncChip({
     popupBlocked,
     quarantinedCount,
     storeDurability,
+    mirrorBacklog,
     serverBacklog,
-    serverOldestPendingAgeMs,
     serverProvider
   });
   return html12`
@@ -945,6 +965,7 @@ var CHIP_ACTION = {
 function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === "yellow") return CHIP_ACTION.NOOP;
   if (state === "backing_up") return CHIP_ACTION.NOOP;
+  if (state === "backup_stale") return CHIP_ACTION.NOOP;
   if (state === "pending") return CHIP_ACTION.NOOP;
   if (state === "quarantined") return CHIP_ACTION.NOOP;
   if (state === "volatile") return CHIP_ACTION.SYNC_NOW;
@@ -1122,7 +1143,7 @@ function createSyncHandlers(host) {
       if (e.detail?.unreachable) {
         host._serverBacklog = 0;
         host._serverQuarantined = 0;
-        host._serverOldestPendingAgeMs = null;
+        host._mirrorBacklog = null;
         host.requestUpdate();
         return;
       }
@@ -1130,7 +1151,7 @@ function createSyncHandlers(host) {
       if (e.detail?.server_quarantined_depth !== void 0) {
         host._serverQuarantined = Number(e.detail.server_quarantined_depth) || 0;
       }
-      if (e.detail?.oldest_pending_age_ms !== void 0) host._serverOldestPendingAgeMs = e.detail.oldest_pending_age_ms;
+      if (e.detail?.[MIRROR_BACKLOG_PROP] !== void 0) host._mirrorBacklog = e.detail[MIRROR_BACKLOG_PROP];
       if (e.detail?.provider) host._serverProvider = e.detail.provider;
       if (e.detail?.sync_tick_calls !== void 0) {
         host._lastError = t("topbar.sync.tooltip.high_volume_reason", { n: e.detail.sync_tick_calls });
@@ -1208,7 +1229,8 @@ var VdgTopbar = class extends LitElement2 {
     _authPending: { type: Boolean, state: true },
     // F-49-01 ad-blocker hint + F-50-01 calm pending
     _serverBacklog: { type: Number, state: true },
-    _serverOldestPendingAgeMs: { type: Number, state: true },
+    _mirrorBacklog: { type: Object, state: true },
+    // mirror_backlog_verdict.rs verdict; null until the first health poll
     _serverProvider: { type: String, state: true },
     _syncing: { type: Boolean, state: true },
     // vdg:sync-started (charter_event_bridge.rs)
@@ -1249,7 +1271,7 @@ var VdgTopbar = class extends LitElement2 {
     this._popupBlocked = false;
     this._authPending = false;
     this._serverBacklog = 0;
-    this._serverOldestPendingAgeMs = null;
+    this._mirrorBacklog = null;
     this._serverProvider = null;
     this._storeDurability = window.__vdg_storeDurability ?? null;
     this._syncing = false;
@@ -1466,11 +1488,10 @@ var VdgTopbar = class extends LitElement2 {
       authReconnect: this._authReconnect,
       authPending: this._authPending,
       storeDurability: this._storeDurability,
-      serverBacklog: this._serverBacklog,
-      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs
+      mirrorBacklog: this._mirrorBacklog
     });
     const ariaLabel = buildAriaLabel(state, this._outboxCount, t, this._serverBacklog);
-    const labelText = state === "red" && this._authReconnect ? t("topbar.sync.label.signin") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "unreachable" ? t("topbar.sync.state.unreachable") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "quarantined" ? t("topbar.sync.state.quarantined") : state === "volatile" ? t("topbar.sync.state.volatile") : state === "rebuilt" ? t("topbar.sync.state.rebuilt") : state === "orange" ? t("topbar.sync.state.retrying") : t("topbar.sync.label");
+    const labelText = state === "red" && this._authReconnect ? t("topbar.sync.label.signin") : state === "red" && !this._online ? t("topbar.sync.state.offline") : state === "unreachable" ? t("topbar.sync.state.unreachable") : state === "backing_up" ? t("topbar.sync.state.backing_up") : state === "backup_stale" ? t("topbar.sync.state.backup_stale") : state === "quarantined" ? t("topbar.sync.state.quarantined") : state === "volatile" ? t("topbar.sync.state.volatile") : state === "rebuilt" ? t("topbar.sync.state.rebuilt") : state === "orange" ? t("topbar.sync.state.retrying") : t("topbar.sync.label");
     return html4`
       ${renderSwBanner(this)}
       <header class="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-6 shrink-0">
@@ -1505,8 +1526,8 @@ var VdgTopbar = class extends LitElement2 {
       popupBlocked: this._popupBlocked,
       quarantinedCount: quarantinedTotal,
       storeDurability: this._storeDurability,
+      mirrorBacklog: this._mirrorBacklog,
       serverBacklog: this._serverBacklog,
-      serverOldestPendingAgeMs: this._serverOldestPendingAgeMs,
       serverProvider: this._serverProvider,
       syncing: this._syncing,
       onSyncNow: () => this._onChipClick(state)
@@ -2344,7 +2365,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.61 (52bfc9b8)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.62 (11282ca4)</div>
         </div>
       </div>
     </div>`;
@@ -2784,6 +2805,307 @@ function createPlatform({ repo: repo3 }) {
   return { ...base, ...authPlatform, ...cachePlatform, ...dataPlatform, ...syncPlatform, ...managerPlatform, ...governancePlatform, ...flowsPlatform };
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/auth/server-access-gate-screen.js
+var SERVER_ACCESS_REASON_TRANSIENT = "transient";
+var SERVER_ACCESS_REASON_SESSION = "session";
+var TRANSIENT_RETRY_BTN_ID = "server-access-transient-retry";
+var SESSION_RECONNECT_BTN_ID = "server-access-session-reconnect";
+var DECLINED_HINT_ID = "server-access-declined-hint";
+var TITLE_KEY = {
+  [SERVER_ACCESS_REASON_TRANSIENT]: "server_access.transient.title",
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.title"
+};
+var BODY_KEY = {
+  [SERVER_ACCESS_REASON_TRANSIENT]: "server_access.transient.body",
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.body"
+};
+var BTN_ID = {
+  [SERVER_ACCESS_REASON_TRANSIENT]: TRANSIENT_RETRY_BTN_ID,
+  [SERVER_ACCESS_REASON_SESSION]: SESSION_RECONNECT_BTN_ID
+};
+var BTN_LABEL_KEY = {
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.button"
+};
+var RETRY_HINT_KEY = {
+  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.retry_failed"
+};
+function renderServerAccessGateScreen(container, { reason, actionFailed = false, onAction } = {}) {
+  if (!container) return;
+  const btnId = BTN_ID[reason] || TRANSIENT_RETRY_BTN_ID;
+  const labelKey = BTN_LABEL_KEY[reason];
+  const btnLabel = labelKey ? t(labelKey) : t("license.gate.retry_button");
+  const hintKey = actionFailed ? RETRY_HINT_KEY[reason] : null;
+  container.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${TITLE_KEY[reason] ? t(TITLE_KEY[reason]) : "L\u1ED7i"}</div>
+      <div class="text-sm text-slate-500 max-w-md">${BODY_KEY[reason] ? t(BODY_KEY[reason]) : "\u0110\xE3 c\xF3 l\u1ED7i x\u1EA3y ra."}</div>
+      ${hintKey ? `<div id="${DECLINED_HINT_ID}" data-testid="${DECLINED_HINT_ID}" class="text-sm text-amber-600 max-w-md">${t(hintKey)}</div>` : ""}
+      <button id="${btnId}" data-testid="${btnId}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${btnLabel}
+      </button>
+    </div>`;
+  container.querySelector(`#${btnId}`)?.addEventListener("click", () => {
+    if (onAction) onAction();
+    else location.reload();
+  });
+}
+
+// output/web/js.tmp/bootstrap/boot/server-gate.js
+var BOOT_GATE_PROP = "bootGate";
+var GATE_SESSION = "session";
+var GATE_OUTAGE = "outage";
+var REASON_BY_KIND = {
+  [GATE_SESSION]: SERVER_ACCESS_REASON_SESSION,
+  [GATE_OUTAGE]: SERVER_ACCESS_REASON_TRANSIENT
+};
+var EVT_RECONNECT_REQUEST = "vdg:auth-reconnect-request";
+var EVT_RECONNECTED = "vdg:auth-reconnected";
+var EVT_NEEDS_RECONNECT = "vdg:auth-needs-reconnect";
+function serverGateReason(err) {
+  return REASON_BY_KIND[err?.[BOOT_GATE_PROP]?.kind] ?? null;
+}
+function requestReconnect(onSettled, win = window) {
+  let settled = false;
+  const finish = (ok) => {
+    if (settled) return;
+    settled = true;
+    win.removeEventListener(EVT_RECONNECTED, onOk);
+    win.removeEventListener(EVT_NEEDS_RECONNECT, onFail);
+    onSettled(ok);
+  };
+  const onOk = () => finish(true);
+  const onFail = () => finish(false);
+  win.addEventListener(EVT_RECONNECTED, onOk);
+  win.addEventListener(EVT_NEEDS_RECONNECT, onFail);
+  win.dispatchEvent(new CustomEvent(EVT_RECONNECT_REQUEST));
+}
+function renderServerGate(mount, err, { onReconnected, onSignIn, serverBackend = true, win = window } = {}) {
+  const reason = serverGateReason(err);
+  if (!reason) return false;
+  if (serverBackend && reason === SERVER_ACCESS_REASON_SESSION) {
+    onSignIn?.();
+    return true;
+  }
+  if (reason === SERVER_ACCESS_REASON_SESSION) {
+    const render = (actionFailed) => renderServerAccessGateScreen(mount, {
+      reason,
+      actionFailed,
+      onAction: () => requestReconnect((ok) => ok ? onReconnected?.() : render(true), win)
+    });
+    render(false);
+    return true;
+  }
+  renderServerAccessGateScreen(mount, { reason });
+  return true;
+}
+
+// output/web/js.tmp/bootstrap/boot/repo-init-fallback.js
+var RETRY_BTN_ID2 = "repo-init-retry-btn";
+var RETRY_BTN_TESTID2 = "repo-init-retry";
+function renderRepoInitTimeoutBanner(mount, onRetry) {
+  if (!mount) return;
+  mount.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${t("repo_init_timeout_title")}</div>
+      <div class="text-sm text-slate-500">${t("repo_init_timeout_body")}</div>
+      <button id="${RETRY_BTN_ID2}" data-testid="${RETRY_BTN_TESTID2}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("repo_init_retry")}
+      </button>
+    </div>`;
+  mount.querySelector(`#${RETRY_BTN_ID2}`)?.addEventListener("click", () => onRetry());
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/util/view-fallback.js
+var MAX_VIEW_MOUNT_RETRIES = 2;
+var _attempts = /* @__PURE__ */ new Map();
+function renderViewFallback(root, route, reason = "timeout") {
+  const used = _attempts.get(route) ?? 0;
+  const exhausted = used >= MAX_VIEW_MOUNT_RETRIES;
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  renderViewMountRecovery(root, {
+    route,
+    offline,
+    exhausted,
+    reason,
+    onRetry: () => {
+      _attempts.set(route, used + 1);
+      window.dispatchEvent(new CustomEvent("vdg:navigate", { detail: { route } }));
+    },
+    onReload: healOrReloadViaServiceWorker
+    // fires ONLY on user click — never automatic
+  });
+}
+async function healOrReloadViaServiceWorker() {
+  const reg = typeof navigator !== "undefined" ? await navigator.serviceWorker?.getRegistration?.().catch(() => null) : null;
+  if (reg?.waiting) {
+    window.dispatchEvent(new CustomEvent("vdg:sw-update-accept"));
+  } else {
+    location.reload();
+  }
+}
+function resetViewMountRetries(route) {
+  _attempts.delete(route);
+}
+
+// output/web/js.tmp/bootstrap/boot/wasm-loader.js
+var cached = null;
+var inflight = null;
+var BRIDGE_EXPORTS = [
+  "vdg_version",
+  "process_excel_file",
+  "get_validation_errors",
+  "apply_fsm_event",
+  "get_entity_state",
+  "register_entity",
+  "drain_events",
+  "get_transition_log",
+  "import_booking_excel_wasm",
+  "verify_license",
+  "permission_can_merge",
+  "access_is_account",
+  // #28: route/nav authority — route-guard.js reads these; without globalizing them it falls back
+  // to window.__vdg_wasm and a boot path that skipped the loader would silently deny every route.
+  "access_can_route",
+  "access_home_route",
+  "access_redirect_for",
+  "access_roles_from_record",
+  "proposal_propose",
+  "proposal_merge",
+  "proposal_reject",
+  // AC-04: reject round-trip needs the global bridge
+  "priced_ref_resolve_on_date",
+  "compute_due_soon",
+  // F-48-01: payment-due-soon 4-tier ladder shared compute
+  "fmt_date_display"
+  // F4-d: the one date-display convention, decided in Rust
+];
+function globalizeBridgeExports(mod) {
+  cached = mod;
+  for (const name of BRIDGE_EXPORTS) {
+    if (typeof mod[name] === "function") {
+      window[name] = mod[name];
+    }
+  }
+}
+function loadOnce() {
+  if (cached) return Promise.resolve(cached);
+  if (!inflight) {
+    inflight = (async () => {
+      const mod = await import(new URL("pkg/vdg_freight.js?v=11282ca4", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=11282ca4", document.baseURI).href;
+      await mod.default({ module_or_path: wasmUrl });
+      cached = mod;
+      window.__vdg_wasm = mod;
+      globalizeBridgeExports(mod);
+      window.dispatchEvent(new Event("vdg:wasm-ready"));
+      return mod;
+    })();
+  }
+  return inflight;
+}
+async function loadWasmOrThrow() {
+  try {
+    return await loadOnce();
+  } catch (err) {
+    inflight = null;
+    throw err;
+  }
+}
+async function loadWasm() {
+  try {
+    return await loadOnce();
+  } catch (err) {
+    console.debug("[wasm-loader]", err);
+    inflight = null;
+    return null;
+  }
+}
+
+// output/web/js.tmp/bootstrap/boot/wasm-boot-loader.js
+async function loadWasmModule() {
+  try {
+    return await loadWasmOrThrow();
+  } catch (err) {
+    if (err instanceof WebAssembly.LinkError || err?.name === "LinkError" || String(err).includes("LinkError")) {
+      console.warn("[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...");
+      if (typeof window !== "undefined" && "caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (typeof navigator !== "undefined" && navigator.serviceWorker) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if (!sessionStorage.getItem("__wasm_link_reloaded")) {
+        sessionStorage.setItem("__wasm_link_reloaded", "1");
+        location.reload();
+        return new Promise(() => {
+        });
+      }
+    }
+    throw err;
+  }
+}
+var BOOT_ERROR_REASON_MAX_CHARS = 200;
+function bootErrorReason(err) {
+  const raw = err && (err.message || err.name) ? String(err.message || err.name) : String(err ?? "");
+  const text = raw.trim();
+  if (!text || text === "undefined") return "";
+  return text.length > BOOT_ERROR_REASON_MAX_CHARS ? `${text.slice(0, BOOT_ERROR_REASON_MAX_CHARS)}\u2026` : text;
+}
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function handleUnrecognizedBootError(err, mount) {
+  console.error("[VDG] boot failed, unrecognized error:", err);
+  if (!mount) return;
+  const reason = bootErrorReason(err);
+  mount.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-xl font-semibold text-slate-700">${t("view_mount_failed_title")}</div>
+      <div class="text-sm text-slate-500">${t("view_mount_failed_network")}</div>
+      ${reason ? `<div class="text-xs text-slate-400 font-mono max-w-lg break-words">${escapeHtml(reason)}</div>` : ""}
+      <button id="boot-error-reload-btn" data-testid="boot-error-reload"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("view_mount_reload")}
+      </button>
+    </div>`;
+  mount.querySelector("#boot-error-reload-btn")?.addEventListener("click", () => healOrReloadViaServiceWorker());
+}
+
+// output/web/js.tmp/bootstrap/boot/boot-failure-screen.js
+var APP_ROOT_ID = "app";
+var VIEW_ROOT_ID = "view-root";
+var BOOT_PLACEHOLDER_ID2 = "view-loading";
+var ROLE_PROBE_TIMEOUT = "RoleProbeTimeoutError";
+var REPO_INIT_TIMEOUTS = ["RepoInitTimeoutError", "IdbOpenFailedError"];
+function bootFallbackMount() {
+  return document.getElementById(BOOT_PLACEHOLDER_ID2)?.parentElement || document.getElementById(VIEW_ROOT_ID) || document.getElementById(APP_ROOT_ID);
+}
+async function renderBootFailure(err, { onRetryRepoInit = () => location.reload() } = {}) {
+  const mount = bootFallbackMount();
+  if (err?.name === ROLE_PROBE_TIMEOUT) {
+    const { renderLoadingBanner } = await import("./auth-fallback-views-6TEABO7S.js");
+    renderLoadingBanner(document.getElementById(APP_ROOT_ID));
+    return;
+  }
+  if (REPO_INIT_TIMEOUTS.includes(err?.name)) {
+    renderRepoInitTimeoutBanner(mount, onRetryRepoInit);
+    return;
+  }
+  if (renderServerGate(mount, err, {
+    onReconnected: () => location.reload(),
+    serverBackend: true,
+    onSignIn: () => mountLoginScreen(() => location.reload())
+  })) {
+    console.error("[VDG] boot stopped on Server", err);
+    return;
+  }
+  handleUnrecognizedBootError(err, mount);
+}
+
 // output/web/js.tmp/bootstrap/compose-ui/auth.js
 var OUTCOME_SIGNED_IN = "signed-in";
 var OUTCOME_DEGRADED = "degraded";
@@ -2811,10 +3133,17 @@ function composeAuth(wasm4) {
     if (!result.ok) throw result.error;
     return result.value;
   };
-  const signIn = (onSignedIn) => mountLoginScreen(async (user) => {
-    await wasm4.auth_adopt_session({ email: user.email });
-    await detectOrThrow(user, "auth-gate:loginCb");
-    onSignedIn(user);
+  const finishSignIn = async (onSignedIn, user) => {
+    try {
+      await wasm4.auth_adopt_session({ email: user.email });
+      await detectOrThrow(user, "auth-gate:loginCb");
+      await onSignedIn(user);
+    } catch (err) {
+      await renderBootFailure(err, { onRetryRepoInit: () => finishSignIn(onSignedIn, user) });
+    }
+  };
+  const signIn = (onSignedIn) => mountLoginScreen((user) => {
+    finishSignIn(onSignedIn, user);
   });
   const requireAuth2 = async (onSignedIn) => {
     const verdict = await wasm4.auth_require_auth({});
@@ -3956,133 +4285,6 @@ function enforceRouteGuard(route, role) {
   return true;
 }
 
-// output/web/js.tmp/implementations/ui/bootstrap/views/auth/server-access-gate-screen.js
-var SERVER_ACCESS_REASON_TRANSIENT = "transient";
-var SERVER_ACCESS_REASON_SESSION = "session";
-var TRANSIENT_RETRY_BTN_ID = "server-access-transient-retry";
-var SESSION_RECONNECT_BTN_ID = "server-access-session-reconnect";
-var DECLINED_HINT_ID = "server-access-declined-hint";
-var TITLE_KEY = {
-  [SERVER_ACCESS_REASON_TRANSIENT]: "server_access.transient.title",
-  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.title"
-};
-var BODY_KEY = {
-  [SERVER_ACCESS_REASON_TRANSIENT]: "server_access.transient.body",
-  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.body"
-};
-var BTN_ID = {
-  [SERVER_ACCESS_REASON_TRANSIENT]: TRANSIENT_RETRY_BTN_ID,
-  [SERVER_ACCESS_REASON_SESSION]: SESSION_RECONNECT_BTN_ID
-};
-var BTN_LABEL_KEY = {
-  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.button"
-};
-var RETRY_HINT_KEY = {
-  [SERVER_ACCESS_REASON_SESSION]: "server_access.session.retry_failed"
-};
-function renderServerAccessGateScreen(container, { reason, actionFailed = false, onAction } = {}) {
-  if (!container) return;
-  const btnId = BTN_ID[reason] || TRANSIENT_RETRY_BTN_ID;
-  const labelKey = BTN_LABEL_KEY[reason];
-  const btnLabel = labelKey ? t(labelKey) : t("license.gate.retry_button");
-  const hintKey = actionFailed ? RETRY_HINT_KEY[reason] : null;
-  container.innerHTML = `
-    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-      <div class="text-xl font-semibold text-slate-700">${TITLE_KEY[reason] ? t(TITLE_KEY[reason]) : "L\u1ED7i"}</div>
-      <div class="text-sm text-slate-500 max-w-md">${BODY_KEY[reason] ? t(BODY_KEY[reason]) : "\u0110\xE3 c\xF3 l\u1ED7i x\u1EA3y ra."}</div>
-      ${hintKey ? `<div id="${DECLINED_HINT_ID}" data-testid="${DECLINED_HINT_ID}" class="text-sm text-amber-600 max-w-md">${t(hintKey)}</div>` : ""}
-      <button id="${btnId}" data-testid="${btnId}"
-              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-        ${btnLabel}
-      </button>
-    </div>`;
-  container.querySelector(`#${btnId}`)?.addEventListener("click", () => {
-    if (onAction) onAction();
-    else location.reload();
-  });
-}
-
-// output/web/js.tmp/bootstrap/boot/server-gate.js
-var BOOT_GATE_PROP = "bootGate";
-var GATE_SESSION = "session";
-var GATE_OUTAGE = "outage";
-var REASON_BY_KIND = {
-  [GATE_SESSION]: SERVER_ACCESS_REASON_SESSION,
-  [GATE_OUTAGE]: SERVER_ACCESS_REASON_TRANSIENT
-};
-var EVT_RECONNECT_REQUEST = "vdg:auth-reconnect-request";
-var EVT_RECONNECTED = "vdg:auth-reconnected";
-var EVT_NEEDS_RECONNECT = "vdg:auth-needs-reconnect";
-function serverGateReason(err) {
-  return REASON_BY_KIND[err?.[BOOT_GATE_PROP]?.kind] ?? null;
-}
-function requestReconnect(onSettled, win = window) {
-  let settled = false;
-  const finish = (ok) => {
-    if (settled) return;
-    settled = true;
-    win.removeEventListener(EVT_RECONNECTED, onOk);
-    win.removeEventListener(EVT_NEEDS_RECONNECT, onFail);
-    onSettled(ok);
-  };
-  const onOk = () => finish(true);
-  const onFail = () => finish(false);
-  win.addEventListener(EVT_RECONNECTED, onOk);
-  win.addEventListener(EVT_NEEDS_RECONNECT, onFail);
-  win.dispatchEvent(new CustomEvent(EVT_RECONNECT_REQUEST));
-}
-function renderServerGate(mount, err, { onReconnected, onSignIn, serverBackend = true, win = window } = {}) {
-  const reason = serverGateReason(err);
-  if (!reason) return false;
-  if (serverBackend && reason === SERVER_ACCESS_REASON_SESSION) {
-    onSignIn?.();
-    return true;
-  }
-  if (reason === SERVER_ACCESS_REASON_SESSION) {
-    const render = (actionFailed) => renderServerAccessGateScreen(mount, {
-      reason,
-      actionFailed,
-      onAction: () => requestReconnect((ok) => ok ? onReconnected?.() : render(true), win)
-    });
-    render(false);
-    return true;
-  }
-  renderServerAccessGateScreen(mount, { reason });
-  return true;
-}
-
-// output/web/js.tmp/implementations/ui/bootstrap/util/view-fallback.js
-var MAX_VIEW_MOUNT_RETRIES = 2;
-var _attempts = /* @__PURE__ */ new Map();
-function renderViewFallback(root, route, reason = "timeout") {
-  const used = _attempts.get(route) ?? 0;
-  const exhausted = used >= MAX_VIEW_MOUNT_RETRIES;
-  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
-  renderViewMountRecovery(root, {
-    route,
-    offline,
-    exhausted,
-    reason,
-    onRetry: () => {
-      _attempts.set(route, used + 1);
-      window.dispatchEvent(new CustomEvent("vdg:navigate", { detail: { route } }));
-    },
-    onReload: healOrReloadViaServiceWorker
-    // fires ONLY on user click — never automatic
-  });
-}
-async function healOrReloadViaServiceWorker() {
-  const reg = typeof navigator !== "undefined" ? await navigator.serviceWorker?.getRegistration?.().catch(() => null) : null;
-  if (reg?.waiting) {
-    window.dispatchEvent(new CustomEvent("vdg:sw-update-accept"));
-  } else {
-    location.reload();
-  }
-}
-function resetViewMountRetries(route) {
-  _attempts.delete(route);
-}
-
 // output/web/js.tmp/implementations/ui/bootstrap/util/view-loader.js
 var VIEW_LOAD_TIMEOUT_MS = 25e3;
 var VIEW_LOAD_RETRY_COUNT = 1;
@@ -4152,7 +4354,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-WDCZTKVG.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-DEIPZ7GE.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4160,14 +4362,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-7DCWCWEA.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-E2PLTOFT.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-7DCWCWEA.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-E2PLTOFT.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4269,7 +4471,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.61 (52bfc9b8)";
+var APP_VERSION = "v0.4.62 (11282ca4)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4511,7 +4713,7 @@ var VIEWS = {
   "/sales/analytics": () => import("./sales-analytics-73QOTSUJ.js"),
   "/sales/quote/new": () => import("./sales-quote-new-ODI237IK.js"),
   "/sales/quote": () => import("./sales-quote-list-EAHS6J3Y.js"),
-  "/masters/customers": () => import("./masters-customers-SOEWXZND.js"),
+  "/masters/customers": () => import("./masters-customers-L63TE4ZK.js"),
   "/masters/carriers": () => import("./masters-carriers-NGSX2ADW.js"),
   "/masters/services": () => import("./masters-services-EU2Q5CWP.js"),
   "/help": () => import("./help-IKAUORGB.js"),
@@ -4519,9 +4721,9 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-WO75SJKX.js"),
-  "/manager/pipeline": () => import("./pipeline-TEBMCROQ.js"),
+  "/manager/pipeline": () => import("./pipeline-CWTGNDBW.js"),
   "/manager/approvals": () => import("./approvals-V4RVJ7SQ.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-QUWJL67S.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-BV6KME6N.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-VPVF3ESY.js"),
   "/manager/finance/close-period": () => import("./close-period-ODQV56G6.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-ELOYOCSC.js"),
@@ -4531,7 +4733,7 @@ var VIEWS = {
   "/manager/sales": () => import("./sales-AZZPV2MW.js"),
   "/manager/finance/commissions": () => import("./commissions-UU5FPDW4.js"),
   "/manager/commission-rules": () => import("./commission-rules-562YSF6U.js"),
-  "/manager/exceptions": () => import("./exceptions-57GTL7YN.js"),
+  "/manager/exceptions": () => import("./exceptions-KGQRNKGG.js"),
   // E-15
   "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
@@ -4563,7 +4765,7 @@ var VIEWS = {
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-MNK5RSO3.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-7PSYSSJF.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-XQ6BDMMF.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-MMFEN43G.js"),
@@ -5467,80 +5669,6 @@ function composeStorageUi() {
   bindAwbRepo(new AwbStoreRepo());
 }
 
-// output/web/js.tmp/bootstrap/boot/wasm-loader.js
-var cached = null;
-var inflight = null;
-var BRIDGE_EXPORTS = [
-  "vdg_version",
-  "process_excel_file",
-  "get_validation_errors",
-  "apply_fsm_event",
-  "get_entity_state",
-  "register_entity",
-  "drain_events",
-  "get_transition_log",
-  "import_booking_excel_wasm",
-  "verify_license",
-  "permission_can_merge",
-  "access_is_account",
-  // #28: route/nav authority — route-guard.js reads these; without globalizing them it falls back
-  // to window.__vdg_wasm and a boot path that skipped the loader would silently deny every route.
-  "access_can_route",
-  "access_home_route",
-  "access_redirect_for",
-  "access_roles_from_record",
-  "proposal_propose",
-  "proposal_merge",
-  "proposal_reject",
-  // AC-04: reject round-trip needs the global bridge
-  "priced_ref_resolve_on_date",
-  "compute_due_soon",
-  // F-48-01: payment-due-soon 4-tier ladder shared compute
-  "fmt_date_display"
-  // F4-d: the one date-display convention, decided in Rust
-];
-function globalizeBridgeExports(mod) {
-  cached = mod;
-  for (const name of BRIDGE_EXPORTS) {
-    if (typeof mod[name] === "function") {
-      window[name] = mod[name];
-    }
-  }
-}
-function loadOnce() {
-  if (cached) return Promise.resolve(cached);
-  if (!inflight) {
-    inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=52bfc9b8", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=52bfc9b8", document.baseURI).href;
-      await mod.default({ module_or_path: wasmUrl });
-      cached = mod;
-      window.__vdg_wasm = mod;
-      globalizeBridgeExports(mod);
-      window.dispatchEvent(new Event("vdg:wasm-ready"));
-      return mod;
-    })();
-  }
-  return inflight;
-}
-async function loadWasmOrThrow() {
-  try {
-    return await loadOnce();
-  } catch (err) {
-    inflight = null;
-    throw err;
-  }
-}
-async function loadWasm() {
-  try {
-    return await loadOnce();
-  } catch (err) {
-    console.debug("[wasm-loader]", err);
-    inflight = null;
-    return null;
-  }
-}
-
 // output/web/js.tmp/bootstrap/compose-ui/platform.js
 function composePlatformUi() {
   bindWasmLoader({ loadWasm });
@@ -5972,23 +6100,6 @@ async function runRepoInit(user, bootFn) {
   }
 }
 
-// output/web/js.tmp/bootstrap/boot/repo-init-fallback.js
-var RETRY_BTN_ID2 = "repo-init-retry-btn";
-var RETRY_BTN_TESTID2 = "repo-init-retry";
-function renderRepoInitTimeoutBanner(mount, onRetry) {
-  if (!mount) return;
-  mount.innerHTML = `
-    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-      <div class="text-xl font-semibold text-slate-700">${t("repo_init_timeout_title")}</div>
-      <div class="text-sm text-slate-500">${t("repo_init_timeout_body")}</div>
-      <button id="${RETRY_BTN_ID2}" data-testid="${RETRY_BTN_TESTID2}"
-              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-        ${t("repo_init_retry")}
-      </button>
-    </div>`;
-  mount.querySelector(`#${RETRY_BTN_ID2}`)?.addEventListener("click", () => onRetry());
-}
-
 // output/web/js.tmp/implementations/ui/bootstrap/migration-overlay.js
 var SHOW_DELAY_MS = 300;
 var MIGRATION_EVENT = "vdg:migration";
@@ -6060,58 +6171,6 @@ function initMigrationOverlay() {
   });
 }
 
-// output/web/js.tmp/bootstrap/boot/wasm-boot-loader.js
-async function loadWasmModule() {
-  try {
-    return await loadWasmOrThrow();
-  } catch (err) {
-    if (err instanceof WebAssembly.LinkError || err?.name === "LinkError" || String(err).includes("LinkError")) {
-      console.warn("[VDG] WebAssembly LinkError detected (stale cache mismatch). Purging caches and reloading...");
-      if (typeof window !== "undefined" && "caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-      if (typeof navigator !== "undefined" && navigator.serviceWorker) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-      }
-      if (!sessionStorage.getItem("__wasm_link_reloaded")) {
-        sessionStorage.setItem("__wasm_link_reloaded", "1");
-        location.reload();
-        return new Promise(() => {
-        });
-      }
-    }
-    throw err;
-  }
-}
-var BOOT_ERROR_REASON_MAX_CHARS = 200;
-function bootErrorReason(err) {
-  const raw = err && (err.message || err.name) ? String(err.message || err.name) : String(err ?? "");
-  const text = raw.trim();
-  if (!text || text === "undefined") return "";
-  return text.length > BOOT_ERROR_REASON_MAX_CHARS ? `${text.slice(0, BOOT_ERROR_REASON_MAX_CHARS)}\u2026` : text;
-}
-function escapeHtml(text) {
-  return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-}
-function handleUnrecognizedBootError(err, mount) {
-  console.error("[VDG] boot failed, unrecognized error:", err);
-  if (!mount) return;
-  const reason = bootErrorReason(err);
-  mount.innerHTML = `
-    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-      <div class="text-xl font-semibold text-slate-700">${t("view_mount_failed_title")}</div>
-      <div class="text-sm text-slate-500">${t("view_mount_failed_network")}</div>
-      ${reason ? `<div class="text-xs text-slate-400 font-mono max-w-lg break-words">${escapeHtml(reason)}</div>` : ""}
-      <button id="boot-error-reload-btn" data-testid="boot-error-reload"
-              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-        ${t("view_mount_reload")}
-      </button>
-    </div>`;
-  mount.querySelector("#boot-error-reload-btn")?.addEventListener("click", () => healOrReloadViaServiceWorker());
-}
-
 // output/web/js.tmp/bootstrap/app-toast.js
 var TOAST_DEFAULT_MS = 4e3;
 var TOAST_FADE_MS = 300;
@@ -6179,7 +6238,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-DSUL257Q.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-5YW23JNG.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6215,9 +6274,6 @@ window.addEventListener("vdg:outbox-drop", (e) => {
     detail: { type: "info", message: t("topbar.sync.toast.schema_drift_drop") }
   }));
 });
-function _resolveBootFallbackMount() {
-  return document.getElementById("view-loading")?.parentElement || document.getElementById("view-root") || document.getElementById("app");
-}
 function bootApp(user, db) {
   const app = document.getElementById("app");
   if (app && !app.querySelector("vdg-sidebar")) {
@@ -6280,28 +6336,12 @@ async function main() {
     composeAuth(wasm4);
     await requireAuth((user) => runRepoInit(user, bootApp));
   } catch (err) {
-    if (err?.name === "RoleProbeTimeoutError") {
-      const { renderLoadingBanner } = await import("./auth-fallback-views-6TEABO7S.js");
-      renderLoadingBanner(document.getElementById("app"));
-      return;
-    }
-    if (err?.name === "RepoInitTimeoutError" || err?.name === "IdbOpenFailedError") {
-      const mount = _resolveBootFallbackMount();
-      renderRepoInitTimeoutBanner(mount, () => {
+    await renderBootFailure(err, {
+      onRetryRepoInit: () => {
         const user = window.__vdg_auth?.getCurrentUser?.();
         runRepoInit(user, bootApp);
-      });
-      return;
-    }
-    if (renderServerGate(_resolveBootFallbackMount(), err, {
-      onReconnected: () => location.reload(),
-      serverBackend: true,
-      onSignIn: () => mountLoginScreen(() => location.reload())
-    })) {
-      console.error("[VDG] boot stopped on Server", err);
-      return;
-    }
-    handleUnrecognizedBootError(err, _resolveBootFallbackMount());
+      }
+    });
   }
 }
 main();

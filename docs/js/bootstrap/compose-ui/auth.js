@@ -5,6 +5,7 @@
 import { bindAuthGate } from '../../implementations/ui/core_abstractions/ports/auth/auth-gate.js';
 import { bindSessionRoles } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
 import { mountLoginScreen, takeAuthError } from '../platform/auth.js';
+import { renderBootFailure } from '../boot/boot-failure-screen.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 
 const OUTCOME_SIGNED_IN = 'signed-in';
@@ -43,11 +44,24 @@ export function composeAuth(wasm) {
     return result.value;
   };
 
-  const signIn = (onSignedIn) => mountLoginScreen(async (user) => {
-    await wasm.auth_adopt_session({ email: user.email }); // bind the local database to this account
-    await detectOrThrow(user, 'auth-gate:loginCb');
-    onSignedIn(user);
-  });
+  // Everything the app does immediately AFTER a successful Google sign-in. It runs once
+  // mountLoginScreen has already removed the login overlay and outside main()'s try, so nothing
+  // here may reject: an unhandled rejection at this point left the user on an empty page with the
+  // overlay gone and no screen behind it. Three calls can fail — the session adopt (a bare wasm
+  // rejection), the role probe (where a dead session's 401 verdict arrives), and onSignedIn
+  // itself, which is repo-init on the boot path — and each routes to the SAME screen main() would
+  // give it. Never rejects, so the caller may fire it and forget it.
+  const finishSignIn = async (onSignedIn, user) => {
+    try {
+      await wasm.auth_adopt_session({ email: user.email }); // bind the local database to this account
+      await detectOrThrow(user, 'auth-gate:loginCb');
+      await onSignedIn(user);
+    } catch (err) {
+      await renderBootFailure(err, { onRetryRepoInit: () => finishSignIn(onSignedIn, user) });
+    }
+  };
+
+  const signIn = (onSignedIn) => mountLoginScreen((user) => { finishSignIn(onSignedIn, user); });
 
   const requireAuth = async (onSignedIn) => {
     const verdict = await wasm.auth_require_auth({});
