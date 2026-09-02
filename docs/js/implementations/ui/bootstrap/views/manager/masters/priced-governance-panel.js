@@ -7,6 +7,7 @@
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { currentUserId } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
+import { saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 
 const TOAST_MS      = 4_000;
 const PROPOSAL_KEEP = 'keep-mine';
@@ -54,9 +55,9 @@ function proposalCardHtml(proposal, currentRecord) {
 
 /// AC-01/02/03/05/06: role read by the host through currentUserRole() (the Rust principal,
 /// session_principal), never the private auth-gate resolvedRole (QA simulability).
-/// `liveRepo` (optional, D-2) = window.__vdg_repo — lets Approve upsert the merged record
-/// into the store the master table actually reads, keyed by `refName` (== the repo `KIND`).
-export function createPricedGovernancePanel({ pricedRepo, refName, role, secondEyes = false, liveRepo = null }) {
+/// Writes go through `saveMaster` — `refName` IS the registered master kind, so the registry
+/// owns the key rule and an unregistered kind is refused. There is no repo handle to pass in.
+export function createPricedGovernancePanel({ pricedRepo, refName, role, secondEyes = false }) {
   // Unknown/unprovisioned role (e.g. a viewer without a parseable Role variant) degrades to
   // non-maintainer rather than throwing — the panel must still render for a read-only visitor.
   // Belt-and-suspenders (D-1): fall back to window.__vdg_wasm.permission_can_merge, the same
@@ -97,8 +98,10 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
   async function commit(recordId, entity) {
     await assertWritable(recordId, entity);
     if (canWriteDirect) {
-      if (!liveRepo) throw new Error('priced panel: direct write with no liveRepo');
-      await liveRepo.put(refName, recordId, entity);
+      // `refName` IS the registered master kind, so the direct branch is an ordinary master
+      // save: the registry owns the key rule and refuses an unregistered kind. the panel is
+      // gone as a write handle — the panel no longer names a collection to a generic door.
+      await saveMaster(refName, entity);
       return { routed: 'direct' };
     }
     await submitProposal(recordId, entity);
@@ -154,13 +157,12 @@ export function createPricedGovernancePanel({ pricedRepo, refName, role, secondE
 
   /// D-2: the merge FSM writes the whole-record post-image to the governance
   /// state.json only — it never touches window.__vdg_repo, so the on-screen master
-  /// table (which reads liveRepo, not the governance ref) would otherwise never show
+  /// table (which reads the master store, not the governance ref) would otherwise never show
   /// the approved row. Upsert it into the same store the table's own saveEntity uses.
   async function _upsertMergedRecord(mergeResult) {
-    if (!liveRepo) return;
     const recordId = mergeResult?.proposal?.record_id;
     const merged   = recordId ? mergeResult.ref_state?.records?.[recordId] : null;
-    if (merged) await liveRepo.put(refName, recordId, merged);
+    if (merged) await saveMaster(refName, merged);
   }
 
   async function _renderProposerBanner(containerEl) {

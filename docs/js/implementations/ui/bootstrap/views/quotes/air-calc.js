@@ -3,8 +3,7 @@
 
 import { t }          from '../../../../kernel/core_abstractions/i18n/index.js';
 import { calcResult } from '../../../core_abstractions/ports/flows/air-rate-calculator.js';
-
-const KIND = 'air-rates';
+import { listAirRateCards } from '../../../core_abstractions/ports/data/sales-reads.js';
 
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -13,7 +12,7 @@ function escHtml(s) {
 async function loadRates(repo) {
   if (!repo) return [];
   try {
-    return await repo.list(KIND, null).catch(() => []);
+    return await listAirRateCards().catch(() => []);
   } catch { /* rates optional */ return []; }
 }
 

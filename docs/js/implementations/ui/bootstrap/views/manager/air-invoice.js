@@ -7,11 +7,10 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { emptyStateHtml, EMPTY_STATE_VARIANT } from '../../components/empty-state.js';
-import { composeAirInvoice, KIND_AIR_RATE, KIND_AIRLINE_CARRIER } from '../../../core_abstractions/ports/manager/air-invoice-composer.js';
+import { composeAirInvoice } from '../../../core_abstractions/ports/manager/air-invoice-composer.js';
+import { cassReconciliationInputs } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const CSV_HEADER = 'awb_no,carrier_iata,flight_no,origin_iata,dest_iata,weight_chargeable_kg,expected_freight,invoiced_amount,variance_amount,currency,verdict';
-
-function getRepo() { return window.__vdg_repo; }
 
 function fmtAmount(n) { return n != null ? Number(n).toLocaleString('vi-VN') : '—'; }
 
@@ -117,13 +116,7 @@ function summaryHtml(totals) {
 }
 
 async function loadReconciliation() {
-  const repo = getRepo();
-  if (!repo) return { rows: [], totals: { matchedCount: 0, disputedCount: 0, unbilledCount: 0 } };
-  const [awbs, airRates, carriers] = await Promise.all([
-    repo.awb_list_all(),
-    repo.list(KIND_AIR_RATE, null),
-    repo.list(KIND_AIRLINE_CARRIER, null),
-  ]);
+  const { awbs, airRates, carriers } = await cassReconciliationInputs();
   return composeAirInvoice(awbs, airRates, carriers);
 }
 

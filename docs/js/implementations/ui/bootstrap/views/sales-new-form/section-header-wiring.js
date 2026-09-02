@@ -7,7 +7,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { classifyDocument } from '../sales-new/doc-auto-detect.js';
 import { loadWasm } from '../../../core_abstractions/ports/wasm-loader.js';
 import { computeChargeableKg } from '../../../core_abstractions/ports/flows/air-rate-calculator.js';
-import { slugify } from '../../../core_abstractions/ports/flows/pnl-commit-orchestrator.js';
+import { listCustomerMasters, createCustomerDraft } from '../../../core_abstractions/ports/data/sales-reads.js';
 import { customerRepFor } from '../../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { directionFromProduct } from './section-header.js';
 
@@ -55,6 +55,9 @@ function _applyMode(root, mode) {
 // call, so a LB actual never gets read as if it were already kg. LB is the only non-kg unit the
 // registry seeds today; an exact international pound (kept as a named constant, not inline).
 const LB_TO_KG = 0.45359237;
+/// How many masters the dropdown offers before anything is typed, and how many hits the index
+/// returns for a query — one list length, so the box does not change height as you type.
+const EMPTY_QUERY_SUGGESTIONS = 5;
 function _toKg(value, uom) {
   return uom === 'LB' ? value * LB_TO_KG : value;
 }
@@ -131,8 +134,7 @@ export function wireHeaderSection(root, onChanged) {
     const sel = root.querySelector('select[name=sales_rep]');
     if (!sel || sel.value) return;
     try {
-      const repo = window.__vdg_repo;
-      const list = repo ? await repo.list('customers') : [];
+      const list = window.__vdg_repo ? await listCustomerMasters() : [];
       const rep  = customerRepFor(customerName, list);
       if (rep && [...sel.options].some((o) => o.value === rep)) {
         sel.value = rep;
@@ -151,13 +153,11 @@ export function wireHeaderSection(root, onChanged) {
       const wasm = await loadWasm();
       if (!wasm) return;
       cIndex = new wasm.CustomerIndex();
-      // Assume customers array is available globally or passed down (it's passed in sectionAHtml but not here, we need to grab it)
-      // We will populate it from window.__vdg_repo if needed
+      // The index is built from the customer masters; sectionAHtml receives them too but this
+      // wiring is mounted without them, so it asks for the same set by name.
       try {
-          const repo = window.__vdg_repo;
-          if (repo) {
-              const list = await repo.list('customers');
-              for (const c of list) {
+          if (window.__vdg_repo) {
+              for (const c of await listCustomerMasters()) {
                   if (c.name) {
                       cIndex.add_customer(JSON.stringify({ id: c.name, name: c.name }));
                   }
@@ -194,21 +194,23 @@ export function wireHeaderSection(root, onChanged) {
           createBtn.className = 'px-3 py-2 bg-slate-50 hover:bg-slate-100 cursor-pointer text-blue-600 font-medium text-center sticky bottom-0 border-t border-slate-200';
           createBtn.textContent = '+ Tạo nhanh: "' + query + '"';
           createBtn.addEventListener('click', async () => {
-              const repo = window.__vdg_repo;
-              if (repo) {
-                  const id = `CUST-${slugify(query)}`;
-                  const newCust = { id, name: query, status: 'Draft' };
-                  try {
-                      await repo.put('customers', id, newCust);
-                      custInput.value = query;
-                      custHidden.value = query;
-                      custDropdown.classList.add('hidden');
-                      if (cIndex) cIndex.add_customer(JSON.stringify({ id: query, name: query }));
-                      onChanged?.();
-                      window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message: 'Đã tạo nhanh khách hàng', type: 'success' } }));
-                  } catch(err) {
-                      console.error(err); // DEV
-                  }
+              if (!window.__vdg_repo) return;
+              try {
+                  // The id scheme, and the dedupe that stops an index miss from splitting one
+                  // customer across two masters, are the use-case's. The name that comes back is
+                  // the one the field must carry — a deduped create answers with the master that
+                  // already held it, not with what was typed.
+                  const { created, record } = await createCustomerDraft(query);
+                  const name = record?.name || query;
+                  custInput.value = name;
+                  custHidden.value = name;
+                  custDropdown.classList.add('hidden');
+                  if (cIndex) cIndex.add_customer(JSON.stringify({ id: name, name }));
+                  onChanged?.();
+                  const message = created ? t('sales_new.customer_quick_created') : t('sales_new.customer_already_known');
+                  window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { message, type: 'success' } }));
+              } catch(err) {
+                  console.error(err); // DEV
               }
           });
           custDropdown.appendChild(createBtn);
@@ -221,14 +223,13 @@ export function wireHeaderSection(root, onChanged) {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(async () => {
           if (!query) {
-              const repo = window.__vdg_repo;
               let results = [];
-              if (repo) {
-                  // F-43-08: 'customer' (singular) is not a registered kind -- always resolved
-                  // empty, so the length-compare hedge below always picked 'customers' anyway.
+              if (window.__vdg_repo) {
+                  // F-43-08 was this screen guessing at the kind and guessing wrong; it asks for
+                  // the masters by name now and cannot guess.
                   try {
-                      const list = await repo.list('customers') || [];
-                      results = list.slice(0, 5).map(c => ({ name: c.name }));
+                      const list = await listCustomerMasters() || [];
+                      results = list.slice(0, EMPTY_QUERY_SUGGESTIONS).map(c => ({ name: c.name }));
                   } catch (e) { console.warn('Failed to list customers', e); } // DEV
               }
               renderDropdown(results, query);
@@ -237,7 +238,7 @@ export function wireHeaderSection(root, onChanged) {
           await initCIndex();
           let resultsJson = '[]';
           if (cIndex) {
-              resultsJson = cIndex.search(query, 5);
+              resultsJson = cIndex.search(query, EMPTY_QUERY_SUGGESTIONS);
           }
           const results = JSON.parse(resultsJson);
 

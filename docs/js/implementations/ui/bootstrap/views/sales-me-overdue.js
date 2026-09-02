@@ -4,6 +4,7 @@
 // as a small local day-threshold classifier — display only, no template ladder, no
 // per-customer override (dunning_threshold_days_override field removed).
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { listBillingRecords, listCustomerMasters } from '../../core_abstractions/ports/data/sales-reads.js';
 
 const STAGE_THRESHOLDS_DAYS = { reminder_1: 7, reminder_2: 14, escalate: 30, legal: 60, blacklist: 95 };
 const STAGE_ORDER = ['reminder_1', 'reminder_2', 'escalate', 'legal', 'blacklist'];
@@ -29,8 +30,8 @@ export async function overdueFollowupsHtml(salesId) {
   if (!repo) return '';
 
   const [billing, customers] = await Promise.all([
-    repo.list('billing', null).catch(() => []),
-    repo.list('customers', null).catch(() => []),
+    listBillingRecords().catch(() => []),
+    listCustomerMasters().catch(() => []),
   ]).catch(() => [[], []]);
 
   const custMap = new Map((customers || []).map((c) => [c.id, c]));

@@ -1,5 +1,6 @@
 // F-19-59 — Finance Dashboard (P&L from real pnl_line records)
 import { fmtNumber, t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { listPnlLines } from '../../core_abstractions/ports/data/sales-reads.js';
 
 const CHART_ID = 'finance-revcost-chart';
 const EMPTY_CODE = 'UNKNOWN';
@@ -129,8 +130,7 @@ function mountChart(lines) {
 export async function render(root) {
   let lines = [];
   try {
-    const repo = window.__vdg_repo;
-    if (repo) lines = await repo.list('pnl_line', null).catch(() => []);
+    if (window.__vdg_repo) lines = await listPnlLines().catch(() => []);
   } catch (e) {
     console.warn('Failed to load pnl_line', e); // DEV
   }

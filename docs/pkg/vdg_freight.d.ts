@@ -1,6 +1,18 @@
 /* tslint:disable */
 /* eslint-disable */
 
+/**
+ * The AWB storage adapter the manager AWB grid reads and writes through.
+ */
+export class AwbRepo {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    append(awb: any): Promise<any>;
+    deleteByAwbNo(awb_no: string, ym: string): Promise<any>;
+    listByMonth(ym: string): Promise<any>;
+}
+
 export class CustomerIndex {
     free(): void;
     [Symbol.dispose](): void;
@@ -9,9 +21,122 @@ export class CustomerIndex {
     search(query: string, top_k: number): string;
 }
 
+/**
+ * The fx-rate storage adapter the manager grid, the sales-new form and period close read through.
+ */
+export class FxRateRepo {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    appendRate(entry_json: string, role: string): Promise<any>;
+    deleteEntry(valid_from: string, valid_to: string, pair: string): Promise<any>;
+    /**
+     * `direction`: 'Buy'|'Sell' — Circular 200 values assets at the buying rate and liabilities at
+     * the selling rate; every caller states which side it wants. Returns the resolved rate.
+     */
+    getRate(date_str: string, pair: string, direction: string): Promise<any>;
+    invalidateMonth(ym: string): void;
+    listAll(): Promise<any>;
+    listByMonth(ym: string): Promise<any>;
+    pnlFxCacheClear(): void;
+    pnlFxCacheGet(date_str: string, pair: string, direction: string): any;
+    pnlFxCachePut(date_str: string, pair: string, direction: string, rate?: number | null): void;
+    pnlFxLookupPair(currency: string): string | undefined;
+    pnlFxRequireDirection(direction: string): void;
+}
+
+/**
+ * `window.__vdg_ledger_repo`. Method names are the JS ones the accounting views, the close-period
+ * screen, the repost panel and `flows_ledger_call`'s dynamic dispatch already use.
+ */
+export class LedgerRepo {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    appendLeg(year: number, acc_code: string, leg: any): Promise<any>;
+    appendReconciliationRecord(record: any): Promise<any>;
+    appendRepostRecord(record: any): Promise<any>;
+    /**
+     * The chart, as the array the views iterate. Bundled, so this never touches the network.
+     */
+    chartOfAccounts(): Promise<any>;
+    /**
+     * Write both seeds into the store if they are not there yet. Content comes from the binary,
+     * not from two fetches.
+     */
+    ensureSeedFiles(): Promise<any>;
+    /**
+     * F1: the posted-index row (with entry_ids) for a dedup key, or null.
+     */
+    findPosted(posted_index: string): Promise<any>;
+    getBalance(acc_code: string, as_of: string): Promise<any>;
+    getLastReconciliation(): Promise<any>;
+    getLastRepost(): Promise<any>;
+    isAlreadyPosted(posted_index: string): Promise<any>;
+    listAccountCodes(year: number): Promise<any>;
+    listAllLegsInEntry(entry_id: string): Promise<any>;
+    /**
+     * `dateFrom`/`dateTo` are nullable at the call sites (reports.js passes null,null) — an
+     * absent bound collapses to the empty string the operator reads as "no bound", same as the
+     * JS `dateFrom || ''` it replaces.
+     */
+    listLegs(year: number, acc_code: string, date_from?: string | null, date_to?: string | null): Promise<any>;
+    /**
+     * PostingRulesSeed (pnl_lines / tax_accrual / commissions / pnl_kind_live). Bundled.
+     */
+    postingRules(): Promise<any>;
+    recordPosted(posted_index: string, entry_ids: any): Promise<any>;
+    /**
+     * F1: drop a posted-index row — only after its entries were reversed.
+     */
+    releasePosted(posted_index: string): Promise<any>;
+    removeEntry(year: number, entry_id: string): Promise<any>;
+    replaceLeg(year: number, acc_code: string, leg: any): Promise<any>;
+}
+
+/**
+ * `window.__vdg_user_repo` — the grants/ staff table, one record per person.
+ */
+export class UserRepo {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * Bootstrap: seed the table with the current user iff it is empty. The workspace label comes
+     * from the licensed workspace, the same answer the governance use-cases read.
+     */
+    ensureSeeded(current_user: any): Promise<any>;
+    get(email: string): Promise<any>;
+    /**
+     * Active users, latest `_ledger_version` per email.
+     */
+    list(): Promise<any>;
+    /**
+     * Every user including deactivated ones — the admin table filters them, it does not hide them.
+     */
+    listAll(): Promise<any>;
+    /**
+     * H4-e: the raw stored shape, no Users-screen projection — the workspace backup export's reach.
+     */
+    listRaw(): Promise<any>;
+    /**
+     * Soft-delete (`active:false`) — never a hard delete. A row that really went inactive earns a
+     * `deactivate_user` trail entry carrying the role it held.
+     */
+    remove(email: string): Promise<any>;
+    /**
+     * A first-time add earns an `add_user` trail row carrying the role it was created with.
+     */
+    upsert(user: any): Promise<any>;
+}
+
 export class WasmEntityRepo {
     free(): void;
     [Symbol.dispose](): void;
+    /**
+     * Mount point for the ui `awbRepo` port (compose-ui/storage.js).
+     */
+    awbRepo(): AwbRepo;
     awb_append(awb_json: string): Promise<any>;
     awb_delete(awb_no: string, ym: string): Promise<any>;
     /**
@@ -40,6 +165,10 @@ export class WasmEntityRepo {
      * minted server-side from the session).
      */
     flows_get_or_create_record(collection: string, name: string, content: string, owner: string): Promise<any>;
+    /**
+     * Mount point for the ui `fxRateRepo` port (compose-ui/storage.js).
+     */
+    fxRateRepo(): FxRateRepo;
     /**
      * Apply fx_rate_prepare_append's pending writes (JSON [{path, line}]).
      */
@@ -83,6 +212,10 @@ export class WasmEntityRepo {
      * gap this does not close.
      */
     invalidate_period_cache(kind: string, period: string): Promise<any>;
+    /**
+     * Mount point for `window.__vdg_ledger_repo` (repo-init-steps.js, deferred init).
+     */
+    ledgerRepo(): LedgerRepo;
     lgr_append_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_append_log(file: string, record_json: string): Promise<any>;
     lgr_ensure_seed_file(file_name: string, content: string): Promise<any>;
@@ -170,6 +303,10 @@ export class WasmEntityRepo {
      * instead of trusting an empty result as "no data for this period" (D13).
      */
     sync_skipped_kinds(): any;
+    /**
+     * Mount point for `window.__vdg_user_repo` (repo-init-steps.js, deferred init).
+     */
+    userRepo(): UserRepo;
     users_ensure_seeded(email: string, name: string, workspace: string): Promise<any>;
     users_get(email: string): Promise<any>;
     users_list(): Promise<any>;
@@ -343,13 +480,41 @@ export function compute_dashboard_exceptions(shipments_json: string, now_ms: num
 
 export function compute_due_soon(billing_json: string, today_str: string, warn_days: number): any;
 
+export function data_add_receivable_note(req: any): Promise<any>;
+
+export function data_append_customer_note(req: any): Promise<any>;
+
+export function data_approval_decision_log(req: any): Promise<any>;
+
+export function data_audit_trail(req: any): Promise<any>;
+
+export function data_cash_flow_inputs(req: any): Promise<any>;
+
+export function data_cass_reconciliation_inputs(req: any): Promise<any>;
+
+export function data_commission_basis_lines(req: any): Promise<any>;
+
+export function data_commission_payouts(req: any): Promise<any>;
+
+export function data_commission_rule_editor_inputs(req: any): Promise<any>;
+
+export function data_commission_rule_suggestions(req: any): Promise<any>;
+
 export function data_current_revision(req: any): Promise<any>;
+
+export function data_customer360_inputs(req: any): Promise<any>;
+
+export function data_delete_commission_rule(req: any): Promise<any>;
 
 export function data_delete_pnl_lines(req: any): Promise<any>;
 
 export function data_delete_shipment(req: any): Promise<any>;
 
+export function data_exception_caseload(req: any): Promise<any>;
+
 export function data_get_envelope(req: any): Promise<any>;
+
+export function data_get_master(req: any): Promise<any>;
 
 export function data_get_shipment(req: any): Promise<any>;
 
@@ -357,7 +522,13 @@ export function data_join_loaded(req: any): Promise<any>;
 
 export function data_list_envelopes(req: any): Promise<any>;
 
+export function data_list_masters(req: any): Promise<any>;
+
 export function data_list_where(req: any): Promise<any>;
+
+export function data_manifest_filings(req: any): Promise<any>;
+
+export function data_mark_receivable_followed_up(req: any): Promise<any>;
 
 /**
  * Replace a shipment's whole commission-entry set — the delete-then-write procedure, its id
@@ -365,7 +536,17 @@ export function data_list_where(req: any): Promise<any>;
  */
 export function data_overwrite_commission_entries(req: any): Promise<any>;
 
+export function data_pending_approvals(req: any): Promise<any>;
+
+export function data_period_close_record(req: any): Promise<any>;
+
+export function data_pipeline_shipments(req: any): Promise<any>;
+
 export function data_pnl_line_id(req: any): any;
+
+export function data_pnl_report_inputs(req: any): Promise<any>;
+
+export function data_promote_commission_suggestion(req: any): Promise<any>;
 
 export function data_publish_billing(req: any): Promise<any>;
 
@@ -376,10 +557,32 @@ export function data_put_envelope(req: any): Promise<any>;
 export function data_put_shipment(req: any): Promise<any>;
 
 /**
+ * The merge toast's "use mine" — see `MergeResolve::reapply_my_values` for why the collection in
+ * the request is checked rather than taken.
+ */
+export function data_reapply_my_values(req: any): Promise<any>;
+
+export function data_receivables_ledger(req: any): Promise<any>;
+
+export function data_resolve_conflict(req: any): Promise<any>;
+
+/**
  * The compensating half of a create that failed part-way — see `ShipmentRepo::rollback_create`
  * for why this is not `data_delete_shipment` with a different name.
  */
 export function data_rollback_shipment_create(req: any): Promise<any>;
+
+export function data_sales_profiles(req: any): Promise<any>;
+
+export function data_save_commission_rule(req: any): Promise<any>;
+
+/**
+ * Write one row of one registered master kind. The key comes from the kind's declared key field
+ * and the writer list from the same registry — the caller names the KIND and nothing else.
+ */
+export function data_save_master(req: any): Promise<any>;
+
+export function data_suppress_duplicate_pair(req: any): Promise<any>;
 
 export function data_write_gate(req: any): Promise<any>;
 
@@ -525,26 +728,6 @@ export function fmt_date_pattern_hint(): string;
  * Installed once by js/bootstrap (after the wasm module is ready and the repo exists).
  */
 export function freight_app_init(platform: any): void;
-
-/**
- * Look up cached FX rate for one side of the quote. JS must ingest relevant months first, and
- * must state a direction ("Buy"|"Sell") — Circular 200 values monetary assets at the buying
- * rate and liabilities at the selling rate, so there is no default side to fall back to.
- * Returns the resolved Decimal (as a JSON string) on success.
- */
-export function fx_rate_get(date_str: string, pair: string, direction: string): any;
-
-/**
- * Push JSONL content for a month into WASM cache. `ym` = "YYYY-MM".
- * Pass empty string when the month file is absent.
- */
-export function fx_rate_ingest_month(ym: string, content: string): void;
-
-/**
- * Validate entry, enforce accountant-only write gate, queue the write.
- * Returns `[{path, line}]` — JS appends each line via the store (ws_write_file -> CharterDB).
- */
-export function fx_rate_prepare_append(entry_json: string, role: string): any;
 
 /**
  * F1: the bank never buys for more than it sells. Moved from util/validate-rate.js.
@@ -734,31 +917,6 @@ export function permission_can_merge(role: string, ref_name: string): boolean;
 export function pnl_currency_exponent(currency: string): number;
 
 /**
- * Evict all cached entries (call after admin adds/deletes a rate).
- */
-export function pnl_fx_cache_clear(): void;
-
-/**
- * `hit:false` — ask the repo. `hit:true, rate:null` — already asked this session and it was not
- * found; do not ask again.
- */
-export function pnl_fx_cache_get(date_str: string, pair: string, direction: string): any;
-
-export function pnl_fx_cache_put(date_str: string, pair: string, direction: string, rate?: number | null): void;
-
-/**
- * `None` — VND self-pair, price at 1, no lookup needed. `Some(pair)` — fetch `<currency>/VND`.
- */
-export function pnl_fx_lookup_pair(currency: string): string | undefined;
-
-/**
- * Circular 200: every FX ask states which side (Buy|Sell) it wants — no default side. Reuses
- * the same parser admin FX-rate entry validates against (`js_bridge_dtos.rs`), so a caller fails
- * fast, synchronously, before doing any repo I/O.
- */
-export function pnl_fx_require_direction(direction: string): void;
-
-/**
  * A line quoted in the workspace's book currency needs no conversion — locks fx_rate at 1.
  * Same `currency == book_currency` test `line_vnd` prices against (pnl_gate.rs); the input cell
  * and the money math read one fact, never two.
@@ -770,13 +928,6 @@ export function pnl_line_fx_lock(currency: string, book_currency: string): any;
  * writes back over the value it was derived from.
  */
 export function pnl_round_for_display(value: number, currency: string): number;
-
-/**
- * Called by `PricedRefRepo` before BOTH writes that can land a record in a ref —
- * the maintainer's direct save and an approved proposal. A guard on one of the two
- * is a guard on neither: the same row reaches the same ref either way.
- */
-export function priced_ref_check_overlap(records_json: string, candidate_json: string): void;
 
 /**
  * AC-05: `PricedRefRepo.resolveOnDate` calls this with every `PricedRecord`
@@ -817,6 +968,69 @@ export function register_entity(entity_id: string, state: string): void;
  */
 export function run(sql: string, params_json: string): void;
 
+export function sales_air_rate_cards(req: any): Promise<any>;
+
+export function sales_billing_records(req: any): Promise<any>;
+
+export function sales_carrier_masters(req: any): Promise<any>;
+
+export function sales_commission_entries_for(req: any): Promise<any>;
+
+export function sales_commission_rule_assignment(req: any): Promise<any>;
+
+export function sales_container_type_options(req: any): Promise<any>;
+
+/**
+ * The search box's quick-create. Deduped against the masters, so an index miss cannot split a
+ * customer across two ids.
+ */
+export function sales_create_customer_draft(req: any): Promise<any>;
+
+export function sales_customer_for_note(req: any): Promise<any>;
+
+export function sales_customer_masters(req: any): Promise<any>;
+
+export function sales_demdet_instances(req: any): Promise<any>;
+
+export function sales_document_sources(req: any): Promise<any>;
+
+/**
+ * The post-write look-again: the lowest shipment_ref keeps a contested number, the loser re-mints
+ * and re-saves, and the D-O / HBL that mirrored it follow.
+ */
+export function sales_heal_job_no(req: any): Promise<any>;
+
+export function sales_ledger_version(req: any): any;
+
+export function sales_pnl_lines(req: any): Promise<any>;
+
+export function sales_pnl_lines_for(req: any): Promise<any>;
+
+export function sales_publish_state(req: any): any;
+
+export function sales_quotation(req: any): Promise<any>;
+
+export function sales_quotations(req: any): Promise<any>;
+
+export function sales_ref_prefix(req: any): any;
+
+export function sales_rep_profile(req: any): Promise<any>;
+
+export function sales_resolve_job_no(req: any): Promise<any>;
+
+export function sales_share_total(req: any): Promise<any>;
+
+export function sales_shipment_commission_snapshot(req: any): Promise<any>;
+
+export function sales_validate_submission(req: any): any;
+
+export function sales_weight_unit_codes(req: any): Promise<any>;
+
+/**
+ * Both row sets a shipment carries, replaced in ONE call — not one call per row.
+ */
+export function sales_write_side_records(req: any): Promise<any>;
+
 /**
  * Generic select export — kept for the one remaining ad-hoc caller path; returns a JSON array of
  * row objects. Business queries go through `sqlite_store`, not this.
@@ -834,6 +1048,13 @@ export function server_health_poll(): Promise<any>;
  * server answered healthy. Never rejects — an outage IS the resolved value.
  */
 export function server_health_probe(): Promise<any>;
+
+/**
+ * Which actions the shipment form offers. The shell renders `kind` and the list; it compares
+ * nothing and maps no label back onto a behaviour (see `shipment_action_bar` for why a published
+ * job gets exactly one).
+ */
+export function shipment_action_bar(publish_state: string): any;
 
 /**
  * E-40 — the owner's rule: "dữ liệu đủ thì đẩy qua". From the entity's stored state, keep
@@ -941,8 +1162,6 @@ export function sync_job_event(req: any): any;
 
 export function sync_user_audit_read(req: any): Promise<any>;
 
-export function sync_user_audit_write(req: any): Promise<any>;
-
 export function sync_wma_dismiss(req: any): any;
 
 export function sync_wma_load(req: any): Promise<any>;
@@ -1016,8 +1235,8 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wasm_init: () => void;
+    readonly __wbg_awbrepo_free: (a: number, b: number) => void;
     readonly __wbg_customerindex_free: (a: number, b: number) => void;
-    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly access_can_route: (a: number, b: number, c: number, d: number) => number;
     readonly access_home_route: (a: number, b: number, c: number) => void;
     readonly access_is_account: (a: number, b: number) => number;
@@ -1035,6 +1254,9 @@ export interface InitOutput {
     readonly auth_session_open: (a: number, b: number) => number;
     readonly auth_session_roles: (a: number, b: number) => void;
     readonly auth_set_resolved_roles: (a: number, b: number) => void;
+    readonly awbrepo_append: (a: number, b: number, c: number) => void;
+    readonly awbrepo_deleteByAwbNo: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly awbrepo_listByMonth: (a: number, b: number, c: number) => number;
     readonly cache_bulk_put: (a: number) => number;
     readonly cache_can_write_master: (a: number, b: number) => void;
     readonly cache_find_match: (a: number, b: number) => void;
@@ -1058,21 +1280,50 @@ export interface InitOutput {
     readonly customerindex_add_customer: (a: number, b: number, c: number) => number;
     readonly customerindex_new: () => number;
     readonly customerindex_search: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly data_add_receivable_note: (a: number) => number;
+    readonly data_append_customer_note: (a: number) => number;
+    readonly data_approval_decision_log: (a: number) => number;
+    readonly data_audit_trail: (a: number) => number;
+    readonly data_cash_flow_inputs: (a: number) => number;
+    readonly data_cass_reconciliation_inputs: (a: number) => number;
+    readonly data_commission_basis_lines: (a: number) => number;
+    readonly data_commission_payouts: (a: number) => number;
+    readonly data_commission_rule_editor_inputs: (a: number) => number;
+    readonly data_commission_rule_suggestions: (a: number) => number;
     readonly data_current_revision: (a: number) => number;
+    readonly data_customer360_inputs: (a: number) => number;
+    readonly data_delete_commission_rule: (a: number) => number;
     readonly data_delete_pnl_lines: (a: number) => number;
     readonly data_delete_shipment: (a: number) => number;
+    readonly data_exception_caseload: (a: number) => number;
     readonly data_get_envelope: (a: number) => number;
+    readonly data_get_master: (a: number) => number;
     readonly data_get_shipment: (a: number) => number;
     readonly data_join_loaded: (a: number) => number;
     readonly data_list_envelopes: (a: number) => number;
+    readonly data_list_masters: (a: number) => number;
     readonly data_list_where: (a: number) => number;
+    readonly data_manifest_filings: (a: number) => number;
+    readonly data_mark_receivable_followed_up: (a: number) => number;
     readonly data_overwrite_commission_entries: (a: number) => number;
+    readonly data_pending_approvals: (a: number) => number;
+    readonly data_period_close_record: (a: number) => number;
+    readonly data_pipeline_shipments: (a: number) => number;
     readonly data_pnl_line_id: (a: number, b: number) => void;
+    readonly data_pnl_report_inputs: (a: number) => number;
+    readonly data_promote_commission_suggestion: (a: number) => number;
     readonly data_publish_billing: (a: number) => number;
     readonly data_published_for: (a: number) => number;
     readonly data_put_envelope: (a: number) => number;
     readonly data_put_shipment: (a: number) => number;
+    readonly data_reapply_my_values: (a: number) => number;
+    readonly data_receivables_ledger: (a: number) => number;
+    readonly data_resolve_conflict: (a: number) => number;
     readonly data_rollback_shipment_create: (a: number) => number;
+    readonly data_sales_profiles: (a: number) => number;
+    readonly data_save_commission_rule: (a: number) => number;
+    readonly data_save_master: (a: number) => number;
+    readonly data_suppress_duplicate_pair: (a: number) => number;
     readonly data_write_gate: (a: number) => number;
     readonly derive_shipment_direction: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly drain_events: (a: number) => void;
@@ -1133,11 +1384,19 @@ export interface InitOutput {
     readonly fmt_date_display: (a: number, b: number, c: number) => void;
     readonly fmt_date_pattern_hint: (a: number) => void;
     readonly freight_app_init: (a: number) => void;
-    readonly fx_rate_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly fx_rate_ingest_month: (a: number, b: number, c: number, d: number, e: number) => void;
-    readonly fx_rate_prepare_append: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_validate_spread: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_validate_value: (a: number, b: number, c: number) => void;
+    readonly fxraterepo_appendRate: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly fxraterepo_deleteEntry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fxraterepo_getRate: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fxraterepo_invalidateMonth: (a: number, b: number, c: number, d: number) => void;
+    readonly fxraterepo_listAll: (a: number) => number;
+    readonly fxraterepo_listByMonth: (a: number, b: number, c: number) => number;
+    readonly fxraterepo_pnlFxCacheClear: (a: number) => void;
+    readonly fxraterepo_pnlFxCacheGet: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+    readonly fxraterepo_pnlFxCachePut: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly fxraterepo_pnlFxLookupPair: (a: number, b: number, c: number, d: number) => void;
+    readonly fxraterepo_pnlFxRequireDirection: (a: number, b: number, c: number, d: number) => void;
     readonly gen_uom_id: (a: number, b: number, c: number) => void;
     readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
@@ -1168,6 +1427,24 @@ export interface InitOutput {
     readonly import_booking_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_document_excel_wasm: (a: number, b: number, c: number) => void;
     readonly import_pnl_excel_wasm: (a: number, b: number, c: number) => void;
+    readonly ledgerrepo_appendLeg: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly ledgerrepo_appendReconciliationRecord: (a: number, b: number, c: number) => void;
+    readonly ledgerrepo_appendRepostRecord: (a: number, b: number, c: number) => void;
+    readonly ledgerrepo_chartOfAccounts: (a: number) => number;
+    readonly ledgerrepo_ensureSeedFiles: (a: number) => number;
+    readonly ledgerrepo_findPosted: (a: number, b: number, c: number) => number;
+    readonly ledgerrepo_getBalance: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly ledgerrepo_getLastReconciliation: (a: number) => number;
+    readonly ledgerrepo_getLastRepost: (a: number) => number;
+    readonly ledgerrepo_isAlreadyPosted: (a: number, b: number, c: number) => number;
+    readonly ledgerrepo_listAccountCodes: (a: number, b: number) => number;
+    readonly ledgerrepo_listAllLegsInEntry: (a: number, b: number, c: number) => number;
+    readonly ledgerrepo_listLegs: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly ledgerrepo_postingRules: (a: number) => number;
+    readonly ledgerrepo_recordPosted: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly ledgerrepo_releasePosted: (a: number, b: number, c: number) => number;
+    readonly ledgerrepo_removeEntry: (a: number, b: number, c: number, d: number) => number;
+    readonly ledgerrepo_replaceLeg: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly license_arm: (a: number, b: number, c: bigint) => number;
     readonly manager_air_invoice: (a: number, b: number) => void;
     readonly manager_air_pnl: (a: number, b: number) => void;
@@ -1217,14 +1494,8 @@ export interface InitOutput {
     readonly manager_users_sort: (a: number, b: number) => void;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly pnl_currency_exponent: (a: number, b: number) => number;
-    readonly pnl_fx_cache_clear: () => void;
-    readonly pnl_fx_cache_get: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-    readonly pnl_fx_cache_put: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
-    readonly pnl_fx_lookup_pair: (a: number, b: number, c: number) => void;
-    readonly pnl_fx_require_direction: (a: number, b: number, c: number) => void;
     readonly pnl_line_fx_lock: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly pnl_round_for_display: (a: number, b: number, c: number) => number;
-    readonly priced_ref_check_overlap: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly priced_ref_resolve_on_date: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly process_excel_file: (a: number, b: number, c: number) => void;
     readonly proposal_merge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
@@ -1232,9 +1503,36 @@ export interface InitOutput {
     readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly sales_air_rate_cards: (a: number) => number;
+    readonly sales_billing_records: (a: number) => number;
+    readonly sales_carrier_masters: (a: number) => number;
+    readonly sales_commission_entries_for: (a: number) => number;
+    readonly sales_commission_rule_assignment: (a: number) => number;
+    readonly sales_container_type_options: (a: number) => number;
+    readonly sales_create_customer_draft: (a: number) => number;
+    readonly sales_customer_for_note: (a: number) => number;
+    readonly sales_customer_masters: (a: number) => number;
+    readonly sales_demdet_instances: (a: number) => number;
+    readonly sales_document_sources: (a: number) => number;
+    readonly sales_heal_job_no: (a: number) => number;
+    readonly sales_ledger_version: (a: number, b: number) => void;
+    readonly sales_pnl_lines: (a: number) => number;
+    readonly sales_pnl_lines_for: (a: number) => number;
+    readonly sales_publish_state: (a: number, b: number) => void;
+    readonly sales_quotation: (a: number) => number;
+    readonly sales_quotations: (a: number) => number;
+    readonly sales_ref_prefix: (a: number, b: number) => void;
+    readonly sales_rep_profile: (a: number) => number;
+    readonly sales_resolve_job_no: (a: number) => number;
+    readonly sales_share_total: (a: number) => number;
+    readonly sales_shipment_commission_snapshot: (a: number) => number;
+    readonly sales_validate_submission: (a: number, b: number) => void;
+    readonly sales_weight_unit_codes: (a: number) => number;
+    readonly sales_write_side_records: (a: number) => number;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly server_health_poll: () => number;
     readonly server_health_probe: () => number;
+    readonly shipment_action_bar: (a: number, b: number, c: number) => void;
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_move_to: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1263,12 +1561,18 @@ export interface InitOutput {
     readonly sync_error_capture: (a: number) => number;
     readonly sync_job_event: (a: number, b: number) => void;
     readonly sync_user_audit_read: (a: number) => number;
-    readonly sync_user_audit_write: (a: number) => number;
     readonly sync_wma_dismiss: (a: number, b: number) => void;
     readonly sync_wma_load: (a: number) => number;
     readonly sync_wma_on_event: (a: number, b: number) => void;
     readonly sync_wma_predict: (a: number, b: number) => void;
     readonly sync_wma_save: (a: number) => number;
+    readonly userrepo_ensureSeeded: (a: number, b: number, c: number) => void;
+    readonly userrepo_get: (a: number, b: number, c: number) => number;
+    readonly userrepo_list: (a: number) => number;
+    readonly userrepo_listAll: (a: number) => number;
+    readonly userrepo_listRaw: (a: number) => number;
+    readonly userrepo_remove: (a: number, b: number, c: number) => number;
+    readonly userrepo_upsert: (a: number, b: number, c: number) => void;
     readonly users_directory_create: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly users_directory_list: (a: number, b: number, c: number) => number;
     readonly users_directory_patch: (a: number, b: number, c: number, d: number) => number;
@@ -1287,6 +1591,7 @@ export interface InitOutput {
     readonly validate_uom_label: (a: number, b: number) => number;
     readonly vdg_version: (a: number) => void;
     readonly verify_license: (a: number, b: number, c: bigint) => number;
+    readonly wasmentityrepo_awbRepo: (a: number) => number;
     readonly wasmentityrepo_awb_append: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_awb_list_all: (a: number) => number;
@@ -1352,6 +1657,13 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
+    readonly wasmentityrepo_ledgerRepo: (a: number) => number;
+    readonly wasmentityrepo_fxRateRepo: (a: number) => number;
+    readonly __wbg_userrepo_free: (a: number, b: number) => void;
+    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
+    readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
+    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1362,9 +1674,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_13985: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_13987: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_10026: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15355: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15357: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11335: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

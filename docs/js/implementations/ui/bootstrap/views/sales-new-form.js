@@ -18,6 +18,7 @@ import { sectionDHtml, wireWaterfallSection, renderWaterfall, collectWaterfallOv
 import { docsExtHtml, DOCS_EXT_FIELDS, wireCargoItemsTable, collectCargoItems,
          wireContainersTable, collectContainers } from './sales-new-form/section-docs-ext.js';
 import { wireQuoteAttach } from './sales-new-form/quote-attach.js';
+import { renderActionBar } from './sales-new-form/action-bar.js';
 import { initPhaseScreens } from './sales-new-form/phase-screens.js';
 export { jumpToFirstError } from './sales-new-form/phase-screens.js';
 import { summarizeLineCurrencies, resolveHeaderCurrency } from './sales-new-form/pnl-line-fx.js';
@@ -102,7 +103,7 @@ export async function renderForm(root, opts = {}) {
         <div id="shipment-form-errors"
           class="hidden text-xs text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2">
         </div>
-        ${_renderActionBar(d.publish_state)}
+        ${renderActionBar(d.publish_state)}
       </form>
     </div>`;
 
@@ -227,43 +228,6 @@ export function collectFormState(root) {
 // F-41-01 publish-vs-save gate moved to its own module (350-line cap); re-exported so every
 // existing importer of validateShipmentForm keeps resolving through this file.
 export { validateShipmentForm } from './sales-new-form/validate-shipment-form.js';
-
-function _renderActionBar(publishState) {
-  if (publishState === 'published') {
-    return `
-      <div class="flex gap-3 pt-2">
-        <button type="button" disabled
-          class="px-5 py-2 bg-emerald-100 text-emerald-800 text-sm font-medium rounded-lg flex items-center gap-2 cursor-not-allowed">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-          ${t('sales_new.action.published')}
-        </button>
-      </div>`;
-  }
-  
-  if (publishState === 'publish_pending') {
-    return `
-      <div class="flex gap-3 pt-2">
-        <button type="button" disabled
-          class="px-5 py-2 bg-blue-100 text-blue-800 text-sm font-medium rounded-lg flex items-center gap-2 cursor-not-allowed">
-          <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-          ${t('sales_new.action.publishing')}
-        </button>
-      </div>`;
-  }
-
-  // default: draft / undefined
-  return `
-    <div class="flex gap-3 pt-2">
-      <button type="submit" data-intent="save" id="ni-save-btn"
-        class="px-4 py-2 border border-slate-300 text-sm text-slate-700 rounded-lg hover:bg-slate-50">
-        ${t('sales_new.action.save')}
-      </button>
-      <button type="submit" data-intent="publish" id="ni-publish-btn"
-        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
-        ${t('sales_new.action.publish')}
-      </button>
-    </div>`;
-}
 
 // Plain read-out of which currencies the entered lines use — no header comparison. The old FR-05
 // warning compared every line cell against the header, so it fired on a blank form and reported

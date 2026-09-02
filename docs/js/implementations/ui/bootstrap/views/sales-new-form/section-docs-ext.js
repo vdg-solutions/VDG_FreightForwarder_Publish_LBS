@@ -50,7 +50,7 @@ export function cargoItemRowHtml(idx, item = {}) {
       <td class="py-1 px-1.5 text-center text-slate-400 font-mono text-[10px]">${idx + 1}</td>
       <td class="py-1 px-1.5">
         <input type="text" name="cargo_desc_${idx}" data-cargo-field="description" value="${escHtml(item.description || '')}"
-          placeholder="${t('sales_new.cargo.desc_ph') || 'Tên / mô tả mặt hàng'}"
+          placeholder="${t('sales_new.cargo.desc_ph')}"
           class="w-full border border-slate-200 rounded px-2 py-0.5 text-xs focus:ring-1 focus:ring-blue-400 outline-none" />
       </td>
       <td class="py-1 px-1.5">
@@ -96,12 +96,12 @@ export function cargoItemsCardHtml(cargoItems = []) {
       <div class="flex items-center justify-between mb-2">
         <div class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
           <span class="text-blue-600">📦</span>
-          <span>${t('sales_new.cargo.title') || 'Danh mục Hàng hóa (Cargo Items)'}</span>
+          <span>${t('sales_new.cargo.title')}</span>
         </div>
         <button type="button" id="btn-add-cargo-item"
           class="px-2.5 py-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium rounded border border-blue-200 transition flex items-center gap-1">
           <span>+</span>
-          <span>${t('sales_new.cargo.add_item') || 'Thêm hàng hóa'}</span>
+          <span>${t('sales_new.cargo.add_item')}</span>
         </button>
       </div>
       <div class="overflow-x-auto rounded border border-slate-200 bg-white">
@@ -109,14 +109,14 @@ export function cargoItemsCardHtml(cargoItems = []) {
           <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider">
             <tr class="border-b border-slate-200">
               <th class="py-1.5 px-1.5 w-8 text-center">#</th>
-              <th class="py-1.5 px-1.5 min-w-[140px]">${t('sales_new.cargo.col_desc') || 'Mô tả hàng hóa'}</th>
-              <th class="py-1.5 px-1.5 w-24">${t('sales_new.cargo.col_hscode') || 'HS Code'}</th>
-              <th class="py-1.5 px-1.5 w-20 text-right">${t('sales_new.cargo.col_qty') || 'Số kiện'}</th>
-              <th class="py-1.5 px-1.5 w-24">${t('sales_new.cargo.col_pkg_type') || 'Loại kiện'}</th>
-              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_gw') || 'GW (kg)'}</th>
-              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_nw') || 'NW (kg)'}</th>
-              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_cbm') || 'CBM (m³)'}</th>
-              <th class="py-1.5 px-1.5 min-w-[100px]">${t('sales_new.cargo.col_marks') || 'Ký mã hiệu'}</th>
+              <th class="py-1.5 px-1.5 min-w-[140px]">${t('sales_new.cargo.col_desc')}</th>
+              <th class="py-1.5 px-1.5 w-24">${t('sales_new.cargo.col_hscode')}</th>
+              <th class="py-1.5 px-1.5 w-20 text-right">${t('sales_new.cargo.col_qty')}</th>
+              <th class="py-1.5 px-1.5 w-24">${t('sales_new.cargo.col_pkg_type')}</th>
+              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_gw')}</th>
+              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_nw')}</th>
+              <th class="py-1.5 px-1.5 w-24 text-right">${t('sales_new.cargo.col_cbm')}</th>
+              <th class="py-1.5 px-1.5 min-w-[100px]">${t('sales_new.cargo.col_marks')}</th>
               <th class="py-1.5 px-1.5 w-8"></th>
             </tr>
           </thead>
@@ -125,7 +125,7 @@ export function cargoItemsCardHtml(cargoItems = []) {
           </tbody>
           <tfoot class="bg-slate-50 font-semibold text-slate-700 border-t border-slate-200">
             <tr>
-              <td colspan="3" class="py-1.5 px-2 text-right text-[11px]">${t('sales_new.cargo.total') || 'Tổng cộng:'}</td>
+              <td colspan="3" class="py-1.5 px-2 text-right text-[11px]">${t('sales_new.cargo.total')}</td>
               <td class="py-1.5 px-1.5 font-mono text-right" id="cargo-sum-qty">0</td>
               <td class="py-1.5 px-1.5"></td>
               <td class="py-1.5 px-1.5 font-mono text-right" id="cargo-sum-gw">0</td>

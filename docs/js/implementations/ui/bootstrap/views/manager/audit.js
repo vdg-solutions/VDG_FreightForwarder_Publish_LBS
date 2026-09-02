@@ -7,11 +7,13 @@ import { todayLocal } from '../../../../kernel/core_abstractions/util/today-loca
 import { changeLines, changesCell, renderChainStatus } from './audit-changes.js';
 import { emptyStateHtml, EMPTY_STATE_VARIANT, bindEmptyStateActions } from '../../components/empty-state.js';
 import { relTime } from '../../../../kernel/core_abstractions/util/rel-time.js';
+import { auditTrail } from '../../../core_abstractions/ports/data/report-reads.js';
 export { buildFeedHtml } from './audit-feed.js';
 
 const AUDIT_LOG_L2_MAX       = 500;
 const AUDIT_LOG_SCROLL_BATCH = 50;
 const SCROLL_THRESHOLD_PX    = 200;
+/// vdg:entity-changed topic, not a collection this screen names to read it.
 const AUDIT_LOG_KIND         = 'audit_log';
 
 function csvHeaders() {
@@ -27,16 +29,12 @@ let _allRows   = [];
 let _gridApi   = null;
 let _onEntity;
 
-function getRepo() { return window.__vdg_repo; }
-
 // ── data ──────────────────────────────────────────────────────────────────────
 
-async function loadRows(repo) {
-  const records = await repo.list(AUDIT_LOG_KIND, null);
-  return records
-    .filter((r) => !r._deleted)
-    .sort((a, b) => new Date(b.created_at || b.ts || 0) - new Date(a.created_at || a.ts || 0))
-    .slice(0, AUDIT_LOG_L2_MAX);
+// The first page. Ordering, tombstones and the ceiling are the read's, not this file's — the
+// screen used to pull the WHOLE log across the boundary and sort/slice it here.
+async function loadRows() {
+  return auditTrail(0, AUDIT_LOG_L2_MAX);
 }
 
 function applyFilter(rows) {
@@ -120,12 +118,10 @@ function initGrid(container, rows) {
       if (!body) return;
       const near = body.scrollTop + body.clientHeight >= body.scrollHeight - SCROLL_THRESHOLD_PX;
       if (!near) return;
-      const repo = getRepo();
-      if (!repo || !api) return;
-      const nextBatch = await repo.list(AUDIT_LOG_KIND, null).catch(() => []);
-      const batch = nextBatch
-        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-        .slice(_allRows.length, _allRows.length + AUDIT_LOG_SCROLL_BATCH);
+      if (!api) return;
+      // Ask for the NEXT page, not the whole log again — the old form downloaded every row on
+      // every scroll tick and threw away all but fifty.
+      const batch = await auditTrail(_allRows.length, AUDIT_LOG_SCROLL_BATCH).catch(() => []);
       if (batch.length) { _allRows.push(...batch); api.applyTransaction({ add: batch }); }
     },
   });
@@ -215,11 +211,8 @@ export async function render(root) {
   window.addEventListener('vdg:wasm-error',     _onWasmError);
   window.addEventListener('unhandledrejection', _onUnhandled);
 
-  const repo = getRepo();
-  if (repo) {
-    try { _allRows = await loadRows(repo); }
-    catch (err) { console.error('[audit] load failed:', err); } // DEV
-  }
+  try { _allRows = await loadRows(); }
+  catch (err) { console.error('[audit] load failed:', err); } // DEV
 
   renderChainStatus(root.querySelector('#chain-status'), _allRows);
 
@@ -276,18 +269,14 @@ export async function render(root) {
   _onEntity = (e) => {
     const { kind } = e.detail || {};
     if (kind !== AUDIT_LOG_KIND) return;
-    if (repo) {
-      repo.list(AUDIT_LOG_KIND, null).then((records) => {
-        const latest = records
-          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-          .slice(0, 1);
-        if (latest.length && _gridApi) {
-          _allRows.unshift(...latest);
-          while (_allRows.length > AUDIT_LOG_L2_MAX) _allRows.pop();
-          _gridApi.applyTransaction({ add: latest, addIndex: 0 });
-        }
-      }).catch(() => {});
-    }
+    // The newest single entry, asked for as one row rather than sorted out of the whole log.
+    auditTrail(0, 1).then((latest) => {
+      if (latest.length && _gridApi) {
+        _allRows.unshift(...latest);
+        while (_allRows.length > AUDIT_LOG_L2_MAX) _allRows.pop();
+        _gridApi.applyTransaction({ add: latest, addIndex: 0 });
+      }
+    }).catch((err) => { console.warn('[audit] live tick failed:', err); }); // DEV
   };
   window.addEventListener('vdg:entity-changed', _onEntity);
 

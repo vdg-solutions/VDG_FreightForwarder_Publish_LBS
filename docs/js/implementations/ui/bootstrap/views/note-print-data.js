@@ -3,16 +3,12 @@
 // Split out of note-print.js so that file stays presentation-only (and under the 350-line cap).
 // Everything here is a pure read through window.__vdg_repo — no Drive call, no mutation.
 
-import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { getShipment } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { deriveNoteLines } from '../../core_abstractions/ports/flows/note-lines.js';
+import { customerForNote, listPnlLinesFor } from '../../core_abstractions/ports/data/sales-reads.js';
 
 export const NOTE_TYPE_DEBIT  = 'debit';
 export const NOTE_TYPE_CREDIT = 'credit';
-
-const KIND_SHIPMENT = 'shipment';
-const KIND_PNL_LINE = 'pnl_line';
-const KIND_CUSTOMER = 'customers';
 
 const DN_PREFIX      = 'DN';
 const CN_PREFIX      = 'CN';
@@ -62,16 +58,17 @@ export async function loadNoteData(
 
   // Materialized pnl_line rows are the source of truth (both entry paths write them since
   // F-57-01); the shipment's embedded copy is the fallback for older records.
-  let rows = await listWhere(repo, KIND_PNL_LINE, (l) => l?.shipment_ref === shipmentRef).catch(() => []);
+  let rows = await listPnlLinesFor(shipmentRef).catch(() => []);
   if (!rows?.length) rows = shipment.pnl_lines || [];
 
   // Line derivation (selling-side filter, unit_amount, total) and their sum live in wasm
   // (flows_note_lines, note_lines.rs) — the figure printed on the page the customer receives.
   const { lines, total } = deriveNoteLines(rows, noteType);
 
-  const customer = shipment.customer
-    ? await _resolveCustomer(repo, shipment.customer)
-    : null;
+  // shipment.customer holds the customer NAME as typed on the form while the master is keyed by
+  // id — resolving one to the other, and the name-only fallback that keeps the note addressed to
+  // the right party, are the use-case's.
+  const customer = shipment.customer ? await customerForNote(shipment.customer) : null;
 
   return {
     shipment,
@@ -83,16 +80,3 @@ export async function loadNoteData(
   };
 }
 
-// shipment.customer holds the customer NAME as typed on the form; the master is keyed by id.
-// Fall back to a name-only record so the note still addresses the right party when the master
-// has no matching row.
-async function _resolveCustomer(repo, nameOrId) {
-  const byId = await repo.get(KIND_CUSTOMER, nameOrId).catch(() => null);
-  if (byId) return byId;
-
-  const all = await repo.list(KIND_CUSTOMER, null).catch(() => []);
-  const hit = (all || []).find(
-    (c) => c?.name && String(c.name).toLowerCase() === String(nameOrId).toLowerCase(),
-  );
-  return hit || { name: nameOrId };
-}

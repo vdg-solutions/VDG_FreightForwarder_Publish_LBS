@@ -5,7 +5,8 @@ import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/ses
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 
 const KIND        = 'flights';
 const KIND_PREFIX = 'FLT';
@@ -164,7 +165,7 @@ export async function render(root) {
     const statusEl = root.querySelector('#m-status');
     if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
-    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'flights:list'), KIND, repo);
+    const listRes = foldSyncFailure(await safeMasterLoad(() => listMasters(KIND), 'flights:list'), KIND, repo);
     if (!listRes.ok) {
       if (tbody) tbody.innerHTML = '';
       emptyEl?.classList.add('hidden');
@@ -180,14 +181,14 @@ export async function render(root) {
   await reload();
 
   root.querySelector('#btn-add')?.addEventListener('click', () => {
-    openModal(root, null, async (entity) => { await repo.put(KIND, entity.id, entity); await reload(); });
+    openModal(root, null, async (entity) => { await saveMaster(KIND, entity); await reload(); });
   });
 
   root.querySelector('#m-tbody')?.addEventListener('click', async (ev) => {
     const editBtn = ev.target.closest('.btn-edit');
     if (editBtn) {
       const entity = items.find((i) => i.id === editBtn.dataset.id);
-      if (entity) openModal(root, entity, async (u) => { await repo.put(KIND, u.id, u); await reload(); });
+      if (entity) openModal(root, entity, async (u) => { await saveMaster(KIND, u); await reload(); });
     }
     const delBtn = ev.target.closest('.btn-delete');
     if (delBtn) {

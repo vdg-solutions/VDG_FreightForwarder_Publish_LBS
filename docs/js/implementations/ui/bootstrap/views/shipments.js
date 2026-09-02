@@ -8,6 +8,7 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { listPnlLines } from '../../core_abstractions/ports/data/sales-reads.js';
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
@@ -132,7 +133,7 @@ export async function loadRealData() {
   if (!repo) return [];
   const [allShipments, allLines, aliasRows] = await Promise.all([
     _bounded(listShipments(repo, null), []),
-    _bounded(repo.list('pnl_line'), []),
+    _bounded(listPnlLines(), []),
     _bounded(ensureShipmentStateAliases(repo), []),
   ]);
   const linesByRef = {};

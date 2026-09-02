@@ -1,20 +1,10 @@
 import {
-  jobTracker
-} from "./chunk-YFGWKASP.js";
-import {
-  bindLedgerRepo,
-  ledgerRepo
-} from "./chunk-IBTSRPFB.js";
-import {
   bindNoteLines
 } from "./chunk-SZYDA4BO.js";
 import "./chunk-2X6PKTEY.js";
 import {
-  bindShipmentStateMigrator
-} from "./chunk-NM5PQAZF.js";
-import {
   bindAirInvoiceComposer
-} from "./chunk-MKBTAKU7.js";
+} from "./chunk-IIJV2425.js";
 import {
   bindLedgerComposer,
   bindLedgerPoster,
@@ -32,11 +22,14 @@ import {
   bindUserAuditLogComposer
 } from "./chunk-GRBWOHUK.js";
 import {
+  jobTracker
+} from "./chunk-YFGWKASP.js";
+import {
   bindManifestComposer
 } from "./chunk-3FXNTAAE.js";
 import {
-  bindErrorLogStore
-} from "./chunk-PGOTV4PU.js";
+  bindShipmentStateMigrator
+} from "./chunk-NM5PQAZF.js";
 import {
   bindBackupExporter
 } from "./chunk-HNTJLHIX.js";
@@ -48,11 +41,12 @@ import {
   markViewSuperseded
 } from "./chunk-2PLULDG2.js";
 import {
+  API_BASE,
+  activeWorkspaceName
+} from "./chunk-O3GF5UE4.js";
+import {
   bindAwbRepo
 } from "./chunk-LEXYJ5I6.js";
-import {
-  bindPeriodClose
-} from "./chunk-QL3VBJTQ.js";
 import {
   bindSelfApprovedComposer
 } from "./chunk-TBGPODD6.js";
@@ -63,21 +57,20 @@ import {
   bindNotificationComposer
 } from "./chunk-NJVBPCWY.js";
 import {
-  LicenseReadOnlyError,
-  PeriodLockedError,
-  bindPeriodLockRegistry,
-  bindWriteGate
-} from "./chunk-XF5P4IGN.js";
+  bindPeriodLockRegistry
+} from "./chunk-42R7YYMN.js";
 import {
-  bindCommissionCalculator,
   bindCommissionComposer
-} from "./chunk-PJCMTW4C.js";
+} from "./chunk-DGRILX5B.js";
 import {
   bindExceptionComposer
 } from "./chunk-WZEL26N6.js";
 import {
   bindBulkOrchestrator
 } from "./chunk-U4F5HOXH.js";
+import {
+  bindErrorLogStore
+} from "./chunk-PGOTV4PU.js";
 import {
   bindJobTracker
 } from "./chunk-T3Z2RENW.js";
@@ -100,6 +93,9 @@ import {
   bindArComposer
 } from "./chunk-64ESJPEU.js";
 import {
+  bindPeriodClose
+} from "./chunk-LW2VKPQE.js";
+import {
   bindDemDetComposer
 } from "./chunk-A4QUGFDN.js";
 import {
@@ -115,15 +111,18 @@ import {
   bindQuoteVoidDelete
 } from "./chunk-RNW6UNLW.js";
 import {
-  bindRepoQuery
-} from "./chunk-EPS4ANRF.js";
-import {
   bindMasterDeduper
 } from "./chunk-ENSWK7L6.js";
 import {
   bindUserDirectory,
   listUsers
 } from "./chunk-XVWG4BTC.js";
+import {
+  bindCommissionCalculator
+} from "./chunk-JAYYO7NZ.js";
+import {
+  bindRepoQuery
+} from "./chunk-EPS4ANRF.js";
 import {
   bindBillingPublish
 } from "./chunk-SXXIG76D.js";
@@ -132,10 +131,10 @@ import {
   bindFsmAutoAdvance,
   bindIdentityProvider,
   bindJobNoGen,
-  bindPnlCommit,
   bindPnlLineId,
   bindQuoteTotals,
   bindRepCodeRegistry,
+  bindShipmentSubmit,
   bindWmaEngine,
   bindWmaStore,
   getCurrentUser,
@@ -146,7 +145,7 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-JAUWUVEL.js";
+} from "./chunk-U3O66ZTM.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
@@ -160,6 +159,16 @@ import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
 import {
+  toLocalDateStr,
+  todayLocal
+} from "./chunk-7INC2TTZ.js";
+import {
+  bindSalesRepDerivation
+} from "./chunk-BDMZBHS4.js";
+import {
+  bindQuoteOrchestrator
+} from "./chunk-5UHUC2YB.js";
+import {
   UNKNOWN_USER_ID,
   bindRouteGuard,
   currentUserEmail,
@@ -171,10 +180,6 @@ import {
   routeGuard
 } from "./chunk-M3ODLRBG.js";
 import {
-  toLocalDateStr,
-  todayLocal
-} from "./chunk-7INC2TTZ.js";
-import {
   ROLES_RESOLVED_EVENT,
   ROLE_ACCOUNTANT,
   ROLE_AUDITOR,
@@ -185,14 +190,8 @@ import {
   ROLE_SALES_REP
 } from "./chunk-NGKBNKFN.js";
 import {
-  bindSalesRepDerivation
-} from "./chunk-BDMZBHS4.js";
-import {
-  bindQuoteOrchestrator
-} from "./chunk-5UHUC2YB.js";
-import {
   bindShipmentVoidDelete
-} from "./chunk-ZCHT56IC.js";
+} from "./chunk-KU3AGH73.js";
 import "./chunk-NSJXCXJQ.js";
 import {
   bindActionGuard,
@@ -214,15 +213,14 @@ import {
 } from "./chunk-EJWPNW2L.js";
 import {
   bindDocumentBoardComposer
-} from "./chunk-KRST3G4J.js";
+} from "./chunk-3XGTMFEQ.js";
+import {
+  bindSalesReads
+} from "./chunk-EEMMQROU.js";
 import {
   bindAuthGate,
   requireAuth
 } from "./chunk-2LU3BLTO.js";
-import {
-  API_BASE,
-  activeWorkspaceName
-} from "./chunk-O35WEKMP.js";
 import {
   bindFxRateRepo,
   fxRateRepo
@@ -231,19 +229,25 @@ import {
   bindCustomer360Composer
 } from "./chunk-TE5ZYPE3.js";
 import {
+  bindReportReads
+} from "./chunk-T5ZHX2YX.js";
+import {
   KIND_SHIPMENT,
   REVENUE_SEEN,
   bindShipmentRepo,
   deleteShipment,
   putEnvelope,
   putShipment
-} from "./chunk-IOR2W5EP.js";
+} from "./chunk-4VNIIBNV.js";
+import {
+  bindSalesRegistry
+} from "./chunk-YFN2XPGT.js";
 import {
   bindMasterRegistry
 } from "./chunk-T2XEYG3A.js";
 import {
-  bindSalesRegistry
-} from "./chunk-YFN2XPGT.js";
+  bindMasterRepo
+} from "./chunk-NRZYXZMH.js";
 import {
   bindSessionRoles,
   currentRoles,
@@ -609,7 +613,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 4f2d8570">v0.4.63 (4f2d8570)</span>
+        <span class="font-mono whitespace-nowrap" title="build e608a3fa">v0.4.64 (e608a3fa)</span>
       </div>
     `;
   }
@@ -2365,7 +2369,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.63 (4f2d8570)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.64 (e608a3fa)</div>
         </div>
       </div>
     </div>`;
@@ -2635,6 +2639,12 @@ var syncPlatform = {
 };
 
 // output/web/js.tmp/bootstrap/platform/manager.js
+var REPO_NOT_MOUNTED = "ledger repo not mounted yet";
+function ledgerRepo() {
+  const repo3 = window.__vdg_ledger_repo;
+  if (!repo3) throw new Error(REPO_NOT_MOUNTED);
+  return repo3;
+}
 var managerPlatform = {
   ledger_chart_of_accounts: () => ledgerRepo().chartOfAccounts(),
   ledger_posting_rules: () => ledgerRepo().postingRules(),
@@ -2654,10 +2664,10 @@ function userRepo() {
 function ledgerRepo2() {
   return window.__vdg_ledger_repo || null;
 }
-var REPO_NOT_MOUNTED = "user repo not mounted yet";
+var REPO_NOT_MOUNTED2 = "user repo not mounted yet";
 function requireUserRepo() {
   const repo3 = userRepo();
-  if (!repo3) throw new Error(REPO_NOT_MOUNTED);
+  if (!repo3) throw new Error(REPO_NOT_MOUNTED2);
   return repo3;
 }
 var governancePlatform = {
@@ -2694,6 +2704,12 @@ function wasm() {
 }
 function repo2() {
   return window.__vdg_repo;
+}
+var LEDGER_NOT_MOUNTED = "ledger repo not mounted yet";
+function ledgerRepo3() {
+  const led = window.__vdg_ledger_repo;
+  if (!led) throw new Error(LEDGER_NOT_MOUNTED);
+  return led;
 }
 function normCollection(dirId) {
   return String(dirId || "").replace(/^\/+|\/+$/g, "");
@@ -2758,7 +2774,7 @@ var flowsPlatform = {
     return await call(...Array.isArray(args) ? args : [args]) ?? null;
   },
   flows_ledger_call: async (op2, args) => {
-    const led = ledgerRepo();
+    const led = ledgerRepo3();
     if (typeof led[op2] !== "function") throw new Error(`flows_ledger_call: unknown op ${op2}`);
     return await led[op2](...Array.isArray(args) ? args : [args]) ?? null;
   }
@@ -2993,8 +3009,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=4f2d8570", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=4f2d8570", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=e608a3fa", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e608a3fa", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3239,9 +3255,20 @@ var dispatchAppEvent = (...a) => _i8().dispatchAppEvent(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/io-port-shared.js
 var UNKNOWN_AUTHOR = "unknown";
+var LEDGER_NOT_MOUNTED2 = "ledger repo not mounted yet";
 var SharedIoPort = class {
-  constructor(userEmail) {
+  /// `ledgerRepoRef` is a thunk, not the repo: this port is built at build-repo-stack, while the
+  /// wasm ledger repo is mounted later in deferred init. The outbox drain that calls the ledger_*
+  /// methods below runs after both, so resolving late is the only ordering that works. The
+  /// composition root supplies it (bootstrap/compose.js) — no global read from this layer.
+  constructor(userEmail, ledgerRepoRef = null) {
     this.userEmail = userEmail;
+    this._ledgerRepoRef = ledgerRepoRef;
+  }
+  _ledger() {
+    const repo3 = this._ledgerRepoRef?.();
+    if (!repo3) throw new Error(LEDGER_NOT_MOUNTED2);
+    return repo3;
   }
   cache_get(kind, id) {
     return localStore().cache_get(kind, id);
@@ -3276,19 +3303,19 @@ var SharedIoPort = class {
     return live?.email || this.userEmail || UNKNOWN_AUTHOR;
   }
   async ledger_get_chart() {
-    return ledgerRepo().chartOfAccounts();
+    return this._ledger().chartOfAccounts();
   }
   async ledger_get_rules() {
-    return ledgerRepo().postingRules();
+    return this._ledger().postingRules();
   }
   async ledger_is_posted(posted_index) {
-    return ledgerRepo().isAlreadyPosted(posted_index);
+    return this._ledger().isAlreadyPosted(posted_index);
   }
   async ledger_append_leg(year, account_code, leg) {
-    return ledgerRepo().appendLeg(year, account_code, leg);
+    return this._ledger().appendLeg(year, account_code, leg);
   }
   async ledger_record_posted(posted_index, ids) {
-    return ledgerRepo().recordPosted(posted_index, ids);
+    return this._ledger().recordPosted(posted_index, ids);
   }
 };
 
@@ -4173,7 +4200,7 @@ async function composeStorage() {
   return backendKind;
 }
 function createIoPort(userEmail) {
-  return new SharedIoPort(userEmail);
+  return new SharedIoPort(userEmail, () => window.__vdg_ledger_repo);
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/ports/key-value.js
@@ -4346,7 +4373,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-CMILUGCT.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-ALQ42FVG.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4354,7 +4381,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-DEIPZ7GE.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-2OIOPWSX.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4362,14 +4389,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-E2PLTOFT.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-S2PQOAPP.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-E2PLTOFT.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-S2PQOAPP.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4471,12 +4498,26 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.63 (4f2d8570)";
+var APP_VERSION = "v0.4.64 (e608a3fa)";
+
+// output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
+var _impl12 = null;
+function bindMergeResolve(impl) {
+  _impl12 = impl;
+}
+function _i11() {
+  if (!_impl12) throw new Error("ui/merge-resolve: no implementation bound (root bootstrap binds it)");
+  return _impl12;
+}
+var reapplyMyValues = (...a) => _i11().reapplyMyValues(...a);
+var resolveConflict = (...a) => _i11().resolveConflict(...a);
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
 var BREAKPOINT_TABLET_PX = 768;
 var PREFS_META_KEY = "preferences";
+var CHOICE_MINE = "mine";
+var CHOICE_THEIRS = "theirs";
 var STORE_LOCKED_COPY = {
   "genuine-conflict": ["store_locked.title", "store_locked.body"],
   unresponsive: ["store_unresponsive.title", "store_unresponsive.body"]
@@ -4506,6 +4547,24 @@ var CONFLICT_VAL_MAX_CHARS = 60;
 function _fieldValText(v) {
   const s = typeof v === "object" && v !== null ? JSON.stringify(v) : String(v ?? "");
   return s.slice(0, CONFLICT_VAL_MAX_CHARS);
+}
+function _showRefusal(dlg, message) {
+  let line = dlg.querySelector("#resolve-error");
+  if (!line) {
+    line = document.createElement("div");
+    line.id = "resolve-error";
+    line.className = "px-6 pb-4 text-xs text-red-600";
+    dlg.appendChild(line);
+  }
+  line.textContent = message || t("merge.resolve_failed");
+}
+function _settle(dlg, reply) {
+  if (!reply?.ok) {
+    _showRefusal(dlg, reply?.error);
+    return;
+  }
+  dlg.close();
+  dlg.remove();
 }
 function _fieldDiffRows(fields, extra = () => "") {
   return fields.map((c) => `
@@ -4541,20 +4600,11 @@ function initConflictModal() {
       </div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    const repo3 = window.__vdg_repo;
-    const mergeBase = merged && typeof merged === "object" ? merged : null;
-    dlg.querySelector("#keep-mine").addEventListener("click", async () => {
-      const mine = { ...mergeBase ?? local, _rev: remote?._rev };
-      for (const c of conflicts || []) mine[c.field] = c.local_val;
-      await repo3?.put(kind, id, mine);
-      dlg.close();
-      dlg.remove();
-    });
-    dlg.querySelector("#use-theirs").addEventListener("click", async () => {
-      await repo3?.put(kind, id, { ...mergeBase ?? remote, _rev: remote?._rev });
-      dlg.close();
-      dlg.remove();
-    });
+    const resolveWith = (choice) => async () => {
+      _settle(dlg, await resolveConflict({ kind, id, choice, merged, local, remote, conflicts: conflicts || [] }));
+    };
+    dlg.querySelector("#keep-mine").addEventListener("click", resolveWith(CHOICE_MINE));
+    dlg.querySelector("#use-theirs").addEventListener("click", resolveWith(CHOICE_THEIRS));
   });
 }
 var MERGE_TOAST_DISMISS_MS = 12e3;
@@ -4599,14 +4649,11 @@ function initMergeToast() {
         dlg.remove();
       };
       dlg.querySelector("#merge-undo").onclick = async () => {
-        const repo3 = window.__vdg_repo;
-        const current = await repo3?.get(kind, id);
-        if (current) {
-          for (const c of fields) current[c.field] = c.local_val;
-          await repo3.put(kind, id, current);
-        }
-        dlg.close();
-        dlg.remove();
+        _settle(dlg, await reapplyMyValues({
+          kind,
+          id,
+          fields: fields.map((c) => ({ field: c.field, value: c.local_val }))
+        }));
       };
     };
   });
@@ -4700,75 +4747,75 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-OGUQX34Q.js"),
-  "/shipments": () => import("./shipments-OJNJRGS6.js"),
+  "/dashboard": () => import("./dashboard-OV4ITTEO.js"),
+  "/shipments": () => import("./shipments-P5VA4TKE.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
-  "/documents": () => import("./documents-2SUK5ZXY.js"),
-  "/finance": () => import("./finance-dashboard-XARJ36ZW.js"),
+  "/documents": () => import("./documents-KCM6MBAN.js"),
+  "/finance": () => import("./finance-dashboard-V4Y3AMO6.js"),
   "/finance/credit": () => import("./credit-dashboard-Z43BZ656.js"),
-  "/finance/demdet": () => import("./demdet-SGLKGZCR.js"),
+  "/finance/demdet": () => import("./demdet-ZUTAAMXG.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-P2S6XLEQ.js"),
-  "/sales/analytics": () => import("./sales-analytics-73QOTSUJ.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-ODI237IK.js"),
+  "/sales/me": () => import("./sales-me-S37MBTXI.js"),
+  "/sales/analytics": () => import("./sales-analytics-M3A2IPUA.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-WFONS4TE.js"),
   "/sales/quote": () => import("./sales-quote-list-EAHS6J3Y.js"),
-  "/masters/customers": () => import("./masters-customers-L63TE4ZK.js"),
-  "/masters/carriers": () => import("./masters-carriers-NGSX2ADW.js"),
-  "/masters/services": () => import("./masters-services-EU2Q5CWP.js"),
+  "/masters/customers": () => import("./masters-customers-5L4P6UTO.js"),
+  "/masters/carriers": () => import("./masters-carriers-WF6BGLCT.js"),
+  "/masters/services": () => import("./masters-services-TZGENFGR.js"),
   "/help": () => import("./help-IKAUORGB.js"),
   "/pending-access": () => import("./pending-access-7DMAML24.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-WO75SJKX.js"),
-  "/manager/pipeline": () => import("./pipeline-CWTGNDBW.js"),
-  "/manager/approvals": () => import("./approvals-V4RVJ7SQ.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-BV6KME6N.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-VPVF3ESY.js"),
-  "/manager/finance/close-period": () => import("./close-period-ODQV56G6.js"),
-  "/manager/finance/self-approved-review": () => import("./self-approved-review-ELOYOCSC.js"),
-  "/manager/audit": () => import("./audit-YZBBMNU5.js"),
+  "/manager/pipeline": () => import("./pipeline-42YDRBXY.js"),
+  "/manager/approvals": () => import("./approvals-ECACSPKI.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-RVYLRQFZ.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-VHDCCII3.js"),
+  "/manager/finance/close-period": () => import("./close-period-VU27GZGX.js"),
+  "/manager/finance/self-approved-review": () => import("./self-approved-review-2HHAP7F4.js"),
+  "/manager/audit": () => import("./audit-WKEWHXBU.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-AZZPV2MW.js"),
-  "/manager/finance/commissions": () => import("./commissions-UU5FPDW4.js"),
-  "/manager/commission-rules": () => import("./commission-rules-562YSF6U.js"),
-  "/manager/exceptions": () => import("./exceptions-KGQRNKGG.js"),
+  "/manager/sales": () => import("./sales-FZX7UVLL.js"),
+  "/manager/finance/commissions": () => import("./commissions-IRESZVYO.js"),
+  "/manager/commission-rules": () => import("./commission-rules-QAH2DJKC.js"),
+  "/manager/exceptions": () => import("./exceptions-C5YFECKS.js"),
   // E-15
   "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
-  "/manager/users": () => import("./users-CUNMJCVN.js"),
+  "/manager/users": () => import("./users-RTYASZ4K.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-NJZOGB3Y.js"),
-  "/manager/settings": () => import("./settings-6PVD7RFG.js"),
+  "/manager/fx-rates": () => import("./fx-rates-PTOBKIXW.js"),
+  "/manager/settings": () => import("./settings-TTWLXCFP.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-27G7TOG7.js"),
-  "/masters/flights": () => import("./flights-THBLV3Y2.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-MRA3NDIZ.js"),
+  "/masters/airports": () => import("./airports-6L34GTAS.js"),
+  "/masters/flights": () => import("./flights-7L5MQDF4.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-BHFWYV6Y.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-4HZGIT5Q.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-ROUN6W6J.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-RYTZJBSW.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-SMSZQYUQ.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-RUNAQRZ4.js"),
-  "/manager/manifest": () => import("./manifest-DPQE7HAN.js"),
+  "/masters/uld-types": () => import("./uld-types-HOCLUJ4N.js"),
+  "/manager/manifest": () => import("./manifest-ZVYAZKFZ.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-A6LOCJ5Z.js"),
+  "/masters/air-rates": () => import("./air-rates-YA7YDQAB.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-F24UAC2I.js"),
-  "/masters/local-charges": () => import("./local-charges-VTLC2OXG.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-WT7MBFO4.js"),
+  "/masters/local-charges": () => import("./local-charges-XHQ5GC7X.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-TZO3QAGT.js"),
-  "/quotes/air-calc": () => import("./air-calc-MSSJVYNW.js"),
+  "/masters/shipment-states": () => import("./shipment-states-EA44FRIC.js"),
+  "/quotes/air-calc": () => import("./air-calc-K2VHRPQW.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-MNK5RSO3.js"),
+  "/manager/air-invoice": () => import("./air-invoice-ZO3JZGHF.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-XQ6BDMMF.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-MMFEN43G.js"),
+  "/accounting/settings": () => import("./settings-CUEPPKXF.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06
@@ -4776,9 +4823,9 @@ var VIEWS = {
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
-var _impl12 = null;
+var _impl13 = null;
 function bindRoutePrefetch(impl) {
-  _impl12 = impl;
+  _impl13 = impl;
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/cache.js
@@ -4801,6 +4848,227 @@ function composeCache(wasm4) {
     prefetchDashboard: async () => {
       await wasm4.cache_route_prefetch({});
     }
+  });
+}
+
+// output/web/js.tmp/implementations/ui/core_abstractions/ports/data/write-gate.js
+var PeriodLockedError = class extends Error {
+  // The binding supplies the (translated) message — the port is pure.
+  constructor(periodKey, message) {
+    super(message ?? `period locked: ${periodKey}`);
+    this.name = "PeriodLockedError";
+    this.period = periodKey;
+  }
+};
+var LicenseReadOnlyError = class extends Error {
+  constructor(graceDaysLeft, message) {
+    super(message ?? `license read-only: ${graceDaysLeft} days left`);
+    this.name = "LicenseReadOnlyError";
+    this.graceDaysLeft = graceDaysLeft;
+  }
+};
+var _impl14 = null;
+function bindWriteGate(impl) {
+  _impl14 = impl;
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/data-masters.js
+function orThrow(reply) {
+  if (!reply.ok) throw new Error(reply.error || "the master write was refused");
+  return reply;
+}
+function bindMastersData(wasm4) {
+  bindMasterRepo({
+    saveMaster: async (kind, entity) => orThrow(await wasm4.data_save_master({ kind, entity })).record,
+    listMasters: async (kind) => orThrow(await wasm4.data_list_masters({ kind })).rows,
+    getMaster: async (kind, id) => orThrow(await wasm4.data_get_master({ kind, id })).record ?? null
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/data-reports.js
+var NO_LIMIT = 0;
+function raise(reply) {
+  if (!reply?.ok) throw new Error(reply?.error || "the read failed");
+  return reply;
+}
+function suggestion(row) {
+  return {
+    key: row.key,
+    pattern: row.pattern,
+    count: row.count,
+    salesPct: row.sales_pct,
+    recipient: row.recipient,
+    kind: row.kind
+  };
+}
+function bindReportReads2(wasm4) {
+  bindReportReads({
+    // ── finance ──────────────────────────────────────────────────────────────
+    cashFlowInputs: async () => {
+      const reply = raise(await wasm4.data_cash_flow_inputs({}));
+      return { receivables: reply.receivables, costLines: reply.cost_lines, shipments: reply.shipments };
+    },
+    receivablesLedger: async () => raise(await wasm4.data_receivables_ledger({})).rows,
+    markReceivableFollowedUp: async (customer) => {
+      raise(await wasm4.data_mark_receivable_followed_up({ customer, note: null }));
+    },
+    addReceivableNote: async (customer, text) => {
+      raise(await wasm4.data_add_receivable_note({ customer, note: text }));
+    },
+    pnlReportInputs: async () => {
+      const reply = raise(await wasm4.data_pnl_report_inputs({}));
+      return { shipments: reply.shipments, pnlLines: reply.pnl_lines };
+    },
+    periodCloseRecord: async (period) => raise(await wasm4.data_period_close_record({ period })).record,
+    // ── commission ───────────────────────────────────────────────────────────
+    commissionBasisLines: async () => raise(await wasm4.data_commission_basis_lines({})).rows,
+    settledCommissionPayouts: async () => raise(await wasm4.data_commission_payouts({})).rows,
+    commissionRuleEditorInputs: async () => {
+      const reply = raise(await wasm4.data_commission_rule_editor_inputs({}));
+      return { users: reply.users, rules: reply.rules, entryAuthors: reply.entry_authors };
+    },
+    commissionRuleSuggestions: async () => raise(await wasm4.data_commission_rule_suggestions({})).suggestions.map(suggestion),
+    promoteCommissionSuggestion: async ({ salesPct, recipient, kind = null, priority }) => {
+      raise(await wasm4.data_promote_commission_suggestion({
+        sales_pct: salesPct,
+        recipient,
+        kind,
+        priority
+      }));
+    },
+    saveCommissionRule: async (ruleId, rule) => {
+      raise(await wasm4.data_save_commission_rule({ rule_id: ruleId, rule }));
+    },
+    deleteCommissionRule: async (ruleId) => {
+      raise(await wasm4.data_delete_commission_rule({ rule_id: ruleId }));
+    },
+    // ── operations ───────────────────────────────────────────────────────────
+    auditTrail: async (offset = 0, limit = NO_LIMIT) => raise(await wasm4.data_audit_trail({ offset, limit })).rows,
+    pendingApprovals: async () => raise(await wasm4.data_pending_approvals({})).rows,
+    approvalDecisionLog: async () => raise(await wasm4.data_approval_decision_log({})).rows,
+    exceptionCaseload: async () => raise(await wasm4.data_exception_caseload({})).rows,
+    pipelineShipments: async () => raise(await wasm4.data_pipeline_shipments({})).rows,
+    manifestFilings: async () => raise(await wasm4.data_manifest_filings({})).rows,
+    salesProfiles: async () => raise(await wasm4.data_sales_profiles({})).rows,
+    customer360Inputs: async () => {
+      const reply = raise(await wasm4.data_customer360_inputs({}));
+      return {
+        customers: reply.customers,
+        receivables: reply.receivables,
+        exceptions: reply.exceptions,
+        quotations: reply.quotations
+      };
+    },
+    /// -> the customer record AS WRITTEN, so the notes tab repaints from storage.
+    appendCustomerNote: async (customerId, text) => raise(await wasm4.data_append_customer_note({ customer_id: customerId, note: text })).record,
+    cassReconciliationInputs: async () => {
+      const reply = raise(await wasm4.data_cass_reconciliation_inputs({}));
+      return { awbs: reply.awbs, airRates: reply.air_rates, carriers: reply.carriers };
+    },
+    suppressDuplicatePair: async (aId, bId) => {
+      raise(await wasm4.data_suppress_duplicate_pair({ a: aId, b: bId }));
+    }
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/data-guard.js
+function bindGuardData(deps) {
+  const wasm4 = deps?.wasm ?? deps;
+  bindMergeResolve({
+    reapplyMyValues: async (req) => await wasm4.data_reapply_my_values(req),
+    resolveConflict: async (req) => await wasm4.data_resolve_conflict(req)
+  });
+}
+
+// output/web/js.tmp/bootstrap/compose-ui/data-sales.js
+function bindSalesData({ wasm: wasm4 }) {
+  const rows = (reply) => {
+    if (!reply.ok) throw new Error(reply.error || "the read failed");
+    return reply.rows;
+  };
+  const record = (reply) => {
+    if (!reply.ok) throw new Error(reply.error || "the read failed");
+    return reply.record;
+  };
+  bindSalesReads({
+    listCustomerMasters: async () => rows(await wasm4.sales_customer_masters({})),
+    listCarrierMasters: async () => rows(await wasm4.sales_carrier_masters({})),
+    listWeightUnitCodes: async () => (await wasm4.sales_weight_unit_codes({})).codes,
+    listContainerTypeOptions: async () => rows(await wasm4.sales_container_type_options({})),
+    getRepProfile: async (salesRepId) => record(await wasm4.sales_rep_profile({ sales_rep_id: salesRepId ?? null })),
+    getCommissionRuleAssignment: async (salesRepId) => record(await wasm4.sales_commission_rule_assignment({ sales_rep_id: salesRepId ?? null })),
+    getShipmentCommissionSnapshot: async (shipmentRef) => record(await wasm4.sales_shipment_commission_snapshot({ id: shipmentRef ?? null })),
+    listCommissionEntriesFor: async (shipmentRef) => rows(await wasm4.sales_commission_entries_for({ id: shipmentRef ?? null })),
+    salesShareTotal: async (shipmentRefs) => (await wasm4.sales_share_total({ shipment_refs: shipmentRefs || [] })).total,
+    listPnlLines: async () => rows(await wasm4.sales_pnl_lines({})),
+    listPnlLinesFor: async (shipmentRef) => rows(await wasm4.sales_pnl_lines_for({ id: shipmentRef ?? null })),
+    listQuotations: async () => rows(await wasm4.sales_quotations({})),
+    getQuotation: async (id) => record(await wasm4.sales_quotation({ id: id ?? null })),
+    listBillingRecords: async () => rows(await wasm4.sales_billing_records({})),
+    listDemdetInstances: async () => rows(await wasm4.sales_demdet_instances({})),
+    listAirRateCards: async () => rows(await wasm4.sales_air_rate_cards({})),
+    readDocumentSources: async () => {
+      const reply = await wasm4.sales_document_sources({});
+      if (!reply.ok) throw new Error("the read failed");
+      return {
+        documents: reply.documents,
+        shippingInstructions: reply.shipping_instructions,
+        arrivalNotices: reply.arrival_notices,
+        releaseOrders: reply.release_orders
+      };
+    },
+    customerForNote: async (nameOrId) => record(await wasm4.sales_customer_for_note({ name: nameOrId ?? null })),
+    createCustomerDraft: async (name) => {
+      const reply = await wasm4.sales_create_customer_draft({ name: name ?? null });
+      if (!reply.ok) throw new Error(reply.error || "the customer could not be created");
+      return { created: reply.created, record: reply.record };
+    }
+  });
+  bindShipmentSubmit({
+    // The direction rule is wasm's; the mint itself is the store's own repo method, which is why
+    // this is the one call here that still takes `repo`.
+    mintShipmentRef: async (repo3, direction, salesRepId) => {
+      if (!repo3?.mint_shipment_ref) throw new Error("WASM repo not ready");
+      const { prefix } = wasm4.sales_ref_prefix({ direction: direction ?? null });
+      return await repo3.mint_shipment_ref(prefix, String(salesRepId || ""));
+    },
+    resolveJobNo: async ({ formJobNo = null, priorJobNo = null, ownRef = null, salesRepId = null } = {}) => (await wasm4.sales_resolve_job_no({
+      form_job_no: formJobNo,
+      prior_job_no: priorJobNo,
+      own_ref: ownRef,
+      sales_rep_id: salesRepId
+    })).job_no,
+    // A refusal here THROWS, the way putShipment does: the heal re-saves the record, and a save the
+    // period gate or the licence refused is the same failure whichever call made it.
+    healJobNoCollision: async (shipment, salesRepId) => {
+      const reply = await wasm4.sales_heal_job_no({ shipment, sales_rep_id: salesRepId ?? null });
+      if (!reply.ok) throw new Error(reply.error || "the job number could not be healed");
+      return reply.shipment;
+    },
+    nextLedgerVersion: (priorVersion = null) => wasm4.sales_ledger_version({ prior_version: priorVersion == null ? null : Number(priorVersion) }).version,
+    resolvePublishState: (priorPublishState, publish) => {
+      const reply = wasm4.sales_publish_state({ prior_publish_state: priorPublishState ?? null, publish });
+      if (!reply.ok) throw new Error(reply.error || "the publish state was refused");
+      return reply.publish_state;
+    },
+    submissionErrorKeys: (state) => wasm4.sales_validate_submission({ state: state || {} }).error_keys,
+    writeSideRecords: async ({
+      shipmentRef,
+      commissionLines = [],
+      pnlLines = [],
+      ledgerVersion,
+      occurredAt,
+      createdBy = null,
+      freshRef = false
+    }) => await wasm4.sales_write_side_records({
+      shipment_ref: shipmentRef,
+      commission_lines: commissionLines,
+      pnl_lines: pnlLines,
+      ledger_version: ledgerVersion,
+      occurred_at: occurredAt,
+      created_by: createdBy,
+      fresh_ref: freshRef
+    })
   });
 }
 
@@ -4899,6 +5167,10 @@ function composeData(wasm4) {
     readPublishedFor: async (_repo, shipment) => (await wasm4.data_published_for({ shipment })).rows,
     currentRevision: async (_repo, shipment) => (await wasm4.data_current_revision({ shipment })).record
   });
+  bindMastersData(wasm4);
+  bindReportReads2(wasm4);
+  bindGuardData(wasm4);
+  bindSalesData({ wasm: wasm4 });
   bindRepoQuery({
     listWhere: async (_repo, kind, predicate = null) => {
       const reply = await wasm4.data_list_where({ kind, column: null, equals: null, ignore_case: false });
@@ -5211,7 +5483,7 @@ function stampNotification(draft) {
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/governance.js
-function raise(reply) {
+function raise2(reply) {
   if (reply?.error) throw new Error(reply.error);
   return reply;
 }
@@ -5243,7 +5515,7 @@ function composeGovernance(wasm4) {
     readSettings: async () => (await wasm4.governance_load_settings({})).settings,
     loadWorkspaceSettings: async () => (await wasm4.governance_load_settings({})).settings,
     saveWorkspaceSettings: async (settings) => {
-      const saved = raise(await wasm4.governance_save_settings({ settings }));
+      const saved = raise2(await wasm4.governance_save_settings({ settings }));
       window.__vdg_workspace_settings = saved.settings;
       return saved.settings;
     }
@@ -5255,21 +5527,21 @@ function composeGovernance(wasm4) {
     },
     loadClosedPeriods: async () => (await wasm4.governance_locked_periods({})).keys,
     listCloseRecords: async () => (await wasm4.governance_close_records({})).records,
-    runPreCloseChecks: async (_repo, period) => raise(await wasm4.governance_pre_close_checks({ period })).checks,
-    closePeriod: async (_repo, period, user, checklist, ledgerRepo3 = null) => raise(await wasm4.governance_close_period({
+    runPreCloseChecks: async (_repo, period) => raise2(await wasm4.governance_pre_close_checks({ period })).checks,
+    closePeriod: async (_repo, period, user, checklist, ledgerRepo4 = null) => raise2(await wasm4.governance_close_period({
       period,
       user: user ?? null,
       checklist: checklist ?? [],
-      with_ledger: !!ledgerRepo3
+      with_ledger: !!ledgerRepo4
     })),
-    reopenPeriod: async (_repo, period, reason, user) => raise(await wasm4.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
+    reopenPeriod: async (_repo, period, reason, user) => raise2(await wasm4.governance_reopen_period({ period, reason: reason ?? null, user: user ?? null }))
   });
   bindPeriodLockRegistry({
     readLockedPeriods: async () => (await wasm4.governance_locked_periods({})).locks,
     lockedPeriodKeys: async () => (await wasm4.governance_locked_periods({})).keys,
     findLock: async (_repo, periodKey) => (await wasm4.governance_find_lock({ period_key: periodKey ?? null })).record ?? null,
-    lockPeriod: async (_repo, periodKey, user) => raise(await wasm4.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
-    unlockPeriod: async (_repo, periodKey) => raise(await wasm4.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
+    lockPeriod: async (_repo, periodKey, user) => raise2(await wasm4.governance_lock_period({ period_key: periodKey ?? null, user: user ?? null })).record,
+    unlockPeriod: async (_repo, periodKey) => raise2(await wasm4.governance_unlock_period({ period_key: periodKey ?? null })).unlocked
   });
   bindPeriodOpeningBalance({
     previousPeriod: (period) => wasm4.governance_period_math({ period: period ?? null }).previous,
@@ -5300,7 +5572,7 @@ function composeGovernance(wasm4) {
   });
   bindErrorLogStore({
     listErrorRecords: async () => (await wasm4.governance_error_records({})).records,
-    purgeErrorMonth: async (month) => raise(await wasm4.governance_purge_error_month({ month }))
+    purgeErrorMonth: async (month) => raise2(await wasm4.governance_purge_error_month({ month }))
   });
 }
 
@@ -5310,16 +5582,22 @@ var LICENSE_STATE_INVALID = "invalid";
 var LICENSE_STATE_NETWORK = "network";
 var LICENSE_STATE_GRACE = "grace";
 var LICENSE_STATE_BLOCKED = "blocked";
-var _impl13 = null;
+var _impl15 = null;
 function bindLicenseGate(impl) {
-  _impl13 = impl;
+  _impl15 = impl;
 }
-function _i11() {
-  if (!_impl13) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
-  return _impl13;
+function _i12() {
+  if (!_impl15) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
+  return _impl15;
 }
-var resolveLicenseState = (...a) => _i11().resolveLicenseState(...a);
-var errorKindMessage = (...a) => _i11().errorKindMessage(...a);
+var resolveLicenseState = (...a) => _i12().resolveLicenseState(...a);
+var errorKindMessage = (...a) => _i12().errorKindMessage(...a);
+
+// output/web/js.tmp/implementations/ui/core_abstractions/ports/flows/pnl-commit-orchestrator.js
+var _impl16 = null;
+function bindPnlCommit(impl) {
+  _impl16 = impl;
+}
 
 // output/web/js.tmp/bootstrap/compose-ui/flows-admin.js
 var BACKUP_PROGRESS_EVENT = "vdg:backup-progress";
@@ -5580,93 +5858,12 @@ function composeFlows(wasm4) {
   composeFlowsAdmin(wasm4);
 }
 
-// output/web/js.tmp/implementations/storage/implementations/repos/fx-rate-repo.js
-var FxRateStoreRepo = class {
-  _repo() {
-    const repo3 = window.__vdg_repo;
-    if (!repo3?.fx_months_to_ingest) throw new Error("WASM repo not ready");
-    return repo3;
-  }
-  _wasm() {
-    const wasm4 = window.__vdg_wasm;
-    if (!wasm4?.fx_rate_get) throw new Error("WASM not ready");
-    return wasm4;
-  }
-  async _ensureAllMonthsLoaded() {
-    const wasm4 = this._wasm();
-    for (const { ym, content } of await this._repo().fx_months_to_ingest()) {
-      wasm4.fx_rate_ingest_month(ym, content);
-    }
-  }
-  /** direction: 'Buy'|'Sell' — Circular 200 values assets at the buying rate and liabilities
-   *  at the selling rate; every caller states which side it wants. Returns the resolved rate. */
-  async getRate(dateStr, pair, direction) {
-    await this._ensureAllMonthsLoaded();
-    try {
-      return this._wasm().fx_rate_get(dateStr, pair, direction);
-    } catch (err) {
-      throw new Error(`FxRateNotFound: ${err.message}`);
-    }
-  }
-  async appendRate(entryJson, role) {
-    await this._ensureAllMonthsLoaded();
-    const writes = this._wasm().fx_rate_prepare_append(entryJson, role);
-    await this._repo().fx_apply_writes(JSON.stringify(writes));
-  }
-  invalidateMonth(ym) {
-    this._repo().fx_invalidate_month(ym);
-  }
-  async listByMonth(ym) {
-    return await this._repo().fx_list_by_month(ym);
-  }
-  async listAll() {
-    return await this._repo().fx_list_all();
-  }
-  async deleteEntry(validFrom, validTo, pair) {
-    await this._repo().fx_delete_entry(validFrom, validTo, pair);
-  }
-  // F-29-01: the fx-lookup rules (VND self-pair, Buy/Sell direction requirement, session cache)
-  // moved to wasm — fx-lookup.js is core_abstractions (no tech), so it reaches them through this
-  // adapter, same as every other wasm call in this class.
-  pnlFxLookupPair(currency) {
-    return this._wasm().pnl_fx_lookup_pair(currency);
-  }
-  pnlFxRequireDirection(direction) {
-    this._wasm().pnl_fx_require_direction(direction);
-  }
-  pnlFxCacheGet(dateStr, pair, direction) {
-    return this._wasm().pnl_fx_cache_get(dateStr, pair, direction);
-  }
-  pnlFxCachePut(dateStr, pair, direction, rate) {
-    this._wasm().pnl_fx_cache_put(dateStr, pair, direction, rate);
-  }
-  pnlFxCacheClear() {
-    this._wasm().pnl_fx_cache_clear();
-  }
-};
-
-// output/web/js.tmp/implementations/storage/implementations/repos/awb-repo.js
-var AwbStoreRepo = class {
-  _repo() {
-    const repo3 = window.__vdg_repo;
-    if (!repo3?.awb_list_by_month) throw new Error("WASM repo not ready");
-    return repo3;
-  }
-  async listByMonth(ym) {
-    return await this._repo().awb_list_by_month(ym);
-  }
-  async append(awb) {
-    await this._repo().awb_append(JSON.stringify(awb));
-  }
-  async deleteByAwbNo(awbNo, ym) {
-    await this._repo().awb_delete(awbNo, ym);
-  }
-};
-
 // output/web/js.tmp/bootstrap/compose-ui/storage.js
 function composeStorageUi() {
-  bindFxRateRepo(new FxRateStoreRepo());
-  bindAwbRepo(new AwbStoreRepo());
+  const repo3 = window.__vdg_repo;
+  if (!repo3?.fxRateRepo) throw new Error("composeStorageUi: wasm repo not built yet");
+  bindFxRateRepo(repo3.fxRateRepo());
+  bindAwbRepo(repo3.awbRepo());
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/platform.js
@@ -5927,6 +6124,8 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
 async function _deferredInit(user, db, repo3) {
   const store = localStore();
   try {
+    window.__vdg_ledger_repo = repo3.ledgerRepo();
+    window.__vdg_user_repo = repo3.userRepo();
     if (store) {
       const prefsResult = await safeAwait(
         store.cache_get_meta(PREFS_META_KEY2),
@@ -5941,7 +6140,7 @@ async function _deferredInit(user, db, repo3) {
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-NZ2GI2Q3.js");
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-UPDH47IB.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.(),
       getRole: () => currentSalesRepId()
@@ -5949,14 +6148,7 @@ async function _deferredInit(user, db, repo3) {
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
-    const { LedgerStoreRepo } = await import("./ledger-repo-ZL3HPSXV.js");
-    const ledgerRepo3 = new LedgerStoreRepo();
-    window.__vdg_ledger_repo = ledgerRepo3;
-    bindLedgerRepo(ledgerRepo3);
-    const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
-    window.__vdg_user_audit_log = userAuditLog;
-    const { UserStoreRepo: UserServerRepo } = await import("./user-repo-X6IPJZKE.js");
-    window.__vdg_user_repo = new UserServerRepo(userAuditLog);
+    window.__vdg_user_audit_log = createUserAuditLog();
     const retryPrincipalOnReconnect = () => {
       if (currentRolesResolved()) {
         window.removeEventListener("vdg:server-health", retryPrincipalOnReconnect);
@@ -6222,7 +6414,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-U3OM4D3K.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-UABKOWMN.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6230,7 +6422,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-RNPYND6T.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-2IW2T7EM.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6238,7 +6430,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-5YW23JNG.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-MRAHYCM3.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6246,7 +6438,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-ODI237IK.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-WFONS4TE.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;

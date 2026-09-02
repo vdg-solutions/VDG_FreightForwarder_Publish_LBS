@@ -5,6 +5,7 @@ import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { selfRepCandidate, customerRepFor } from '../../../ui/core_abstractions/ports/flows/sales-rep-derivation.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { saveDraft } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
+import { listCustomerMasters, listCarrierMasters, listContainerTypeOptions } from '../../core_abstractions/ports/data/sales-reads.js';
 import { navigate } from '../router.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 
@@ -13,16 +14,14 @@ const OVERRIDE_THRESHOLD_PCT = 0.15;
 
 export async function getContainerTypes(repo) {
   try {
-    const list = await repo?.list?.('units-of-measure');
-    if (Array.isArray(list) && list.length > 0) {
-      const conts = list.filter((u) => u.category === 'container');
-      if (conts.length > 0) {
-        return conts.map((u) => {
-          const code = u.aliases?.[0] || u.code;
-          const label = u.label_vi ? `${code} (${u.label_vi})` : code;
-          return { code, label };
-        });
-      }
+    // Which category holds container types, and which spelling of a code wins, are the registry's
+    // — this screen only turns the answer into option labels.
+    const conts = repo ? await listContainerTypeOptions() : [];
+    if (conts.length > 0) {
+      return conts.map((u) => ({
+        code: u.code,
+        label: u.label_vi ? `${u.code} (${u.label_vi})` : u.code,
+      }));
     }
   } catch { /* fallback to standard codes */ }
   return [
@@ -283,8 +282,8 @@ export async function render(root, quoteId) {
   let customers = [], carriers = [];
   if (repo) {
     [customers, carriers] = await Promise.all([
-      repo.list('customers', null).catch(() => []),
-      repo.list('carriers', null).catch(() => []),
+      listCustomerMasters().catch(() => []),
+      listCarrierMasters().catch(() => []),
     ]);
   }
   const repSelect = root.querySelector('#f-sales-rep');

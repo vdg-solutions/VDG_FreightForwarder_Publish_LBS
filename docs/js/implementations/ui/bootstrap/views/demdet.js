@@ -8,8 +8,7 @@
 import { t, fmtDate, fmtNumber } from '../../../kernel/core_abstractions/i18n/index.js';
 import { emptyStateHtml, EMPTY_STATE_VARIANT } from '../components/empty-state.js';
 import { composeOverview } from '../../core_abstractions/ports/manager/demdet-composer.js';
-
-const KIND_DEMDET = 'demdet';
+import { listDemdetInstances } from '../../core_abstractions/ports/data/sales-reads.js';
 
 const STATE_LABEL_KEYS = {
   NotStarted:       'demdet.state.not_started',
@@ -77,7 +76,7 @@ function buildTableBody(rows) {
 async function loadOverview() {
   const repo = getRepo();
   if (!repo) return { rows: [], kpis: { activeContainers: 0, overFreeTime: 0, expiringSoon: 0, totalExposureBaseDisplay: 0 } };
-  const instances = await repo.list(KIND_DEMDET, null).catch(() => []);
+  const instances = await listDemdetInstances().catch(() => []);
   return composeOverview(instances);
 }
 

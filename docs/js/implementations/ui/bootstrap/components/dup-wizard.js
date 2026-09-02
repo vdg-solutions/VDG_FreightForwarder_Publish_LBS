@@ -2,15 +2,16 @@
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { suppressDuplicatePair } from '../../core_abstractions/ports/data/report-reads.js';
 
-const PREF_DEDUP_SUPPRESSED_KEY = 'dedup_suppressed';
-const PREF_META_KEY             = 'preferences';
-const SCORE_PRECISION           = 2;
+const SCORE_PRECISION = 2;
 
 class VdgDupWizard extends LitElement {
+  // No `repo` property any more: the suppression goes through a named use-case, so the component
+  // needs nothing but the pairs. masters.js still assigns `wizard.repo` — a harmless no-op on an
+  // undeclared property, to be dropped when that view is converted.
   static properties = {
     clusters: { type: Array },
-    repo:     { type: Object },
     _clusters: { type: Array, state: true },
   };
 
@@ -19,7 +20,6 @@ class VdgDupWizard extends LitElement {
   constructor() {
     super();
     this.clusters  = [];
-    this.repo      = null;
     this._clusters = [];
   }
 
@@ -29,17 +29,13 @@ class VdgDupWizard extends LitElement {
     }
   }
 
+  // "These two are not the same thing" is a judgement about the data — where the suppression
+  // list lives and what a suppressed pair looks like are wasm's, not this component's.
   async _suppress(pair) {
-    const repo = this.repo;
-    if (repo) {
-      try {
-        const prefs  = (await repo.list('meta-pref', null))?.find((p) => p.id === PREF_META_KEY) || { id: PREF_META_KEY };
-        const suppressed = [...(prefs[PREF_DEDUP_SUPPRESSED_KEY] || [])];
-        suppressed.push({ a: pair.a.id, b: pair.b.id, suppressed_at: new Date().toISOString() });
-        await repo.put('meta-pref', PREF_META_KEY, { ...prefs, [PREF_DEDUP_SUPPRESSED_KEY]: suppressed });
-      } catch (err) {
-        console.warn('[dup-wizard] suppress write failed:', err.message); // DEV
-      }
+    try {
+      await suppressDuplicatePair(pair.a.id, pair.b.id);
+    } catch (err) {
+      console.warn('[dup-wizard] suppress write failed:', err.message); // DEV
     }
     this._clusters = this._clusters.filter((c) => c !== pair);
   }

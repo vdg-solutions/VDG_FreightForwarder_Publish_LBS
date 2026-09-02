@@ -12,6 +12,7 @@ import { currentUserEmail } from '../../../core_abstractions/ports/governance/ro
 import { drillLinesRowsHtml, drillLinesHeadHtml } from './pnl-drill-lines.js';
 import { exportExcel } from './pnl-report-export.js';
 import { isMountedRoute } from '../../util/view-mounted.js';
+import { pnlReportInputs } from '../../../core_abstractions/ports/data/report-reads.js';
 
 // F4-e: "Last12M" wasn't a real term in either language — TTM (trailing twelve months) is the
 // standard finance abbreviation for this window, same register as its three siblings, no
@@ -192,12 +193,12 @@ export async function render(root) {
   if (_onPivotRetry) window.removeEventListener('vdg:pivot-retry', _onPivotRetry);
   if (_onLocale)     window.removeEventListener('vdg:locale-changed', _onLocale);
 
+  const inputs   = await pnlReportInputs();
+  _allShipments  = inputs.shipments;
+  _allPnlLines   = inputs.pnlLines;
+
   const repo = getRepo();
   if (repo) {
-    [_allShipments, _allPnlLines] = await Promise.all([
-      repo.list('shipment', null),
-      repo.list('pnl_line', null),
-    ]);
     // Either source can silently degrade to a fresh-but-empty local cache when its background
     // bootstrap has not (yet) succeeded — sync_health.rs is Rust's own record of that, checked
     // here rather than trusting an empty array as "no data for this period" (AC: fix the type).
@@ -294,8 +295,8 @@ export async function render(root) {
     else                    { _dims    = e.detail.dims; }
     await refreshPivot();
   };
-  // pivot-table's own retry button (LOAD_FAILED state) — a full re-render re-runs the same
-  // repo.list() calls above, the only way to re-attempt the bootstrap this view depends on.
+  // pivot-table's own retry button (LOAD_FAILED state) — a full re-render re-runs pnlReportInputs
+  // above, the only way to re-attempt the bootstrap this view depends on.
   _onPivotRetry = () => { render(root); };
 
   window.addEventListener('vdg:pivot-cell-click',    _onPivotClick);

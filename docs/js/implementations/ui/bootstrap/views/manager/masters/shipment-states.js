@@ -7,6 +7,7 @@
 import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 import { migrateLegacyShipmentState } from '../../../../core_abstractions/ports/flows/shipment-state-migrator.js';
 import { SHIPMENT_STATES_KIND } from '../../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
@@ -28,8 +29,8 @@ function canWrite() {
   return canWriteMaster(KIND, currentRoles());
 }
 
-async function loadStates(repo) {
-  return safeMasterLoad(async () => (await repo.list(KIND, null).catch(() => [])) || [], 'shipment-states:load');
+async function loadStates() {
+  return safeMasterLoad(async () => (await listMasters(KIND).catch(() => [])) || [], 'shipment-states:load');
 }
 
 function rowHtml(s, isEditor) {
@@ -87,7 +88,7 @@ export async function render(root) {
   let states = [];
 
   async function loadAndRender() {
-    const loadRes = await loadStates(repo);
+    const loadRes = await loadStates();
     if (!loadRes.ok) {
       renderMasterLoadRetryRow(body, colSpan, t('shipment_states.load_error'), t('shipment_states.load_retry'), loadAndRender);
       return;
@@ -103,7 +104,9 @@ export async function render(root) {
     const editBtn = ev.target.closest('.btn-edit');
     if (!editBtn) return;
     const entity = states.find((s) => s.code === editBtn.dataset.code);
-    if (entity) openModal(root, entity, async (u) => { await repo.put(KIND, u.code, u); await loadAndRender(); });
+    // No `u.code` here any more: the kind DECLARES that it keys on `code` (master_registry.rs),
+    // so this call is the same shape as every other master view's.
+    if (entity) openModal(root, entity, async (u) => { await saveMaster(KIND, u); await loadAndRender(); });
   });
 
   root.querySelector('#btn-ss-migrate')?.addEventListener('click', async () => {

@@ -6,24 +6,25 @@ import { t }                  from '../../../../kernel/core_abstractions/i18n/in
 import { showConfirm }        from '../../helpers/show-confirm.js';
 import { KIND_SHIPMENT } from '../../../core_abstractions/ports/data/shipment-repo.js';
 import { bulkPut }            from '../../../core_abstractions/ports/cache/bulk-orchestrator.js';
-import { PREF_LOCKED_PERIODS_KEY } from '../../../core_abstractions/ports/data/write-gate.js';
-import { lockPeriod, readLockedPeriods } from '../../../core_abstractions/ports/governance/period-lock-registry.js';
-import { computeCommissions, buildPeriodKey, KIND_PNL_LINE } from '../../../core_abstractions/ports/manager/commission-calculator.js';
+import { lockPeriod } from '../../../core_abstractions/ports/governance/period-lock-registry.js';
+import { computeCommissions, buildPeriodKey } from '../../../core_abstractions/ports/manager/commission-calculator.js';
 import { compose as composeRules } from '../../../core_abstractions/ports/manager/commission-composer.js';
 import { safeMasterLoad }     from '../../../../kernel/core_abstractions/util/master-load.js';
 import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { commissionBasisLines, settledCommissionPayouts }
+  from '../../../core_abstractions/ports/data/report-reads.js';
 
+// The payout record's kind, still needed for the entity it WRITES (bulkPut) and for the
+// vdg:entity-changed topic; the READ of it is a named use-case now.
 const PAYOUT_KIND          = 'commission_payout';
 const KIND_COMMISSION_RULES = 'commission_rules';
 const DEFAULT_PERIOD_MODE  = 'month';
 const TOAST_AUTODISMISS_MS = 5_000;
-const PREFS_META_KEY       = 'preferences';
 
 let _shipments   = [];
 let _pnlLines    = [];
 let _payouts     = [];
 let _rules       = new Map();
-let _prefs       = {};
 let _periodMode  = DEFAULT_PERIOD_MODE;
 const _periodDate  = new Date();
 let _onEntity;
@@ -111,20 +112,15 @@ async function loadData() {
   const res = await safeMasterLoad(async () => {
     const [shipments, pnlLines, payouts] = await Promise.all([
       listShipments(repo, null),
-      repo.list(KIND_PNL_LINE, null),
-      repo.list(PAYOUT_KIND, null),
+      commissionBasisLines(),
+      settledCommissionPayouts(),
     ]);
     const composed = await composeRules(repo);
-    let prefs = {};
-    try {
-      const prefList = await repo.list('meta-pref', null);
-      prefs = prefList?.find((p) => p.id === PREFS_META_KEY) || {};
-    } catch { /* meta-pref absent on a fresh workspace — defaults to {} */ }
-    return { shipments, pnlLines, payouts, rules: composed.rules, prefs };
+    return { shipments, pnlLines, payouts, rules: composed.rules };
   }, 'commissions:load');
   _loadInFlight = false;
   if (!res.ok) return false;
-  ({ shipments: _shipments, pnlLines: _pnlLines, payouts: _payouts, rules: _rules, prefs: _prefs } = res.value);
+  ({ shipments: _shipments, pnlLines: _pnlLines, payouts: _payouts, rules: _rules } = res.value);
   return true;
 }
 
@@ -172,7 +168,7 @@ export async function render(root) {
       </div>
     </div>`;
 
-  await renderSuggestionsBanner(root.querySelector('#commission-suggest-banner'), getRepo());
+  await renderSuggestionsBanner(root.querySelector('#commission-suggest-banner'));
 
   let currentRows = computeCommissions(_shipments, _pnlLines, _rules, [], currentPeriodKey());
   renderTable(root, currentRows);
@@ -224,8 +220,7 @@ export async function render(root) {
       // and the write gate use. This used to splice the list inline — a second writer of the
       // same fact, and the only one, since closePeriod never touched it.
       await lockPeriod(repo, key, manager);
-      _prefs   = { ..._prefs, [PREF_LOCKED_PERIODS_KEY]: await readLockedPeriods(repo) };
-      _payouts = await repo.list(PAYOUT_KIND, null);
+      _payouts = await settledCommissionPayouts();
     }
 
     window.dispatchEvent(new CustomEvent('vdg:toast', {

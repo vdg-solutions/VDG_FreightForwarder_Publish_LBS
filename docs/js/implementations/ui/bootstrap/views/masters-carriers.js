@@ -3,7 +3,8 @@
 import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
-import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
+import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../core_abstractions/ports/data/master-repo.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
@@ -159,7 +160,7 @@ export async function render(root) {
 
   async function onEdit(entity) {
     openModal(root, entity, async (u) => {
-      await repo.put(KIND, u.id, u);
+      await saveMaster(KIND, u);
       items = items.map((i) => (i.id === u.id ? u : i));
       api?.setGridOption('rowData', items);
     });
@@ -191,7 +192,7 @@ export async function render(root) {
 
   async function reload() {
     const statusEl = root.querySelector('#m-status');
-    const listRes = foldSyncFailure(await boundedList(repo, KIND, `${KIND}:list`), KIND, repo);
+    const listRes = foldSyncFailure(await safeMasterLoad(() => listMasters(KIND), `${KIND}:list`), KIND, repo);
     loadFailed = !listRes.ok;
     items = loadFailed ? [] : listRes.value;
     api?.setGridOption('rowData', items);
@@ -207,7 +208,7 @@ export async function render(root) {
 
   function handleAdd() {
     openModal(root, null, async (entity) => {
-      await repo.put(KIND, entity.id, entity);
+      await saveMaster(KIND, entity);
       items = [...items, entity];
       api?.setGridOption('rowData', items);
       const hdr = root.querySelector('#grid-header');

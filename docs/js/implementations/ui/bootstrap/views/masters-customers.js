@@ -3,7 +3,8 @@
 import { currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { canWriteMaster } from '../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../helpers/show-confirm.js';
-import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
+import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../core_abstractions/ports/data/master-repo.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
@@ -88,7 +89,7 @@ export async function render(root) {
 
   async function onEdit(entity) {
     openModal(root, entity, async (updated) => {
-      await repo.put(KIND, updated.id, updated);
+      await saveMaster(KIND, updated);
       items = items.map((i) => (i.id === updated.id ? updated : i));
       api?.setGridOption('rowData', items);
     }, await loadReps());
@@ -129,7 +130,7 @@ export async function render(root) {
       return;
     }
 
-    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'customers:list'), KIND, repo);
+    const listRes = foldSyncFailure(await safeMasterLoad(() => listMasters(KIND), 'customers:list'), KIND, repo);
     loadFailed = !listRes.ok;
     items = loadFailed ? [] : listRes.value;
     api?.setGridOption('rowData', items);
@@ -145,7 +146,7 @@ export async function render(root) {
 
   async function handleAdd() {
     openModal(root, null, async (entity) => {
-      await repo.put(KIND, entity.id, entity);
+      await saveMaster(KIND, entity);
       items = [...items, entity];
       api?.setGridOption('rowData', items);
       const hdr = root.querySelector('#grid-header');

@@ -70,7 +70,7 @@ export async function composeStorage() {
 /// implemented in Rust (js_io.rs overrides them onto http_io), so the old ServerIoPort — a
 /// complete second copy of the wire contract — is gone rather than kept in step.
 export function createIoPort(userEmail) {
-  return new SharedIoPort(userEmail);
+  return new SharedIoPort(userEmail, () => window.__vdg_ledger_repo);
 }
 
 

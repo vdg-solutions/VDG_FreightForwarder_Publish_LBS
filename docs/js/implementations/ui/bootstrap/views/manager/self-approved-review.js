@@ -4,7 +4,9 @@
 
 import { compose } from '../../../core_abstractions/ports/manager/self-approved-composer.js';
 import { t, fmtDate } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { approvalDecisionLog } from '../../../core_abstractions/ports/data/report-reads.js';
 
+/// vdg:entity-changed topic, not a collection this screen names to read it.
 const KIND_DECISION     = 'approval_decision';
 const EMPTY_CELL        = '—';
 const MONTH_COUNT_BACK  = 12; // matches close-period.js's own back-window
@@ -18,8 +20,6 @@ let _selectedPeriod = null;
 let _decisions       = [];
 let _rows             = [];
 let _onEntity;
-
-function getRepo() { return window.__vdg_repo; }
 
 function monthOptions() {
   const now  = new Date();
@@ -76,8 +76,7 @@ function renderTable(root) {
 }
 
 async function reload(root) {
-  const repo = getRepo();
-  _decisions = repo ? await repo.list(KIND_DECISION, null) : [];
+  _decisions = await approvalDecisionLog();
   recompute();
   renderTable(root);
 }

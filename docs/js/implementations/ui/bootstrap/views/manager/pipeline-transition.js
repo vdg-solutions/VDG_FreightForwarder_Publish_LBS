@@ -3,14 +3,14 @@
 // node:test cannot resolve).
 //
 // F2 (production incident, v0.4.43): the drag handler used to write the new state with a raw
-// `repo.put('shipment', id, {...s, state})` — the FULL joined shipment (envelope + revenue
-// merged for rendering). That bypassed BOTH the `shipment.transition` re-check `persist_advanced`
-// performs AND `putEnvelope`'s split, so a drag could silently leak the rep's sell figures into
-// the shared folder CS reads, and any refusal never surfaced — it vanished into the background
-// outbox drain with no toast, the write looking like it worked. persistAdvancedState is the same
-// choke point detail-panel.js's own "advance" button already uses (fsm_ingest.rs::
-// persist_advanced): it re-checks the action, writes through putEnvelope, and announces the
-// change — the only lawful way a shipment's state gets written back.
+// generic store write naming the shipment kind itself — and it wrote the FULL joined shipment
+// (envelope + revenue merged for rendering). That bypassed BOTH the `shipment.transition` re-check
+// `persist_advanced` performs AND `putEnvelope`'s split, so a drag could silently leak the rep's
+// sell figures into the shared folder CS reads, and any refusal never surfaced — it vanished into
+// the background outbox drain with no toast, the write looking like it worked.
+// persistAdvancedState is the same choke point detail-panel.js's own "advance" button uses
+// (fsm_ingest.rs::persist_advanced): it re-checks the action, writes through putEnvelope, and
+// announces the change — the only lawful way a shipment's state gets written back.
 import { persistAdvancedState } from '../../../core_abstractions/ports/flows/fsm-ingest.js';
 
 /// (id, to, shipments, repo, wasm) -> the applied state, or null when `id` names no row this

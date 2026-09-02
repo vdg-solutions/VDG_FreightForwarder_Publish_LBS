@@ -4,10 +4,14 @@ import { APP_VERSION } from '../../kernel/core_abstractions/version.js';
 import { t } from '../../kernel/core_abstractions/i18n/index.js';
 import { onEvent } from '../core_abstractions/ports/sync/wma-engine.js';
 import { loadKindWmaState, saveKindWmaState } from '../core_abstractions/ports/sync/wma-store.js';
+import { reapplyMyValues, resolveConflict } from '../core_abstractions/ports/data/merge-resolve.js';
 
 const NEW_FEATURE_BANNER_DAYS = 7;
 const BREAKPOINT_TABLET_PX    = 768;
 const PREFS_META_KEY          = 'preferences';
+// The two verdicts merge_resolve.rs accepts; any other string is refused there.
+const CHOICE_MINE   = 'mine';
+const CHOICE_THEIRS = 'theirs';
 
 // vdg:store-locked fires for two DIFFERENT diagnoses — never blur them into one wording:
 //   'genuine-conflict' — store-client.js classified a real sahpool-genuine-conflict (Rust: no Web
@@ -52,6 +56,26 @@ function _fieldValText(v) {
   return s.slice(0, CONFLICT_VAL_MAX_CHARS);
 }
 
+// A refused resolution keeps the dialog open and SAYS why. The old code awaited a bare put and
+// closed regardless, so a refusal — a locked period, a row deleted upstream — vanished silently.
+function _showRefusal(dlg, message) {
+  let line = dlg.querySelector('#resolve-error');
+  if (!line) {
+    line = document.createElement('div');
+    line.id = 'resolve-error';
+    line.className = 'px-6 pb-4 text-xs text-red-600';
+    dlg.appendChild(line);
+  }
+  line.textContent = message || t('merge.resolve_failed');
+}
+
+/// Closes the dialog only when the write actually landed.
+function _settle(dlg, reply) {
+  if (!reply?.ok) { _showRefusal(dlg, reply?.error); return; }
+  dlg.close();
+  dlg.remove();
+}
+
 function _fieldDiffRows(fields, extra = () => '') {
   return fields.map((c) => `
     <div class="mb-2">
@@ -90,23 +114,15 @@ export function initConflictModal() {
       </div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    // F-28-06: re-put the winning body — re-enters the Rust rebase gate (apply_put). Base is
-    // detail.merged (auto-resolvable fields already policy-resolved); the buttons only decide
-    // the contested fields. _rev stamped to the remote _rev this event carried so the re-put
-    // fast-forwards instead of conflicting against its own stale base. merged is null when
-    // the row was deleted upstream — fall back to the raw sides.
-    const repo = window.__vdg_repo;
-    const mergeBase = merged && typeof merged === 'object' ? merged : null;
-    dlg.querySelector('#keep-mine').addEventListener('click', async () => {
-      const mine = { ...(mergeBase ?? local), _rev: remote?._rev };
-      for (const c of conflicts || []) mine[c.field] = c.local_val;
-      await repo?.put(kind, id, mine);
-      dlg.close(); dlg.remove();
-    });
-    dlg.querySelector('#use-theirs').addEventListener('click', async () => {
-      await repo?.put(kind, id, { ...(mergeBase ?? remote), _rev: remote?._rev });
-      dlg.close(); dlg.remove();
-    });
+    // F-28-06: the winning body is composed by `data_resolve_conflict`, not here — which side wins
+    // each contested field, which base it lands on when the row was deleted upstream, and the _rev
+    // the re-put fast-forwards from are all decisions, and decisions live in Rust. The whole event
+    // payload goes back so it has what it needs; the collection is checked there, not taken.
+    const resolveWith = (choice) => async () => {
+      _settle(dlg, await resolveConflict({ kind, id, choice, merged, local, remote, conflicts: conflicts || [] }));
+    };
+    dlg.querySelector('#keep-mine').addEventListener('click', resolveWith(CHOICE_MINE));
+    dlg.querySelector('#use-theirs').addEventListener('click', resolveWith(CHOICE_THEIRS));
   });
 }
 
@@ -148,15 +164,12 @@ export function initMergeToast() {
       dlg.showModal();
       dlg.querySelector('#merge-ok').onclick = () => { dlg.close(); dlg.remove(); };
       dlg.querySelector('#merge-undo').onclick = async () => {
-        // Fetch the freshest row (carries the post-merge _rev) and overlay this editor's
-        // values for the auto-resolved fields — a plain put through the rebase gate.
-        const repo = window.__vdg_repo;
-        const current = await repo?.get(kind, id);
-        if (current) {
-          for (const c of fields) current[c.field] = c.local_val;
-          await repo.put(kind, id, current);
-        }
-        dlg.close(); dlg.remove();
+        // "Use mine" over an auto-resolved merge. The re-read of the freshest row (it carries the
+        // post-merge _rev), the overlay and the write back through the rebase gate are one named
+        // use-case now — the dialog only names the fields the user is taking back.
+        _settle(dlg, await reapplyMyValues({
+          kind, id, fields: fields.map((c) => ({ field: c.field, value: c.local_val })),
+        }));
       };
     };
   });

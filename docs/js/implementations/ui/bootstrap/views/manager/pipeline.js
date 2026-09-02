@@ -12,6 +12,7 @@ import { todayLocal } from '../../../../kernel/core_abstractions/util/today-loca
 import { SHIPMENT_MAIN_PATH } from '../../../../kernel/core_abstractions/util/shipment-phases.js';
 import { guardMessage } from '../../../../kernel/core_abstractions/util/guard-messages.js';
 import { applyShipmentTransition } from './pipeline-transition.js';
+import { pipelineShipments } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const SEA_KANBAN_STATES = SHIPMENT_MAIN_PATH;
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
@@ -70,9 +71,7 @@ export function applyPipelineModeFilter(shipments, mode) {
 function getRepo() { return window.__vdg_repo; }
 
 async function loadShipments() {
-  const repo = getRepo();
-  if (!repo) return [];
-  return repo.list('shipment', null);
+  return pipelineShipments();
 }
 
 function applyFilter(list, filter) {

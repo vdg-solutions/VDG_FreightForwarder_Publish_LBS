@@ -6,6 +6,7 @@ import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/ses
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND = 'units-of-measure';
@@ -175,8 +176,8 @@ function rowHtml(u, isEditor) {
 
 // F-20-01: bounded — a stalled Drive write on a fresh workspace resolves to
 // { ok: false } instead of hanging the caller at "Đang tải…".
-async function loadUnits(repo) {
-  return safeMasterLoad(async () => (await repo.list(KIND, null).catch(() => [])) || [], 'units-of-measure:load');
+async function loadUnits() {
+  return safeMasterLoad(async () => (await listMasters(KIND).catch(() => [])) || [], 'units-of-measure:load');
 }
 
 export async function render(root) {
@@ -215,7 +216,7 @@ export async function render(root) {
   let units = [];
 
   async function loadAndRender() {
-    const loadRes = await loadUnits(repo);
+    const loadRes = await loadUnits();
     if (!loadRes.ok) {
       renderMasterLoadRetryRow(body, colSpan, t('common.load.error'), t('common.load.retry'), loadAndRender);
       return;
@@ -235,14 +236,14 @@ export async function render(root) {
   });
 
   root.querySelector('#btn-uom-add')?.addEventListener('click', () => {
-    openModal(root, null, units, async (entity) => { await repo.put(KIND, entity.id, entity); await loadAndRender(); });
+    openModal(root, null, units, async (entity) => { await saveMaster(KIND, entity); await loadAndRender(); });
   });
 
   body.addEventListener('click', async (ev) => {
     const editBtn = ev.target.closest('.btn-edit');
     if (editBtn) {
       const entity = units.find((i) => i.id === editBtn.dataset.id);
-      if (entity) openModal(root, entity, units, async (u) => { await repo.put(KIND, u.id, u); await loadAndRender(); });
+      if (entity) openModal(root, entity, units, async (u) => { await saveMaster(KIND, u); await loadAndRender(); });
     }
     const delBtn = ev.target.closest('.btn-delete');
     if (delBtn) {

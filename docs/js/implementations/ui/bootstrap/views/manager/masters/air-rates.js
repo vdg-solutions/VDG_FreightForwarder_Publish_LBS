@@ -3,7 +3,8 @@
 
 import { t, currentLocale } from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, foldSyncFailure, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { foldSyncFailure, safeMasterLoad, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { currentUserRole, currentUserRoles } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
@@ -147,7 +148,7 @@ export async function render(root) {
   const settings   = window.__vdg_workspace_settings ?? await readSettings(repo);
   const secondEyes = !!settings[SECOND_EYES_FIELD];
   const pricedRepo = window.__vdg_priced_repos?.[KIND];
-  const panel = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, secondEyes, liveRepo: repo }) : null;
+  const panel = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, secondEyes }) : null;
 
   // AC-05: a same-route mount timeout may have already painted the shell fallback into this
   // SAME root while the settings await above was stalled — bail instead of clobbering it.
@@ -190,7 +191,7 @@ export async function render(root) {
     const statusEl = root.querySelector('#ar-status');
     if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
-    const listRes = foldSyncFailure(await boundedList(repo, KIND, 'air-rates:list'), KIND, repo);
+    const listRes = foldSyncFailure(await safeMasterLoad(() => listMasters(KIND), 'air-rates:list'), KIND, repo);
     if (!listRes.ok) {
       if (tbody) tbody.innerHTML = '';
       emptyEl?.classList.add('hidden');
@@ -216,13 +217,13 @@ export async function render(root) {
   }
   if (panel && pendingEl) await safeMasterLoad(() => panel.renderPendingPanel(pendingEl, refreshPending), 'air-rates:pending');
 
-  // AC-05/06: canWriteDirect routes straight to repo.put; otherwise the edit becomes a
-  // proposal — the row is never put to the live table (no state.json mutation).
+  // AC-05/06: canWriteDirect routes straight to the live table; otherwise the edit becomes a
+  // proposal — the row is never written to the live table (no state.json mutation).
   async function saveEntity(entity) {
-    // One call, not a branch plus a guard the branch has to remember: panel.commit routes to
-    // repo.put or to a proposal, and refuses an overlapping window on either road.
+    // One call, not a branch plus a guard the branch has to remember: panel.commit routes to the
+    // live write or to a proposal, and refuses an overlapping window on either road.
     if (panel) await panel.commit(entity.id, entity);
-    else await repo.put(KIND, entity.id, entity);
+    else await saveMaster(KIND, entity);
     await reload();
   }
 

@@ -9,8 +9,7 @@
 import { t, fmtDate } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { emptyStateHtml, EMPTY_STATE_VARIANT } from '../../components/empty-state.js';
 import { composeOverview } from '../../../core_abstractions/ports/manager/manifest-composer.js';
-
-const KIND_MANIFEST = 'manifest';
+import { manifestFilings } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const STATE_LABEL_KEYS = {
   Draft:                   'manifest.state.draft',
@@ -34,8 +33,6 @@ const JURISDICTION_LABEL_KEYS = {
 function escHtml(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
-
-function getRepo() { return window.__vdg_repo; }
 
 function stateLabel(state) {
   return t(STATE_LABEL_KEYS[state] ?? 'manifest.state.draft');
@@ -117,10 +114,7 @@ function buildTable(rows) {
 }
 
 async function loadOverview() {
-  const repo = getRepo();
-  if (!repo) return { rows: [] };
-  const manifests = await repo.list(KIND_MANIFEST, null).catch(() => []);
-  return composeOverview(manifests);
+  return composeOverview(await manifestFilings());
 }
 
 export async function render(root) {

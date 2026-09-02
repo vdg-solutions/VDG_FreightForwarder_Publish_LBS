@@ -3,10 +3,10 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { openAddModal } from './commission-rules-modal.js';
+import { commissionRuleEditorInputs, saveCommissionRule, deleteCommissionRule }
+  from '../../../core_abstractions/ports/data/report-reads.js';
 
 const KIND_COMMISSION_RULES = 'commission_rules';
-const KIND_USERS            = 'user'; // F-39-01: canonical user-master kind (MASTER_REGISTRY)
-const KIND_COMMISSION_ENTRY = 'commission_entry';
 
 let _users          = [];
 const _rules        = new Map();
@@ -17,20 +17,17 @@ function getRepo() { return window.__vdg_repo; }
 function wasm() { return window.__vdg_wasm; }
 
 async function loadData() {
-  const repo = getRepo();
-  if (!repo) return;
-  const [users, ruleEntities, entries] = await Promise.all([
-    repo.list(KIND_USERS, null).catch(() => []),
-    repo.list(KIND_COMMISSION_RULES, null).catch(() => []),
-    repo.list(KIND_COMMISSION_ENTRY, null).catch(() => []),
-  ]);
+  // One read for the whole editor. The author projection used to be `entries.map(e =>
+  // e.created_by)` here, which meant every commission-entry row crossed the boundary to produce
+  // a list of email addresses.
+  const { users, rules, entryAuthors } = await commissionRuleEditorInputs();
   _users = users;
   _rules.clear();
-  for (const r of ruleEntities) {
+  for (const r of rules) {
     const key = r.sales_id || r.salesId || r.id;
     if (key) _rules.set(key, r);
   }
-  _entrySalesIds = entries.map((e) => e.created_by).filter(Boolean);
+  _entrySalesIds = entryAuthors;
 }
 
 // One row per user PLUS one row per rule with no matching user — a rule is not required to
@@ -217,7 +214,7 @@ export async function render(root) {
       return;
     }
 
-    await getRepo().delete(KIND_COMMISSION_RULES, row.id);
+    await deleteCommissionRule(row.id);
     window.dispatchEvent(new CustomEvent('vdg:toast', {
       detail: { type: 'success', message: t('commission_rules.deleted') },
     }));
@@ -229,7 +226,7 @@ export async function render(root) {
 
   root.querySelector('#btn-add-rule').addEventListener('click', () => {
     openAddModal(root, async (entity) => {
-      await getRepo().put(KIND_COMMISSION_RULES, entity.id, entity);
+      await saveCommissionRule(entity.id, entity);
       await loadData();
       await refreshGrid();
     });

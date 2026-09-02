@@ -20,6 +20,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { openEditModal } from './users-modals.js';
 import { navigate } from '../../router.js';
+import { salesProfiles } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const KIND_USER = 'user';
 const TOAST_MS  = 4_000;
@@ -95,8 +96,7 @@ function _modalDeps() {
 // ── load + reload ─────────────────────────────────────────────────────────────
 
 async function _reload(root) {
-  const repo = getRepo();
-  _allUsers  = repo ? await repo.list(KIND_USER, null) : [];
+  _allUsers = await salesProfiles();
   _applyAndMount(root);
 }
 

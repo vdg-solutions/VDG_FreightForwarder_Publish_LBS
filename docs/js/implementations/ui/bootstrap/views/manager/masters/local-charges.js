@@ -3,6 +3,7 @@
 // Sales tra cứu biểu phí local charge theo hãng tàu; tên Việt, VAT kép, search alias.
 
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { currentUserRole, currentUserRoles } from '../../../../core_abstractions/ports/governance/route-guard.js';
 import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
@@ -87,7 +88,7 @@ export async function render(root) {
   // migration keeps its single owner in the settings screens.
   const settings   = window.__vdg_workspace_settings ?? await readSettings(repo);
   const secondEyes = !!settings[SECOND_EYES_FIELD];
-  const panel      = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, secondEyes, liveRepo: repo }) : null;
+  const panel      = pricedRepo ? createPricedGovernancePanel({ pricedRepo, refName: KIND, role, secondEyes }) : null;
   const colSpan    = LOAD_COL_SPAN + (isEditor ? 1 : 0);
   // Container is what separates otherwise identical tariff rows (a 20' and a 40' Empty Reposition
   // differ ONLY here) — without the column the grid renders five distinct charges as five copies.
@@ -130,9 +131,11 @@ export async function render(root) {
   // failure instead of hanging at "Đang tải…".
   async function loadAndRender() {
     const loadRes = await safeMasterLoad(() => Promise.all([
-      repo.list(KIND, null).catch(() => []),
-      repo.list(UNIT_KIND, null).catch(() => []),
-      repo.list(CARRIER_KIND, null).catch(() => []),
+      // Each of the three falls back on its own: the two FK tables only supply labels, so a
+      // charge row still renders (with its raw code) when one of them cannot be read.
+      listMasters(KIND).catch(() => []),
+      listMasters(UNIT_KIND).catch(() => []),
+      listMasters(CARRIER_KIND).catch(() => []),
     ]), 'local-charges:load');
 
     if (!loadRes.ok) {
@@ -179,13 +182,13 @@ export async function render(root) {
   }
   if (panel && pendingEl) await panel.renderPendingPanel(pendingEl, refreshPending);
 
-  // AC-01/05: canWriteDirect routes straight to repo.put; otherwise the edit becomes a
-  // proposal — the row is never put to the live table (no state.json mutation).
+  // AC-01/05: canWriteDirect routes straight to the live table; otherwise the edit becomes a
+  // proposal — the row is never written to the live table (no state.json mutation).
   async function saveEntity(entity) {
-    // One call, not a branch plus a guard the branch has to remember: panel.commit routes to
-    // repo.put or to a proposal, and refuses an overlapping window on either road.
+    // One call, not a branch plus a guard the branch has to remember: panel.commit routes to the
+    // live write or to a proposal, and refuses an overlapping window on either road.
     if (panel) await panel.commit(entity.id, entity);
-    else await repo.put(KIND, entity.id, entity);
+    else await saveMaster(KIND, entity);
     await loadAndRender();
     apply();
   }

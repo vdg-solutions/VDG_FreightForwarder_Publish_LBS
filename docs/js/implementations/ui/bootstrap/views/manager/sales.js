@@ -4,11 +4,12 @@ import '../../components/sparkline.js';
 import { navigate }            from '../../router.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 import { KIND_SHIPMENT } from '../../../core_abstractions/ports/data/shipment-repo.js';
-import { computeCommissions, computeSparkline, buildPeriodKey, SPARKLINE_MONTHS, KIND_PNL_LINE } from '../../../core_abstractions/ports/manager/commission-calculator.js';
+import { computeCommissions, computeSparkline, buildPeriodKey, SPARKLINE_MONTHS } from '../../../core_abstractions/ports/manager/commission-calculator.js';
 import { compose as composeRules } from '../../../core_abstractions/ports/manager/commission-composer.js';
 import { t }                        from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid }              from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { commissionBasisLines } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const DEFAULT_PERIOD_MODE    = 'month';
 const KIND_COMMISSION_RULES  = 'commission_rules';
@@ -224,7 +225,7 @@ export async function render(root) {
   if (repo) {
     [_shipments, _pnlLines] = await Promise.all([
       listShipments(repo, null),
-      repo.list(KIND_PNL_LINE, null),
+      commissionBasisLines(),
     ]);
     const composed = await composeRules(repo);
     _rules = composed.rules;
@@ -309,7 +310,7 @@ export async function render(root) {
     const kind = e.detail?.kind;
     if (kind !== KIND_SHIPMENT && kind !== KIND_COMMISSION_RULES) return;
     if (repo) {
-      [_shipments, _pnlLines] = await Promise.all([listShipments(repo, null), repo.list(KIND_PNL_LINE, null)]);
+      [_shipments, _pnlLines] = await Promise.all([listShipments(repo, null), commissionBasisLines()]);
       const composed = await composeRules(repo);
       _rules = composed.rules;
     }

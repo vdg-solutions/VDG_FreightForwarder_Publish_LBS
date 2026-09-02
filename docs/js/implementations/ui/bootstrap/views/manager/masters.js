@@ -2,6 +2,10 @@
 
 import '../../components/dup-wizard.js';
 import { findMatch }      from '../../../core_abstractions/ports/cache/master-deduper.js';
+import { listMasters, saveMaster } from '../../../core_abstractions/ports/data/master-repo.js';
+import { listWhere }      from '../../../core_abstractions/ports/data/repo-query.js';
+import { KIND_SHIPMENT }  from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { KIND_PNL_LINE }  from '../../../core_abstractions/ports/manager/commission-calculator.js';
 import { showConfirm }    from '../../helpers/show-confirm.js';
 import { t }              from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
@@ -77,7 +81,7 @@ function mountUserGrid(container, users) {
 // this master-data row for the data-quality view below, not an access decision.
 async function renderUsers(root) {
   const repo  = getRepo();
-  const users = repo ? await repo.list(USER_KIND, null) : [];
+  const users = repo ? await listMasters(USER_KIND) : [];
 
   root.innerHTML = `
     <div class="p-6 space-y-4 max-w-[1600px] mx-auto">
@@ -118,7 +122,7 @@ async function renderUsers(root) {
       return;
     }
     const updated = { ...user, status: STATUS_INACTIVE, deactivated_at: new Date().toISOString(), deactivated_by: currentUser() };
-    if (repo) await repo.put(USER_KIND, id, updated);
+    if (repo) await saveMaster(USER_KIND, updated);
     toast(`${user.name} deactivated.`);
     await renderUsers(root);
   });
@@ -204,9 +208,12 @@ function renderDataQuality(container, customers, shipments, pnlLines) {
 
 async function renderCustomersMaster(root) {
   const repo      = getRepo();
-  const customers = repo ? await repo.list(KIND_CUSTOMER, null) : [];
-  const shipments = repo ? await repo.list('shipment', null) : [];
-  const pnlLines  = repo ? await repo.list('pnl_line', null) : [];
+  // Three reads, same as before — the data-quality panel below needs all three. The two
+  // non-master kinds go through listWhere (the named read every other view uses for them); only
+  // the customer table is master data with a registry entry behind it.
+  const [customers, shipments, pnlLines] = repo
+    ? await Promise.all([listMasters(KIND_CUSTOMER), listWhere(repo, KIND_SHIPMENT), listWhere(repo, KIND_PNL_LINE)])
+    : [[], [], []];
 
   const managerBar = document.createElement('div');
   managerBar.className = 'flex gap-2 mb-4';

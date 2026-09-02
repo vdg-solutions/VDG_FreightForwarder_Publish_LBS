@@ -1,7 +1,8 @@
 // Manager Period Close — F-14-11
 
-import { getCurrentPeriodLock, runPreCloseChecks, closePeriod, reopenPeriod, loadClosedPeriods, PERIOD_CLOSE_KIND, REASON_MAX_CHARS }
+import { getCurrentPeriodLock, runPreCloseChecks, closePeriod, reopenPeriod, loadClosedPeriods, REASON_MAX_CHARS }
   from '../../../core_abstractions/ports/governance/period-close.js';
+import { periodCloseRecord } from '../../../core_abstractions/ports/data/report-reads.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
@@ -114,10 +115,10 @@ async function loadSheetJs() {
 }
 
 async function handleExport(period) {
-  const repo = getRepo();
-  if (!repo || !period) return;
-  const records = await repo.list(PERIOD_CLOSE_KIND, null).catch(() => []);
-  const rec     = records.find((r) => r.period === period);
+  if (!period) return;
+  // The close record OF THIS PERIOD — the screen used to pull every close record ever written and
+  // find() the one it wanted.
+  const rec = await periodCloseRecord(period).catch(() => null);
 
   await loadSheetJs();
   if (!window.XLSX) { window.print(); return; }

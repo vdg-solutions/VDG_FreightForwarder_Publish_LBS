@@ -1,17 +1,28 @@
 // io-port-shared.js — the half of the wasm IO port that does not depend on where the bytes go:
-// the local cache tier, the app event bus, the author identity, the ledger repo. Every storage
-// authority's IoPort (Drive, vdg-server) extends this and adds only the drive_*/ws_* half.
+// the local cache tier, the app event bus, the author identity, the ledger repo. Every network
+// method of the port is implemented in Rust (js_io.rs over http_io); this is the local half.
 
 import { localStore } from './local-store.js';
 import { dispatchAppEvent } from './events.js';
 import { getCurrentUser } from './identity.js';
-import { ledgerRepo } from './ledger-repo.js';
 
 const UNKNOWN_AUTHOR = 'unknown';
+const LEDGER_NOT_MOUNTED = 'ledger repo not mounted yet';
 
 export class SharedIoPort {
-  constructor(userEmail) {
+  /// `ledgerRepoRef` is a thunk, not the repo: this port is built at build-repo-stack, while the
+  /// wasm ledger repo is mounted later in deferred init. The outbox drain that calls the ledger_*
+  /// methods below runs after both, so resolving late is the only ordering that works. The
+  /// composition root supplies it (bootstrap/compose.js) — no global read from this layer.
+  constructor(userEmail, ledgerRepoRef = null) {
     this.userEmail = userEmail;
+    this._ledgerRepoRef = ledgerRepoRef;
+  }
+
+  _ledger() {
+    const repo = this._ledgerRepoRef?.();
+    if (!repo) throw new Error(LEDGER_NOT_MOUNTED);
+    return repo;
   }
 
   cache_get(kind, id)       { return localStore().cache_get(kind, id); }
@@ -33,9 +44,9 @@ export class SharedIoPort {
     return live?.email || this.userEmail || UNKNOWN_AUTHOR;
   }
 
-  async ledger_get_chart()                         { return ledgerRepo().chartOfAccounts(); }
-  async ledger_get_rules()                         { return ledgerRepo().postingRules(); }
-  async ledger_is_posted(posted_index)             { return ledgerRepo().isAlreadyPosted(posted_index); }
-  async ledger_append_leg(year, account_code, leg) { return ledgerRepo().appendLeg(year, account_code, leg); }
-  async ledger_record_posted(posted_index, ids)    { return ledgerRepo().recordPosted(posted_index, ids); }
+  async ledger_get_chart()                         { return this._ledger().chartOfAccounts(); }
+  async ledger_get_rules()                         { return this._ledger().postingRules(); }
+  async ledger_is_posted(posted_index)             { return this._ledger().isAlreadyPosted(posted_index); }
+  async ledger_append_leg(year, account_code, leg) { return this._ledger().appendLeg(year, account_code, leg); }
+  async ledger_record_posted(posted_index, ids)    { return this._ledger().recordPosted(posted_index, ids); }
 }

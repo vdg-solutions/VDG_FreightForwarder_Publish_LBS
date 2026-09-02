@@ -3,6 +3,8 @@
 import { composeAR, composeAP, composeTimeline, AR_CURRENT_DAYS, AR_BUCKET_31_60, AR_BUCKET_61_90, CREDIT_UTILIZATION_WARN_PCT, CREDIT_UTILIZATION_EXCEEDED_PCT }
   from '../../../core_abstractions/ports/manager/ar-composer.js';
 import { fetchClosingRatesBuy, renderFxRevalSummary } from './cash-flow-fx-reval.js';
+import { cashFlowInputs, receivablesLedger, markReceivableFollowedUp, addReceivableNote }
+  from '../../../core_abstractions/ports/data/report-reads.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 
@@ -10,6 +12,7 @@ const MAX_CREDIT_ALERTS   = 3;
 const PREFS_META_KEY      = 'preferences';
 const CHART_ACTUAL_COLOR  = 'rgba(59,130,246,0.7)';
 const CHART_FORECAST_COLOR= 'rgba(148,163,184,0.5)';
+// vdg:entity-changed topics, not collections this screen reads — the reads are named use-cases.
 const KIND_BILLING        = 'billing';
 const KIND_CUSTOMER       = 'customers';
 
@@ -23,8 +26,6 @@ let _shipments     = [];
 let _dismissedIds  = [];
 let _store         = null;
 let _onEntity;
-
-function getRepo() { return window.__vdg_repo; }
 
 function tabBtnClass(active) {
   return `px-4 py-2 text-sm font-medium rounded-tl-lg rounded-tr-lg ${active
@@ -125,22 +126,16 @@ function showRowActions(container, row) {
   div.addEventListener('click', async (e) => {
     const action = e.target.closest('[data-action]')?.dataset.action;
     if (!action) return;
-    const repo = getRepo();
     if (action === 'email') {
       const subj = encodeURIComponent(t('cash_flow.mail.subject', {
         customer: row.customer,
         amount: (row.total_outstanding || 0).toLocaleString(),
       }));
       window.location.href = `mailto:?subject=${subj}`;
-    } else if (action === 'followup' && repo) {
-      const bEntry = _billing.find((b) => (b.customer || b.Customer) === row.customer);
-      if (bEntry) {
-        await repo.put(KIND_BILLING, bEntry.id, {
-          ...bEntry,
-          followed_up_at: new Date().toISOString(),
-          followed_up_by: window.__vdg_auth?.getCurrentUser?.()?.email || 'manager',
-        });
-      }
+    } else if (action === 'followup') {
+      // Which receivable this customer NAME refers to, the timestamp and the actor are all
+      // decided in wasm — this used to find() over the array the view happened to be holding.
+      await markReceivableFollowedUp(row.customer);
       e.target.textContent = t('cash_flow.status.marked');
     } else if (action === 'note') {
       const ta = document.createElement('textarea');
@@ -151,12 +146,8 @@ function showRowActions(container, row) {
       ta.focus();
       ta.addEventListener('blur', async () => {
         const note = ta.value.trim();
-        if (!note || !repo) return;
-        const bEntry = _billing.find((b) => (b.customer || b.Customer) === row.customer);
-        if (bEntry) {
-          const notes = [...(bEntry.notes || []), { text: note, at: new Date().toISOString() }];
-          await repo.put(KIND_BILLING, bEntry.id, { ...bEntry, notes });
-        }
+        if (!note) { ta.remove(); return; }
+        await addReceivableNote(row.customer, note);
         ta.remove();
       });
     } else if (action === 'print') {
@@ -231,14 +222,10 @@ export async function render(root) {
     _dismissedIds = prefs?.dismissed_credit_alerts || [];
   } catch { _store = null; }
 
-  const repo = getRepo();
-  if (repo) {
-    [_billing, _pnlLines, _shipments] = await Promise.all([
-      repo.list(KIND_BILLING, null),
-      repo.list('pnl_line', null),
-      repo.list('shipment', null),
-    ]);
-  }
+  const inputs = await cashFlowInputs();
+  _billing   = inputs.receivables;
+  _pnlLines  = inputs.costLines;
+  _shipments = inputs.shipments;
 
   const today       = Date.now();
   const fxRatesBuy  = await fetchClosingRatesBuy(_billing);
@@ -293,7 +280,7 @@ export async function render(root) {
     const { kind } = e.detail || {};
     if (kind !== KIND_BILLING && kind !== KIND_CUSTOMER) return;
 
-    if (repo) _billing = await repo.list(KIND_BILLING, null);
+    _billing = await receivablesLedger();
     const freshRatesBuy = await fetchClosingRatesBuy(_billing);
     const fresh = composeAR({ billingEntities: _billing, today: Date.now(), fxRatesBuy: freshRatesBuy });
     mountArGrid(root.querySelector('#ar-grid-container'), fresh.rows);

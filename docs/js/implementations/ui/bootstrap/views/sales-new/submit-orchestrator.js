@@ -1,52 +1,28 @@
-// submit-orchestrator.js — validate, persist; buildShipment delegated to shipment-builder.js
+// submit-orchestrator.js — the save, as the form performs it. Every DECISION it used to make is a
+// named use-case now (owner law 2026-09-01): the Job No precedence and the collision arbitration in
+// `operators/flows/job_no_arbitration.rs`, the ledger-version policy, the commission-entry and
+// pnl-line id schemes, the EX/IM ref prefix and the submission rules in
+// `operators/data/shipment_submit.rs`. What is left here is sequence and the user's error message.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 import { buildShipment, deriveDirection } from './shipment-builder.js';
-import { pnlLineId, deletePnlLinesFor } from '../../../core_abstractions/ports/data/pnl-line-id.js';
-import { putShipment, rollbackShipmentCreate, overwriteCommissionEntries, getEnvelope, listEnvelopes } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { putShipment, rollbackShipmentCreate, getEnvelope } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import {
+  mintShipmentRef, resolveJobNo, healJobNoCollision, nextLedgerVersion, submissionErrorKeys, writeSideRecords, resolvePublishState } from '../../../core_abstractions/ports/data/shipment-submit.js';
 import { ensureShipmentStateAliases } from '../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { registerFsmEntity } from '../../../core_abstractions/ports/flows/fsm-ingest.js';
 import { autoAdvanceShipment } from '../../../core_abstractions/ports/flows/fsm-auto-advance.js';
-import { ensureRepCode } from '../../../core_abstractions/ports/flows/rep-code-registry.js';
-import { assignJobNo } from '../../../core_abstractions/ports/flows/job-no-gen.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
-const KIND_USER = 'user';
 const WARN_PNL_LINES_MISSING = 'pnl_lines_empty';
-const INITIAL_LEDGER_VERSION = 1; // F-23-03 pm-decisions.md Q3: envelope-only field
+/// A create has no version to count from; the rule that turns that into 1 is wasm's.
+const NO_PRIOR_VERSION = null;
 
-// window is undefined under node:test (this module is imported there directly) — guard
-// instead of a bare `window.__vdg_ledger_repo` default so the browser global stays lazy.
-function _defaultLedgerRepo() {
-  return typeof window !== 'undefined' ? window.__vdg_ledger_repo : undefined;
-}
-
-function directionPrefix(direction) {
-  return (direction || '').toLowerCase() === 'import' ? 'IM' : 'EX';
-}
-
-// → string[] (empty = valid); used by the old 5-section form
+// → string[] (empty = valid); used by the old 5-section form. The RULES are wasm's — this picks
+// the reader's words for the keys they answer with.
 export function validateForm(state) {
-  const errs = [];
-  if (!state.mbl && !state.hbl && !state.job_file_no) {
-    errs.push(t('sales_new.validation.no_bill'));
-  }
-  if (!state.customer) {
-    errs.push(t('sales_new.validation.no_customer'));
-  }
-  if (!state.pnl_lines.some((l) => l.amount > 0)) {
-    errs.push(t('sales_new.validation.no_lines'));
-  }
-  if (state._etdEtaError) {
-    errs.push(t('sales_new.etd_eta_warn'));
-  }
-  // Override mode: amount + recipient mandatory
-  const overrideEntry = (state.commission_entries || []).find((ce) => ce.source === 'Override');
-  if (overrideEntry && (!overrideEntry.gross_amount || !overrideEntry.recipient)) {
-    errs.push(t('sales_new.validation.override_incomplete'));
-  }
-  return errs;
+  return submissionErrorKeys(state).map((key) => t(key));
 }
 
 // Highlight fields + show summary block (AC-11). Called on EVERY submit attempt, not only a
@@ -85,25 +61,21 @@ export function highlightErrors(root, errors) {
   }
 }
 
-// The Shipments list + sales analytics aggregate from `pnl_line` entities (only the Excel-import
-// path created them). Manual P&Ls had only embedded shipment.pnl_lines → 0 revenue in the list
-// ("thiếu doanh thu"). Materialize one pnl_line per embedded line, keyed `${ref}-L<n>`, so both
-// entry paths agree. Fields already match (selling_vnd_collect / buying_vnd_pay from buildShipment).
-// F-57-01: id now comes from the shared pnlLineId() helper — the import path mints the identical
-// shape, so cleanup below reaches lines from either entry path.
-async function _writePnlLines(repo, ref, shipment, version) {
-  const lines = shipment.pnl_lines || [];
-  for (let i = 0; i < lines.length; i++) {
-    const id = pnlLineId(ref, i + 1);
-    await repo.put('pnl_line', id, { ...lines[i], id, shipment_ref: ref, _ledger_version: version });
-  }
-}
-
-// F-57-01: enumerate-and-delete, replacing a fixed `${ref}-L1`..`-L50` probe that could not see
-// the import path's zero-padded `-L000` ids — those survived the overwrite and double-counted
-// the shipment's revenue in the grid and in sales analytics.
-async function _deletePnlLines(repo, ref) {
-  await deletePnlLinesFor(repo, ref);
+// The rows that hang off a saved shipment — its commission entries and its P&L lines — in ONE
+// call for the whole of both sets. A partial write is raised, never warned about and passed over:
+// the create path compensates on it, and on an amendment the rep would otherwise be told the save
+// landed while what they are owed was not written.
+async function _writeSideRecords(ref, shipment, salesRepId, version, freshRef) {
+  const written = await writeSideRecords({
+    shipmentRef:     ref,
+    commissionLines: shipment.commission_lines || [],
+    pnlLines:        shipment.pnl_lines || [],
+    ledgerVersion:   version,
+    occurredAt:      todayLocal(),
+    createdBy:       salesRepId || null,
+    freshRef,
+  });
+  if (!written.ok) throw new Error(`side records incomplete: ${(written.skipped || []).join(', ')}`);
 }
 
 // F-18-11: seed-if-unseeded + load once per call — resolver input for buildShipment's state
@@ -112,90 +84,30 @@ async function _loadStateAliasRows(repo) {
   return ensureShipmentStateAliases(repo);
 }
 
-async function _repCodeFor(repo, salesRepId) {
-  const userId = `user:${salesRepId}`;
-  const user = (await repo.get(KIND_USER, userId).catch(() => null)) || { id: userId, sales_code: null };
-  return ensureRepCode(user, repo);
-}
-
-// True if some OTHER shipment (shipment_ref !== excludeRef) already carries jobNo. Catches the
-// stale-draft-reuse case: a form draft persisted job_no before submit (mount-time preview),
-// the user abandons/reopens it after already submitting once, and resubmits — without this
-// check the second save would mint a duplicate legal doc number (F-32-01 QA rework).
-async function _jobNoTaken(repo, jobNo, excludeRef) {
-  const matches = await listEnvelopes(repo, (s) => s.job_no === jobNo && s.shipment_ref !== excludeRef);
-  return matches.length > 0;
-}
-
-// Cross-tab TOCTOU (F-41-04): two submits can BOTH pass _jobNoTaken before either write lands —
-// the pre-check is check-then-write, not atomic, and the submit guard only covers one render.
-// So after the write, look again. The LOWEST shipment_ref keeps the contested number (the same
-// deterministic winner rule as bundle-file-heal / drive-file-dedup, so both sides agree without
-// coordination); the loser re-mints and re-saves. HBL/D-O mirror the Job No when auto-filled
-// (F-32-01), so a healed number carries them along. Cross-DEVICE collisions that sync in after
-// both sessions closed are not reachable from here — that residue is E-32's numbering redesign.
-async function _healJobNoCollision(repo, shipment, salesRepId) {
-  const jobNo = shipment.job_no;
-  if (!jobNo) return;
-  const rivals = await listEnvelopes(repo, (s) => s.job_no === jobNo && s.shipment_ref !== shipment.shipment_ref);
-  if (!rivals.length) return;
-  const winner = [shipment.shipment_ref, ...rivals.map((r) => r.shipment_ref)].sort()[0];
-  if (winner === shipment.shipment_ref) return; // we keep the number; the rival's session heals its own
-  const fresh = await assignJobNo(repo, await _repCodeFor(repo, salesRepId));
-  if (shipment.do_no === jobNo) shipment.do_no = fresh;
-  if (shipment.hbl === jobNo) shipment.hbl = fresh;
-  shipment.job_no = fresh;
-  await putShipment(repo, shipment);
-}
-
-// F-32-01: use the form-supplied Job No when present; on edit, preserve the shipment's prior
-// Job No (mirrors the state-preservation precedent above); otherwise generate one locally —
-// keeps submitForm/updateForm complete, independently-correct entry points for callers that
-// bypass the interactive form (e.g. batch import, tests). `ownRef` is the shipment_ref this
-// call is writing to (null for submitForm's brand-new ref) — excluded from the collision check
-// so re-saving a record never regenerates its own job_no.
-async function _resolveJobNo(state, repo, salesRepId, priorJobNo = null, ownRef = null) {
-  if (state.job_no) {
-    if (state.job_no === priorJobNo) return state.job_no; // own record, unchanged — no lookup needed
-    if (await _jobNoTaken(repo, state.job_no, ownRef)) {
-      return assignJobNo(repo, await _repCodeFor(repo, salesRepId));
-    }
-    return state.job_no;
-  }
-  if (priorJobNo) return priorJobNo;
-  return assignJobNo(repo, await _repCodeFor(repo, salesRepId));
-}
-
-// #13 (owner 2026-08-08): shipment_ref = EX|IM-YYMMDD-{HASH8}, minted in WASM
-// (store/operators/ref_gen.rs) — entropy from (rep salt + time + nonce) plus a local same-id
-// regen guard. Replaces the counted sequence whose per-user cache made two reps mint the
-// same EX-YYMMDD-001 on the same day (the KNOWN LIMIT this comment block used to carry).
-async function _mintFreeShipmentRef(repo, dir, salesRepId) {
-  if (!repo?.mint_shipment_ref) throw new Error('WASM repo not ready');
-  return await repo.mint_shipment_ref(dir, String(salesRepId || ''));
-}
-
-// validate → buildShipment → repo.put → commission_entries → post ledger → return
-// { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every repo.put this
-// call made (compensating delete, not a real transaction — pm-decisions.md Q3).
-export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultLedgerRepo(), opts = {}) {
+// validate → buildShipment → putShipment → side records → post ledger → return
+// { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every write this call made
+// (compensating delete, not a real transaction — pm-decisions.md Q3).
+export async function submitForm(state, repo, salesRepId, opts = {}) {
   if (!repo) throw new Error('Repo not available');
 
   const publish = opts.publish !== false;
 
-  // F-41-03 follow-up: the same derivation the record stores — an import job's ref must not
-  // mint under EX just because the form has no explicit direction field.
-  const dir = directionPrefix(deriveDirection(state));
-  const ref = await _mintFreeShipmentRef(repo, dir, salesRepId);
+  // The direction the job runs decides the ref's prefix — an import job must not mint under EX
+  // just because the form carries no explicit direction field (F-41-03).
+  const ref = await mintShipmentRef(repo, deriveDirection(state), salesRepId);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
-  const jobNo = await _resolveJobNo(state, repo, salesRepId);
-  const shipment = buildShipment(state, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
-  shipment._ledger_version = INITIAL_LEDGER_VERSION;
+  const jobNo = await resolveJobNo({ formJobNo: state.job_no, salesRepId });
+  let shipment = buildShipment(state, ref, salesRepId, { publishState: resolvePublishState(null, publish), stateAliasRows, jobNo });
+  const version = nextLedgerVersion(NO_PRIOR_VERSION);
+  shipment._ledger_version = version;
   // E-37: two records, split in Rust. The envelope goes to _shared/shipments where CS and the rep
   // both work; the sell side goes to the rep's fork, which CS holds no permission on.
   await putShipment(repo, shipment);
-  await _healJobNoCollision(repo, shipment, salesRepId);
+  // F-41-04: the pre-check is check-then-write, so look again now the write has landed. A record
+  // that lost the arbitration comes back re-minted and already re-saved — carry on with THAT one,
+  // the publish snapshot below reads the Job No off it.
+  shipment = await healJobNoCollision(shipment, salesRepId);
   await registerFsmEntity(ref, shipment.state); // F-19-88 AC-01: make it a first-class FSM entity
 
   const warnings = [];
@@ -203,25 +115,8 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
     warnings.push(WARN_PNL_LINES_MISSING);
   }
 
-  // F-15-59: commission_lines is the ground-truth (embedded in shipment payload via
-  // buildShipment); write one commission_entry row per line, mirrors updateForm.
-  const commLines = shipment.commission_lines || [];
-
   try {
-    for (let i = 0; i < commLines.length; i++) {
-      const key    = `${ref}-CE${i + 1}`;
-      const record = {
-        ...commLines[i],
-        shipment_ref:      ref,
-        occurred_at:       todayLocal(),
-        created_by:        salesRepId || null,
-        _ledger_version:   INITIAL_LEDGER_VERSION,
-      };
-      await repo.put('commission_entry', key, record);
-    }
-
-    // Materialize pnl_line entities so the Shipments list + analytics see this manual P&L.
-    await _writePnlLines(repo, ref, shipment, INITIAL_LEDGER_VERSION);
+    await _writeSideRecords(ref, shipment, salesRepId, version, true);
 
     // F-37-05: publish is what CREATES the record Accounting reads. A publish_state flag on the
     // envelope cannot make "kế toán chỉ thấy sau khi publish" true - Accounting is not in the
@@ -245,15 +140,14 @@ export async function submitForm(state, repo, salesRepId, ledgerRepo = _defaultL
   return { ref, warnings, publishState: shipment.publish_state, advancedTo };
 }
 
-// AC-04..AC-06: update in-place — overwrite shipment record + commission_entry set for ref.
+// AC-04..AC-06: update in-place — overwrite shipment record + both side-record sets for ref.
 // commission_lines are embedded in the shipment payload (ground truth for UI).
-// Audit trail via outbox events pending implementation.
 // F-23-03: `_ledger_version` bumps on every save so a re-post produces new entry_ids
 // instead of matching the already-posted dedup key from the prior version (pm-decisions.md
-// Q3). A ledger-post failure here still propagates to the caller's catch — unlike
-// submitForm there is no safe compensating delete for an in-place edit of a pre-existing
-// record (would destroy the customer's prior data, not just this call's writes).
-export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _defaultLedgerRepo(), opts = {}) {
+// Q3). A failure here still propagates to the caller's catch — unlike submitForm there is no
+// safe compensating delete for an in-place edit of a pre-existing record (it would destroy the
+// customer's prior data, not just this call's writes).
+export async function updateForm(state, repo, salesRepId, ref, opts = {}) {
   if (!repo) throw new Error('Repo not available');
 
   const publish = opts.publish !== false;
@@ -265,36 +159,25 @@ export async function updateForm(state, repo, salesRepId, ref, ledgerRepo = _def
   // rebuilding via buildShipment. An explicit edit-time state change (once the UI grows one)
   // still wins since state.state is checked first.
   const stateInput = { ...state, state: state.state ?? prior?.state };
-  const jobNo = await _resolveJobNo(state, repo, salesRepId, prior?.job_no, ref);
-  const shipment = buildShipment(stateInput, ref, salesRepId, { publishState: publish ? 'publish_pending' : 'draft', stateAliasRows, jobNo });
-  shipment._ledger_version = (prior?._ledger_version || 0) + 1;
+  const jobNo = await resolveJobNo({
+    formJobNo: state.job_no, priorJobNo: prior?.job_no, ownRef: ref, salesRepId,
+  });
+  let shipment = buildShipment(stateInput, ref, salesRepId, { publishState: resolvePublishState(prior?.publish_state ?? null, publish), stateAliasRows, jobNo });
+  const version = nextLedgerVersion(prior?._ledger_version ?? NO_PRIOR_VERSION);
+  shipment._ledger_version = version;
   await putShipment(repo, shipment);
-  await _healJobNoCollision(repo, shipment, salesRepId);
+  shipment = await healJobNoCollision(shipment, salesRepId);
   await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state
 
-  // Commission overwrite: ONE call. Which ids to sweep, that the sweep covers the full range so a
-  // shortened set leaves nothing behind, the pre-F-15-59 `-CR1` compatibility, and the row shape
-  // are all decisions — they live in `commission_entries.rs` (owner law 2026-09-01), not here.
-  // They also used to be stated twice: this loop's `MAX_CE_CLEANUP` and the rollback operator's
-  // own copy of the same bound.
-  const commissions = await overwriteCommissionEntries(repo, {
-    shipment_ref: ref,
-    lines: state.commission_lines || [],
-    ledger_version: shipment._ledger_version,
-    occurred_at: todayLocal(),
-    created_by: salesRepId || null,
-  });
-  if (!commissions?.ok) console.warn('[VDG] commission overwrite left rows behind:', commissions?.skipped); // DEV
+  // Both sets replaced together, before the publish. Nothing in the snapshot reads the pnl_line
+  // entities — it is built from the shipment payload — so this only means the two row sets can no
+  // longer disagree with the record that was already written above.
+  await _writeSideRecords(ref, shipment, salesRepId, version, false);
 
   // F-37-05: an amendment publishes a NEW REVISION. Never an overwrite - Accounting may already
   // have raised an invoice from the previous one, and changing the figures under it is exactly
   // the thing a published record must not be able to do.
   if (publish) await _handOverToAccounting(repo, shipment);
-  // Overwrite pnl_line entities (delete old set, write new) — mirrors commission handling.
-  await _deletePnlLines(repo, ref);
-  await _writePnlLines(repo, ref, shipment, shipment._ledger_version);
-
-  // Accounting logic is now handled asynchronously by WASM.
 
   // E-40: a re-save that completed the missing data (e.g. ATD typed on the bill screen) moves
   // the job right here — no drag, no button.

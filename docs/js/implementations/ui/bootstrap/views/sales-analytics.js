@@ -2,11 +2,10 @@ import { COMMISSION_PCT } from '../../core_abstractions/ports/flows/sales-analyt
 import { computeKpis, computeLeaderboard, computeTopCustomers, computeLaneHeatmap, computeMonthlyBars, computeBillingFunnel } from '../../core_abstractions/ports/flows/sales-analytics-compute.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { listPnlLines } from '../../core_abstractions/ports/data/sales-reads.js';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
-const KIND_SHIPMENT   = 'shipment';
-const KIND_LINE       = 'pnl_line';
 const CHART_BAR_COLOR_REV  = 'rgba(59,130,246,0.7)';
 const CHART_BAR_COLOR_COST = 'rgba(248,113,113,0.7)';
 const DONUT_COLORS    = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#f97316','#6366f1'];
@@ -192,7 +191,7 @@ export async function render(root) {
   const repo = window.__vdg_repo;
   const [shipments, lines] = await Promise.all([
     listShipments(repo, null),
-    repo.list(KIND_LINE, null),
+    listPnlLines(),
   ]);
 
   const kpis       = computeKpis(shipments, lines);

@@ -5,16 +5,16 @@ import { APPROVAL_SLA_HOURS } from '../../components/approval-card.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { decide }    from '../../../core_abstractions/ports/flows/approval-orchestrator.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
+import { pendingApprovals } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const TOAST_AUTODISMISS_MS = 5_000;
+/// vdg:entity-changed topic, not a collection this screen names to read it.
 const KIND_APPROVAL        = 'approval_request';
 
 let _items       = [];
 const _filter      = { type: null, urgent: false };
 const _selectedIds = new Set();
 let _onEntity;
-
-function getRepo()  { return window.__vdg_repo; }
 
 function ageHours(isoStr) {
   return (Date.now() - new Date(isoStr).getTime()) / 3_600_000;
@@ -28,13 +28,11 @@ function applyFilter(items) {
   });
 }
 
+// "Still waiting on a manager" is a statement about the data, and it is made in wasm now: the
+// Pending/tombstone test and the oldest-first order used to live here, where a decided request
+// that failed to sync could still be rendered as actionable.
 async function loadItems() {
-  const repo = getRepo();
-  if (!repo) return [];
-  const all = await repo.list(KIND_APPROVAL, null);
-  return all
-    .filter((a) => a.status === 'Pending' && !a._deleted)
-    .sort((a, b) => new Date(a.requested_at) - new Date(b.requested_at));
+  return pendingApprovals();
 }
 
 function updateBadge(count) {

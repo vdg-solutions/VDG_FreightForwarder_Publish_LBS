@@ -14,7 +14,11 @@ import { findFxDeviations, confirmFxDeviations } from './sales-new-form/pnl-fx-d
 import { safeMasterLoad } from '../../../kernel/core_abstractions/util/master-load.js';
 import { ensureRepCode } from '../../core_abstractions/ports/flows/rep-code-registry.js';
 import { assignJobNo } from '../../core_abstractions/ports/flows/job-no-gen.js';
-import { getShipment, REVENUE_SEEN } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { getShipment, listEnvelopes, REVENUE_SEEN } from '../../core_abstractions/ports/data/shipment-repo.js';
+import {
+  listCustomerMasters, listCarrierMasters, listWeightUnitCodes, getRepProfile,
+  getCommissionRuleAssignment, getShipmentCommissionSnapshot,
+} from '../../core_abstractions/ports/data/sales-reads.js';
 import { readSettings, DEFAULT_CURRENCY_FIELD } from '../../core_abstractions/ports/governance/workspace-settings.js';
 import { loadTimeline, renderTimeline, bindTimeline } from '../components/phase-timeline.js';
 
@@ -131,23 +135,23 @@ export async function render(root, opts = {}) {
   let weightUnits = [];
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, uomList] = await Promise.all([
-        repo.list('customers').catch(() => []),
-        repo.list('carriers').catch(() => []),
-        // F-43-08: 'shipment' (singular) is the registered kind -- 'shipments' resolved to
-        // nothing and rendered the job list empty with no error.
-        repo.list('shipment').catch((e) => { console.error('[sales-new] shipment list failed:', e); return []; }),
-        salesRepId ? repo.get('user', `user:${salesRepId}`).catch((e) => { console.error('[sales-new] user get failed:', e); return null; }) : Promise.resolve(null),
-        salesRepId ? repo.get('commission_rules', salesRepId).catch(() => null) : Promise.resolve(null),
+      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, weightCodes] = await Promise.all([
+        listCustomerMasters().catch(() => []),
+        listCarrierMasters().catch(() => []),
+        // F-43-08 was a view naming its own kind and getting it wrong ('shipments' resolved to
+        // nothing and rendered the job list empty with no error). The name is wasm's now.
+        listEnvelopes(repo).catch((e) => { console.error('[sales-new] shipment list failed:', e); return []; }),
+        getRepProfile(salesRepId).catch((e) => { console.error('[sales-new] user get failed:', e); return null; }),
+        getCommissionRuleAssignment(salesRepId).catch(() => null),
         // Accounting's default currency — a LOCAL store read (workspace_settings kind), not a
         // Drive fetch. Read on edit too now: it doubles as the book currency the form's live
         // commission/line math compares against, not only the new-header seed.
         readSettings(repo),
         // F-41-01: the rep select's options — a master-kind read, same 5-min registry cache.
         getActiveSalesReps(repo).catch(() => []),
-        // Weight-unit select's options — same registry read pattern as getContainerTypes()
-        // (sales-quote-new.js): a master-kind list, filtered to the "weight" category client-side.
-        repo.list('units-of-measure').catch(() => []),
+        // The weight select's options. Which units are weights is a fact of the registry, not of
+        // this screen — it used to filter `category === 'weight'` here.
+        listWeightUnitCodes().catch(() => []),
       ]);
       // Resolve manager-assigned sales_pct → inject into userConfig
       let resolvedUserConfig = rawUserConfig;
@@ -162,7 +166,7 @@ export async function render(root, opts = {}) {
           generatedJobNo = await assignJobNo(repo, repCode);
         } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
       }
-      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList, uomList };
+      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList, weightCodes };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
@@ -173,7 +177,7 @@ export async function render(root, opts = {}) {
       jobNo      = loadRes.value.jobNo;
       defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
       reps       = loadRes.value.repList;
-      weightUnits = (loadRes.value.uomList || []).filter((u) => u.category === 'weight').map((u) => u.code);
+      weightUnits = loadRes.value.weightCodes || [];
     }
     // !loadRes.ok (timeout or thrown): customers=[], userConfig=null, jobNo=null — all
     // already-tolerated defaults downstream (sales-new-form.js — no contract change;
@@ -186,7 +190,7 @@ export async function render(root, opts = {}) {
       if (repo) {
         const shipment = await getShipment(repo, editRef);
         if (shipment) revenueVisible = shipment[REVENUE_SEEN] !== false;
-        const ce = await repo.get('commission_entry', `${editRef}-CR1`).catch(() => null);
+        const ce = await getShipmentCommissionSnapshot(editRef).catch(() => null);
         draft = shipmentToDraft(shipment, ce);
       }
     } catch { /* shipment not found — render blank */ }
@@ -268,7 +272,7 @@ export async function render(root, opts = {}) {
       const prefix = repSelect.value;
       if (!prefix) return;
       try {
-        const user = (await repo.get('user', `user:${prefix}`).catch((e) => { console.error('[sales-new] user get failed:', e); return null; }))
+        const user = (await getRepProfile(prefix).catch((e) => { console.error('[sales-new] user get failed:', e); return null; }))
           || { id: `user:${prefix}`, sales_code: null };
         const code  = await ensureRepCode(user, repo);
         const fresh = await assignJobNo(repo, code);
@@ -315,7 +319,7 @@ export async function render(root, opts = {}) {
       const repFinal = state.sales_rep || salesRepId;
       try {
         if (isEdit) {
-          const { advancedTo } = await updateForm(state, repo, repFinal, editRef, undefined, { publish });
+          const { advancedTo } = await updateForm(state, repo, repFinal, editRef, { publish });
           _dispatchCommitted(formMount, repFinal);
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
           showToast(t(key).replace('{ref}', editRef), 'success');
@@ -327,7 +331,7 @@ export async function render(root, opts = {}) {
             navigate('/sales/edit/' + editRef);
           }
         } else {
-          const { ref, advancedTo } = await submitForm(state, repo, repFinal, undefined, { publish });
+          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish });
           _dispatchCommitted(formMount, repFinal);
           await clearDraft();
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';

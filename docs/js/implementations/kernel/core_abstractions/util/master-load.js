@@ -14,11 +14,6 @@ export async function safeMasterLoad(loadFn, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
   return safeAwait(loadFn(), _ms, null, tag);
 }
 
-// Bounded repo.list — for callers that just need the settled result.
-export function boundedList(repo, kind, tag, _ms = SAFE_AWAIT_DEFAULT_MS) {
-  return safeMasterLoad(() => repo.list(kind, null), tag, _ms);
-}
-
 // F-?? (masters outage collapse): repo.list() always answers from the local cache, so an outage
 // with nothing cached yet still resolves { ok: true, value: [] } — indistinguishable from a
 // genuinely empty master table. `sync_health` (Rust) already knows the difference: any kind whose

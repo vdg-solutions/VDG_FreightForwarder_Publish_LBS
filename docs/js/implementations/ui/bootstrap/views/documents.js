@@ -4,9 +4,8 @@
 
 import { t, fmtDate } from '../../../kernel/core_abstractions/i18n/index.js';
 import { emptyStateHtml, EMPTY_STATE_VARIANT } from '../components/empty-state.js';
-import {
-  composeDocumentBoard, KIND_DOCUMENT, KIND_SHIPPING_INSTRUCTION, KIND_ARRIVAL_NOTICE, KIND_RELEASE_ORDER,
-} from '../../core_abstractions/ports/manager/document-board-composer.js';
+import { composeDocumentBoard } from '../../core_abstractions/ports/manager/document-board-composer.js';
+import { readDocumentSources } from '../../core_abstractions/ports/data/sales-reads.js';
 
 function getRepo() { return window.__vdg_repo; }
 
@@ -40,12 +39,9 @@ function rowHtml(row) {
 async function loadBoard() {
   const repo = getRepo();
   if (!repo) return { rows: [], kpis: { totalPending: 0, criticalPriority: 0, exceptions: 0, draftMblPending: 0 } };
-  const [documents, shippingInstructions, arrivalNotices, releaseOrders] = await Promise.all([
-    repo.list(KIND_DOCUMENT, null),
-    repo.list(KIND_SHIPPING_INSTRUCTION, null),
-    repo.list(KIND_ARRIVAL_NOTICE, null),
-    repo.list(KIND_RELEASE_ORDER, null),
-  ]);
+  // Which document kinds make up the board is the use-case's; a fifth one appears here without
+  // this screen learning its name.
+  const { documents, shippingInstructions, arrivalNotices, releaseOrders } = await readDocumentSources();
   return composeDocumentBoard(documents, shippingInstructions, arrivalNotices, releaseOrders);
 }
 

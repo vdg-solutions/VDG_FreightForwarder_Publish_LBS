@@ -1,8 +1,7 @@
 // commission-tab.js — per-shipment commission entries with override audit
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
-
-const KIND_COMMISSION_ENTRY = 'commission_entry';
+import { listCommissionEntriesFor } from '../../core_abstractions/ports/data/sales-reads.js';
 
 function fmtNum(n) {
   return Number(n ?? 0).toLocaleString('vi-VN');
@@ -54,8 +53,7 @@ export async function renderCommissionTab(root, shipmentRef, repo) {
 
   let entries = [];
   try {
-    const all = await repo.list(KIND_COMMISSION_ENTRY, null);
-    entries = (all || []).filter((e) => e.shipment_ref === shipmentRef);
+    entries = await listCommissionEntriesFor(shipmentRef) || [];
   } catch (err) {
     root.innerHTML = `<p class="text-xs text-red-500">${t('commission.tab.load_error')}</p>`;
     console.error('[commission-tab] list failed:', err); // DEV

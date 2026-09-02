@@ -6,7 +6,6 @@ import { safeAwait } from '../../implementations/kernel/core_abstractions/util/s
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
 import { createPlatform } from '../platform/index.js';
 import { composeUi } from '../compose-ui/index.js';
-import { bindLedgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 
 import { setStoreScope, localStore } from '../../implementations/storage/core_abstractions/local-store.js';
 import { loadLocale } from '../../implementations/kernel/core_abstractions/i18n/index.js';
@@ -116,6 +115,14 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
 async function _deferredInit(user, db, repo) {
   const store = localStore();
   try {
+    // Ledger + user repos first: they are wasm objects off the already-loaded module, so mounting
+    // them costs nothing and cannot fail on a cold cache. Everything below this line is behind an
+    // `await import(...)`, and the outbox drain started there posts THROUGH the ledger repo — the
+    // old order (mount last) left both that drain and resolve_principal reading an unmounted repo
+    // whenever a dynamic import was slow, and the catch at the bottom swallowed the reason.
+    window.__vdg_ledger_repo = repo.ledgerRepo();
+    window.__vdg_user_repo   = repo.userRepo();
+
     if (store) {
       const prefsResult = await safeAwait(
         store.cache_get_meta(PREFS_META_KEY),
@@ -141,18 +148,7 @@ async function _deferredInit(user, db, repo) {
     const { startDueSoonChecker } = await import('../platform/sync-due-soon.js');
     startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
 
-    // Ledger repo — binds the io ports' ledger_* calls (outbox drain posting) and the
-    // window global the accounting views/close-period/repost-panel read.
-    const { LedgerStoreRepo } = await import('../../implementations/storage/implementations/repos/ledger-repo.js');
-    const ledgerRepo = new LedgerStoreRepo();
-    window.__vdg_ledger_repo = ledgerRepo;
-    bindLedgerRepo(ledgerRepo);
-
-    const userAuditLog = createUserAuditLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.() });
-    window.__vdg_user_audit_log = userAuditLog;
-
-    const { UserStoreRepo: UserServerRepo } = await import('../../implementations/storage/implementations/repos/user-repo.js');
-    window.__vdg_user_repo = new UserServerRepo(userAuditLog);
+    window.__vdg_user_audit_log = createUserAuditLog();
 
     // The staff-table record is the final word on this session's principal, and it lands AFTER
     // the ACL-probe snapshot auth_set_resolved_roles already wrote (it can disagree, and it wins).

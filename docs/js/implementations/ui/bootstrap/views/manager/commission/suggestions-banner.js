@@ -1,33 +1,19 @@
-// suggestions-banner.js — pattern-detect + promote-to-rule CTA
+// suggestions-banner.js — shows the repeated manual overrides wasm found, and promotes one.
+//
+// This file used to hold the whole detection: it grouped commission entries by
+// (pct, recipient, kind), decided that three of a kind is a pattern, spelled the rule id
+// `auto-flat-{pct}-{slug}`, named the rule and built its `Flat { sales_pct, company_pct }` split.
+// That is the commission-rule FORMAT authored in a view file, next to the markup. All of it lives
+// in `operators/data/report_reads/commission.rs` now; what is left here is the banner.
 
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
+import { commissionRuleSuggestions, promoteCommissionSuggestion }
+  from '../../../../core_abstractions/ports/data/report-reads.js';
 
-const KIND_COMMISSION_ENTRY  = 'commission_entry';
-const KIND_COMMISSION_RULES  = 'commission_rules';
-const PATTERN_THRESHOLD      = 3;
 const SESSION_DISMISS_PREFIX = 'vdg_commission_suggest_dismissed_';
 const DEFAULT_PROMOTE_PRIORITY = 5;
-
-function groupKey(pct, recipient, kind) {
-  return `${pct}|${recipient}|${kind}`;
-}
-
-function buildGroups(entries) {
-  const map = new Map();
-  for (const e of entries) {
-    if (e.source !== 'Override') continue;
-    if (e.commission_pct == null || !e.recipient) continue;
-    const key = groupKey(e.commission_pct, e.recipient, e.kind || '');
-    const cur = map.get(key) || { pct: e.commission_pct, recipient: e.recipient, kind: e.kind, count: 0 };
-    cur.count++;
-    map.set(key, cur);
-  }
-  return map;
-}
-
-function autoSlug(recipient) {
-  return recipient.toLowerCase().replace(/\s+/g, '-');
-}
+/// vdg:entity-changed topic the promote announces on — an event name, not a read.
+const KIND_COMMISSION_RULES = 'commission_rules';
 
 function bannerHtml(gk, pattern, count, priority) {
   const msg = t('commission.suggest_promote')
@@ -52,67 +38,47 @@ function bannerHtml(gk, pattern, count, priority) {
     </div>`;
 }
 
-async function createRule(repo, pct, recipient, kind, priority) {
-  const pctDisplay = Math.round(pct * 100);
-  const companyPct = 1 - pct;
-  const ruleId = `auto-flat-${pctDisplay}-${autoSlug(recipient)}`;
-  const rule = {
-    rule_id:        ruleId,
-    name:           `Flat ${pctDisplay}% to ${recipient}`,
-    applies_to:     [],
-    when:           ['Always'],
-    split_strategy: { Flat: { sales_pct: pct, company_pct: companyPct } },
-    priority,
-    kind_hint:      kind || null,
-  };
-  await repo.put(KIND_COMMISSION_RULES, ruleId, rule);
-  window.dispatchEvent(new CustomEvent('vdg:entity-changed', {
-    detail: { kind: KIND_COMMISSION_RULES },
-  }));
-}
-
 /**
  * @param {HTMLElement} container  target element
- * @param {object} repo            CachedEntityRepo
  */
-export async function renderSuggestionsBanner(container, repo) {
-  if (!container || !repo) return;
+export async function renderSuggestionsBanner(container) {
+  if (!container) return;
   container.innerHTML = '';
 
-  let allEntries;
+  let suggestions;
   try {
-    allEntries = await repo.list(KIND_COMMISSION_ENTRY, null);
+    suggestions = await commissionRuleSuggestions();
   } catch (err) {
-    console.warn('[suggestions-banner] list failed:', err); // DEV
+    console.warn('[suggestions-banner] read failed:', err); // DEV
     return;
   }
 
-  const groups = buildGroups(allEntries || []);
+  for (const s of suggestions) {
+    if (sessionStorage.getItem(SESSION_DISMISS_PREFIX + s.key)) continue;
 
-  for (const [gk, { pct, recipient, kind, count }] of groups) {
-    if (count < PATTERN_THRESHOLD) continue;
-    if (sessionStorage.getItem(SESSION_DISMISS_PREFIX + gk)) continue;
-
-    const pctDisplay = Math.round(pct * 100);
-    const pattern    = `Flat ${pctDisplay}% to ${recipient}`;
-    const tmp        = document.createElement('div');
-    tmp.innerHTML    = bannerHtml(gk, pattern, count, DEFAULT_PROMOTE_PRIORITY);
-    const banner     = tmp.firstElementChild;
+    const tmp     = document.createElement('div');
+    tmp.innerHTML = bannerHtml(s.key, s.pattern, s.count, DEFAULT_PROMOTE_PRIORITY);
+    const banner  = tmp.firstElementChild;
     container.appendChild(banner);
 
     banner.querySelector('.banner-dismiss')?.addEventListener('click', () => {
-      sessionStorage.setItem(SESSION_DISMISS_PREFIX + gk, '1');
+      sessionStorage.setItem(SESSION_DISMISS_PREFIX + s.key, '1');
       banner.remove();
     });
 
     banner.querySelector('.banner-promote')?.addEventListener('click', async () => {
-      const pri = parseInt(banner.querySelector('.banner-priority')?.value, 10);
+      const pri     = parseInt(banner.querySelector('.banner-priority')?.value, 10);
       const safePri = isNaN(pri) ? DEFAULT_PROMOTE_PRIORITY : pri;
       try {
-        await createRule(repo, pct, recipient, kind, safePri);
+        await promoteCommissionSuggestion({
+          salesPct: s.salesPct, recipient: s.recipient, kind: s.kind, priority: safePri,
+        });
+        window.dispatchEvent(new CustomEvent('vdg:entity-changed', {
+          detail: { kind: KIND_COMMISSION_RULES },
+        }));
         banner.remove();
       } catch (err) {
-        console.error('[suggestions-banner] createRule failed:', err); // DEV
+        console.error('[suggestions-banner] promote failed:', err); // DEV
       }
     });
   }

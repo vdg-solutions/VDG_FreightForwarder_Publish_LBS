@@ -11,7 +11,8 @@ import { currentRoles } from '../../../../../ui/core_abstractions/ports/auth/ses
 import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master-registry.js';
 import { t }         from '../../../../../kernel/core_abstractions/i18n/index.js';
 import { showConfirm } from '../../../helpers/show-confirm.js';
-import { boundedList, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
+import { listMasters, saveMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
 
 const KIND             = 'ocean-tariff';
 const KIND_PREFIX      = 'OTF';
@@ -251,8 +252,8 @@ export async function render(root) {
     if (!repo) { items = []; if (tbody) tbody.innerHTML = ''; if (statusEl) statusEl.textContent = ''; return; }
 
     const [tariffRaw, carrierRes] = await Promise.all([
-      boundedList(repo, KIND, 'ocean-tariff:list'),
-      boundedList(repo, CARRIER_KIND, 'ocean-tariff:carriers'),
+      safeMasterLoad(() => listMasters(KIND), 'ocean-tariff:list'),
+      safeMasterLoad(() => listMasters(CARRIER_KIND), 'ocean-tariff:carriers'),
     ]);
     const tariffRes = foldSyncFailure(tariffRaw, KIND, repo);
     if (!tariffRes.ok) {
@@ -279,14 +280,14 @@ export async function render(root) {
   await reload();
 
   root.querySelector('#btn-add')?.addEventListener('click', () => {
-    openModal(root, null, async (entity) => { await repo.put(KIND, entity.id, entity); await reload(); });
+    openModal(root, null, async (entity) => { await saveMaster(KIND, entity); await reload(); });
   });
 
   root.querySelector('#m-tbody')?.addEventListener('click', async (ev) => {
     const editBtn = ev.target.closest('.btn-edit');
     if (editBtn) {
       const entity = items.find((i) => i.id === editBtn.dataset.id);
-      if (entity) openModal(root, entity, async (u) => { await repo.put(KIND, u.id, u); await reload(); });
+      if (entity) openModal(root, entity, async (u) => { await saveMaster(KIND, u); await reload(); });
     }
     const delBtn = ev.target.closest('.btn-delete');
     if (delBtn) {

@@ -4,13 +4,15 @@ import { compose, HEALTH_THRESHOLD_GOOD, HEALTH_THRESHOLD_WATCH, compose360 } fr
 import { shipmentLane } from '../../../../kernel/core_abstractions/util/shipment-lane.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { customer360Inputs, appendCustomerNote }
+  from '../../../core_abstractions/ports/data/report-reads.js';
 
 const CUSTOMER360_RE   = /^\/manager\/customers\/([^/]+)$/;
+// vdg:entity-changed topics this screen repaints on — not collections it names to read them.
 const KIND_CUSTOMER    = 'customers';
 const KIND_SHIPMENT    = 'shipment';
 const KIND_BILLING     = 'billing';
 const KIND_EXCEPTION   = 'exception';
-const KIND_QUOTATION   = 'quotations'; // F-43-08: singular 'quotation' resolved to nothing -- tab was always empty
 const AUDIT_BATCH_SIZE = 50;
 const TAB_MULTIMODAL   = 'multimodal';
 
@@ -26,10 +28,6 @@ let _onEntity;
 function getRepo() { return window.__vdg_repo; }
 
 function fmtNum(n) { return Number(n ?? 0).toLocaleString('vi-VN'); }
-
-function currentUser() {
-  return window.__vdg_auth?.getCurrentUser?.()?.email || 'manager';
-}
 
 function healthBadgeCls(score) {
   if (score >= HEALTH_THRESHOLD_GOOD)  return 'bg-emerald-100 text-emerald-700';
@@ -181,7 +179,7 @@ function renderNotesTab(container, customer) {
   const noteHtml = notes.map((n) => `
     <div class="bg-slate-50 rounded-lg p-3">
       <div class="flex items-center gap-2 text-xs text-slate-500 mb-1">
-        <span class="font-medium text-slate-700">${n.author || '?'}</span>
+        <span class="font-medium text-slate-700">${(n.author || '?').split('@')[0]}</span>
         <span>${n.created_at?.slice(0,16)||''}</span>
       </div>
       <div class="text-xs text-slate-800">${n.text}</div>
@@ -204,12 +202,10 @@ function renderNotesTab(container, customer) {
   addBtn.addEventListener('click', async () => {
     const text = input.value.trim();
     if (!text) return;
-    const repo    = getRepo();
-    const author  = currentUser().split('@')[0];
-    const newNote = { text, author, created_at: new Date().toISOString() };
-    const updated = { ...customer, notes: [...(customer.notes || []), newNote] };
-    if (repo) await repo.put(KIND_CUSTOMER, customer.id, updated);
-    customer.notes = updated.notes;
+    // The author and the timestamp are stamped in wasm (session principal + platform clock); this
+    // used to mint both here, and the author was a local-part sliced off the address.
+    const written = await appendCustomerNote(customer.id, text);
+    customer.notes = written?.notes || customer.notes;
     input.value    = '';
     addBtn.disabled = true;
     renderNotesTab(container, customer);
@@ -273,14 +269,10 @@ export async function render(root, param) {
 
   const repo = getRepo();
   let customers = [], quotations = [];
-  if (repo) {
-    [customers, _shipments, _billing, _exceptions, quotations] = await Promise.all([
-      repo.list(KIND_CUSTOMER, null),
-      listShipments(repo, null),
-      repo.list(KIND_BILLING, null),
-      repo.list(KIND_EXCEPTION, null),
-      repo.list(KIND_QUOTATION, null),
-    ]);
+  {
+    const [inputs, shipments] = await Promise.all([customer360Inputs(), listShipments(repo, null)]);
+    ({ customers, receivables: _billing, exceptions: _exceptions, quotations } = inputs);
+    _shipments = shipments;
   }
 
   _vm = compose(customerId, customers, _shipments, _billing, _exceptions);
@@ -330,12 +322,9 @@ export async function render(root, param) {
   _onEntity = async (e) => {
     const kind = e.detail?.kind;
     if (![KIND_CUSTOMER, KIND_SHIPMENT, KIND_BILLING, KIND_EXCEPTION].includes(kind)) return;
-    if (repo) {
-      [customers, _shipments, _billing, _exceptions] = await Promise.all([
-        repo.list(KIND_CUSTOMER, null), listShipments(repo, null),
-        repo.list(KIND_BILLING, null),  repo.list(KIND_EXCEPTION, null),
-      ]);
-    }
+    const [inputs, shipments] = await Promise.all([customer360Inputs(), listShipments(repo, null)]);
+    ({ customers, receivables: _billing, exceptions: _exceptions } = inputs);
+    _shipments = shipments;
     _vm = compose(customerId, customers, _shipments, _billing, _exceptions);
     renderHeader(root);
     renderTabContent(root, _tab, quotations);

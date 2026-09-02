@@ -14,6 +14,12 @@ import {
 import { bindBillingPublish } from '../../implementations/ui/core_abstractions/ports/data/billing-publish-repo.js';
 import { bindRepoQuery } from '../../implementations/ui/core_abstractions/ports/data/repo-query.js';
 import { bindPnlLineId } from '../../implementations/ui/core_abstractions/ports/data/pnl-line-id.js';
+// One lane, one binding file: the masters half is eighteen registry-backed tables, unrelated to
+// the shipment record this file otherwise composes.
+import { bindMastersData } from './data-masters.js';
+import { bindReportReads } from './data-reports.js';
+import { bindGuardData } from './data-guard.js';
+import { bindSalesData } from './data-sales.js';
 
 const REASON_PERIOD_LOCKED    = 'period-locked';
 const REASON_LICENSE_READONLY = 'license-readonly';
@@ -123,6 +129,11 @@ export function composeData(wasm) {
     readPublishedFor: async (_repo, shipment) => (await wasm.data_published_for({ shipment })).rows,
     currentRevision: async (_repo, shipment) => (await wasm.data_current_revision({ shipment })).record,
   });
+
+  bindMastersData(wasm);
+  bindReportReads(wasm);
+  bindGuardData(wasm);
+  bindSalesData({ wasm });
 
   bindRepoQuery({
     listWhere: async (_repo, kind, predicate = null) => {

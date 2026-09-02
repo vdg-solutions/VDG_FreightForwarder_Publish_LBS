@@ -6,6 +6,7 @@ import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-l
 import { computeSortedExceptions, computeTrends, computeMttr, computePerSalesRate, computeEscalated, KIND_EXCEPTION, SEVERITY_BADGE_CLS }
   from '../../../core_abstractions/ports/manager/exception-composer.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
+import { exceptionCaseload } from '../../../core_abstractions/ports/data/report-reads.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 const ANIMATE_OUT_MS      = 300;
@@ -171,8 +172,8 @@ export function createEntityChangeHandler(kind, refreshFn, debounceMs = ENTITY_D
   return handler;
 }
 
-async function refreshFromEntity(root, repo) {
-  if (repo) _exceptions = await repo.list(KIND_EXCEPTION, null);
+async function refreshFromEntity(root) {
+  _exceptions = await exceptionCaseload();
   const vms = computeSortedExceptions(_exceptions);
   mountGrid(root.querySelector('#exc-grid'), vms);
   renderTrends(root, _exceptions);
@@ -238,8 +239,7 @@ export async function render(root) {
   if (_trendChart) { _trendChart.destroy(); _trendChart = null; }
   _selectedIds.clear();
 
-  const repo = getRepo();
-  if (repo) _exceptions = await repo.list(KIND_EXCEPTION, null);
+  _exceptions = await exceptionCaseload();
 
   const vms = computeSortedExceptions(_exceptions);
 
@@ -290,6 +290,6 @@ export async function render(root) {
     }
   });
 
-  _onEntity = createEntityChangeHandler(KIND_EXCEPTION, () => refreshFromEntity(root, repo));
+  _onEntity = createEntityChangeHandler(KIND_EXCEPTION, () => refreshFromEntity(root));
   window.addEventListener('vdg:entity-changed', _onEntity);
 }

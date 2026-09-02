@@ -109,19 +109,19 @@ export function sectionBHtml(draft = {}) {
       <!-- Quick KPI Stats Bar -->
       <div class="grid grid-cols-4 gap-3 mb-4 p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs">
         <div class="bg-white p-2 rounded border border-slate-200">
-          <div class="text-[10px] text-slate-500 font-medium">Tổng Chi (VND)</div>
+          <div class="text-[10px] text-slate-500 font-medium">${t('sales_new.kpi_total_pay')}</div>
           <div id="quick-total-pay" class="text-sm font-semibold text-blue-700 mt-0.5">0</div>
         </div>
         <div class="bg-white p-2 rounded border border-slate-200">
-          <div class="text-[10px] text-slate-500 font-medium">Tổng Thu (VND)</div>
+          <div class="text-[10px] text-slate-500 font-medium">${t('sales_new.kpi_total_collect')}</div>
           <div id="quick-total-collect" class="text-sm font-semibold text-emerald-700 mt-0.5">0</div>
         </div>
         <div class="bg-white p-2 rounded border border-slate-200">
-          <div class="text-[10px] text-slate-500 font-medium">Lợi Nhuận Gộp (Margin)</div>
+          <div class="text-[10px] text-slate-500 font-medium">${t('sales_new.kpi_margin')}</div>
           <div id="quick-margin" class="text-sm font-semibold text-slate-900 mt-0.5">0</div>
         </div>
         <div class="bg-white p-2 rounded border border-slate-200">
-          <div class="text-[10px] text-slate-500 font-medium">Tỷ Suất Lợi Nhuận (Margin %)</div>
+          <div class="text-[10px] text-slate-500 font-medium">${t('sales_new.kpi_margin_pct')}</div>
           <div id="quick-margin-pct" class="text-sm font-semibold text-slate-900 mt-0.5">—</div>
         </div>
       </div>
@@ -130,10 +130,10 @@ export function sectionBHtml(draft = {}) {
         <table class="w-full text-xs min-w-[1500px]" id="lines-table">
           <thead>
             <tr class="bg-slate-100/70 border-b border-slate-200">
-              <th colspan="3" class="px-2 py-1 text-left text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Hạng mục</th>
-              <th colspan="7" class="px-2 py-1 text-center bg-blue-100/50 text-blue-800 font-semibold uppercase tracking-wider text-[10px] border-x border-blue-200">Chi Phí Mua (Chi)</th>
-              <th colspan="7" class="px-2 py-1 text-center bg-emerald-100/50 text-emerald-800 font-semibold uppercase tracking-wider text-[10px] border-r border-emerald-200">Doanh Thu Bán (Thu)</th>
-              <th colspan="2" class="px-2 py-1 text-center text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Khác</th>
+              <th colspan="3" class="px-2 py-1 text-left text-slate-500 font-semibold uppercase tracking-wider text-[10px]">${t('sales_new.col_group_item')}</th>
+              <th colspan="7" class="px-2 py-1 text-center bg-blue-100/50 text-blue-800 font-semibold uppercase tracking-wider text-[10px] border-x border-blue-200">${t('sales_new.col_group_buy')}</th>
+              <th colspan="7" class="px-2 py-1 text-center bg-emerald-100/50 text-emerald-800 font-semibold uppercase tracking-wider text-[10px] border-r border-emerald-200">${t('sales_new.col_group_sell')}</th>
+              <th colspan="2" class="px-2 py-1 text-center text-slate-500 font-semibold uppercase tracking-wider text-[10px]">${t('sales_new.col_group_other')}</th>
             </tr>
             <tr class="bg-slate-50 border-b border-slate-200">
               <th class="px-1 py-1.5 text-left text-slate-400 w-6">#</th>

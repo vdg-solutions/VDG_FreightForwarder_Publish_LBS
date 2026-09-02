@@ -2,7 +2,7 @@
 // auto-activate on deploy. Cache is the offline fallback, never the
 // freshness source: a redeploy is picked up on the next fetch without a manual clear.
 
-const STATIC_CACHE     = 'vdg-static-v4f2d8570';
+const STATIC_CACHE     = 'vdg-static-ve608a3fa';
 // Build-hash-versioned, NOT a fixed 'v1'. A fixed name survives every deploy,
 // so one bad entry a stale worker cached is replayed forever with no cure but a manual Unregister.
 // Versioned, activate's existing sweep (validCaches) drops the old generation on the next deploy.
@@ -56,6 +56,10 @@ const BOOT_GRAPH = [
   'js/bootstrap/boot/wasm-loader.js',
   'js/bootstrap/compose-ui/auth.js',
   'js/bootstrap/compose-ui/cache.js',
+  'js/bootstrap/compose-ui/data-guard.js',
+  'js/bootstrap/compose-ui/data-masters.js',
+  'js/bootstrap/compose-ui/data-reports.js',
+  'js/bootstrap/compose-ui/data-sales.js',
   'js/bootstrap/compose-ui/data.js',
   'js/bootstrap/compose-ui/flows-admin.js',
   'js/bootstrap/compose-ui/flows.js',
@@ -101,7 +105,6 @@ const BOOT_GRAPH = [
   'js/implementations/storage/core_abstractions/id-token.js',
   'js/implementations/storage/core_abstractions/identity.js',
   'js/implementations/storage/core_abstractions/io-port-shared.js',
-  'js/implementations/storage/core_abstractions/ledger-repo.js',
   'js/implementations/storage/core_abstractions/local-store.js',
   'js/implementations/storage/core_abstractions/oauth-scope.js',
   'js/implementations/storage/core_abstractions/oauth.js',
@@ -125,8 +128,6 @@ const BOOT_GRAPH = [
   'js/implementations/storage/implementations/auth/userinfo.js',
   'js/implementations/storage/implementations/auth/window-open-guard.js',
   'js/implementations/storage/implementations/local/store-client.js',
-  'js/implementations/storage/implementations/repos/awb-repo.js',
-  'js/implementations/storage/implementations/repos/fx-rate-repo.js',
   'js/implementations/storage/implementations/server/backend.js',
   'js/implementations/storage/implementations/server/server-role.js',
   'js/implementations/storage/implementations/server/server-session.js',
@@ -176,9 +177,14 @@ const BOOT_GRAPH = [
   'js/implementations/ui/core_abstractions/ports/cache/master-registry.js',
   'js/implementations/ui/core_abstractions/ports/cache/route-prefetch.js',
   'js/implementations/ui/core_abstractions/ports/data/billing-publish-repo.js',
+  'js/implementations/ui/core_abstractions/ports/data/master-repo.js',
+  'js/implementations/ui/core_abstractions/ports/data/merge-resolve.js',
   'js/implementations/ui/core_abstractions/ports/data/pnl-line-id.js',
   'js/implementations/ui/core_abstractions/ports/data/repo-query.js',
+  'js/implementations/ui/core_abstractions/ports/data/report-reads.js',
+  'js/implementations/ui/core_abstractions/ports/data/sales-reads.js',
   'js/implementations/ui/core_abstractions/ports/data/shipment-repo.js',
+  'js/implementations/ui/core_abstractions/ports/data/shipment-submit.js',
   'js/implementations/ui/core_abstractions/ports/data/write-gate.js',
   'js/implementations/ui/core_abstractions/ports/flows/air-rate-calculator.js',
   'js/implementations/ui/core_abstractions/ports/flows/approval-orchestrator.js',
@@ -256,7 +262,7 @@ const APP_ORIGIN               = self.location.origin;
 // A content-hash in the filename makes an asset immutable under that name → cache-first forever.
 const IMMUTABLE_HASH_RE        = /\.[0-9a-f]{8,}\.(?:js|mjs|wasm|css)$/i;
 // wasm-pack's pkg output (vdg_freight.js / _bg.wasm) is NOT hash-named — but it IS precached and
-// versioned with STATIC_CACHE (a redeploy bumps 4f2d8570 → activate drops the old cache →
+// versioned with STATIC_CACHE (a redeploy bumps e608a3fa → activate drops the old cache →
 // install re-precaches the new bytes), so it's served cache-first, never network-first. The multi-MB
 // wasm through _networkFirst's 3.5s abort could hand WebAssembly.compile a 503 Offline: the main
 // thread cached it first, but the SQLite worker's concurrent boot fetch raced the timeout and got a

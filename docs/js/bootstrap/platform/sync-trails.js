@@ -72,31 +72,12 @@ export function createAuditLog({ getUser, getRole }) {
 }
 
 /**
- * The user/role compliance trail. Revoking a role fires two back-to-back writes (F-24-11); the
- * same chain keeps them in order without making `write` awaitable.
+ * The user/role compliance trail — read side only. Writing is the user repo's own business (it is
+ * the only writer, and it owns the ordering the trail requires), so it happens in wasm now
+ * (bootstrap/js_repo_user.rs); this is what the admin view reads back.
  */
-export function createUserAuditLog({ getUser }) {
-  let queue = Promise.resolve();
+export function createUserAuditLog() {
   return {
-    write(action, targetEmail, before, after) {
-      queue = queue
-        .then(async () => {
-          const w = wasm();
-          if (!w?.sync_user_audit_write) throw new Error('wasm bridge not ready — audit entry not persisted');
-          const reply = await w.sync_user_audit_write({
-            action,
-            target_email: targetEmail,
-            before: before ?? null,
-            after: after ?? null,
-            actor_email: getUser?.()?.email ?? null,
-          });
-          if (!reply.ok) throw new Error(reply.error || 'user audit write failed');
-        })
-        .catch((err) => {
-          console.error('[user-audit-log] write failed:', err); // DEV — one failure doesn't block the queue
-        });
-    },
-    flush: () => queue,
     async readAll() {
       const w = wasm();
       if (!w?.sync_user_audit_read) return [];

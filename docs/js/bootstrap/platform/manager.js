@@ -1,7 +1,13 @@
 // platform/manager.js — extra platform methods the Rust manager use-cases import (js_manager.rs
-// extern type). The reconciler and the repost need the double-entry journal, which lives behind
-// the storage module's LedgerRepo rather than behind the entity records port.
-import { ledgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
+// extern type). The reconciler and the repost need the double-entry journal, which the wasm ledger
+// repo owns; this file only forwards the call, same as platform/governance.js does.
+const REPO_NOT_MOUNTED = 'ledger repo not mounted yet';
+
+function ledgerRepo() {
+  const repo = window.__vdg_ledger_repo;
+  if (!repo) throw new Error(REPO_NOT_MOUNTED);
+  return repo;
+}
 
 export const managerPlatform = {
   ledger_chart_of_accounts:   ()                    => ledgerRepo().chartOfAccounts(),

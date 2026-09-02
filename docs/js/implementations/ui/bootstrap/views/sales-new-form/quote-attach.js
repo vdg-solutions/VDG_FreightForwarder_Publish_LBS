@@ -11,8 +11,8 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { lineRowHtml, classifyKind } from './section-lines.js';
 import { applyFxDateDefaults, prefillRowFx } from './pnl-line-fx.js';
 import { checkAlreadyConverted } from '../../../core_abstractions/ports/flows/quote-orchestrator.js';
+import { listQuotations, getQuotation } from '../../../core_abstractions/ports/data/sales-reads.js';
 
-const KIND_QUOTATIONS = 'quotations';
 const SELL_QTY_DEFAULT = 1; // a quote line prices the shipment once — qty is not quote data
 
 /// Quotes this job may attach: Accepted, for this customer (case-insensitive, matching
@@ -131,7 +131,7 @@ export function wireQuoteAttach(root, { repo, fxRepo = null, docDate = '', ownRe
 
   const quoteId = (q) => q.id;
   const refill = async () => {
-    quotes = await repo.list(KIND_QUOTATIONS, null).catch(() => []);
+    quotes = await listQuotations().catch(() => []);
     const customer = root.querySelector('[name=customer]')?.value || '';
     const current  = picker.value;
     const rows = eligibleQuotes(quotes, customer);
@@ -158,7 +158,7 @@ export function wireQuoteAttach(root, { repo, fxRepo = null, docDate = '', ownRe
   const hasAnyLine = Array.from(root.querySelectorAll('#lines-tbody tr[data-line]'))
     .some((row) => ['desc', 'buy_amt', 'sell_amt'].some((n) => row.querySelector(`[name=${n}]`)?.value));
   if (preset && !hasAnyLine) {
-    repo.get(KIND_QUOTATIONS, preset)
+    getQuotation(preset)
       .then((quote) => { if (quote) applyQuoteSellRows(root, quote.lines, { fxRepo, docDate, onChanged }); })
       .catch(() => { /* the quote may not be readable here — the form still works hand-filled */ });
   }

@@ -9,6 +9,7 @@ import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shi
 import { UNKNOWN_STATE } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { listPnlLines, salesShareTotal } from '../../core_abstractions/ports/data/sales-reads.js';
 
 function mtdFilter(s) {
   const now  = new Date();
@@ -25,10 +26,9 @@ export async function loadMyData(salesId) {
   const repo = window.__vdg_repo;
   if (!repo) return EMPTY_DATA;
 
-  const [allShipments, allLines, allCommEntries, aliasRows] = await Promise.all([
+  const [allShipments, allLines, aliasRows] = await Promise.all([
     listShipments(repo, (s) => (s.sales_rep || '').toLowerCase() === salesId.toLowerCase()),
-    repo.list('pnl_line').catch(() => []),
-    repo.list('commission_entry').catch(() => []),
+    listPnlLines().catch(() => []),
     ensureShipmentStateAliases(repo), // DEFECT-1: seed-on-first-read (sales rep never opens master view)
   ]);
 
@@ -41,10 +41,10 @@ export async function loadMyData(salesId) {
   const mtd = allShipments.filter(mtdFilter);
   const mtdRefs = new Set(mtd.map(s => s.shipment_ref || s.ref));
 
-  // SalesShare commission MTD (from commission_entry persisted by WASM engine)
-  const salesCommission = allCommEntries
-    .filter(e => e.kind === 'SalesShare' && mtdRefs.has(e.shipment_ref))
-    .reduce((s, e) => s + Number(e.net_amount?.amount ?? e.net_amount ?? 0), 0);
+  // What the rep is owed on this month's jobs. Which commission kind is the rep's own share, and
+  // how a net amount is read off a row that may hold a bare number or a money object, are the
+  // use-case's — this screen hands it the refs and renders the figure.
+  const salesCommission = await salesShareTotal([...mtdRefs]).catch(() => 0);
 
   const linesByRef = {};
   for (const l of allLines) {

@@ -1,7 +1,6 @@
 // platform/flows.js — extra platform methods the Rust flows use-cases import (js_flows.rs extern
 // type). Raw passthrough: no decision lives here, only the browser/storage call the operator asked
 // for. Every method is async so a value and a promise can never answer the same call differently.
-import { ledgerRepo } from '../../implementations/storage/core_abstractions/ledger-repo.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import * as shipments from '../../implementations/ui/core_abstractions/ports/data/shipment-repo.js';
 import { todayLocal } from '../../implementations/kernel/core_abstractions/util/today-local.js';
@@ -14,6 +13,13 @@ const ZIP_LEVEL         = 6;
 
 function wasm() { return window.__vdg_wasm; }
 function repo()  { return window.__vdg_repo; }
+
+const LEDGER_NOT_MOUNTED = 'ledger repo not mounted yet';
+function ledgerRepo() {
+  const led = window.__vdg_ledger_repo;
+  if (!led) throw new Error(LEDGER_NOT_MOUNTED);
+  return led;
+}
 
 // jobno_lease.rs's `dir_id` used to be a Drive folder id; CharterDB has no folder tree, so it is
 // read here as a collection PATH instead — same reinterpretation http_io.rs's
