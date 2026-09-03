@@ -189,7 +189,7 @@
   "sales_new.badge.publish_pending": "Đang xử lý Publish",
   "sales_new.etd_eta_warn": "ETD phải trước ETA",
   "sales_new.validation.no_bill": "Cần ít nhất 1 trong: MBL / HBL / Job File No",
-  "sales_new.validation.bill_awb_invalid": "Số vận đơn không hợp lệ cho hàng không: MBL/HBL phải là số AWB dạng 123-45678901 (3 số hãng, 8 số sê-ri, số cuối là sê-ri chia 7 lấy dư). Đổi Sản phẩm nếu đây không phải lô hàng không.",
+  "sales_new.validation.bill_awb_invalid": "Số vận đơn không hợp lệ cho hàng không: MBL/HBL phải là số AWB dạng 123-45678905 (3 số hãng, 8 số sê-ri, số cuối là sê-ri chia 7 lấy dư). Đổi Sản phẩm nếu đây không phải lô hàng không.",
   "sales_new.validation.mode_product_conflict": "Phương thức và Sản phẩm không khớp: chọn Đường hàng không thì Sản phẩm phải là Đường hàng không, và ngược lại. Sản phẩm là thứ quyết định có cần số AWB hay không.",
   "sales_new.validation.no_customer": "Khách hàng là bắt buộc",
   "sales_new.validation.no_lines": "Cần ít nhất 1 dòng P&L có số tiền > 0",
@@ -2124,5 +2124,6 @@
   "ledger.row_total": "TỔNG",
   "ledger.discrepancy": "Lệch (Discrepancy):",
   "masters.delete_failed": "Không xoá được dòng này — bản ghi thiếu khoá hoặc bạn không có quyền.",
-  "common.action.ok": "OK"
+  "common.action.ok": "OK",
+  "sales_new.validation.bill_awb_check_digit": "Số vận đơn hàng không sai số kiểm tra: số cuối phải là {n}. (Số cuối = 7 số sê-ri chia 7 lấy dư — IATA Res 600a.)"
 }

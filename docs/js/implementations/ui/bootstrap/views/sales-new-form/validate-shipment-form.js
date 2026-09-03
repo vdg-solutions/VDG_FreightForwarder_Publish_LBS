@@ -42,7 +42,17 @@ export function validateShipmentForm(state, { publish = true } = {}) {
 
   // `reply.errors` are i18n key SUFFIXES under sales_new.validation. — the gate decides WHICH
   // rules fired, this only renders them (same convention as the FX-deviation confirm dialog).
-  const errs = reply.errors.map((key) => t(`sales_new.validation.${key}`));
+  const errs = reply.errors.map((key) => {
+    // "invalid" alone is a wall: the operator holds a carrier's document and has to guess WHICH
+    // character is wrong. When the shape is right and only the check digit is off, the gate hands
+    // back the digit the serial requires and the message names it. `null` = the shape itself is
+    // wrong, and no single digit would rescue it, so the generic sentence is the honest one.
+    if (key === 'bill_awb_invalid' && reply.awb_expected_check !== null && reply.awb_expected_check !== undefined) {
+      return t('sales_new.validation.bill_awb_check_digit')
+        .replace('{n}', String(reply.awb_expected_check));
+    }
+    return t(`sales_new.validation.${key}`);
+  });
   if (reply.vnd_mismatch) {
     const { expected, actual, delta } = reply.vnd_mismatch;
     errs.push(t('sales_new.validation.vnd_invariant')

@@ -288,6 +288,10 @@ export async function render(root, opts = {}) {
   // first is still pending (double-click / slow network) so only one shipment/job_no
   // is ever consumed per user action.
   const guardedSubmit = createSubmitGuard();
+  // The ref of an attempt whose rollback left records behind. The next attempt writes to THAT ref
+  // instead of minting a new one, so a retry repairs the orphan rather than doubling it. Cleared
+  // on success; scoped to this mount, so navigating away and starting a new job starts clean.
+  let orphanRef = null;
 
   root.querySelector('#shipment-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -331,7 +335,8 @@ export async function render(root, opts = {}) {
             navigate('/sales/edit/' + editRef);
           }
         } else {
-          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish });
+          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish, ref: orphanRef });
+          orphanRef = null;
           _dispatchCommitted(formMount, repFinal);
           await clearDraft();
           const key = publish ? 'sales_new.publish_pending_toast' : 'sales_new.saved_draft_toast';
@@ -340,6 +345,7 @@ export async function render(root, opts = {}) {
           navigate('/sales/edit/' + ref);
         }
       } catch (err) {
+        if (err?.orphanRef) orphanRef = err.orphanRef;
         showToast(saveErrorText(err), 'error');
       }
     });

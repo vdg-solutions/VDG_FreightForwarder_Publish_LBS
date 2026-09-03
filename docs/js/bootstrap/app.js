@@ -255,11 +255,10 @@ import {
 import {
   bindSessionRoles,
   currentAccount,
-  currentRoleToken,
   currentRoles,
   currentRolesResolved,
   hasRole
-} from "./chunk-KCXWLPDI.js";
+} from "./chunk-ZJ7UETTQ.js";
 import {
   bindGrid
 } from "./chunk-7DW526V3.js";
@@ -618,7 +617,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build e9374903">v0.4.68 (e9374903)</span>
+        <span class="font-mono whitespace-nowrap" title="build fb2041c5">v0.4.69 (fb2041c5)</span>
       </div>
     `;
   }
@@ -2352,7 +2351,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.68 (e9374903)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.69 (fb2041c5)</div>
         </div>
       </div>
     </div>`;
@@ -2992,8 +2991,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=e9374903", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e9374903", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=fb2041c5", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fb2041c5", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4365,7 +4364,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-7PU3XNEE.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-MUNDMTQC.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4373,14 +4372,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-FFJWEZRR.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-KAA7NU3F.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-FFJWEZRR.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-KAA7NU3F.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4482,7 +4481,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.68 (e9374903)";
+var APP_VERSION = "v0.4.69 (fb2041c5)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4740,14 +4739,14 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-ZUTAAMXG.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-UBZ25F6I.js"),
+  "/sales/me": () => import("./sales-me-UKBZIL4C.js"),
   "/sales/analytics": () => import("./sales-analytics-MCKIGTJU.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-ZBLUQQBZ.js"),
-  "/sales/quote": () => import("./sales-quote-list-WOXNX445.js"),
-  "/masters/customers": () => import("./masters-customers-GTVYZAEZ.js"),
-  "/masters/carriers": () => import("./masters-carriers-IKRUHFCR.js"),
-  "/masters/services": () => import("./masters-services-JLTH362B.js"),
-  "/help": () => import("./help-TFMIWEYI.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-4KW3HTYJ.js"),
+  "/sales/quote": () => import("./sales-quote-list-VCJTCXW6.js"),
+  "/masters/customers": () => import("./masters-customers-BEWZFHC4.js"),
+  "/masters/carriers": () => import("./masters-carriers-KPBFC56B.js"),
+  "/masters/services": () => import("./masters-services-N4BVLNGW.js"),
+  "/help": () => import("./help-O2HJDF2F.js"),
   "/pending-access": () => import("./pending-access-7DMAML24.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
@@ -4775,23 +4774,23 @@ var VIEWS = {
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-6BI53HPO.js"),
-  "/masters/flights": () => import("./flights-DFRPFUCY.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-RYH2ANOS.js"),
+  "/masters/airports": () => import("./airports-26XDZMG6.js"),
+  "/masters/flights": () => import("./flights-XK3FL5WU.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-H2WUMCQC.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-R4PL6WOF.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-BRU2SJVN.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-UAIKKGWH.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-YQTFNNR3.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-NAXYCVI6.js"),
+  "/masters/uld-types": () => import("./uld-types-6DLCU6JA.js"),
   "/manager/manifest": () => import("./manifest-ZVYAZKFZ.js"),
   // E-16 F-16-05
   "/masters/air-rates": () => import("./air-rates-QCTUK67N.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-25QHNJ6J.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-DKR3YGMA.js"),
   "/masters/local-charges": () => import("./local-charges-L7HWH22Y.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-RCSAIMVK.js"),
+  "/masters/shipment-states": () => import("./shipment-states-FYFD6YDG.js"),
   "/quotes/air-calc": () => import("./air-calc-K2VHRPQW.js"),
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-ZO3JZGHF.js"),
@@ -6134,13 +6133,9 @@ async function _deferredInit(user, db, repo3) {
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-UPDH47IB.js");
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-UWA3TVJG.js");
     window.__vdg_audit_log = createAuditLog({
-      getUser: () => window.__vdg_auth?.getCurrentUser?.(),
-      // `actor_role` wants a ROLE and this is the role TOKEN, which is not one either
-      // (`__MANAGER__` for the owner, an account for everyone else). Left as it was rather than
-      // changed under the same commit that moved identity — a persisted audit field.
-      getRole: () => currentRoleToken()
+      getUser: () => window.__vdg_auth?.getCurrentUser?.()
     });
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
@@ -6435,7 +6430,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-ZBLUQQBZ.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-4KW3HTYJ.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;

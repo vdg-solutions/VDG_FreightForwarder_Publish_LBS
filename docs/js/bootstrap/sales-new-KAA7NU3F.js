@@ -118,7 +118,7 @@ import {
 import {
   currentAccount,
   currentRoles
-} from "./chunk-KCXWLPDI.js";
+} from "./chunk-ZJ7UETTQ.js";
 import "./chunk-JAZY43GR.js";
 import {
   showConfirm
@@ -2816,7 +2816,12 @@ function validateShipmentForm(state, { publish = true } = {}) {
     commission_lines: state.commission_lines || []
   };
   const reply = mod.validate_shipment_gate(JSON.stringify(request));
-  const errs = reply.errors.map((key) => t(`sales_new.validation.${key}`));
+  const errs = reply.errors.map((key) => {
+    if (key === "bill_awb_invalid" && reply.awb_expected_check !== null && reply.awb_expected_check !== void 0) {
+      return t("sales_new.validation.bill_awb_check_digit").replace("{n}", String(reply.awb_expected_check));
+    }
+    return t(`sales_new.validation.${key}`);
+  });
   if (reply.vnd_mismatch) {
     const { expected, actual, delta } = reply.vnd_mismatch;
     errs.push(t("sales_new.validation.vnd_invariant").replace("{expected}", expected).replace("{actual}", actual).replace("{delta}", delta));
@@ -3105,7 +3110,7 @@ async function _loadStateAliasRows(repo) {
 async function submitForm(state, repo, salesRepId, opts = {}) {
   if (!repo) throw new Error("Repo not available");
   const publish = opts.publish !== false;
-  const ref = await mintShipmentRef(repo, deriveDirection(state), salesRepId);
+  const ref = opts.ref || await mintShipmentRef(repo, deriveDirection(state), salesRepId);
   const stateAliasRows = await _loadStateAliasRows(repo);
   const jobNo = await resolveJobNo({ formJobNo: state.job_no, salesRepId });
   let shipment = buildShipment(state, ref, salesRepId, { publishState: resolvePublishState(null, publish), stateAliasRows, jobNo });
@@ -3123,7 +3128,10 @@ async function submitForm(state, repo, salesRepId, opts = {}) {
     if (publish) await _handOverToAccounting(repo, shipment);
   } catch (err) {
     const undo = await rollbackShipmentCreate(repo, ref).catch((e) => ({ ok: false, skipped: [e?.message || String(e)] }));
-    if (!undo?.ok) console.warn("[VDG] rollback left records behind:", undo?.skipped);
+    if (!undo?.ok) {
+      console.warn("[VDG] rollback left records behind:", undo?.skipped);
+      err.orphanRef = ref;
+    }
     throw err;
   }
   const advancedTo = await autoAdvanceShipment(repo, shipment);
@@ -3486,6 +3494,7 @@ async function render(root, opts = {}) {
     });
   }
   const guardedSubmit = createSubmitGuard();
+  let orphanRef = null;
   root.querySelector("#shipment-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const intent = e.submitter?.dataset?.intent === "save" ? "save" : "publish";
@@ -3521,7 +3530,8 @@ async function render(root, opts = {}) {
             navigate("/sales/edit/" + editRef);
           }
         } else {
-          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish });
+          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish, ref: orphanRef });
+          orphanRef = null;
           _dispatchCommitted(formMount, repFinal);
           await clearDraft();
           const key = publish ? "sales_new.publish_pending_toast" : "sales_new.saved_draft_toast";
@@ -3530,6 +3540,7 @@ async function render(root, opts = {}) {
           navigate("/sales/edit/" + ref);
         }
       } catch (err) {
+        if (err?.orphanRef) orphanRef = err.orphanRef;
         showToast(saveErrorText(err), "error");
       }
     });

@@ -24,7 +24,7 @@ const wasm = () => window.__vdg_wasm;
  * must not be able to make a shipment save wait on its own history — so anything that has to
  * observe the trail (a verifier, a clean shutdown) awaits `flush()`.
  */
-export function createAuditLog({ getUser, getRole }) {
+export function createAuditLog({ getUser }) {
   let queue = Promise.resolve();
 
   const enqueue = (store, kind, entityId, op, body, changes, label) => {
@@ -40,7 +40,9 @@ export function createAuditLog({ getUser, getRole }) {
           body: body ?? null,
           changes: Array.isArray(changes) ? changes : null,
           actor_email: getUser?.()?.email ?? null,
-          actor_role: getRole?.() ?? null,
+          // No actor_role: wasm reads the roles off the session principal itself. An audit trail
+          // whose subject supplies its own role is not evidence, and JS was passing the session's
+          // role TOKEN anyway -- `__MANAGER__` for the owner, an address for everyone else.
         });
         if (!reply.ok) throw new Error(reply.error || 'audit append failed');
       })

@@ -20,8 +20,9 @@ export function bindSessionRoles(impl) { _impl = impl; }
 export const currentAccount = () => (_impl ? _impl.currentAccount() : null);
 
 /// WHERE this session's authority came from: an account, or a sentinel (`__MANAGER__`,
-/// `NOT_PROVISIONED`). Not an identity — see `currentAccount`. Only the audit trail's `actor_role`
-/// still reads it, and that field wants a ROLE, which this is not either.
+/// `NOT_PROVISIONED`). Not an identity — see `currentAccount` — and not a role either. Nothing in
+/// the ui reads it; it is exposed so the two can stay told apart rather than collapse back into
+/// one accessor that means whichever the caller assumed.
 export const currentRoleToken = () => (_impl ? _impl.currentRoleToken() : null);
 
 /// The roles this session holds. Empty until the ACL record resolves — callers gate on a role,

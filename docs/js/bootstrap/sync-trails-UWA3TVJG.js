@@ -8,7 +8,7 @@ var ERROR_KIND_JS = "js_error";
 var ERROR_KIND_REJECTION = "unhandled_rejection";
 var ERROR_KIND_SYNC = "sync_error";
 var wasm = () => window.__vdg_wasm;
-function createAuditLog({ getUser, getRole }) {
+function createAuditLog({ getUser }) {
   let queue = Promise.resolve();
   const enqueue = (store, kind, entityId, op, body, changes, label) => {
     queue = queue.then(async () => {
@@ -21,8 +21,10 @@ function createAuditLog({ getUser, getRole }) {
         op,
         body: body ?? null,
         changes: Array.isArray(changes) ? changes : null,
-        actor_email: getUser?.()?.email ?? null,
-        actor_role: getRole?.() ?? null
+        actor_email: getUser?.()?.email ?? null
+        // No actor_role: wasm reads the roles off the session principal itself. An audit trail
+        // whose subject supplies its own role is not evidence, and JS was passing the session's
+        // role TOKEN anyway -- `__MANAGER__` for the owner, an address for everyone else.
       });
       if (!reply.ok) throw new Error(reply.error || "audit append failed");
     }).catch((err) => {

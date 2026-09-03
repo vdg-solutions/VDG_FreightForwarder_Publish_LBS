@@ -1,7 +1,7 @@
 // Post-OAuth repo-init chain — "render-first, sync-later"
 // Critical path: open store → WASM init → repo build → license gate → RENDER
 
-import { currentAccount, currentRoleToken, currentRolesResolved } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
+import { currentAccount, currentRolesResolved } from '../../implementations/ui/core_abstractions/ports/auth/session-roles.js';
 import { safeAwait } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 import { createIoPort } from '../../implementations/storage/bootstrap/compose.js';
 import { createPlatform } from '../platform/index.js';
@@ -140,10 +140,6 @@ async function _deferredInit(user, db, repo) {
     const { createAuditLog, createUserAuditLog, installErrorLog } = await import('../platform/sync-trails.js');
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.(),
-      // `actor_role` wants a ROLE and this is the role TOKEN, which is not one either
-      // (`__MANAGER__` for the owner, an account for everyone else). Left as it was rather than
-      // changed under the same commit that moved identity — a persisted audit field.
-      getRole: () => currentRoleToken(),
     });
 
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });

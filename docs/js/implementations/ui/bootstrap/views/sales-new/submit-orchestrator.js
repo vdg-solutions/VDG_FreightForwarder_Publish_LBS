@@ -94,7 +94,13 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
 
   // The direction the job runs decides the ref's prefix — an import job must not mint under EX
   // just because the form carries no explicit direction field (F-41-03).
-  const ref = await mintShipmentRef(repo, deriveDirection(state), salesRepId);
+  //
+  // `opts.ref` is a RETRY of a submission whose rollback could not finish. Minting again there is
+  // how one job became two: the first attempt's envelope had already landed, the compensating
+  // delete failed (it only ever warned to the console), the user pressed Save again, and a fresh
+  // ref made a second shipment beside the orphan instead of overwriting it. Re-using the ref makes
+  // the retry idempotent — the second write lands on the same row.
+  const ref = opts.ref || await mintShipmentRef(repo, deriveDirection(state), salesRepId);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
   const jobNo = await resolveJobNo({ formJobNo: state.job_no, salesRepId });
@@ -130,7 +136,12 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
     // part that is genuinely UI: preserving the error the user needs to read, and saying out loud
     // when the cleanup left something behind instead of letting an orphan go unmentioned.
     const undo = await rollbackShipmentCreate(repo, ref).catch((e) => ({ ok: false, skipped: [e?.message || String(e)] }));
-    if (!undo?.ok) console.warn('[VDG] rollback left records behind:', undo?.skipped); // DEV
+    if (!undo?.ok) {
+      console.warn('[VDG] rollback left records behind:', undo?.skipped); // DEV
+      // Name the survivor on the error so a retry can land on it. Without this the orphan is
+      // unreachable and the next attempt mints a twin — the duplicate-shipment report.
+      err.orphanRef = ref;
+    }
     throw err;
   }
 
