@@ -6,7 +6,7 @@
 // server login) a one-file job.
 
 /// Verdicts. `token` is the ACCOUNT the rest of the app keys on (MANAGER sentinel or the
-/// user's prefix upper-cased); `roles` the role names; `areas` the folder-id manifest an
+/// the account, upper-cased); `roles` the role names; `areas` the folder-id manifest an
 /// employee's data layer starts from ({ path, folder_id }[]).
 export const VERDICT_MANAGER = 'manager';
 export const VERDICT_GRANT = 'grant';

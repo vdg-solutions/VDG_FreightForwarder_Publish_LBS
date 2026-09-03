@@ -954,7 +954,6 @@
   "admin.users.column.display_name": "Tên hiển thị",
   "admin.users.column.role": "Vai trò",
   "admin.users.column.sales_code": "Mã sales",
-  "admin.users.prefix.auto_hint": "Hệ thống tự đặt theo email. Nếu trùng thì thêm 4 số phía sau.",
   "admin.users.column.active": "Trạng thái",
   "admin.users.column.last_active": "Hoạt động gần nhất",
   "admin.users.column.actions": "Thao tác",

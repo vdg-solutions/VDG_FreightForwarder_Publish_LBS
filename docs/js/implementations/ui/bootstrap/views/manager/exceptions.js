@@ -244,7 +244,7 @@ export async function render(root) {
   const vms = computeSortedExceptions(_exceptions);
 
   const repsForAssign = await getActiveSalesReps(getRepo() || window.__vdg_repo).catch(() => []);
-  const assignOpts    = repsForAssign.map((r) => `<option value="${r.prefix}">${r.name}</option>`).join('');
+  const assignOpts    = repsForAssign.map((r) => `<option value="${r.account}">${r.name}</option>`).join('');
 
   root.setAttribute('data-mgr-exc', '1');
   root.innerHTML = `

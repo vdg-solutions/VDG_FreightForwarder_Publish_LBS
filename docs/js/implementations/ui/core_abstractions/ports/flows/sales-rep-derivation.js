@@ -3,7 +3,7 @@
 
 let _impl = null;
 
-/// Root bootstrap binds { deriveSalesRep, selfRepCandidate, customerRepFor } once.
+/// Root bootstrap binds { deriveSalesRep, selfRepCandidate, customerRepFor, mineOnly } once.
 export function bindSalesRepDerivation(impl) { _impl = impl; }
 
 function _i() {
@@ -13,7 +13,10 @@ function _i() {
 
 /// ({ routeRep, draftRep, customerRep, selfRep }) -> rep ('' = the form must ask)
 export const deriveSalesRep  = (...a) => _i().deriveSalesRep(...a);
-/// (roles, token) -> rep ('' unless the session holds a sales role)
+/// (roles, account) -> rep ('' unless the session holds a sales role)
 export const selfRepCandidate = (...a) => _i().selfRepCandidate(...a);
+/// (rows) -> the rows belonging to the signed-in account. No account argument: a caller that
+/// could name one could name somebody else's.
+export const mineOnly = (...a) => _i().mineOnly(...a);
 /// (customerName, customers) -> rep
 export const customerRepFor  = (...a) => _i().customerRepFor(...a);

@@ -4,7 +4,7 @@
 
 let _impl = null;
 
-/// Root bootstrap binds { getActiveSalesReps, getSalesRepByPrefix, clearRegistryCache } once.
+/// Root bootstrap binds { getActiveSalesReps, getSalesRepByAccount, clearRegistryCache } once.
 export function bindSalesRegistry(impl) { _impl = impl; }
 
 function _i() {
@@ -12,10 +12,10 @@ function _i() {
   return _impl;
 }
 
-/// () -> [{ name, prefix, email, color, handle }]
-/// `prefix` IS the account (lowercased email) — it is what a job stores as its sales_rep_id.
-/// `handle` is the short form shown in a dropdown, display only.
+/// () -> [{ name, account, email, color, handle }]
+/// `account` is the lowercased email — what a job stores as its sales_rep_id, and the only field
+/// here anything compares. `handle` is the short form shown in a dropdown, display only.
 export const getActiveSalesReps = (...a) => _i().getActiveSalesReps(...a);
-/// (reps, prefix) -> the rep, or null
-export const getSalesRepByPrefix = (...a) => _i().getSalesRepByPrefix(...a);
+/// (reps, account) -> the rep, or null
+export const getSalesRepByAccount = (...a) => _i().getSalesRepByAccount(...a);
 export const clearRegistryCache = (...a) => _i().clearRegistryCache(...a);

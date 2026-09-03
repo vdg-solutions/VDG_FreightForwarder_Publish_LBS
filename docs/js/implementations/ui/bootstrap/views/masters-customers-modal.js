@@ -14,13 +14,13 @@ function genId() {
 
 // F-41-01: which rep serves this customer lives on the customer master, so a CS-created job
 // inherits its rep from the customer instead of from whoever typed it (industry rule). A stored
-// prefix no longer in the active list is still offered so an edit never silently drops it.
+// account no longer in the active list is still offered so an edit never silently drops it.
 function repOptions(reps, selected) {
-  const known  = (reps || []).some((r) => r.prefix === selected);
+  const known  = (reps || []).some((r) => r.account === selected);
   const legacy = selected && !known ? `<option value="${escHtml(selected)}" selected>${escHtml(selected)}</option>` : '';
   return `<option value="">${t('masters_customers.field.sales_rep_none')}</option>${legacy}` +
     (reps || []).map((r) =>
-      `<option value="${escHtml(r.prefix)}"${r.prefix === selected ? ' selected' : ''}>${escHtml(r.name)}${r.handle ? ` (${escHtml(r.handle)})` : ''}</option>`).join('');
+      `<option value="${escHtml(r.account)}"${r.account === selected ? ' selected' : ''}>${escHtml(r.name)}${r.handle ? ` (${escHtml(r.handle)})` : ''}</option>`).join('');
 }
 
 function buildModal(entity, reps) {

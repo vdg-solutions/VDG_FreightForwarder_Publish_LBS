@@ -100,12 +100,18 @@ export function composeData(wasm) {
       if (!reply.ok) throw new Error(reply.error || 'the read failed');
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
-    // Filter the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
-    // cross-fork revenue read for everybody else's.
-    listShipments: async (repo, predicate = null) => {
-      const reply = await wasm.data_list_envelopes({});
+    // Narrow the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
+    // cross-owner revenue read for everybody else's. `mine` is wasm's decision, not a predicate
+    // this layer applies.
+    listShipments: async (repo) => {
+      const reply = await wasm.data_list_envelopes({ mine: false });
       if (!reply.ok) throw new Error(reply.error || 'the read failed');
-      return joinLoaded(repo, applyPredicate(reply.rows, predicate));
+      return joinLoaded(repo, reply.rows);
+    },
+    listMyShipments: async (repo) => {
+      const reply = await wasm.data_list_envelopes({ mine: true });
+      if (!reply.ok) throw new Error(reply.error || 'the read failed');
+      return joinLoaded(repo, reply.rows);
     },
     joinLoaded,
     anyRevenueVisible: (rows) => (rows || []).some((row) => row?.[REVENUE_SEEN]),

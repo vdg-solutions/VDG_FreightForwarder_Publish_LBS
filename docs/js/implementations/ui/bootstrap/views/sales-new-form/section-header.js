@@ -110,9 +110,9 @@ function custSel(customers, selected, isAutofilled) {
     </div>`;
 }
 
-// F-41-01: the rep field is a SELECT over provisioned reps (value = fork prefix), not free text —
-// what it holds names the revenue fork, the publish fork and the Job No namespace, none of which
-// a typed label can address. A prior value that is not in the active list (rep left, legacy
+// F-41-01: the rep field is a SELECT over provisioned reps (value = the rep's ACCOUNT), not free
+// text — what it holds names the revenue owner, the publish owner and the Job No namespace, none
+// of which a typed label can address. A prior value that is not in the active list (rep left, legacy
 // record) stays offered so an edit never silently loses it; a sentinel ('__MANAGER__') is a role
 // token, not a rep, and is NOT re-offered — resaving such a record forces a real pick.
 //
@@ -126,11 +126,11 @@ function repOptionLabel(r) {
 }
 
 function repSel(reps, selected, currentUser) {
-  const known  = (reps || []).some((r) => r.prefix === selected);
+  const known  = (reps || []).some((r) => r.account === selected);
   const legacy = selected && !known && window.__vdg_wasm?.access_is_account(selected)
     ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : '';
   const opts = (reps || []).map((r) =>
-    `<option value="${r.prefix}"${r.prefix === selected ? ' selected' : ''}>${repOptionLabel(r)}</option>`).join('');
+    `<option value="${r.account}"${r.account === selected ? ' selected' : ''}>${repOptionLabel(r)}</option>`).join('');
   return `<select name="sales_rep" class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs">
     <option value="">${t('sales_new.select_placeholder')}</option>${legacy}${opts}
   </select>`;

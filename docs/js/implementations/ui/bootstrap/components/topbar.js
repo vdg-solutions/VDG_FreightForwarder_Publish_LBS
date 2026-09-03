@@ -1,7 +1,7 @@
 // Topbar — route title, user avatar, sync chip, SW update banner
 
 import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
-import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentAccount, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { ROLE_MANAGER, ROLE_SALES_MANAGER, ROLES_RESOLVED_EVENT } from '../../../ui/core_abstractions/roles.js';
@@ -215,7 +215,7 @@ class VdgTopbar extends LitElement {
         ? { email: profile?.email || currentUserEmail(), name: profile?.name || '',
             picture: profile?.picture || '', sub: '', id_token: null }
         : null);
-    const salesId = currentSalesRepId();
+    const salesId = currentAccount();
     const now = Date.now();
     // Rust's own verdict (sync_health.rs) — a synchronous, in-memory read, no round trip. The
     // chip's color/label decision must consult THIS, not a JS-tracked retry streak that a later,

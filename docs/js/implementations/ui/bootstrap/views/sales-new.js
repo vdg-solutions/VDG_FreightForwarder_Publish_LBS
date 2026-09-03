@@ -2,7 +2,7 @@
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { navigate } from '../router.js';
-import { currentSalesRepId, currentRoles } from '../../core_abstractions/ports/auth/session-roles.js';
+import { currentAccount, currentRoles } from '../../core_abstractions/ports/auth/session-roles.js';
 import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { selfRepCandidate, customerRepFor } from '../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
@@ -104,12 +104,12 @@ export async function render(root, opts = {}) {
   const isEdit = mode === 'edit' && !!editRef;
   // F-41-01: the job's rep is DERIVED — explicit ?sales= (on-behalf / the quote-convert door)
   // wins, else the signed-in session but ONLY when it actually holds a sales role. The old
-  // unconditional `currentSalesRepId()` default is the bug this feature exists to remove: a job
+  // unconditional `currentAccount()` default is the bug this feature exists to remove: a job
   // CS opened was attributed to the CS account, so its revenue fork, publish fork and Job No
   // namespace all pointed at the wrong person. '' here means the form must be given a rep —
   // the customer master autofills one, or the select asks.
   const routeRep   = (salesId && salesId !== 'me') ? salesId : null;
-  const salesRepId = routeRep || selfRepCandidate(currentRoles(), currentSalesRepId() || '');
+  const salesRepId = routeRep || selfRepCandidate(currentRoles(), currentAccount() || '');
   const repo = window.__vdg_repo;
 
   let customers  = [];
@@ -245,7 +245,7 @@ export async function render(root, opts = {}) {
   // reaches the field.
   if (draft && !draft.sales_rep) {
     const fromCust = customerRepFor(draft.customer, customers);
-    if (fromCust && reps.some((r) => r.prefix === fromCust)) draft.sales_rep = fromCust;
+    if (fromCust && reps.some((r) => r.account === fromCust)) draft.sales_rep = fromCust;
   }
 
   const formMount = root.querySelector('#form-mount') || root;

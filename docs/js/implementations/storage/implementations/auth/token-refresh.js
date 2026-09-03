@@ -15,7 +15,7 @@ async function _onReconnectRequest() {
   try {
     const resp = await reconnectInteractive();                 // full resp (token)
     const user = await hydrateSessionFromToken(resp);          // re-mint id_token + scope flag
-    if (user && _onReconnected) await _onReconnected(user);    // re-resolve currentSalesRepId
+    if (user && _onReconnected) await _onReconnected(user);    // re-resolve the session principal
     window.dispatchEvent(new CustomEvent('vdg:auth-reconnected'));   // chip → green, resumes drain
     window.dispatchEvent(new CustomEvent('vdg:sync-now'));          // drain outbox AFTER reconnected
   } catch {

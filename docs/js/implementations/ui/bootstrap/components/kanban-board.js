@@ -48,7 +48,7 @@ class VdgKanbanBoard extends LitElement {
     this._pending    = new Set();
     this._moveMenuId = null;
     this._touchMode  = window.innerWidth < TOUCH_MODE_BREAKPOINT || navigator.maxTouchPoints > 0;
-    this._colorMap   = new Map(); // prefix → border-color class
+    this._colorMap   = new Map(); // account → border-color class
     this._loadColors();
   }
 
@@ -57,7 +57,7 @@ class VdgKanbanBoard extends LitElement {
     if (!repo) return;
     try {
       const reps = await getActiveSalesReps(repo);
-      this._colorMap = new Map(reps.map((r) => [r.prefix.toUpperCase(), r.color]));
+      this._colorMap = new Map(reps.map((r) => [r.account, r.color]));
       this.requestUpdate();
     } catch (err) {
       console.error('[kanban-board] color load failed:', err); // DEV
@@ -193,7 +193,7 @@ class VdgKanbanBoard extends LitElement {
     const sales     = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t);
     const margin    = s.margin_pct   ?? null;
     const isAir     = s.mode === 'air'; // data compare, not UI text — off-template so detector-blind
-    const salesCls  = this._colorMap.get((sales || '').toUpperCase()) || FALLBACK_BORDER_COLOR;
+    const salesCls  = this._colorMap.get((sales || '').trim().toLowerCase()) || FALLBACK_BORDER_COLOR;
     const pendingCls= this._pending.has(id) ? 'opacity-70 animate-pulse' : '';
     const selCls    = this._selected.has(id) ? 'ring-2 ring-blue-400' : '';
 

@@ -13,7 +13,7 @@ export { ROLE_READ_ONLY };
 export const PENDING_ROUTE = '/pending-access';
 const REASON_DENIED = 'nav.access.denied';
 
-/// Stamped on anything that has to answer "who did this" — the workspace user prefix, the same
+/// Stamped on anything that has to answer "who did this" — the workspace account, the same
 /// token the ledger uses. A ROLE is not an identity: two sales reps share one, so a role-stamped
 /// record cannot name either of them.
 export const UNKNOWN_USER_ID = 'unknown';

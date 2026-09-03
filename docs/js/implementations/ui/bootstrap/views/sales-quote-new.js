@@ -1,6 +1,6 @@
 // F-12-10 — New quotation form (Draft creation)
 
-import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentAccount, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { selfRepCandidate, customerRepFor } from '../../../ui/core_abstractions/ports/flows/sales-rep-derivation.js';
 import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
@@ -144,11 +144,11 @@ function repOptionLabel(r) {
   return r.handle ? `${r.name} (${r.handle})` : r.name;
 }
 
-// F-41: SELECT over provisioned reps (value = fork prefix), never free text — this is the
+// F-41: SELECT over provisioned reps (value = the rep's ACCOUNT), never free text — this is the
 // commercial owner a quote defaults to, and it must stay overridable per document.
 function repSelectHtml(reps, selected) {
   const opts = (reps || [])
-    .map((r) => `<option value="${escHtml(r.prefix)}"${r.prefix === selected ? ' selected' : ''}>${escHtml(repOptionLabel(r))}</option>`)
+    .map((r) => `<option value="${escHtml(r.account)}"${r.account === selected ? ' selected' : ''}>${escHtml(repOptionLabel(r))}</option>`)
     .join('');
   return `<select id="f-sales-rep" name="sales_rep" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
     <option value="">${t('sales_new.select_placeholder')}</option>${opts}
@@ -261,7 +261,7 @@ function formHtml(presetSales, containerTypes = [], reps = []) {
 export async function render(root, quoteId) {
   if (!can(quoteId ? 'quote.edit' : 'quote.create')) { navigate('/sales/quote'); return; } // F-63: QUOTE_EDIT_RE has no access_policy.rs rule of its own
   _lines = [{ description: '', amount: '', currency: 'VND' }];
-  const salesId = currentSalesRepId();
+  const salesId = currentAccount();
   if (!salesId) {
     root.innerHTML = `<div data-auth-stale class="p-6 text-red-600 text-sm">${t('sales_me.not_authenticated')}</div>`;
     return;

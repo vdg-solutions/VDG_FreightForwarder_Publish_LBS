@@ -1,7 +1,7 @@
 // F-12-09 — Sales personal workspace (daily driver)
 // Identity: Google OAuth verified — no self-pick modal
 
-import { currentSalesRepId, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentAccount, currentRoles } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
 import { ROLE_MANAGER } from '../../../ui/core_abstractions/roles.js';
 import { overdueFollowupsHtml, sendSalesReminder } from './sales-me-overdue.js';
 import { dueSoonHtml } from './sales-me-due-soon.js';
@@ -160,7 +160,7 @@ export async function render(root) {
   window.addEventListener('vdg:locale-changed', _onLocale);
 
   const user    = window.__vdg_auth?.getCurrentUser?.();
-  const salesId = currentSalesRepId();
+  const salesId = currentAccount();
 
   if (!user || !salesId) {
     root.innerHTML = `<div data-auth-stale class="p-6 text-red-600 text-sm">${t('sales_me.not_authenticated')}</div>`;
@@ -184,7 +184,7 @@ async function populateView(root, salesId, user) {
   const bodyEl    = root.querySelector('#me-body');
 
   const { ok, value: data, error } = await safeAwait(
-    loadMyData(salesId),
+    loadMyData(),
     LOAD_TIMEOUT_MS,
     () => {},
     'sales-me:loadMyData',

@@ -954,7 +954,6 @@
   "admin.users.column.display_name": "Display Name",
   "admin.users.column.role": "Role",
   "admin.users.column.sales_code": "Sales code",
-  "admin.users.prefix.auto_hint": "Assigned automatically from the email. A clash adds 4 digits.",
   "admin.users.column.active": "Status",
   "admin.users.column.last_active": "Last Active",
   "admin.users.column.actions": "Actions",

@@ -28,7 +28,7 @@ function managerRoleLabel(tFn) {
  */
 export function resolveSalesRepLabel(token, currentUser = null, tFn = t) {
   if (!token) return '';
-  if (!SENTINEL_SHAPE.test(token)) return token; // AC-04: real rep name/prefix passthrough
+  if (!SENTINEL_SHAPE.test(token)) return token; // AC-04: real rep name/account passthrough
   if (token === MANAGER_SENTINEL) {
     const name = currentUser?.name || currentUser?.email;
     return name || managerRoleLabel(tFn);

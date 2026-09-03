@@ -173,8 +173,8 @@ async function recompose(root) {
   }
 }
 
-// F-47-05: the button's VALUE and its LABEL used to be one string, because a rep's `prefix` was
-// the email's local part — short enough to read and, back then, an identity. The prefix is the
+// F-47-05: the button's VALUE and its LABEL used to be one string, because a rep's identity was
+// the email's local part — short enough to read and, back then, an identity. It is the whole
 // account now, so the two are carried separately: the account filters, the name is what a manager
 // reads. `name` is server-supplied, hence the escape.
 function _esc(s) {
@@ -188,7 +188,7 @@ async function _buildSalesBtns() {
   if (repo) {
     try {
       const reps = await getActiveSalesReps(repo);
-      reps.forEach((r) => entries.push([r.prefix, r.name || r.prefix]));
+      reps.forEach((r) => entries.push([r.account, r.name || r.account]));
     } catch { /* fallback: All-only */ }
   }
   return entries.map(([val, label]) => {

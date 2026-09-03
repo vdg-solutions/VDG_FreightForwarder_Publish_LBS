@@ -8,7 +8,7 @@
 import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shipment-state-resolver.js';
 import { UNKNOWN_STATE } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
-import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
+import { listMyShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
 import { listPnlLines, salesShareTotal } from '../../core_abstractions/ports/data/sales-reads.js';
 
 function mtdFilter(s) {
@@ -22,12 +22,17 @@ function mtdFilter(s) {
 
 const EMPTY_DATA = { all: [], mtd: [], pending: [], stats: { shipments: 0, revenue: 0, margin: 0, salesCommission: 0, advances: 0 } };
 
-export async function loadMyData(salesId) {
+// `salesId` is no longer a parameter: which jobs are mine is the session's own question, answered
+// in wasm off `session_principal::account()`. It used to be
+// `(s.sales_rep || '').toLowerCase() === salesId.toLowerCase()`, where `salesId` was the role
+// TOKEN — `__MANAGER__` for the workspace owner, matching no job at all. That is what showed 0
+// shipments over a workspace holding 17.
+export async function loadMyData() {
   const repo = window.__vdg_repo;
   if (!repo) return EMPTY_DATA;
 
   const [allShipments, allLines, aliasRows] = await Promise.all([
-    listShipments(repo, (s) => (s.sales_rep || '').toLowerCase() === salesId.toLowerCase()),
+    listMyShipments(repo),
     listPnlLines().catch(() => []),
     ensureShipmentStateAliases(repo), // DEFECT-1: seed-on-first-read (sales rep never opens master view)
   ]);

@@ -1,6 +1,7 @@
 // F-12-10 — Quotation list view (all states, role-filtered)
 
-import { currentSalesRepId } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { currentAccount } from '../../../ui/core_abstractions/ports/auth/session-roles.js';
+import { mineOnly } from '../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listWhere } from '../../core_abstractions/ports/data/repo-query.js';
 import { sendToCustomer, markAccepted, checkAlreadyConverted } from '../../core_abstractions/ports/flows/quote-orchestrator.js';
@@ -208,8 +209,10 @@ async function loadQuotes(repo, salesId, seesAllQuotes) {
   // is the client-side scope for what a list renders.
   // F-63: Auditor reads the whole book too — same unfiltered branch as SalesManager, never the
   // per-rep filter (an auditor has no sales_rep_id of their own to filter on).
-  const filter = seesAllQuotes ? null : (q) => (q.sales_rep_id || '').toLowerCase() === salesId.toLowerCase();
-  return listWhere(repo, KIND_QUOTATIONS, filter).catch(() => []);
+  const rows = await listWhere(repo, KIND_QUOTATIONS, null).catch(() => []);
+  // Whose a quote is, is wasm's call (`rep_account::belongs_to`). This compared `sales_rep_id`
+  // against the session's role TOKEN in JS, so the workspace owner matched none of their own.
+  return seesAllQuotes ? rows : mineOnly(rows);
 }
 
 // ── entry point ───────────────────────────────────────────────────────────────
@@ -230,7 +233,7 @@ export async function render(root) {
   };
   window.addEventListener('vdg:locale-changed', _onLocale);
 
-  const salesId = currentSalesRepId();
+  const salesId = currentAccount();
   const canCreateQuote = can('quote.create');
   const canDecideOverride = can('approval.decide');
   const repo = window.__vdg_repo;

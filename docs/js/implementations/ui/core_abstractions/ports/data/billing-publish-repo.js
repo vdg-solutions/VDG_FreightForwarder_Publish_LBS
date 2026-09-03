@@ -2,7 +2,7 @@
 //
 // Publishing is not a flag. Accounting is not in the reader set of `_shared/shipments` at all, so
 // `publish_state: 'published'` on the envelope shows them nothing — publish has to CREATE a record
-// in a folder Accounting was granted, which is `users/{prefix}/billing_published`.
+// in a folder Accounting was granted, which is `users/{account}/billing_published`.
 
 export const KIND_BILLING_PUBLISHED = 'billing_published';
 

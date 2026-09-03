@@ -17,7 +17,8 @@ let _signinListenerWired = false;
 
 export function composeAuth(wasm) {
   const sessionRoles = {
-    currentSalesRepId: () => wasm.auth_session_roles({}).token ?? null,
+    currentAccount:    () => wasm.auth_session_roles({}).account ?? null,
+    currentRoleToken:  () => wasm.auth_session_roles({}).token ?? null,
     currentRoles:      () => wasm.auth_session_roles({}).roles,
     // session_principal.rs's own `resolved()` -- tells an empty currentRoles() apart from a
     // probe that never got an answer (see session-roles.js's own doc comment).

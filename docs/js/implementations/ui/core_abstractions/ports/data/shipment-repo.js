@@ -55,8 +55,14 @@ export const rollbackShipmentCreate = (...a) => _i().rollbackShipmentCreate(...a
 export const overwriteCommissionEntries = (...a) => _i().overwriteCommissionEntries(...a);
 /// (repo, ref) -> the shipment rejoined with whatever revenue this reader can see, or null.
 export const getShipment = (...a) => _i().getShipment(...a);
-/// (repo, predicate?) -> joined shipments.
+/// (repo) -> joined shipments, everything this reader can see.
 export const listShipments = (...a) => _i().listShipments(...a);
+/// (repo) -> joined shipments belonging to the signed-in account.
+///
+/// A separate door rather than a predicate argument: "mine" is decided in wasm off the session's
+/// own account (`rep_account::belongs_to`), and there is deliberately no way for a caller to ask
+/// for somebody else's.
+export const listMyShipments = (...a) => _i().listMyShipments(...a);
 /// (repo, envelopes) -> joined shipments, for callers that already hold envelopes.
 export const joinLoaded = (...a) => _i().joinLoaded(...a);
 /// (rows) -> true when at least one row carries a sell side this reader could read.

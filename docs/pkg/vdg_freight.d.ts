@@ -655,6 +655,8 @@ export function flows_license_resolve(req: any): Promise<any>;
 
 export function flows_migrate_shipment_states(req: any): Promise<any>;
 
+export function flows_mine_only(req: any): any;
+
 export function flows_next_local_seq(req: any): Promise<any>;
 
 export function flows_note_lines(req: any): any;
@@ -695,7 +697,7 @@ export function flows_sales_analytics(req: any): any;
 
 export function flows_sales_commission(req: any): Promise<any>;
 
-export function flows_sales_rep_by_prefix(req: any): any;
+export function flows_sales_rep_by_account(req: any): any;
 
 export function flows_save_quote_draft(req: any): Promise<any>;
 
@@ -1390,6 +1392,7 @@ export interface InitOutput {
     readonly flows_license_error_key: (a: number, b: number) => void;
     readonly flows_license_resolve: (a: number) => number;
     readonly flows_migrate_shipment_states: (a: number) => number;
+    readonly flows_mine_only: (a: number, b: number) => void;
     readonly flows_next_local_seq: (a: number) => number;
     readonly flows_note_lines: (a: number, b: number) => void;
     readonly flows_persist_advanced_state: (a: number) => number;
@@ -1410,7 +1413,7 @@ export interface InitOutput {
     readonly flows_repo_max_seq: (a: number) => number;
     readonly flows_sales_analytics: (a: number, b: number) => void;
     readonly flows_sales_commission: (a: number) => number;
-    readonly flows_sales_rep_by_prefix: (a: number, b: number) => void;
+    readonly flows_sales_rep_by_account: (a: number, b: number) => void;
     readonly flows_save_quote_draft: (a: number) => number;
     readonly flows_self_rep_candidate: (a: number, b: number) => void;
     readonly flows_send_quote: (a: number) => number;
@@ -1714,9 +1717,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15433: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15435: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11413: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15451: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15453: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11431: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -166,11 +166,9 @@ import {
   todayLocal
 } from "./chunk-7INC2TTZ.js";
 import {
+  bindQuoteOrchestrator,
   bindSalesRepDerivation
-} from "./chunk-BDMZBHS4.js";
-import {
-  bindQuoteOrchestrator
-} from "./chunk-5UHUC2YB.js";
+} from "./chunk-7VDYLQIL.js";
 import {
   UNKNOWN_USER_ID,
   bindRouteGuard,
@@ -244,7 +242,7 @@ import {
   deleteShipment,
   putEnvelope,
   putShipment
-} from "./chunk-4VNIIBNV.js";
+} from "./chunk-CDRBIG2D.js";
 import {
   bindSalesRegistry
 } from "./chunk-YFN2XPGT.js";
@@ -256,11 +254,12 @@ import {
 } from "./chunk-XLNZASZM.js";
 import {
   bindSessionRoles,
+  currentAccount,
+  currentRoleToken,
   currentRoles,
   currentRolesResolved,
-  currentSalesRepId,
   hasRole
-} from "./chunk-NQTRREKJ.js";
+} from "./chunk-KCXWLPDI.js";
 import {
   bindGrid
 } from "./chunk-7DW526V3.js";
@@ -619,7 +618,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build c8bc5791">v0.4.67 (c8bc5791)</span>
+        <span class="font-mono whitespace-nowrap" title="build e9374903">v0.4.68 (e9374903)</span>
       </div>
     `;
   }
@@ -1480,7 +1479,7 @@ var VdgTopbar = class extends LitElement2 {
       sub: "",
       id_token: null
     } : null);
-    const salesId = currentSalesRepId();
+    const salesId = currentAccount();
     const now = Date.now();
     const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).length > 0;
     const unreachable = !!window.__vdg_repo?.sync_server_unreachable?.();
@@ -2353,7 +2352,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.67 (c8bc5791)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.68 (e9374903)</div>
         </div>
       </div>
     </div>`;
@@ -2993,8 +2992,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=c8bc5791", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=c8bc5791", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=e9374903", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=e9374903", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3114,7 +3113,8 @@ var SIGNIN_REQUEST_EVENT = "vdg:auth-signin-request";
 var _signinListenerWired = false;
 function composeAuth(wasm4) {
   const sessionRoles = {
-    currentSalesRepId: () => wasm4.auth_session_roles({}).token ?? null,
+    currentAccount: () => wasm4.auth_session_roles({}).account ?? null,
+    currentRoleToken: () => wasm4.auth_session_roles({}).token ?? null,
     currentRoles: () => wasm4.auth_session_roles({}).roles,
     // session_principal.rs's own `resolved()` -- tells an empty currentRoles() apart from a
     // probe that never got an answer (see session-roles.js's own doc comment).
@@ -4357,7 +4357,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-ALQ42FVG.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-DEVXFRPQ.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4365,7 +4365,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-GIRH7QRD.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-7PU3XNEE.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4373,14 +4373,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-RRJG4DHU.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-FFJWEZRR.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-RRJG4DHU.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-FFJWEZRR.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4482,7 +4482,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.67 (c8bc5791)";
+var APP_VERSION = "v0.4.68 (e9374903)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4731,8 +4731,8 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-OV4ITTEO.js"),
-  "/shipments": () => import("./shipments-P5VA4TKE.js"),
+  "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
+  "/shipments": () => import("./shipments-DHEEMQ5G.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-KCM6MBAN.js"),
   "/finance": () => import("./finance-dashboard-UFCYYKU6.js"),
@@ -4740,20 +4740,20 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-ZUTAAMXG.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-S37MBTXI.js"),
-  "/sales/analytics": () => import("./sales-analytics-M3A2IPUA.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-WFONS4TE.js"),
-  "/sales/quote": () => import("./sales-quote-list-EAHS6J3Y.js"),
-  "/masters/customers": () => import("./masters-customers-6LVIVJ3I.js"),
-  "/masters/carriers": () => import("./masters-carriers-25ACI65R.js"),
-  "/masters/services": () => import("./masters-services-OJHORGV2.js"),
-  "/help": () => import("./help-IKAUORGB.js"),
+  "/sales/me": () => import("./sales-me-UBZ25F6I.js"),
+  "/sales/analytics": () => import("./sales-analytics-MCKIGTJU.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-ZBLUQQBZ.js"),
+  "/sales/quote": () => import("./sales-quote-list-WOXNX445.js"),
+  "/masters/customers": () => import("./masters-customers-GTVYZAEZ.js"),
+  "/masters/carriers": () => import("./masters-carriers-IKRUHFCR.js"),
+  "/masters/services": () => import("./masters-services-JLTH362B.js"),
+  "/help": () => import("./help-TFMIWEYI.js"),
   "/pending-access": () => import("./pending-access-7DMAML24.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
-  "/manager/dashboard": () => import("./dashboard-WO75SJKX.js"),
-  "/manager/pipeline": () => import("./pipeline-42YDRBXY.js"),
-  "/manager/approvals": () => import("./approvals-ECACSPKI.js"),
+  "/manager/dashboard": () => import("./dashboard-BELKTNKK.js"),
+  "/manager/pipeline": () => import("./pipeline-OT75GWCY.js"),
+  "/manager/approvals": () => import("./approvals-DZEFGRIT.js"),
   "/manager/reports/pnl": () => import("./pnl-report-HBXLLPCO.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-VHDCCII3.js"),
   "/manager/finance/close-period": () => import("./close-period-VU27GZGX.js"),
@@ -4761,10 +4761,10 @@ var VIEWS = {
   "/manager/audit": () => import("./audit-WKEWHXBU.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-FZX7UVLL.js"),
-  "/manager/finance/commissions": () => import("./commissions-IRESZVYO.js"),
+  "/manager/sales": () => import("./sales-X4TD2GCN.js"),
+  "/manager/finance/commissions": () => import("./commissions-DOBGSUUL.js"),
   "/manager/commission-rules": () => import("./commission-rules-QAH2DJKC.js"),
-  "/manager/exceptions": () => import("./exceptions-C5YFECKS.js"),
+  "/manager/exceptions": () => import("./exceptions-HAGQW5SX.js"),
   // E-15
   "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
@@ -4775,23 +4775,23 @@ var VIEWS = {
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-U4WZM3Y3.js"),
-  "/masters/flights": () => import("./flights-5PX4657W.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-ZWRW5ALA.js"),
+  "/masters/airports": () => import("./airports-6BI53HPO.js"),
+  "/masters/flights": () => import("./flights-DFRPFUCY.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-RYH2ANOS.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-2PQBVPOW.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-R4PL6WOF.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-PYMLXXPC.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-UAIKKGWH.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-OP4IZ376.js"),
+  "/masters/uld-types": () => import("./uld-types-NAXYCVI6.js"),
   "/manager/manifest": () => import("./manifest-ZVYAZKFZ.js"),
   // E-16 F-16-05
   "/masters/air-rates": () => import("./air-rates-QCTUK67N.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-P7YZC5DR.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-25QHNJ6J.js"),
   "/masters/local-charges": () => import("./local-charges-L7HWH22Y.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-YHRKPHFI.js"),
+  "/masters/shipment-states": () => import("./shipment-states-RCSAIMVK.js"),
   "/quotes/air-calc": () => import("./air-calc-K2VHRPQW.js"),
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-ZO3JZGHF.js"),
@@ -4799,7 +4799,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-CUEPPKXF.js"),
+  "/accounting/settings": () => import("./settings-7RS4ZLCQ.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06
@@ -5123,12 +5123,18 @@ function composeData(wasm4) {
       if (!reply.ok) throw new Error(reply.error || "the read failed");
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
-    // Filter the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
-    // cross-fork revenue read for everybody else's.
-    listShipments: async (repo3, predicate = null) => {
-      const reply = await wasm4.data_list_envelopes({});
+    // Narrow the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
+    // cross-owner revenue read for everybody else's. `mine` is wasm's decision, not a predicate
+    // this layer applies.
+    listShipments: async (repo3) => {
+      const reply = await wasm4.data_list_envelopes({ mine: false });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
-      return joinLoaded(repo3, applyPredicate(reply.rows, predicate));
+      return joinLoaded(repo3, reply.rows);
+    },
+    listMyShipments: async (repo3) => {
+      const reply = await wasm4.data_list_envelopes({ mine: true });
+      if (!reply.ok) throw new Error(reply.error || "the read failed");
+      return joinLoaded(repo3, reply.rows);
     },
     joinLoaded,
     anyRevenueVisible: (rows) => (rows || []).some((row) => row?.[REVENUE_SEEN])
@@ -5657,7 +5663,8 @@ var EMPTY2 = {};
 function composeFlows(wasm4) {
   bindSalesRepDerivation({
     deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) => wasm4.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
-    selfRepCandidate: (roles, token) => wasm4.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
+    selfRepCandidate: (roles, account) => wasm4.flows_self_rep_candidate({ roles: roles || [], account: account ?? null }).rep,
+    mineOnly: (rows) => wasm4.flows_mine_only({ rows: rows || [] }).rows,
     customerRepFor: (customerName, customers) => wasm4.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep
   });
   bindAirRateCalculator({
@@ -5751,7 +5758,7 @@ function composeFlows(wasm4) {
       const { users } = await listUsers({ role: ROLE_SALES_REP });
       return (await wasm4.flows_active_sales_reps({ rows: users || [], force: false })).reps;
     },
-    getSalesRepByPrefix: (reps, prefix) => wasm4.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
+    getSalesRepByAccount: (reps, account) => wasm4.flows_sales_rep_by_account({ reps: reps || [], account: account ?? null }).rep,
     clearRegistryCache: () => wasm4.flows_clear_sales_registry(EMPTY2)
   });
   window.addEventListener(ENTITY_CHANGED_EVENT, (e) => {
@@ -6130,11 +6137,14 @@ async function _deferredInit(user, db, repo3) {
     const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-UPDH47IB.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.(),
-      getRole: () => currentSalesRepId()
+      // `actor_role` wants a ROLE and this is the role TOKEN, which is not one either
+      // (`__MANAGER__` for the owner, an account for everyone else). Left as it was rather than
+      // changed under the same commit that moved identity — a persisted audit field.
+      getRole: () => currentRoleToken()
     });
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
-    startDueSoonChecker({ getSalesId: () => currentSalesRepId() });
+    startDueSoonChecker({ getSalesId: () => currentAccount() });
     window.__vdg_user_audit_log = createUserAuditLog();
     const retryPrincipalOnReconnect = () => {
       if (currentRolesResolved()) {
@@ -6401,7 +6411,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-UABKOWMN.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-52JVBOBD.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6409,7 +6419,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-2IW2T7EM.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-RQ7ALOEQ.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6417,7 +6427,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-3N6GZGZE.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-BCDPLPPX.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6425,7 +6435,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-WFONS4TE.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-ZBLUQQBZ.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;

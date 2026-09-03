@@ -33,7 +33,8 @@ export function composeFlows(wasm) {
   bindSalesRepDerivation({
     deriveSalesRep: ({ routeRep = null, draftRep = null, customerRep = null, selfRep = null } = {}) =>
       wasm.flows_derive_sales_rep({ route_rep: routeRep, draft_rep: draftRep, customer_rep: customerRep, self_rep: selfRep }).rep,
-    selfRepCandidate: (roles, token) => wasm.flows_self_rep_candidate({ roles: roles || [], token: token ?? null }).rep,
+    selfRepCandidate: (roles, account) => wasm.flows_self_rep_candidate({ roles: roles || [], account: account ?? null }).rep,
+    mineOnly: (rows) => wasm.flows_mine_only({ rows: rows || [] }).rows,
     customerRepFor: (customerName, customers) =>
       wasm.flows_customer_rep({ customer_name: customerName ?? null, customers: customers || [] }).rep,
   });
@@ -126,7 +127,7 @@ export function composeFlows(wasm) {
       const { users } = await listUsers({ role: ROLE_SALES_REP });
       return (await wasm.flows_active_sales_reps({ rows: users || [], force: false })).reps;
     },
-    getSalesRepByPrefix: (reps, prefix) => wasm.flows_sales_rep_by_prefix({ reps: reps || [], prefix: prefix ?? null }).rep,
+    getSalesRepByAccount: (reps, account) => wasm.flows_sales_rep_by_account({ reps: reps || [], account: account ?? null }).rep,
     clearRegistryCache: () => wasm.flows_clear_sales_registry(EMPTY),
   });
   // The registry is a five-minute cache of the user master; a user record changing is the one

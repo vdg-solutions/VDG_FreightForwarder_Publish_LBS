@@ -7,12 +7,22 @@
 
 let _impl = null;
 
-/// Root bootstrap binds { currentSalesRepId, currentRoles, currentRolesResolved, hasRole,
-/// setResolvedRoles } once.
+/// Root bootstrap binds { currentAccount, currentRoleToken, currentRoles, currentRolesResolved,
+/// hasRole, setResolvedRoles } once.
 export function bindSessionRoles(impl) { _impl = impl; }
 
-/// The resolved fork token for this session (fork id / sentinel — NOT an authority).
-export const currentSalesRepId = () => (_impl ? _impl.currentSalesRepId() : null);
+/// WHO is signed in: the account (lowercased email). This is what a record is stamped with and
+/// matched against — the same namespace a rep picker writes into `sales_rep_id`.
+///
+/// It was `currentSalesRepId()` and returned `currentRoleToken()` below, which for the workspace
+/// owner is `__MANAGER__`. Every screen that asked "which of these are mine" compared that against
+/// an account and got nothing back.
+export const currentAccount = () => (_impl ? _impl.currentAccount() : null);
+
+/// WHERE this session's authority came from: an account, or a sentinel (`__MANAGER__`,
+/// `NOT_PROVISIONED`). Not an identity — see `currentAccount`. Only the audit trail's `actor_role`
+/// still reads it, and that field wants a ROLE, which this is not either.
+export const currentRoleToken = () => (_impl ? _impl.currentRoleToken() : null);
 
 /// The roles this session holds. Empty until the ACL record resolves — callers gate on a role,
 /// never on emptiness meaning "allow".
@@ -26,5 +36,5 @@ export const currentRolesResolved = () => (_impl ? _impl.currentRolesResolved() 
 
 export const hasRole = (role) => (_impl ? _impl.hasRole(role) : false);
 
-/// Keeps the fork token and the role set in lockstep; returns the token.
+/// Keeps the role token and the role set in lockstep; returns the token.
 export const setResolvedRoles = (token, roles) => (_impl ? _impl.setResolvedRoles(token, roles) : token);

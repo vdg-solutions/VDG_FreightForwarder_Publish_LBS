@@ -33,7 +33,7 @@ const SILENT_REFRESH_TIMEOUT_MS = Math.max(1_000, SAFE_AWAIT_DEFAULT_MS - 2_000)
 
 // Multi-account guard: the browser can hold several Google sessions at once. A re-mint WITHOUT
 // login_hint lets Google pick its DEFAULT session account — silently flipping the app's token to
-// a different account than the one signed in (wrong identity, wrong users/<prefix> routing).
+// a different account than the one signed in (wrong identity, wrong users/<account> routing).
 // Always pin the mint to the current session's email.
 function _sessionEmail() {
   const token = localStorage.getItem(ID_TOKEN_KEY);

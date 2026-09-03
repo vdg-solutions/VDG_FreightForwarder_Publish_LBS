@@ -77,7 +77,7 @@ class VdgApprovalCard extends LitElement {
     if (!repo) return;
     try {
       this._repsList   = await getActiveSalesReps(repo);
-      this._delegateTo = this._repsList[0]?.prefix || '';
+      this._delegateTo = this._repsList[0]?.account || '';
       this.requestUpdate();
     } catch (err) {
       console.error('[approval-card] rep load failed:', err); // DEV
@@ -112,7 +112,7 @@ class VdgApprovalCard extends LitElement {
     this._action   = action;
     this._comment  = '';
     this._expanded = action !== 'Delegate';
-    if (action === 'Delegate') this._delegateTo = this._repsList[0]?.prefix || '';
+    if (action === 'Delegate') this._delegateTo = this._repsList[0]?.account || '';
     this.requestUpdate();
   }
 
@@ -175,7 +175,7 @@ class VdgApprovalCard extends LitElement {
         <div class="mt-3 flex items-center gap-2">
           <select @change="${(e) => { this._delegateTo = e.target.value; }}"
                   class="text-xs border border-slate-200 rounded px-2 py-1">
-            ${this._repsList.map((r) => html`<option value="${r.prefix}">${r.name}</option>`)}
+            ${this._repsList.map((r) => html`<option value="${r.account}">${r.name}</option>`)}
           </select>
           <button @click="${() => this._submit()}"
                   class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg">${t('approval.action.delegate')}</button>
