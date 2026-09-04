@@ -43,7 +43,7 @@ import {
 import {
   API_BASE,
   activeWorkspaceName
-} from "./chunk-O3GF5UE4.js";
+} from "./chunk-BGHVKQFL.js";
 import {
   bindAwbRepo
 } from "./chunk-LEXYJ5I6.js";
@@ -617,7 +617,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build fb2041c5">v0.4.69 (fb2041c5)</span>
+        <span class="font-mono whitespace-nowrap" title="build 22b4a963">v0.4.70 (22b4a963)</span>
       </div>
     `;
   }
@@ -2351,7 +2351,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.69 (fb2041c5)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.70 (22b4a963)</div>
         </div>
       </div>
     </div>`;
@@ -2769,6 +2769,9 @@ function createPlatform({ repo: repo3 }) {
     records_get: (kind, id) => repo3.get(kind, id),
     records_list: (kind) => repo3.list(kind),
     records_put: (kind, id, body) => repo3.put(kind, id, body),
+    // CDB-DM-04: whose row it is, when that is not the person typing. Carried, never decided
+    // here -- the shell hands the value across, wasm chose it.
+    records_put_owned: (kind, id, body, owner) => repo3.put_owned(kind, id, body, owner),
     // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
     // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
     records_put_labeled: (kind, id, body, labels) => repo3.put_labeled(kind, id, body, labels),
@@ -2991,8 +2994,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=fb2041c5", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=fb2041c5", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=22b4a963", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=22b4a963", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4372,14 +4375,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-KAA7NU3F.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-KQL4DDLY.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-KAA7NU3F.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-KQL4DDLY.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4481,7 +4484,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.69 (fb2041c5)";
+var APP_VERSION = "v0.4.70 (22b4a963)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4757,7 +4760,7 @@ var VIEWS = {
   "/manager/finance/cash-flow": () => import("./cash-flow-VHDCCII3.js"),
   "/manager/finance/close-period": () => import("./close-period-VU27GZGX.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-2HHAP7F4.js"),
-  "/manager/audit": () => import("./audit-WKEWHXBU.js"),
+  "/manager/audit": () => import("./audit-6BPPMIH3.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-X4TD2GCN.js"),
@@ -4770,7 +4773,7 @@ var VIEWS = {
   "/manager/users": () => import("./users-RTYASZ4K.js"),
   // E-15 F-15-36
   "/manager/fx-rates": () => import("./fx-rates-PTOBKIXW.js"),
-  "/manager/settings": () => import("./settings-TTWLXCFP.js"),
+  "/manager/settings": () => import("./settings-EXOTB3HW.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
@@ -4798,7 +4801,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-7RS4ZLCQ.js"),
+  "/accounting/settings": () => import("./settings-J2EHSHHI.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06
@@ -6133,7 +6136,7 @@ async function _deferredInit(user, db, repo3) {
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-UWA3TVJG.js");
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-X7ASFFE4.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.()
     });

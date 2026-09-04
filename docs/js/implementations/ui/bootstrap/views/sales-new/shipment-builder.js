@@ -125,7 +125,7 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     // Reading state.roe_debit alone dropped every typed sell-side ROE on the floor.
     roe_debit:             parseFloat(state.roe_selling ?? state.roe_debit) || null,
     // E-37: line_id is the join key between the two records a shipment is stored as (the buy side
-    // travels with the envelope into _shared/shipments, the sell side stays in the rep's fork).
+    // travels with the envelope into _shared/shipments, the sell side stays under the rep's account).
     // Same scheme as the materialized `pnl_line` rows, so one shipment has one line vocabulary.
     // shipment_split REFUSES a line without it rather than producing a half that cannot rejoin.
     pnl_lines:             state.lines

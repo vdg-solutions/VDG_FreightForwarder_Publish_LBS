@@ -39,12 +39,12 @@ function createAuditLog({ getUser }) {
   };
   return {
     append: (kind, entityId, op, body, changes = null) => enqueue(AUDIT_STORE_SHARED, kind, entityId, op, body, changes, "append"),
-    /// The same entry in the rep's own fork. Reached only from the shipment-audit use-case, which
+    /// The same entry in the rep's own revenue trail. Reached only from the shipment-audit use-case, which
     /// is the only caller holding a change list already sorted by Rust.
     appendRevenue: (kind, entityId, op, body, changes = null) => enqueue(AUDIT_STORE_REVENUE, kind, entityId, op, body, changes, "revenue append"),
     flush: () => queue,
     readAll: () => read(AUDIT_STORE_SHARED),
-    /// A reader who holds no revenue fork gets [] — that is the CS answer and it is correct.
+    /// A reader the policy grants no revenue rows gets [] — that is the CS answer and it is correct.
     readRevenueHistory: () => read(AUDIT_STORE_REVENUE),
     readFiltered: (email) => read(AUDIT_STORE_SHARED, email)
   };

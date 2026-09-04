@@ -41,7 +41,7 @@ function _i() {
 export const putShipment = (...a) => _i().putShipment(...a);
 /// (repo, ref, shipmentLike) -> envelope. The operational half only; never period-gated.
 export const putEnvelope = (...a) => _i().putEnvelope(...a);
-/// (repo, ref) -> the stored envelope, with no cross-fork revenue read.
+/// (repo, ref) -> the stored envelope, with no cross-account revenue read.
 export const getEnvelope = (...a) => _i().getEnvelope(...a);
 /// (repo, predicate?) -> envelopes.
 export const listEnvelopes = (...a) => _i().listEnvelopes(...a);

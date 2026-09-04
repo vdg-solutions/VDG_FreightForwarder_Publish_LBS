@@ -4,7 +4,7 @@
 // manager grid, and so the two never drift into describing the same entry differently.
 //
 // Nothing here decides what may be shown. The entry arrived from the store whose readers were
-// already settled by the folder ACL — a reader holding a revenue entry was granted that fork. This
+// already settled by the policy — a reader holding a revenue entry may see that row. This
 // module only formats what it was handed.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';

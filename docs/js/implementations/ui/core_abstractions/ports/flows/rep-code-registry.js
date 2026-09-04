@@ -1,5 +1,5 @@
 // rep-code-registry — port: the 4-digit rep code that namespaces every Job No. It is the same
-// `sales_code` the users screen shows as "Mã sales"; `fork` is a different field.
+// `sales_code` the users screen shows as "Mã sales"; the account is a different thing.
 
 /// The shape a rep code has — the users form checks it without a bridge call.
 export const REP_CODE_REGEX = /^\d{4}$/;

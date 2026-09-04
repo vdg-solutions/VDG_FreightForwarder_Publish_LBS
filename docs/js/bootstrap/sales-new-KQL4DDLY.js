@@ -394,7 +394,7 @@ function buildShipment(state, ref, salesRepId, opts = {}) {
     // Reading state.roe_debit alone dropped every typed sell-side ROE on the floor.
     roe_debit: parseFloat(state.roe_selling ?? state.roe_debit) || null,
     // E-37: line_id is the join key between the two records a shipment is stored as (the buy side
-    // travels with the envelope into _shared/shipments, the sell side stays in the rep's fork).
+    // travels with the envelope into _shared/shipments, the sell side stays under the rep's account).
     // Same scheme as the materialized `pnl_line` rows, so one shipment has one line vocabulary.
     // shipment_split REFUSES a line without it rather than producing a half that cannot rejoin.
     pnl_lines: state.lines ? state.lines.map((ln, i) => ({
@@ -3284,6 +3284,21 @@ ${_confirmBody(flagged)}`,
   return { proceed: true, overrides };
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/sales-new/phase-timeline-mount.js
+var TIMELINE_MOUNT_ID = "phase-timeline";
+var DRAFT_TIMELINE_REF = "draft:new";
+function mountPhaseTimeline(root, record) {
+  const timeline = loadTimeline(record);
+  if (!timeline) return;
+  const host = root.querySelector(`#${TIMELINE_MOUNT_ID}`);
+  if (!host) return;
+  const paint = (focus) => {
+    host.innerHTML = renderTimeline(timeline, { focus });
+    bindTimeline(host, paint);
+  };
+  paint(timeline.current);
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new.js
 function saveErrorText(err) {
   try {
@@ -3292,18 +3307,6 @@ function saveErrorText(err) {
   } catch {
   }
   return `Error: ${err.message}`;
-}
-var DRAFT_TIMELINE_REF = "draft:new";
-function mountPhaseTimeline(root, record) {
-  const timeline = loadTimeline(record);
-  if (!timeline) return;
-  const host = root.querySelector("#phase-timeline");
-  if (!host) return;
-  const paint = (focus) => {
-    host.innerHTML = renderTimeline(timeline, { focus });
-    bindTimeline(host, paint);
-  };
-  paint(timeline.current);
 }
 var PERSONALIZATION_LOAD_TIMEOUT_MS = 5e3;
 function showToast(msg, type = "info") {

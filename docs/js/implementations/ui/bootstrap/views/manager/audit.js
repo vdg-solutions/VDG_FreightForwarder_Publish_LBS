@@ -85,7 +85,7 @@ function _colDefs() {
     { headerName: t('audit.col.to'),      field: 'to_state',    width: 120 },
     { headerName: t('audit.col.event'),   field: 'event',       width: 140 },
     // F-37-02: a hash can only say that something moved. Sell figures are NOT here — they are in
-    // the rep's own fork, in the trail whose readers already hold the record it describes.
+    // the rep's own revenue trail, the one whose readers already hold the record it describes.
     { headerName: t('audit.col.changes'), flex: 1, cellRenderer: changesCell },
     { headerName: t('audit.col.emitted'), field: 'emitted_at',  width: 100 },
   ];

@@ -1,7 +1,7 @@
 // output/web/js.tmp/implementations/storage/core_abstractions/workspace-config.js
 var WORKSPACE_NAME = (() => {
   const raw = "LBS";
-  return raw.startsWith("WORKSPACE_NAME_") ? "LBS" : raw;
+  return raw.startsWith("WORKSPACE_NAME_") ? "" : raw;
 })();
 var API_BASE = (() => {
   const raw = "https://vdg-lbs-edge.lbs-vdg.workers.dev";

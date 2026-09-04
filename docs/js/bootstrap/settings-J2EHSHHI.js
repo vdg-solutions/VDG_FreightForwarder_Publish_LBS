@@ -11,7 +11,7 @@ import {
 } from "./chunk-CHLQ7LZW.js";
 import {
   activeWorkspaceName
-} from "./chunk-O3GF5UE4.js";
+} from "./chunk-BGHVKQFL.js";
 import {
   getCurrentPeriodLock
 } from "./chunk-LW2VKPQE.js";

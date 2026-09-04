@@ -271,6 +271,17 @@ export class WasmEntityRepo {
      * rule); an edit of an existing record drops them silently, same as `put` always has.
      */
     put_labeled(kind: string, id: string, body: any, labels: any): Promise<any>;
+    /**
+     * CDB-DM-04: `put`, plus WHOSE row it is.
+     *
+     * `put` leaves the owner undeclared and the bridge falls back to the session, which is right
+     * only while the writer and the owner are the same person. They are not when a Manager enters
+     * a rep's revenue: charterdb-retire-the-fork.md §2 calls that default "silently makes a
+     * Manager's entry steal the rep's job". This is the seam `storage_bridge.rs` already promised
+     * -- "a future caller that DOES know its own owner is honored without a second, competing
+     * derivation".
+     */
+    put_owned(kind: string, id: string, body: any, owner: string): Promise<any>;
     sync_delta(): Promise<any>;
     /**
      * Every kind currently failing this session (`sync_health::mark_failed`, armed from both
@@ -377,7 +388,7 @@ export function auth_require_auth(req: any): Promise<any>;
 
 /**
  * Boot's final principal resolution: JS hands over the signed-in email, this reads the staff
- * table and republishes the whole principal — no role/fork decision left on the JS side.
+ * table and republishes the whole principal — no role or identity decision left on the JS side.
  */
 export function auth_resolve_principal(req: any): Promise<any>;
 
@@ -1685,6 +1696,7 @@ export interface InitOutput {
     readonly wasmentityrepo_pref_write_state: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_put_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasmentityrepo_put_owned: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
     readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
@@ -1717,9 +1729,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15456: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15458: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11436: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15473: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15475: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11453: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

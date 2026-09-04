@@ -1,7 +1,7 @@
 // user-edit-modal.js — Edit User modal for the admin Users view (F-24-04).
 // F-46-03: one PATCH /api/users/{email} call replaces the old changeRole cascade + separate
 // display_name upsert — the server writes both in one request and enforces the last-Manager guard
-// itself. The fork is server-managed now (assigned once at create, never edited here).
+// itself. The account is server-managed now (set once at create, never edited here).
 //
 // AC-04/AC-05: this same modal IS the reactivate flow (`{ reactivate: true }`) — a deactivated
 // grant's `roles` were wiped to `[]` on the server, so bringing the account back is choosing its

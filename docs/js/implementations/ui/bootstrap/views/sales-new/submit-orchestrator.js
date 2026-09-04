@@ -108,7 +108,7 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
   const version = nextLedgerVersion(NO_PRIOR_VERSION);
   shipment._ledger_version = version;
   // E-37: two records, split in Rust. The envelope goes to _shared/shipments where CS and the rep
-  // both work; the sell side goes to the rep's fork, which CS holds no permission on.
+  // both work; the sell side goes under the rep's account, which the policy does not let CS read.
   await putShipment(repo, shipment);
   // F-41-04: the pre-check is check-then-write, so look again now the write has landed. A record
   // that lost the arbitration comes back re-minted and already re-saved — carry on with THAT one,

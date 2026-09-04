@@ -17,7 +17,7 @@ function _i() {
 }
 
 /// (repo, shipment, { publishedBy, publishedAt }?) -> the snapshot, as a NEW revision.
-/// Throws when the shipment carries no sell side — it was read without access to the revenue fork,
+/// Throws when the shipment carries no sell side — it was read without access to the revenue rows,
 /// and publishing it would invoice zero.
 export const publishBilling = (...a) => _i().publishBilling(...a);
 /// (repo, shipment) -> every revision published for it, oldest first.

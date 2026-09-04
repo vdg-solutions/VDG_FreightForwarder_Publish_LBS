@@ -18,6 +18,9 @@ export function createPlatform({ repo }) {
     records_get:      (kind, id)        => repo.get(kind, id),
     records_list:     (kind)            => repo.list(kind),
     records_put:      (kind, id, body)  => repo.put(kind, id, body),
+    // CDB-DM-04: whose row it is, when that is not the person typing. Carried, never decided
+    // here -- the shell hands the value across, wasm chose it.
+    records_put_owned: (kind, id, body, owner) => repo.put_owned(kind, id, body, owner),
     // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
     // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
     records_put_labeled: (kind, id, body, labels) => repo.put_labeled(kind, id, body, labels),

@@ -11,7 +11,10 @@
 // tenant config can no longer declare a binding this file has nothing left to receive.
 export const WORKSPACE_NAME = (() => {
   const raw = 'LBS';
-  return raw.startsWith('WORKSPACE_NAME_') ? 'LBS' : raw;
+  // Unsubstituted = a build no publish stamped, so it belongs to NO tenant. Naming one here put
+  // the customer's workspace name into every other tenant's bundle, and callers already expect
+  // the empty case (`|| null`, `|| ''` at the three platform ports). Same shape as API_BASE below.
+  return raw.startsWith('WORKSPACE_NAME_') ? '' : raw;
 })();
 
 // The API origin the server adapter talks to. Empty (unsubstituted) = same origin as the page: a

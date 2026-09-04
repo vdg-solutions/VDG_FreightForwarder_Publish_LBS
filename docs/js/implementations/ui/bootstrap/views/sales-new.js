@@ -20,9 +20,7 @@ import {
   getCommissionRuleAssignment, getShipmentCommissionSnapshot,
 } from '../../core_abstractions/ports/data/sales-reads.js';
 import { readSettings, DEFAULT_CURRENCY_FIELD } from '../../core_abstractions/ports/governance/workspace-settings.js';
-import { loadTimeline, renderTimeline, bindTimeline } from '../components/phase-timeline.js';
-
-const TIMELINE_MOUNT_ID = 'phase-timeline';
+import { mountPhaseTimeline, DRAFT_TIMELINE_REF } from './sales-new/phase-timeline-mount.js';
 
 // wasm has no locale, so a use-case that needs the reader's words hands back {key, ...params} as
 // JSON in `error` instead of a baked sentence (F-47-04) — same convention detail-panel.js uses
@@ -33,36 +31,6 @@ function saveErrorText(err) {
     if (envelope && envelope.key) return t(envelope.key, envelope);
   } catch { /* not a JSON envelope — fall through to the raw message */ }
   return `Error: ${err.message}`;
-}
-// A NEW job has no shipment_ref yet, but the timeline still needs a non-empty entity id to render
-// the Created checklist (F-37-04). It used to borrow the Job No for this — a 10-digit legal doc
-// number sitting in a ref-typed slot. The sentinel says what it is; it never persists (submitForm
-// mints the real EX|IM ref) and the FSM registry simply has no entry for it, which falls back to
-// the record's own state exactly like any not-yet-registered job.
-const DRAFT_TIMELINE_REF = 'draft:new';
-
-/**
- * Draw the phases above the form, and let a click move the FORM'S FOCUS.
- *
- * Focus is not state. Clicking a phase the job has already passed opens it for correction — which
- * is the back-and-forth between CS and Sales the owner asked for — and never moves the shipment
- * backwards. `state` only changes through apply_fsm_event, which is guarded and audited.
- *
- * A shipment the FSM does not recognise gets no timeline rather than an empty one: "this job has
- * no phases" is a different claim from "we could not work out where it is".
- */
-function mountPhaseTimeline(root, record) {
-  const timeline = loadTimeline(record);
-  if (!timeline) return;
-
-  const host = root.querySelector('#phase-timeline');
-  if (!host) return;
-
-  const paint = (focus) => {
-    host.innerHTML = renderTimeline(timeline, { focus });
-    bindTimeline(host, paint);
-  };
-  paint(timeline.current);
 }
 
 // F-19-29: personalization reads (userConfig + commission override) are optional — bound them
@@ -105,7 +73,7 @@ export async function render(root, opts = {}) {
   // F-41-01: the job's rep is DERIVED — explicit ?sales= (on-behalf / the quote-convert door)
   // wins, else the signed-in session but ONLY when it actually holds a sales role. The old
   // unconditional `currentAccount()` default is the bug this feature exists to remove: a job
-  // CS opened was attributed to the CS account, so its revenue fork, publish fork and Job No
+  // CS opened was attributed to the CS account, so its revenue rows, its published billing and its Job No
   // namespace all pointed at the wrong person. '' here means the form must be given a rep —
   // the customer master autofills one, or the select asks.
   const routeRep   = (salesId && salesId !== 'me') ? salesId : null;
