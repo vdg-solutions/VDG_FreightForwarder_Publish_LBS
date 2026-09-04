@@ -123,6 +123,14 @@ export function composeFlows(wasm) {
     // F-46-03: the picker's rows come from the server's safe projection, not the local "user"
     // entity cache (nothing ever wrote that kind — the empty-picker bug). The wasm side still
     // owns shaping, colour-hashing and the 5-minute cache.
+    // B-47-07-04, as its own call. Widening getActiveSalesReps' return from an array to an
+    // object would have silently broken seven callers that iterate it — the shape a function
+    // returns is part of its contract, and this list is a different question anyway: not "who
+    // can be picked" but "who was left out, and why".
+    getExcludedNonSalesAccounts: async () => {
+      const users = await listUsers().catch(() => []);
+      return (await wasm.flows_active_sales_reps({ rows: users || [], force: false })).excluded_no_sales_role || [];
+    },
     getActiveSalesReps: async () => {
       const { users } = await listUsers({ role: ROLE_SALES_REP });
       return (await wasm.flows_active_sales_reps({ rows: users || [], force: false })).reps;

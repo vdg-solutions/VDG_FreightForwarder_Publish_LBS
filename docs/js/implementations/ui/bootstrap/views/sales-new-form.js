@@ -28,7 +28,7 @@ import { mountDateHints } from '../util/date-input-hint.js';
 const AUTOSAVE_DELAY_MS = 1500;
 
 export async function renderForm(root, opts = {}) {
-  const { customers = [], salesRepId = '', userConfig = null, draft = null,
+  const { customers = [], excludedRepCount = 0, salesRepId = '', userConfig = null, draft = null,
           mode = 'create', fxRepo = null, jobNo = null, defaultCurrency = null,
           revenueVisible = true, reps = [], editRef = null, carriers = [], shipments = [],
           weightUnits = [] } = opts;
@@ -96,7 +96,7 @@ export async function renderForm(root, opts = {}) {
       <div id="phase-timeline"></div>
       <form id="shipment-form" class="space-y-4" novalidate>
         <input type="hidden" name="book_currency" value="${d.book_currency}" />
-        ${sectionAHtml(d, customers, reps, { carriers, shipments, weightUnits })}
+        ${sectionAHtml(d, customers, reps, { carriers, shipments, weightUnits, excludedRepCount })}
         ${sectionBHtml(d)}
         ${revenueVisible ? sectionCHtml(d) : ''}
         ${revenueVisible ? sectionDHtml(d, { isManager }) : ''}

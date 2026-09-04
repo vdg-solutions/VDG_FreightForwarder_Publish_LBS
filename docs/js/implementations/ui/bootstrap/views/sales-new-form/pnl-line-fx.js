@@ -2,7 +2,7 @@
 // Split out of section-lines.js (already at the 350-line cap) — see design.md §4.
 import { getRateForDate } from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { lineVnd } from '../../../core_abstractions/ports/flows/pnl-gate.js';
-import { currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { currentLocale, t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountDateHints } from '../../util/date-input-hint.js';
 
 const VND_CURRENCY = 'VND';
@@ -179,6 +179,31 @@ function _recomputeVndCell(row, side) {
   const bookCurrency = bookCurrencyOf(row);
   const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrency);
   vndEl.value = fmtVndNum(vnd, bookCurrency);
+  _markUnresolvedRate(rateEl, amtEl?.value, curEl?.value, bookCurrency);
+}
+
+// B-47-07-03 sibling (B-47-07-02): a foreign line with an amount and no rate computes nothing, so
+// the VND cell renders blank -- fmtVndNum returns "" for 0. Blank is honest but silent, and the
+// row sits in a form full of filled cells looking finished.
+//
+// The sentence for this already existed: `sales_new.validation.line_fx_no_rate_hint` was written
+// and wired to nothing -- a message nobody could ever read. It says the useful thing (type a rate,
+// or add one on the Admin FX screen if none exists), so it is shown rather than replaced.
+//
+// The save gate still decides: pnl-fx-deviation-gate flags fx_rate <= 0 as non_positive and puts
+// a destructive confirm in the way. This is the earlier, quieter half -- it tells the person while
+// they are still typing, instead of at the end.
+function _markUnresolvedRate(rateEl, amount, currency, bookCurrency) {
+  if (!rateEl) return;
+  const foreign   = !!currency && currency !== (bookCurrency || VND_CURRENCY);
+  const hasAmount = amount !== undefined && amount !== null && String(amount).trim() !== ""
+                    && Number(amount) !== 0;
+  const noRate    = !rateEl.value || Number(rateEl.value) <= 0;
+  const unresolved = foreign && hasAmount && noRate;
+  rateEl.classList.toggle("border-amber-400", unresolved);
+  rateEl.classList.toggle("bg-amber-50", unresolved);
+  if (unresolved) rateEl.title = t("sales_new.validation.line_fx_no_rate_hint");
+  else rateEl.removeAttribute("title");
 }
 
 /**

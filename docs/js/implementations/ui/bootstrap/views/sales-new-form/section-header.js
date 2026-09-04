@@ -125,15 +125,23 @@ function repOptionLabel(r) {
   return r.handle ? `${r.name} (${r.handle})` : r.name;
 }
 
-function repSel(reps, selected, currentUser) {
-  const known  = (reps || []).some((r) => r.account === selected);
+function repSel(reps, selected, currentUser, excludedCount = 0) {
+  const list   = reps || [];
+  const known  = list.some((r) => r.account === selected);
   const legacy = selected && !known && window.__vdg_wasm?.access_is_account(selected)
     ? `<option value="${selected}" selected>${resolveSalesRepLabel(selected, currentUser, t)}</option>` : '';
-  const opts = (reps || []).map((r) =>
+  const opts = list.map((r) =>
     `<option value="${r.account}"${r.account === selected ? ' selected' : ''}>${repOptionLabel(r)}</option>`).join('');
+  // A short list is not the same as a complete one. When the registry reports accounts it left
+  // out for lacking a Sales role, say so — the operator who provisioned that account otherwise
+  // reads its absence as "it does not exist" and goes looking in the wrong place (B-47-07-04).
+  const left_out = excludedCount;
+  const hint = left_out
+    ? `<div class="text-[10px] text-slate-500 mt-0.5">${t('sales_new.rep_excluded_hint').replace('{n}', String(left_out))}</div>`
+    : '';
   return `<select name="sales_rep" class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs">
     <option value="">${t('sales_new.select_placeholder')}</option>${legacy}${opts}
-  </select>`;
+  </select>${hint}`;
 }
 
 // F-41-02: the job-side quote door. Options load when the picker opens (quote-attach.js);
@@ -233,7 +241,8 @@ export function renderHistoryDatalists(carriers = [], shipments = []) {
   `;
 }
 
-export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers = [], shipments = [], weightUnits = [] } = {}) {
+export function sectionAHtml(draft = {}, customers = [], reps = [], opts = {}) {
+  const { carriers = [], shipments = [], weightUnits = [] } = opts;
   const d    = draft;
   const mode = (d.mode || 'SEA').toUpperCase();
   const seaHide = mode === 'AIR' ? ' class="hidden"' : '';
@@ -289,7 +298,7 @@ export function sectionAHtml(draft = {}, customers = [], reps = [], { carriers =
         <div>
           <label class="block text-[10px] text-slate-500 mb-0.5">${t('sales_new.field.sales_rep')}</label>
           <div class="flex gap-1">
-            ${repSel(reps, d.sales_rep, getCurrentUser())}
+            ${repSel(reps, d.sales_rep, getCurrentUser(), opts.excludedRepCount || 0)}
             <span id="doc-type-badge"
               class="hidden text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 self-center">
             </span>

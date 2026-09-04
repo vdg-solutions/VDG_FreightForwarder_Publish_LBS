@@ -5,7 +5,7 @@ import { navigate } from '../router.js';
 import { currentAccount, currentRoles } from '../../core_abstractions/ports/auth/session-roles.js';
 import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { selfRepCandidate, customerRepFor } from '../../core_abstractions/ports/flows/sales-rep-derivation.js';
-import { getActiveSalesReps } from '../../core_abstractions/ports/flows/sales-registry.js';
+import { getActiveSalesReps, getExcludedNonSalesAccounts } from '../../core_abstractions/ports/flows/sales-registry.js';
 import { loadDraft, clearDraft } from './sales-new/draft-manager.js';
 import { renderForm, collectFormState, validateShipmentForm, shipmentToDraft, jumpToFirstError } from './sales-new-form.js';
 import { submitForm, updateForm, highlightErrors } from './sales-new/submit-orchestrator.js';
@@ -86,6 +86,7 @@ export async function render(root, opts = {}) {
   let jobNo      = null;
   let defaultCurrency = null;
   let reps       = [];
+  let excludedRepCount = 0;
   // F-37-06: whether the SELL SIDE came back. A new job is visible - the rep about to type the
   // figures is the one who owns them. On an edit it is whatever the read actually returned, so
   // CS opening a job gets no revenue section: not because of their role, but because the folder
@@ -103,7 +104,7 @@ export async function render(root, opts = {}) {
   let weightUnits = [];
   if (repo) {
     const loadRes = await safeMasterLoad(async () => {
-      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, weightCodes] = await Promise.all([
+      const [customerList, carrierList, shipmentList, rawUserConfig, assignment, wsSettings, repList, excludedReps, weightCodes] = await Promise.all([
         listCustomerMasters().catch(() => []),
         listCarrierMasters().catch(() => []),
         // F-43-08 was a view naming its own kind and getting it wrong ('shipments' resolved to
@@ -117,6 +118,9 @@ export async function render(root, opts = {}) {
         readSettings(repo),
         // F-41-01: the rep select's options — a master-kind read, same 5-min registry cache.
         getActiveSalesReps(repo).catch(() => []),
+        // B-47-07-04: how many provisioned accounts the registry left out. Failure folds to 0 —
+        // a missing hint is a smaller wrong than a wrong number.
+        getExcludedNonSalesAccounts(repo).catch(() => []),
         // The weight select's options. Which units are weights is a fact of the registry, not of
         // this screen — it used to filter `category === 'weight'` here.
         listWeightUnitCodes().catch(() => []),
@@ -134,7 +138,7 @@ export async function render(root, opts = {}) {
           generatedJobNo = await assignJobNo(repo, repCode);
         } catch { /* best-effort at mount — submitForm generates its own fallback (AC-01) */ }
       }
-      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList, weightCodes };
+      return { customerList, carrierList, shipmentList, userConfig: resolvedUserConfig, jobNo: generatedJobNo, wsSettings, repList, excludedReps, weightCodes };
     }, 'sales-new:personalization', PERSONALIZATION_LOAD_TIMEOUT_MS);
 
     if (loadRes.ok) {
@@ -145,6 +149,7 @@ export async function render(root, opts = {}) {
       jobNo      = loadRes.value.jobNo;
       defaultCurrency = loadRes.value.wsSettings?.[DEFAULT_CURRENCY_FIELD] ?? null;
       reps       = loadRes.value.repList;
+      excludedRepCount = (loadRes.value.excludedReps || []).length;
       weightUnits = loadRes.value.weightCodes || [];
     }
     // !loadRes.ok (timeout or thrown): customers=[], userConfig=null, jobNo=null — all
@@ -218,7 +223,7 @@ export async function render(root, opts = {}) {
 
   const formMount = root.querySelector('#form-mount') || root;
   const fxRepo    = await _fxRepo();
-  await renderForm(formMount, { customers, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
+  await renderForm(formMount, { customers, excludedRepCount, salesRepId, userConfig, draft, mode, fxRepo, jobNo,
                                 defaultCurrency, revenueVisible, reps, editRef, carriers, shipments,
                                 weightUnits });
 

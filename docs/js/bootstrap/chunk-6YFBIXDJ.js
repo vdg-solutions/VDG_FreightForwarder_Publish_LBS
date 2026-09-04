@@ -8,7 +8,8 @@ import {
   lineVnd
 } from "./chunk-Z6T6WECV.js";
 import {
-  currentLocale
+  currentLocale,
+  t
 } from "./chunk-5L442NSS.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/pnl-line-fx.js
@@ -118,6 +119,18 @@ function _recomputeVndCell(row, side) {
   const bookCurrency = bookCurrencyOf(row);
   const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrency);
   vndEl.value = fmtVndNum(vnd, bookCurrency);
+  _markUnresolvedRate(rateEl, amtEl?.value, curEl?.value, bookCurrency);
+}
+function _markUnresolvedRate(rateEl, amount, currency, bookCurrency) {
+  if (!rateEl) return;
+  const foreign = !!currency && currency !== (bookCurrency || VND_CURRENCY);
+  const hasAmount = amount !== void 0 && amount !== null && String(amount).trim() !== "" && Number(amount) !== 0;
+  const noRate = !rateEl.value || Number(rateEl.value) <= 0;
+  const unresolved = foreign && hasAmount && noRate;
+  rateEl.classList.toggle("border-amber-400", unresolved);
+  rateEl.classList.toggle("bg-amber-50", unresolved);
+  if (unresolved) rateEl.title = t("sales_new.validation.line_fx_no_rate_hint");
+  else rateEl.removeAttribute("title");
 }
 async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}) {
   if (!row) return;

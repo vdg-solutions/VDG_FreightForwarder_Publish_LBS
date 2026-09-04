@@ -2125,5 +2125,6 @@
   "ledger.discrepancy": "Lệch (Discrepancy):",
   "masters.delete_failed": "Không xoá được dòng này — bản ghi thiếu khoá hoặc bạn không có quyền.",
   "common.action.ok": "OK",
-  "sales_new.validation.bill_awb_check_digit": "Số vận đơn hàng không sai số kiểm tra: số cuối phải là {n}. (Số cuối = 7 số sê-ri chia 7 lấy dư — IATA Res 600a.)"
+  "sales_new.validation.bill_awb_check_digit": "Số vận đơn hàng không sai số kiểm tra: số cuối phải là {n}. (Số cuối = 7 số sê-ri chia 7 lấy dư — IATA Res 600a.)",
+  "sales_new.rep_excluded_hint": "{n} tài khoản khác không hiện ở đây vì chưa có vai Sales."
 }

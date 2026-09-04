@@ -8,8 +8,10 @@ function _i() {
   return _impl;
 }
 var getActiveSalesReps = (...a) => _i().getActiveSalesReps(...a);
+var getExcludedNonSalesAccounts = (...a) => _i().getExcludedNonSalesAccounts(...a);
 
 export {
   bindSalesRegistry,
-  getActiveSalesReps
+  getActiveSalesReps,
+  getExcludedNonSalesAccounts
 };

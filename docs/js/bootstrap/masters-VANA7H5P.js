@@ -300,7 +300,7 @@ async function renderCustomersMaster(root) {
     document.body.appendChild(wizard);
   });
   try {
-    const { render: renderCusts } = await import("./masters-customers-BEWZFHC4.js");
+    const { render: renderCusts } = await import("./masters-customers-H7WYGR5L.js");
     await renderCusts(delegate);
   } catch {
     delegate.innerHTML = `<div class="p-4 text-slate-400 text-xs">${t("masters_hub.err.customer_load")}</div>`;

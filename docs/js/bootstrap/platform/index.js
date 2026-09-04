@@ -29,8 +29,21 @@ export function createPlatform({ repo }) {
     records_invalidate_period_cache: (kind, period) => repo.invalidate_period_cache(kind, period),
     records_delete:   (kind, id)        => repo.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
-    records_get_meta: (key)             => window.__vdg_io ? window.__vdg_io.cache_get_meta(key) : null,
-    records_put_meta: (key, body)       => window.__vdg_io ? window.__vdg_io.cache_put_meta(key, body) : null,
+    // B-24-04-01: these two answered `null` while `__vdg_io` was still being installed, and the
+    // wasm side calls `.then` on whatever comes back -- so the first render of every view after a
+    // page load threw "then on undefined", once per view, on every session.
+    //
+    // A rejected promise, not `Promise.resolve(null)`: the port returns a Result and the callers
+    // already decide what an absent value means (license.rs does `.unwrap_or(Value::Null)`).
+    // Answering "empty" from here would move that decision into the bridge and turn "the IO layer
+    // is not up yet" into "there is no such setting", which is the false zero this project keeps
+    // paying for.
+    records_get_meta: (key)             => (window.__vdg_io
+      ? window.__vdg_io.cache_get_meta(key)
+      : Promise.reject(new Error(`io not ready: cache_get_meta(${key})`))),
+    records_put_meta: (key, body)       => (window.__vdg_io
+      ? window.__vdg_io.cache_put_meta(key, body)
+      : Promise.reject(new Error(`io not ready: cache_put_meta(${key})`))),
     // H4-d: the two bespoke stores (month-partitioned, no `kind` records_list can route to) the
     // workspace backup export reaches directly — same repo object, dedicated dump methods
     // (store::bootstrap::wasm_repo_stores::fx_list_all/awb_list_all).
