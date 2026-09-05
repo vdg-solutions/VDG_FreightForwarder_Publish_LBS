@@ -25,10 +25,12 @@ export function computeVndInvariant(state = {}) {
  * detectFxDeviation — VR-03: per-line deviation check (reference rate resolved by caller),
  * decided by the wasm gate. fxRate <= 0 -> flagged 'non_positive' regardless of reference.
  * currency === VND -> never flagged (locked rate = 1). referenceRate == null -> band check
- * skipped, but the <=0 check still applies.
+ * skipped, but the <=0 check still applies — UNLESS referenceUnreadable says the rate table
+ * itself could not be parsed, which flags 'no_reference' (B-15-38-02). Which of the two an
+ * absent reference is, is the gate's call, not this file's: it only carries the fact across.
  */
-export function detectFxDeviation({ currency, fxRate, referenceRate }) {
-  return fxDeviation(currency, fxRate, referenceRate);
+export function detectFxDeviation({ currency, fxRate, referenceRate, referenceUnreadable }) {
+  return fxDeviation(currency, fxRate, referenceRate, referenceUnreadable === true);
 }
 
 /**

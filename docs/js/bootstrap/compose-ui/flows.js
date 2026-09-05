@@ -61,9 +61,10 @@ export function composeFlows(wasm) {
       });
       return { match: r.match, expected: r.expected, actual: r.actual, delta: r.delta };
     },
-    fxDeviation: (currency, fxRate, referenceRate) => {
+    fxDeviation: (currency, fxRate, referenceRate, referenceUnreadable) => {
       const r = wasm.flows_pnl_fx_deviation({
         currency: currency || '', fx_rate: Number(fxRate) || 0, reference_rate: referenceRate == null ? null : Number(referenceRate),
+        reference_unreadable: referenceUnreadable === true,
       });
       return { flagged: r.flagged, reason: r.reason, deviation: r.deviation, threshold: r.threshold };
     },

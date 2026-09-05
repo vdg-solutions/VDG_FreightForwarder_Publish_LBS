@@ -5,9 +5,25 @@ import {
   t
 } from "./chunk-5L442NSS.js";
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/manager/awb-pdf-lines.js
+var TITLE_SIZE = 16;
+var BODY_SIZE = 11;
+var EMPTY = "\u2014";
+function pdfLines(awb) {
+  return [
+    { size: TITLE_SIZE, y: 20, text: `${t("awb.label.awb_no")}: ${awb.awb_no}` },
+    { size: BODY_SIZE, y: 34, text: `${t("sales_new.field.shipper")}: ${awb.shipper?.name ?? EMPTY}` },
+    { size: BODY_SIZE, y: 43, text: `${t("sales_new.field.consignee")}: ${awb.consignee?.name ?? EMPTY}` },
+    { size: BODY_SIZE, y: 52, text: `${t("awb.label.chargeable_weight")}: ${awb.weight_chargeable_kg ?? 0} kg` },
+    { size: BODY_SIZE, y: 61, text: `${t("awb.label.pieces")}: ${awb.pieces ?? 0}` },
+    { size: BODY_SIZE, y: 70, text: `${t("sales_new.field.commodity")}: ${awb.commodity_desc ?? EMPTY}` }
+  ];
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/awb.js
 var JSPDF_CDN = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 var TOAST_MS = 4e3;
+var PDF_MARGIN_X = 14;
 var STATUS_ALL = "All";
 var STATUS_OPTS = ["All", "Drafted", "SISubmitted", "Released", "DeliveryProof"];
 var _jsPdf = null;
@@ -39,14 +55,10 @@ function kindLabel(k) {
 async function exportPdf(awb) {
   const JsPDF = await loadJsPdf();
   const doc = new JsPDF();
-  doc.setFontSize(16);
-  doc.text(`AWB: ${awb.awb_no}`, 14, 20);
-  doc.setFontSize(11);
-  doc.text(`${t("sales_new.field.shipper")}: ${awb.shipper?.name ?? "\u2014"}`, 14, 34);
-  doc.text(`${t("sales_new.field.consignee")}: ${awb.consignee?.name ?? "\u2014"}`, 14, 43);
-  doc.text(`${t("awb.label.chargeable_weight")}: ${awb.weight_chargeable_kg ?? 0} kg`, 14, 52);
-  doc.text(`Pieces: ${awb.pieces ?? 0}`, 14, 61);
-  doc.text(`Commodity: ${awb.commodity_desc ?? "\u2014"}`, 14, 70);
+  for (const line of pdfLines(awb)) {
+    doc.setFontSize(line.size);
+    doc.text(line.text, PDF_MARGIN_X, line.y);
+  }
   const blob = doc.output("blob");
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

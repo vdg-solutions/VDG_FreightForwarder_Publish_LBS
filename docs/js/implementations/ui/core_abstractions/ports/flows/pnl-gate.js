@@ -16,5 +16,5 @@ function _i() {
 export const lineVnd = (...a) => _i().lineVnd(...a);
 /// (lines, commissionNetAfterTax, bookCurrency) -> { match, expected, actual, delta }
 export const vndInvariant = (...a) => _i().vndInvariant(...a);
-/// (currency, fxRate, referenceRate) -> { flagged, reason, deviation }
+/// (currency, fxRate, referenceRate, referenceUnreadable) -> { flagged, reason, deviation, threshold }
 export const fxDeviation = (...a) => _i().fxDeviation(...a);

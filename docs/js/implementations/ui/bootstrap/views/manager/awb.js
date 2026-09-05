@@ -3,10 +3,12 @@
 
 import { t }                     from '../../../../kernel/core_abstractions/i18n/index.js';
 import { awbRepo }               from '../../../core_abstractions/ports/storage/awb-repo.js';
+import { pdfLines }              from './awb-pdf-lines.js';
 
 // AC-10: jsPDF lazy CDN — not bundled, loaded on first Export PDF click
 const JSPDF_CDN   = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm';
 const TOAST_MS    = 4_000;
+const PDF_MARGIN_X = 14;
 const STATUS_ALL  = 'All';
 const STATUS_OPTS = ['All', 'Drafted', 'SISubmitted', 'Released', 'DeliveryProof'];
 
@@ -38,18 +40,14 @@ function kindLabel(k) {
   return t(k === 'Master' ? 'awb.kind.master' : 'awb.kind.house');
 }
 
-// AC-10: PDF fields — AWB no, shipper, consignee, pieces, chargeable weight, commodity
+// AC-10: PDF fields — the text is built in awb-pdf-lines.js, where a test can read it.
 async function exportPdf(awb) {
   const JsPDF = await loadJsPdf();
   const doc   = new JsPDF();
-  doc.setFontSize(16);
-  doc.text(`AWB: ${awb.awb_no}`, 14, 20);
-  doc.setFontSize(11);
-  doc.text(`${t('sales_new.field.shipper')}: ${awb.shipper?.name ?? '—'}`, 14, 34);
-  doc.text(`${t('sales_new.field.consignee')}: ${awb.consignee?.name ?? '—'}`, 14, 43);
-  doc.text(`${t('awb.label.chargeable_weight')}: ${awb.weight_chargeable_kg ?? 0} kg`, 14, 52);
-  doc.text(`Pieces: ${awb.pieces ?? 0}`, 14, 61);
-  doc.text(`Commodity: ${awb.commodity_desc ?? '—'}`, 14, 70);
+  for (const line of pdfLines(awb)) {
+    doc.setFontSize(line.size);
+    doc.text(line.text, PDF_MARGIN_X, line.y);
+  }
   const blob = doc.output('blob');
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');

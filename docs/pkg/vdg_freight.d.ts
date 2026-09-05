@@ -35,6 +35,13 @@ export class FxRateRepo {
      * the selling rate; every caller states which side it wants. Returns the resolved rate.
      */
     getRate(date_str: string, pair: string, direction: string): Promise<any>;
+    /**
+     * B-15-38-02: does the loaded rate table hold rows the parser refused? The deviation gate
+     * asks before deciding what an absent reference MEANS — an unread row is a blind check, an
+     * unfilled date is not. Answers for the months already ingested; the gate runs after a save
+     * has loaded them.
+     */
+    hasUnreadableRates(): boolean;
     invalidateMonth(ym: string): void;
     listAll(): Promise<any>;
     listByMonth(ym: string): Promise<any>;
@@ -1440,6 +1447,7 @@ export interface InitOutput {
     readonly fxraterepo_appendRate: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fxraterepo_deleteEntry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly fxraterepo_getRate: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fxraterepo_hasUnreadableRates: (a: number) => number;
     readonly fxraterepo_invalidateMonth: (a: number, b: number, c: number, d: number) => void;
     readonly fxraterepo_listAll: (a: number) => number;
     readonly fxraterepo_listByMonth: (a: number, b: number, c: number) => number;
@@ -1729,9 +1737,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15505: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15507: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11485: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15508: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15510: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11488: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

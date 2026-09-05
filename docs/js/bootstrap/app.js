@@ -618,7 +618,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 197c05bf">v0.4.75 (197c05bf)</span>
+        <span class="font-mono whitespace-nowrap" title="build 6d594379">v0.4.76 (6d594379)</span>
       </div>
     `;
   }
@@ -2352,7 +2352,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.75 (197c05bf)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.76 (6d594379)</div>
         </div>
       </div>
     </div>`;
@@ -3004,8 +3004,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=197c05bf", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=197c05bf", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=6d594379", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=6d594379", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4412,14 +4412,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-WGMUSVZJ.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-5O2JO6J3.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-WGMUSVZJ.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-5O2JO6J3.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4521,7 +4521,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.75 (197c05bf)";
+var APP_VERSION = "v0.4.76 (6d594379)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4812,7 +4812,7 @@ var VIEWS = {
   "/manager/fx-rates": () => import("./fx-rates-PTOBKIXW.js"),
   "/manager/settings": () => import("./settings-A7U2KLTX.js"),
   // E-16 F-16-02
-  "/manager/awb": () => import("./awb-7X2YDYEK.js"),
+  "/manager/awb": () => import("./awb-OHLWBRU3.js"),
   // E-16 F-16-03
   "/masters/airports": () => import("./airports-26XDZMG6.js"),
   "/masters/flights": () => import("./flights-XK3FL5WU.js"),
@@ -5732,11 +5732,12 @@ function composeFlows(wasm4) {
       });
       return { match: r.match, expected: r.expected, actual: r.actual, delta: r.delta };
     },
-    fxDeviation: (currency, fxRate, referenceRate) => {
+    fxDeviation: (currency, fxRate, referenceRate, referenceUnreadable) => {
       const r = wasm4.flows_pnl_fx_deviation({
         currency: currency || "",
         fx_rate: Number(fxRate) || 0,
-        reference_rate: referenceRate == null ? null : Number(referenceRate)
+        reference_rate: referenceRate == null ? null : Number(referenceRate),
+        reference_unreadable: referenceUnreadable === true
       });
       return { flagged: r.flagged, reason: r.reason, deviation: r.deviation, threshold: r.threshold };
     }

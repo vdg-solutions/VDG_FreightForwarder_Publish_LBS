@@ -208,6 +208,7 @@
   "sales_new.fx_deviation.cancel": "Cancel",
   "sales_new.fx_deviation.reason_non_positive": "FX rate must be greater than 0",
   "sales_new.fx_deviation.reason_deviation": "FX rate deviates from the reference rate beyond the allowed threshold",
+  "sales_new.fx_deviation.reason_no_reference": "The stored FX rates could not be read, so this rate was not checked against a reference",
   "commission.suggest_promote": "Pattern {pattern}: {count} overrides. Create rule?",
   "commission.override_reason_placeholder": "Reason for override (optional)",
   "commission.create_rule": "Create rule",

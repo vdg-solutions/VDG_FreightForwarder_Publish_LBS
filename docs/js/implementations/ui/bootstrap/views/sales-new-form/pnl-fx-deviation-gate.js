@@ -8,6 +8,15 @@ import { detectFxDeviation, buildFxOverrideRecord } from './pnl-save-validations
 
 const VND_CURRENCY = 'VND';
 
+// Each reason the wasm gate can return, and the label that explains it. A reason with no entry here
+// would have printed as the generic deviation wording, which is the wrong sentence for a rate the
+// system could not read at all.
+const REASON_LABEL_KEYS = {
+  non_positive: 'sales_new.fx_deviation.reason_non_positive',
+  deviation:    'sales_new.fx_deviation.reason_deviation',
+  no_reference: 'sales_new.fx_deviation.reason_no_reference',
+};
+
 // currency VND is a locked self-pair (rate=1, no lookup needed); missing repo/date → no reference
 // (band check is skipped downstream, ≤0 check still applies) — mirrors pnl-line-fx.js's prefillFxRate.
 async function _resolveReference(fxRepo, fxDate, currency, direction) {
@@ -16,12 +25,20 @@ async function _resolveReference(fxRepo, fxDate, currency, direction) {
   return getRateForDate(fxRepo, fxDate, currency, direction);
 }
 
+// B-15-38-02: an absent reference means one of two different things. A half-filled form or a real
+// gap in the series is nothing to report; a rate table whose rows would not parse is a check running
+// blind, and only the repo knows which happened. Asked once per scan, not per line — the answer
+// cannot change mid-scan and a dialog per keystroke teaches people to dismiss dialogs.
+function _ratesUnreadable(fxRepo) {
+  return typeof fxRepo?.hasUnreadableRates === 'function' && fxRepo.hasUnreadableRates() === true;
+}
+
 // Only check a side that actually carries an amount — an untouched/padding row has no fx data
 // to evaluate, same gating as validateShipmentForm's VR-01 hard-block (amount present → checks apply).
-async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }) {
+async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }, referenceUnreadable) {
   if (!amount || !currency) return;
   const referenceRate = await _resolveReference(fxRepo, fxDate, currency, direction);
-  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate });
+  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate, referenceUnreadable });
   if (isFlagged) {
     flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason, threshold });
   }
@@ -35,19 +52,20 @@ export async function findFxDeviations(state = {}, fxRepo) {
   const flagged = [];
   const lines           = state.lines || [];
   const commissionLines = state.commission_lines || [];
+  const unreadable      = _ratesUnreadable(fxRepo);
 
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     await _checkSide(flagged, fxRepo, `${i}:buy:${l.desc || ''}`,
-      { amount: l.buy_amt, currency: l.buy_currency, fxRate: l.buy_fx_rate, fxDate: l.buy_fx_date, direction: 'Sell' });
+      { amount: l.buy_amt, currency: l.buy_currency, fxRate: l.buy_fx_rate, fxDate: l.buy_fx_date, direction: 'Sell' }, unreadable);
     await _checkSide(flagged, fxRepo, `${i}:sell:${l.desc || ''}`,
-      { amount: l.sell_amt, currency: l.sell_currency, fxRate: l.sell_fx_rate, fxDate: l.sell_fx_date, direction: 'Buy' });
+      { amount: l.sell_amt, currency: l.sell_currency, fxRate: l.sell_fx_rate, fxDate: l.sell_fx_date, direction: 'Buy' }, unreadable);
   }
 
   for (let i = 0; i < commissionLines.length; i++) {
     const l = commissionLines[i];
     await _checkSide(flagged, fxRepo, `C${i}:${l.kind || ''}`,
-      { amount: l.amount_fx, currency: l.currency, fxRate: l.fx_rate, fxDate: l.fx_date, direction: 'Sell' });
+      { amount: l.amount_fx, currency: l.currency, fxRate: l.fx_rate, fxDate: l.fx_date, direction: 'Sell' }, unreadable);
   }
 
   return flagged;
@@ -55,8 +73,8 @@ export async function findFxDeviations(state = {}, fxRepo) {
 
 function _confirmBody(flagged) {
   return flagged.map((f) => {
-    const reasonLabel = f.reason === 'non_positive'
-      ? t('sales_new.fx_deviation.reason_non_positive')
+    const reasonLabel = REASON_LABEL_KEYS[f.reason]
+      ? t(REASON_LABEL_KEYS[f.reason])
       : t('sales_new.fx_deviation.reason_deviation');
     return `${f.lineRef}: ${f.currency} @ ${f.fxRate} — ${reasonLabel}`;
   }).join('\n');
