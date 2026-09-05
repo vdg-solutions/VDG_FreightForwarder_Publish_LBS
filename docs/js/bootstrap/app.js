@@ -42,8 +42,9 @@ import {
 } from "./chunk-2PLULDG2.js";
 import {
   API_BASE,
+  WORKSPACE_NAME,
   activeWorkspaceName
-} from "./chunk-BGHVKQFL.js";
+} from "./chunk-XUWWFFDQ.js";
 import {
   bindAwbRepo
 } from "./chunk-LEXYJ5I6.js";
@@ -617,7 +618,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 79e5970b">v0.4.71 (79e5970b)</span>
+        <span class="font-mono whitespace-nowrap" title="build 37751ac4">v0.4.74 (37751ac4)</span>
       </div>
     `;
   }
@@ -2351,7 +2352,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.71 (79e5970b)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.74 (37751ac4)</div>
         </div>
       </div>
     </div>`;
@@ -3003,8 +3004,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=79e5970b", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=79e5970b", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=37751ac4", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=37751ac4", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3958,6 +3959,37 @@ if (typeof window !== "undefined") window.__vdg_auth = { getCurrentUser: getCurr
 var identityProvider = { getCurrentUser: getCurrentUser2, signOut: signOut2, wasPreviouslySignedIn: wasPreviouslySignedIn2, rebuildSessionFromStoredToken: rebuildSessionFromStoredToken2 };
 var oauthProvider = { hydrateSessionFromToken: hydrateSessionFromToken2, restampIdTokenExp, initGoogleSignIn: initGoogleSignIn2, renderSignInButton: renderSignInButton3 };
 
+// output/web/js.tmp/implementations/storage/implementations/local/store-scope.js
+var SCOPE_MAX_LEN = 64;
+var SCOPE_SEP = "--";
+var DIGEST_LEN = 8;
+var HEX_RADIX = 16;
+var FNV_OFFSET_BASIS = 2166136261;
+var FNV_PRIME = 16777619;
+function cleaned(part) {
+  return String(part || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function digest(text) {
+  let h = FNV_OFFSET_BASIS;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, FNV_PRIME) >>> 0;
+  }
+  return h.toString(HEX_RADIX).padStart(DIGEST_LEN, "0");
+}
+function scopeKeyFor(workspace, email) {
+  const account = cleaned(email);
+  if (!account) return "";
+  const space = cleaned(workspace);
+  const full = space ? `${space}${SCOPE_SEP}${account}` : account;
+  if (full.length <= SCOPE_MAX_LEN) return full;
+  const head = full.slice(0, SCOPE_MAX_LEN - DIGEST_LEN - SCOPE_SEP.length);
+  return `${head}${SCOPE_SEP}${digest(full)}`;
+}
+function storeScopeKey(email) {
+  return scopeKeyFor(WORKSPACE_NAME, email);
+}
+
 // output/web/js.tmp/implementations/storage/implementations/local/store-client.js
 var INIT_TIMEOUT_MS = 2e4;
 var OP_TIMEOUT_MS = 5e3;
@@ -3977,11 +4009,7 @@ function _announceLockedIf(errMsg) {
 var BUS_NAME = "vdg-sqlite-bus";
 var LEADER_LOCK = "vdg-sqlite-leader";
 var RID_SEP = "|";
-var SCOPE_MAX_LEN = 64;
 var _scope = null;
-function storeScopeKey(email) {
-  return String(email || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, SCOPE_MAX_LEN);
-}
 function setStoreScope2(email) {
   const key = storeScopeKey(email);
   if (!key) throw new SqliteUnavailableError("store scope requires a signed-in account");
@@ -4493,7 +4521,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.71 (79e5970b)";
+var APP_VERSION = "v0.4.74 (37751ac4)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4782,7 +4810,7 @@ var VIEWS = {
   "/manager/users": () => import("./users-RTYASZ4K.js"),
   // E-15 F-15-36
   "/manager/fx-rates": () => import("./fx-rates-PTOBKIXW.js"),
-  "/manager/settings": () => import("./settings-EXOTB3HW.js"),
+  "/manager/settings": () => import("./settings-A7U2KLTX.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-7X2YDYEK.js"),
   // E-16 F-16-03
@@ -4810,7 +4838,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-AQQYPCBH.js"),
+  "/accounting/settings": () => import("./settings-AH66Q2OU.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06

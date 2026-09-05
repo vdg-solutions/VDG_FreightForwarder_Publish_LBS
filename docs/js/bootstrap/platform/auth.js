@@ -88,9 +88,6 @@ export const authPlatform = {
   },
   auth_cache_clear: async () => {
     localStorage.removeItem(ROLE_CACHE_KEY);
-    // E-43: the grant manifest answers the same question as the role cache and is written by the
-    // same probe. Dropping one without the other leaves a session holding folder ids for access it
-    // may no longer have.
   },
 
   // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is

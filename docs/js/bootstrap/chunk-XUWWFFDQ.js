@@ -14,6 +14,7 @@ function activeWorkspaceName() {
 }
 
 export {
+  WORKSPACE_NAME,
   API_BASE,
   activeWorkspaceName
 };

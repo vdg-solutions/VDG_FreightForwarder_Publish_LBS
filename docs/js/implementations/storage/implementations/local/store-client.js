@@ -22,6 +22,9 @@
 
 // First op pays the cold cost (module fetch + wasm compile + VFS install); give it room. Every later
 // op is a local SQL call in Rust — milliseconds — so a short backstop is a dead-worker detector.
+
+import { storeScopeKey } from './store-scope.js';
+
 const INIT_TIMEOUT_MS = 20_000;
 const OP_TIMEOUT_MS    = 5_000;
 
@@ -49,15 +52,8 @@ const RID_SEP     = '|'; // engine rid = `${tabId}|${localRid}` so concurrent ta
 // #18: the bus, the leader lock and the database are all per-account. They used to be origin-wide,
 // so two accounts open in one browser shared ONE engine over ONE database — account B read account
 // A's cached rows, and B's ops were relayed to a leader tab signed in as A.
-const SCOPE_MAX_LEN = 64;
 let _scope = null;
 
-export function storeScopeKey(email) {
-  return String(email || '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, SCOPE_MAX_LEN);
-}
 
 // Called as soon as an identity is established, before any store op. First call wins; a genuine
 // account switch happens only across a reload (signOut reloads), so a differing key mid-life is a
