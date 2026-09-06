@@ -1051,6 +1051,15 @@ export function sales_heal_job_no(req: any): Promise<any>;
 
 export function sales_ledger_version(req: any): any;
 
+/**
+ * May the signed-in reader be shown a job's TOTAL profit or loss?
+ *
+ * Not "is there a sell figure in what came back" — that question let a rep who received one of
+ * three revenue lines be shown a company-level number summed from a partial set, which reads as a
+ * 71-million loss on a job that made 48 million. See `access_policy::may_see_job_total`.
+ */
+export function sales_may_see_job_total(): boolean;
+
 export function sales_pnl_lines(req: any): Promise<any>;
 
 export function sales_pnl_lines_for(req: any): Promise<any>;
@@ -1070,6 +1079,16 @@ export function sales_resolve_job_no(req: any): Promise<any>;
 export function sales_share_total(req: any): Promise<any>;
 
 export function sales_shipment_commission_snapshot(req: any): Promise<any>;
+
+/**
+ * Which month a job's numbers belong to, or `null` when it carries no date at all.
+ *
+ * The sales workspace decided this in JS off `etd || prep_date || date`, and a job with none of
+ * them fell out of every month — a September job holding 63,512,000 VND of margin was counted
+ * nowhere while the same screen listed it two rows below. `shipment_month` states the rule and
+ * this is the only door to it.
+ */
+export function sales_shipment_month(row: any): any;
 
 export function sales_validate_submission(req: any): any;
 
@@ -1577,6 +1596,7 @@ export interface InitOutput {
     readonly sales_document_sources: (a: number) => number;
     readonly sales_heal_job_no: (a: number) => number;
     readonly sales_ledger_version: (a: number, b: number) => void;
+    readonly sales_may_see_job_total: () => number;
     readonly sales_pnl_lines: (a: number) => number;
     readonly sales_pnl_lines_for: (a: number) => number;
     readonly sales_publish_state: (a: number, b: number) => void;
@@ -1587,6 +1607,7 @@ export interface InitOutput {
     readonly sales_resolve_job_no: (a: number) => number;
     readonly sales_share_total: (a: number) => number;
     readonly sales_shipment_commission_snapshot: (a: number) => number;
+    readonly sales_shipment_month: (a: number, b: number) => void;
     readonly sales_validate_submission: (a: number, b: number) => void;
     readonly sales_weight_unit_codes: (a: number) => number;
     readonly sales_write_side_records: (a: number) => number;
@@ -1737,9 +1758,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15508: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15510: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11488: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15523: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15525: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11503: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

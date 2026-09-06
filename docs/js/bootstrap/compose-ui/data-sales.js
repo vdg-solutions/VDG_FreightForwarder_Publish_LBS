@@ -34,6 +34,11 @@ export function bindSalesData({ wasm }) {
     salesShareTotal: async (shipmentRefs) =>
       (await wasm.sales_share_total({ shipment_refs: shipmentRefs || [] })).total,
     listPnlLines:         async () => rows(await wasm.sales_pnl_lines({})),
+    // Both synchronous: they are rules, not reads. `shipmentMonth` decides which month a job's
+    // numbers land in; `maySeeJobTotal` decides whether this reader may be shown a company-level
+    // figure at all. The shell asks and renders — it does not compute either.
+    shipmentMonth:        (row) => wasm.sales_shipment_month(row ?? {}) ?? null,
+    maySeeJobTotal:       () => wasm.sales_may_see_job_total(),
     listPnlLinesFor:      async (shipmentRef) => rows(await wasm.sales_pnl_lines_for({ id: shipmentRef ?? null })),
     listQuotations:       async () => rows(await wasm.sales_quotations({})),
     getQuotation:         async (id) => record(await wasm.sales_quotation({ id: id ?? null })),

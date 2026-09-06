@@ -58,3 +58,10 @@ export const readDocumentSources = (...a) => _i().readDocumentSources(...a);
 export const customerForNote = (...a) => _i().customerForNote(...a);
 /// (name) -> { created, record }. Deduped: an index miss is not proof the master is absent.
 export const createCustomerDraft = (...a) => _i().createCustomerDraft(...a);
+/// (shipmentRow) -> 'YYYY-MM' the job's numbers belong to, or null when it carries no date at all.
+/// ETD decides when present; a job with no date falls back to the day it was opened, which is
+/// minted into its own reference. The rule is wasm's (core_abstractions/shipment_month.rs).
+export const shipmentMonth = (...a) => _i().shipmentMonth(...a);
+/// () -> may the signed-in reader be shown a job's TOTAL profit or loss? False for anyone not
+/// guaranteed every line of it — a sum over a partial set is a different number, not a smaller one.
+export const maySeeJobTotal = (...a) => _i().maySeeJobTotal(...a);

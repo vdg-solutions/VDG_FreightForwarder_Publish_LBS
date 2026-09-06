@@ -3,7 +3,7 @@ import {
 } from "./chunk-A4QUGFDN.js";
 import {
   listDemdetInstances
-} from "./chunk-EEMMQROU.js";
+} from "./chunk-PUYI7C66.js";
 import {
   EMPTY_STATE_VARIANT,
   emptyStateHtml

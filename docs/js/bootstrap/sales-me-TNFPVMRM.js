@@ -22,8 +22,9 @@ import {
   listBillingRecords,
   listCustomerMasters,
   listPnlLines,
-  salesShareTotal
-} from "./chunk-EEMMQROU.js";
+  salesShareTotal,
+  shipmentMonth
+} from "./chunk-PUYI7C66.js";
 import {
   listMyShipments
 } from "./chunk-CDRBIG2D.js";
@@ -178,11 +179,8 @@ async function dueSoonHtml(salesId) {
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-me-data.js
 function mtdFilter(s) {
   const now = /* @__PURE__ */ new Date();
-  const year = now.getFullYear();
-  const mo = String(now.getMonth() + 1).padStart(2, "0");
-  const pfx = `${year}-${mo}`;
-  const d = s.etd || s.prep_date || s.date || "";
-  return d.startsWith(pfx);
+  const pfx = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return shipmentMonth(s) === pfx;
 }
 var EMPTY_DATA = { all: [], mtd: [], pending: [], stats: { shipments: 0, revenue: 0, margin: 0, salesCommission: 0, advances: 0 } };
 async function loadMyData() {

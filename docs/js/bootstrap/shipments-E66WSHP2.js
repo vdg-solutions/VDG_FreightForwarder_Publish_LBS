@@ -6,7 +6,7 @@ import "./chunk-ETXXTRJC.js";
 import {
   chooseShipmentAffordance,
   runShipmentAffordance
-} from "./chunk-KU3AGH73.js";
+} from "./chunk-JANBRVUT.js";
 import "./chunk-NSJXCXJQ.js";
 import {
   can
@@ -19,8 +19,9 @@ import {
   ensureShipmentStateAliases
 } from "./chunk-FJ72A4AS.js";
 import {
-  listPnlLines
-} from "./chunk-EEMMQROU.js";
+  listPnlLines,
+  maySeeJobTotal
+} from "./chunk-PUYI7C66.js";
 import {
   shipmentLane
 } from "./chunk-V5UQPUBE.js";
@@ -257,7 +258,7 @@ async function loadRealData() {
     const sellSeen = lines.some(
       (l) => l.sell_amt != null || l.selling_vnd_collect != null || l.selling_amount != null
     );
-    s.pnl = sellSeen ? lines.reduce((acc, l) => acc + Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0), 0) : void 0;
+    s.pnl = sellSeen && maySeeJobTotal() ? lines.reduce((acc, l) => acc + Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0), 0) : void 0;
   }
   return allShipments;
 }

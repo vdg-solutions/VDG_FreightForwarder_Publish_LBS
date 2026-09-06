@@ -11,6 +11,7 @@ import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.
 import { listPnlLines } from '../../core_abstractions/ports/data/sales-reads.js';
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
+import { maySeeJobTotal } from '../../core_abstractions/ports/data/sales-reads.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 import { isMountedRoute } from '../util/view-mounted.js';
 
@@ -161,9 +162,15 @@ export async function loadRealData() {
     // Decidable only when a sell figure actually came back: the read receipt says nothing was
     // hidden from us, AND some line carries one. A job the rep has costed but not yet priced
     // gets a dash too - reporting -800 there says it lost money, when it simply has no price.
+    // "Some sell figure came back" was the wrong question. A reader who receives one of three
+    // revenue lines passes it, and the sum is then a company-level number built from a partial
+    // set — the same job read -71,141,139 for a rep and +47,867,861 for a manager. Nobody can
+    // tell a short list from a complete one: a refused read and an absent record are the same 404
+    // by design. So the question is whether this reader is guaranteed EVERY line, which wasm
+    // answers from the role (access_policy::may_see_job_total). Anyone else gets the dash.
     const sellSeen = lines.some(
       (l) => l.sell_amt != null || l.selling_vnd_collect != null || l.selling_amount != null);
-    s.pnl = sellSeen
+    s.pnl = (sellSeen && maySeeJobTotal())
       ? lines.reduce((acc, l) =>
           acc + (Number(l.sell_amt || l.selling_vnd_collect || 0))
               - (Number(l.buy_amt  || l.buying_vnd_pay      || 0)), 0)

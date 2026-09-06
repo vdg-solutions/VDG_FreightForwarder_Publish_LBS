@@ -26,6 +26,8 @@ var listAirRateCards = (...a) => _i().listAirRateCards(...a);
 var readDocumentSources = (...a) => _i().readDocumentSources(...a);
 var customerForNote = (...a) => _i().customerForNote(...a);
 var createCustomerDraft = (...a) => _i().createCustomerDraft(...a);
+var shipmentMonth = (...a) => _i().shipmentMonth(...a);
+var maySeeJobTotal = (...a) => _i().maySeeJobTotal(...a);
 
 export {
   bindSalesReads,
@@ -47,5 +49,7 @@ export {
   listAirRateCards,
   readDocumentSources,
   customerForNote,
-  createCustomerDraft
+  createCustomerDraft,
+  shipmentMonth,
+  maySeeJobTotal
 };

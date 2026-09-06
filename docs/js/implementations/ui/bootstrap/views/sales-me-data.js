@@ -9,15 +9,17 @@ import { resolveShipmentState } from '../../../kernel/core_abstractions/util/shi
 import { UNKNOWN_STATE } from '../../../kernel/core_abstractions/util/dashboard-distribution.js';
 import { ensureShipmentStateAliases } from '../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { listMyShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
-import { listPnlLines, salesShareTotal } from '../../core_abstractions/ports/data/sales-reads.js';
+import { listPnlLines, salesShareTotal, shipmentMonth } from '../../core_abstractions/ports/data/sales-reads.js';
 
+// Which month a job counts in is a rule about the books, so wasm holds it
+// (core_abstractions/shipment_month.rs) and this asks. It used to read
+// `etd || prep_date || date` here and drop anything with none of them: a September job carrying
+// 63,512,000 VND of margin was counted in no month at all, while this same screen listed it two
+// rows below. ETD is a plan and it is blank until somebody types it.
 function mtdFilter(s) {
   const now  = new Date();
-  const year = now.getFullYear();
-  const mo   = String(now.getMonth() + 1).padStart(2, '0');
-  const pfx  = `${year}-${mo}`;
-  const d    = s.etd || s.prep_date || s.date || '';
-  return d.startsWith(pfx);
+  const pfx  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return shipmentMonth(s) === pfx;
 }
 
 const EMPTY_DATA = { all: [], mtd: [], pending: [], stats: { shipments: 0, revenue: 0, margin: 0, salesCommission: 0, advances: 0 } };
