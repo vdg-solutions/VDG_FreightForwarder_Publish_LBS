@@ -618,7 +618,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f26db49d">v0.4.79 (f26db49d)</span>
+        <span class="font-mono whitespace-nowrap" title="build cd92f059">v0.4.81 (cd92f059)</span>
       </div>
     `;
   }
@@ -2352,7 +2352,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.79 (f26db49d)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.81 (cd92f059)</div>
         </div>
       </div>
     </div>`;
@@ -3004,8 +3004,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=f26db49d", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f26db49d", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=cd92f059", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=cd92f059", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4521,7 +4521,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.79 (f26db49d)";
+var APP_VERSION = "v0.4.81 (cd92f059)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -6117,6 +6117,10 @@ function renderBootPhase(state) {
   el.hidden = false;
 }
 
+// output/web/js.tmp/bootstrap/platform/dev-seams.js
+var FLAG = "off";
+var DEV_SEAMS_ENABLED = FLAG === "on";
+
 // output/web/js.tmp/bootstrap/boot/repo-init-steps.js
 var CACHE_OP_TIMEOUT_MS = 8e3;
 var PREFS_META_KEY2 = "preferences";
@@ -6131,7 +6135,7 @@ function _storeUnresponsive(tag) {
   return null;
 }
 async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
-  const _hangMs = parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || "0", 10);
+  const _hangMs = DEV_SEAMS_ENABLED ? parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || "0", 10) : 0;
   const fsm = createBootFsm(renderBootPhase);
   stepRef.value = STEP_OPEN_DB;
   const db = null;

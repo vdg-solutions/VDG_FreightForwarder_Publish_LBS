@@ -283,7 +283,7 @@ export class WasmEntityRepo {
      *
      * `put` leaves the owner undeclared and the bridge falls back to the session, which is right
      * only while the writer and the owner are the same person. They are not when a Manager enters
-     * a rep's revenue: charterdb-retire-the-fork.md §2 calls that default "silently makes a
+     * a rep's revenue: archives/account-folder-retirement.md §2 calls that default "silently makes a
      * Manager's entry steal the rep's job". This is the seam `storage_bridge.rs` already promised
      * -- "a future caller that DOES know its own owner is honored without a second, competing
      * derivation".
@@ -374,7 +374,7 @@ export function auth_detect_role(req: any): Promise<any>;
 
 /**
  * The raw `/me` body, fetched in Rust. `server-role.js` used to call it with `apiFetch` and derive
- * the verdict itself — including a JS copy of `derive_fork`. Both are gone.
+ * the verdict itself — including a JS copy of the account-folder derivation. Both are gone.
  *
  * A FREE export, not a method on the repo store, and that is the whole point. It never read
  * `self`: `me_http::fetch_me()` takes the API base from `option_env!` and the session from the
@@ -1758,9 +1758,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15523: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15525: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11503: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15524: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15526: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11504: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

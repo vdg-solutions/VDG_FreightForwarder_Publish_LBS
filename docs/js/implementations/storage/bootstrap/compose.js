@@ -28,9 +28,6 @@ import { identityProvider, oauthProvider } from '../implementations/auth/google-
 import { localStoreClient } from '../implementations/local/store-client.js';
 
 export const BACKEND_SERVER = 'server';
-const MOCK_MODE_KEY   = 'vdg.driveMode';
-const MOCK_MODE_VALUE = 'mock';
-const MOCK_QUERY_KEY  = 'mock';
 
 // Static bindings: the adapters that do not depend on the backend. Done at module load so every
 // later import in the boot (auth-gate, the role cache, the views) finds the ports bound.
@@ -46,16 +43,6 @@ bindLocalStore(localStoreClient);
 bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })) });
 // F-46-03: user management is server-only by design (owner 2026-08-21) — no Drive-mode branch.
 bindUserDirectory({ listUsers, createUser, patchUser });
-
-/// `?mock=1` or localStorage vdg.driveMode=mock: seeds a fake session for CDP/regression runs
-/// (client/tests/local/seed, client/tests/regression) — the key predates the server split and is
-/// unrelated to Google Drive today; left named as the test scripts already key on it.
-export function isMockMode() {
-  try {
-    return new URLSearchParams(location.search).get(MOCK_QUERY_KEY) === '1'
-      || localStorage.getItem(MOCK_MODE_KEY) === MOCK_MODE_VALUE;
-  } catch { return false; /* no location/storage (worker, test) — the real transport */ }
-}
 
 /// Probe once, bind once. Never throws — an unreachable API is reported as an outage
 /// (backend.js's own vdg:server-health dispatch), never a switch to a different backend.

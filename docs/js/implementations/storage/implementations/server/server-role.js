@@ -2,7 +2,7 @@
 // performed in Rust (store::implementations::http_io::fetch_me).
 //
 // This file used to DERIVE the verdict: which roles counted, which token to use, whether an
-// account was provisioned — and it kept a JS copy of `derive_fork` (fork-id.js, now deleted) to do
+// account was provisioned — and it kept a JS copy of the account-folder derivation (now deleted) to do
 // it. Owner law 2026-09-01: JS does not decide. The raw body goes straight to Rust, and
 // freight_app::core_abstractions::me_verdict builds the verdict auth_gate matches on.
 //

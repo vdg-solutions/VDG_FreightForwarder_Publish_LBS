@@ -1,6 +1,6 @@
 // platform/data.js — extra platform methods the Rust data use-cases import (js_data.rs extern type).
 //
-// The fork bundle reader that used to live here is gone with the fork itself (owner 2026-09-01).
+// The per-account bundle reader that used to live here is gone with the account-folder concept itself (owner 2026-09-01).
 // It listed `users/{email}/{kind}` and read every *.jsonl body in it — a store nothing had written
 // since the Drive era, so it answered empty on every call while costing a listing plus a read per
 // file, and its failures could fail a whole revenue grid. `shipment_revenue` and

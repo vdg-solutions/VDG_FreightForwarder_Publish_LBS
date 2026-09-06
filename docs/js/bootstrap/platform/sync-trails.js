@@ -4,7 +4,7 @@
 // (freight_app/operators/sync/{audit_log,user_audit_log,error_log}.rs).
 //
 // The promise chain is the one thing that stays here: appends are fire-and-forget by contract, and
-// two of them in the same tick would otherwise chain off the same tip and fork the history.
+// two of them in the same tick would otherwise chain off the same tip and branch the history.
 
 const AUTH_DEAD_EVENT        = 'vdg:auth-needs-reconnect';
 const AUTH_RECONNECTED_EVENT = 'vdg:auth-reconnected';

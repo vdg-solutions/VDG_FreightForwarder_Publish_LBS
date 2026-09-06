@@ -15,6 +15,7 @@ import { loadWasmOrThrow } from './wasm-loader.js';
 import { rehydrateFsmStates } from '../../implementations/ui/core_abstractions/ports/flows/fsm-ingest.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
+import { DEV_SEAMS_ENABLED } from '../platform/dev-seams.js';
 
 const CACHE_OP_TIMEOUT_MS = 8000;
 const PREFS_META_KEY     = 'preferences';
@@ -38,7 +39,7 @@ function _storeUnresponsive(tag) {
 }
 
 export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
-  const _hangMs = parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || '0', 10);
+  const _hangMs = DEV_SEAMS_ENABLED ? parseInt(localStorage.getItem(REPO_HANG_SEAM_KEY) || '0', 10) : 0;
   const fsm = createBootFsm(renderBootPhase);
 
   // 1. Storage is SQLite/OPFS in a worker

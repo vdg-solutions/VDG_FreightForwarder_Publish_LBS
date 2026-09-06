@@ -1,7 +1,7 @@
 // user-add-modal.js — Add User modal for the admin Users view (F-24-04).
-// F-46-03: one POST /api/users call replaces the old read-grant / CAS-write-grant / create-fork-
-// folder cascade (userRepo.upsert + roleService.assignRole, ~60s) — the server does the grant
-// write and the fork-folder create in one request now, and it is idempotent, so there is no
+// F-46-03: one POST /api/users call replaces the old read-grant / CAS-write-grant / create-
+// account-folder cascade (userRepo.upsert + roleService.assignRole, ~60s) — the server does the
+// grant write and the account-folder create in one request now, and it is idempotent, so there is no
 // partial-failure rollback dance left to write here.
 
 import { mountOverlay } from '../../helpers/mount-overlay.js';
