@@ -1,10 +1,9 @@
-// id-token.js — the synthetic id-token codec: turning the stored `vdg.auth.id_token` string into a
-// user and back. No GIS, no client id, no network, no storage — pure.
+// id-token.js — the synthetic id-token codec: turning the stored id-token string into a user and
+// back. No GIS, no client id, no network, no storage — pure. The storage key itself moved to
+// identity-cache-keys.js::idTokenKey() (B-15-38-06 — Rust namespaces it by tenant).
 
 import { b64Decode, b64Encode } from '../../kernel/core_abstractions/ports/base64.js';
 import { nowMs } from '../../kernel/core_abstractions/ports/clock.js';
-
-export const TOKEN_KEY = 'vdg.auth.id_token';
 
 export function parseIdToken(token) {
   try {

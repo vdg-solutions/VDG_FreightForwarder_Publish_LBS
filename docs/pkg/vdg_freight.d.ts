@@ -391,6 +391,14 @@ export function auth_fetch_me(): Promise<any>;
 
 export function auth_has_role(req: any): any;
 
+/**
+ * B-15-38-06: the namespaced identity-cache key set, resolved once at boot. Pure — no platform
+ * object needed — so the storage bootstrap can call this before `freight_app_init` runs. JS
+ * never builds these strings itself (owner ruling 2026-09-07); it asks here and reads/writes the
+ * slot it is handed.
+ */
+export function auth_identity_cache_keys(): any;
+
 export function auth_require_auth(req: any): Promise<any>;
 
 /**
@@ -1323,6 +1331,7 @@ export interface InitOutput {
     readonly auth_detect_role: (a: number) => number;
     readonly auth_fetch_me: () => number;
     readonly auth_has_role: (a: number, b: number) => void;
+    readonly auth_identity_cache_keys: (a: number) => void;
     readonly auth_require_auth: (a: number) => number;
     readonly auth_resolve_principal: (a: number) => number;
     readonly auth_session_close: () => number;
@@ -1758,9 +1767,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15524: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15526: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11504: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15530: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15532: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11510: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

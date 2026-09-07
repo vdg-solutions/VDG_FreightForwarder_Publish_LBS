@@ -4,8 +4,9 @@
 // authority's verdict, this browser's role memory (localStorage), the role broadcast and the login
 // overlay. The DECISIONS made from these answers are in Rust (freight_app/operators/auth) — this
 // file only answers and acts. The timeouts stay here too, so no timer leaks into an inner layer.
-import { getCurrentUser, signOut, wasPreviouslySignedIn, rebuildSessionFromStoredToken, ROLE_CACHE_KEY }
+import { getCurrentUser, signOut, wasPreviouslySignedIn, rebuildSessionFromStoredToken }
   from '../../implementations/storage/core_abstractions/identity.js';
+import { roleCacheKey } from '../../implementations/storage/core_abstractions/identity-cache-keys.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { workspaceAuthority } from '../../implementations/storage/core_abstractions/workspace-authority.js';
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
@@ -40,7 +41,7 @@ export function takeAuthError() {
 }
 
 function _readCache() {
-  try { return JSON.parse(localStorage.getItem(ROLE_CACHE_KEY) || 'null'); }
+  try { return JSON.parse(localStorage.getItem(roleCacheKey()) || 'null'); }
   catch { return null; } // a corrupt entry is no entry — the next probe rewrites it
 }
 
@@ -83,11 +84,11 @@ export const authPlatform = {
 
   auth_cache_read:  async () => _readCache(),
   auth_cache_write: async (entry) => {
-    try { localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify(entry)); }
+    try { localStorage.setItem(roleCacheKey(), JSON.stringify(entry)); }
     catch { /* quota — a lost cache costs one extra probe, nothing else */ }
   },
   auth_cache_clear: async () => {
-    localStorage.removeItem(ROLE_CACHE_KEY);
+    localStorage.removeItem(roleCacheKey());
   },
 
   // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is

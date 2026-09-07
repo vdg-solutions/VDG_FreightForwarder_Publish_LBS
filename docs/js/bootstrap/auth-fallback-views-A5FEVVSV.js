@@ -1,4 +1,10 @@
 import {
+  idTokenKey,
+  profileKey,
+  roleCacheKey,
+  sessionTokenKey
+} from "./chunk-DT34M7SM.js";
+import {
   t
 } from "./chunk-5L442NSS.js";
 
@@ -16,9 +22,10 @@ function renderLoadingBanner(mount) {
     </div>`;
   mount.querySelector("#auth-fallback-reauth")?.addEventListener("click", () => {
     try {
-      localStorage.removeItem("vdg.role-cache");
-      sessionStorage.removeItem("vdg.session-token");
-      localStorage.removeItem("vdg.auth.user");
+      localStorage.removeItem(roleCacheKey());
+      sessionStorage.removeItem(sessionTokenKey());
+      localStorage.removeItem(idTokenKey());
+      localStorage.removeItem(profileKey());
     } catch {
     }
     window.__vdg_auth?.signOut?.();

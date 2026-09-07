@@ -21,7 +21,6 @@ function _i2() {
 var assignJobNo = (...a) => _i2().assignJobNo(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/identity.js
-var ROLE_CACHE_KEY = "vdg.role.cache";
 var _provider = null;
 function bindIdentityProvider(provider) {
   _provider = provider;
@@ -118,7 +117,6 @@ function _i8() {
 var pnlLineId = (...a) => _i8().pnlLineId(...a);
 
 export {
-  ROLE_CACHE_KEY,
   bindIdentityProvider,
   getCurrentUser,
   signOut,

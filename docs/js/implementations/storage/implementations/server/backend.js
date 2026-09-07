@@ -7,6 +7,7 @@
 // (sessionStorage — http_io::session_token reads the same key), and the boot-time backend memo.
 
 import { API_BASE } from '../../core_abstractions/workspace-config.js';
+import { sessionTokenKey } from '../../core_abstractions/identity-cache-keys.js';
 
 const BACKEND_SERVER = 'server';
 // The page (github.io) and the API (workers.dev) are different SITES, so a session cookie would
@@ -14,7 +15,6 @@ const BACKEND_SERVER = 'server';
 // token therefore rides the X-Vdg-Session header, read back from here by Rust
 // (http_io::session_token). sessionStorage on purpose: window-scoped, gone when the window
 // closes — a localStorage copy outlived the tab and was readable by every tab on this origin.
-const SESSION_TOKEN_KEY = 'vdg.session-token';
 const BACKEND_KEY       = 'vdg.backend'; // sessionStorage: survives reload, not a new tab on another origin
 const SERVER_HEALTH_EVENT = 'vdg:server-health';
 const WASM_READY_EVENT    = 'vdg:wasm-ready';
@@ -72,13 +72,13 @@ async function adoptSessionToken(token) {
 function rememberSessionToken(token) {
   try {
     if (token) {
-      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+      sessionStorage.setItem(sessionTokenKey(), token);
     } else {
-      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(sessionTokenKey());
     }
     // Always, both ways: sign-in must not leave an older build's durable copy behind, and sign-out
     // must clear one even on a session that never read it.
-    localStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem(sessionTokenKey());
   } catch {
     // storage-less context — the token does not persist and the next call re-authenticates
   }

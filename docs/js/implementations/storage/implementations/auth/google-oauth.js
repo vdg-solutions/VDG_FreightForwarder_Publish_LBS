@@ -4,27 +4,30 @@
 
 import { adoptSessionToken, rememberSessionToken } from '../../core_abstractions/backend.js';
 import { SERVER_SESSION_TTL_MS, serverSessionIdentity } from '../../core_abstractions/server-session.js';
-import { PROFILE_KEY, writeCachedProfile, readCachedProfile } from '../../core_abstractions/profile-cache.js';
+import { writeCachedProfile, readCachedProfile } from '../../core_abstractions/profile-cache.js';
 // The synthetic id-token codec (parse/build) is core — no GIS, no client id, no storage.
-import { TOKEN_KEY, buildUser, encodeSyntheticIdToken, parseIdToken } from '../../core_abstractions/id-token.js';
+import { buildUser, encodeSyntheticIdToken, parseIdToken } from '../../core_abstractions/id-token.js';
 import { fetchUserinfo } from './userinfo.js';
 import { renderSignInButton as renderGoogleSignInButton } from './signin-button.js';
-import { ROLE_CACHE_KEY } from '../../core_abstractions/identity.js';
+import {
+  roleCacheKey, idTokenKey, profileKey, accessTokenKey, accessTokenExpKey, sessionTokenKey,
+} from '../../core_abstractions/identity-cache-keys.js';
 
 const CLIENT_ID            = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com';
-const ACCESS_TOKEN_KEY     = 'vdg.auth.access_token';
-const ACCESS_TOKEN_EXP_KEY = 'vdg.auth.access_token_exp';
 const GIS_SCRIPT_URL       = 'https://accounts.google.com/gsi/client';
 const GIS_SCRIPT_TIMEOUT   = 10_000; // ms
 const DEFAULT_TOKEN_TTL_SEC = 3600; // Google's default access-token lifetime when expires_in absent
 
 
-// Canonical auth-owned localStorage keys — single source of truth (F-15-50 AC-07).
-// Add new auth keys here; every clear path picks them up automatically.
-export const AUTH_STORAGE_KEYS = Object.freeze([
-  TOKEN_KEY, ACCESS_TOKEN_KEY, ACCESS_TOKEN_EXP_KEY, ROLE_CACHE_KEY,
-  PROFILE_KEY, 'vdg.session-token', // display profile & server session token
-]);
+// Canonical auth-owned storage keys — single source of truth (F-15-50 AC-07). Add new auth keys
+// here; every clear path picks them up automatically. A function, not a frozen array of literals
+// (B-15-38-06): the tenant-namespaced form only exists once resolveIdentityCacheKeys() has run.
+export function authStorageKeys() {
+  return [
+    idTokenKey(), accessTokenKey(), accessTokenExpKey(), roleCacheKey(),
+    profileKey(), sessionTokenKey(), // display profile & server session token
+  ];
+}
 
 let _currentUser = null; // in-memory cache after parse
 
@@ -41,13 +44,13 @@ function wasmApi() {
 
 function getCurrentUser() {
   if (_currentUser) return _currentUser;
-  const stored = localStorage.getItem(TOKEN_KEY);
+  const stored = localStorage.getItem(idTokenKey());
   if (!stored) return null;
   _currentUser = buildUser(stored);
-  if (!_currentUser) localStorage.removeItem(TOKEN_KEY); // expired/corrupt
-  // Backfill the display-profile cache for sessions signed in before PROFILE_KEY existed —
+  if (!_currentUser) localStorage.removeItem(idTokenKey()); // expired/corrupt
+  // Backfill the display-profile cache for sessions signed in before the profile key existed —
   // otherwise their avatar still blanks at the NEXT hourly expiry.
-  if (_currentUser && !localStorage.getItem(PROFILE_KEY)) writeCachedProfile(_currentUser);
+  if (_currentUser && !localStorage.getItem(profileKey())) writeCachedProfile(_currentUser);
   return _currentUser;
 }
 
@@ -57,7 +60,7 @@ function getCurrentUser() {
 /// machine that is the whole difference. Returns a promise so a caller can wait for the server
 /// half, but the local half has already happened by the time it does.
 function signOut() {
-  for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k); // F-15-50 AC-01
+  for (const k of authStorageKeys()) localStorage.removeItem(k); // F-15-50 AC-01
   _currentUser = null;
   // The DELETE must carry the session (Rust attaches the header), so the token is only dropped
   // afterwards — win or lose. auth_session_close never rejects; ok:false is an outage to log,
@@ -71,18 +74,18 @@ function signOut() {
 
 // F-19-84 AC-05 — prior sign-in leaves an access-token exp behind (survives id_token expiry, only
 // cleared by an explicit signOut()); reused as the "was previously signed in" marker, no new key.
-function wasPreviouslySignedIn() { return localStorage.getItem(ACCESS_TOKEN_EXP_KEY) != null; }
+function wasPreviouslySignedIn() { return localStorage.getItem(accessTokenExpKey()) != null; }
 
 // Extend the synthetic id-token session to a new expiry (the fresh access-token exp) WITHOUT
 // changing identity — silent renewal keeps the same user, just a later exp. No-op if no id-token.
 // The in-memory user cache is this module's, so invalidating it lives here too.
 function restampIdTokenExp(accessExpMs) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(idTokenKey());
   if (!token) return false;
   const payload = parseIdToken(token);
   if (!payload) return false;
   payload.exp = Math.floor(accessExpMs / 1000);          // pin to new access-token exp
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(payload));
+  localStorage.setItem(idTokenKey(), encodeSyntheticIdToken(payload));
   _currentUser = null;   // force rebuild; email/sub unchanged
   return true;
 }
@@ -95,8 +98,8 @@ function restampIdTokenExp(accessExpMs) {
 // behind, rather than waiting out its hour.
 function _persistAccessToken(resp) {
   const expMs = Date.now() + (resp.expires_in || DEFAULT_TOKEN_TTL_SEC) * 1000;
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(ACCESS_TOKEN_EXP_KEY);
+  localStorage.removeItem(accessTokenKey());
+  localStorage.removeItem(accessTokenExpKey());
   return expMs;
 }
 
@@ -107,7 +110,7 @@ async function rebuildSessionFromStoredToken() {
   const me = await serverSessionIdentity();
   if (!me) return null;
   const cached = readCachedProfile();
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
+  localStorage.setItem(idTokenKey(), encodeSyntheticIdToken({
     email: me.email, name: me.name || cached?.name || '', picture: cached?.picture || '', sub: cached?.sub || me.email,
     exp: Math.floor((Date.now() + SERVER_SESSION_TTL_MS) / 1000),
   }));
@@ -146,8 +149,8 @@ async function hydrateSessionFromToken(resp) {
   const tokenPayload = {
     email: info.email, name: info.name, picture: info.picture, sub: info.sub, exp: expSec,
   };
-  console.log('[Auth] Writing TOKEN_KEY with payload:', tokenPayload);
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(tokenPayload));
+  console.log('[Auth] Writing id_token with payload:', tokenPayload);
+  localStorage.setItem(idTokenKey(), encodeSyntheticIdToken(tokenPayload));
   writeCachedProfile(info);
   _currentUser = null; // force rebuild from the freshly-minted token
 

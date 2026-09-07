@@ -6,8 +6,15 @@ var DELTA_JOB_ID = "sync-delta";
 var DRAIN_TRIGGER_EVENTS = ["vdg:sync-now", "vdg:sync-force-retry", "online"];
 var AUTH_DEAD_EVENT = "vdg:auth-needs-reconnect";
 var AUTH_RECONNECTED_EVENT = "vdg:auth-reconnected";
+var SYNC_ERROR_EVENT = "vdg:sync-error";
+var REASON_UNAUTHORIZED = "unauthorized";
 var DELTA_COMMANDS = { pause: "cmd_pause", resume: "cmd_resume", run_now: "cmd_run_now" };
 var wasm = () => window.__vdg_wasm;
+window.addEventListener(SYNC_ERROR_EVENT, (e) => {
+  if (e.detail?.reason !== REASON_UNAUTHORIZED) return;
+  wasm()?.auth_clear_role_cache?.({});
+  window.dispatchEvent(new CustomEvent(AUTH_DEAD_EVENT));
+});
 var _jobMap = {};
 var _jobRows = [];
 var _listeners = /* @__PURE__ */ new Set();

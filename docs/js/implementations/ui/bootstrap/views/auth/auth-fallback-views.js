@@ -3,6 +3,9 @@
 // Extracted from app.js so the loading-hang recovery path can dynamic-import safely.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import {
+  roleCacheKey, sessionTokenKey, idTokenKey, profileKey,
+} from '../../../../storage/core_abstractions/identity-cache-keys.js';
 
 export function renderLoadingBanner(mount) {
   if (!mount) return;
@@ -15,12 +18,15 @@ export function renderLoadingBanner(mount) {
         ${t('auth_loading_banner_action')}
       </button>
     </div>`;
-  // Reload — user re-clicks Sign in button for fresh tokens
+  // Reload — user re-clicks Sign in button for fresh tokens. These used to be the wrong keys
+  // entirely ('vdg.role-cache' with a hyphen, 'vdg.auth.user' — neither ever matched a real slot,
+  // so this button never actually cleared anything); now the real, tenant-namespaced ones.
   mount.querySelector('#auth-fallback-reauth')?.addEventListener('click', () => {
     try {
-      localStorage.removeItem('vdg.role-cache');
-      sessionStorage.removeItem('vdg.session-token');
-      localStorage.removeItem('vdg.auth.user');
+      localStorage.removeItem(roleCacheKey());
+      sessionStorage.removeItem(sessionTokenKey());
+      localStorage.removeItem(idTokenKey());
+      localStorage.removeItem(profileKey());
     } catch { /* storage-less context (InPrivate, blocked site data) — the reload below is the real remedy */ }
     window.__vdg_auth?.signOut?.();
     location.reload();

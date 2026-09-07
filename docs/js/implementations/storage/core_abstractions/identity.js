@@ -2,10 +2,9 @@
 // Services is the one provider today (implementations/auth/google-oauth.js binds itself here at
 // load); the operators never import the provider, only this port. A second provider (Firebase
 // Auth, a plain server login) binds the same four functions.
-
-/// localStorage key of the role cache — one name, shared by the provider's sign-out sweep and the
-/// app's role-cache; declared here so neither imports the other for a string.
-export const ROLE_CACHE_KEY = 'vdg.role.cache';
+//
+// The role-cache key moved to identity-cache-keys.js::roleCacheKey() (B-15-38-06 — Rust
+// namespaces it by tenant); this file no longer names a storage key at all.
 
 let _provider = null;
 

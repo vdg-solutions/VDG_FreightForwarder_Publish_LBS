@@ -12,17 +12,15 @@
 
 import { ensureWindowOpen } from '../../core_abstractions/popup-guard.js';
 import { parseIdToken } from '../../core_abstractions/id-token.js';
-import { ROLE_CACHE_KEY } from '../../core_abstractions/identity.js';
+import {
+  roleCacheKey, idTokenKey, accessTokenKey, accessTokenExpKey, accessTokenIssuedKey,
+} from '../../core_abstractions/identity-cache-keys.js';
 import { SAFE_AWAIT_DEFAULT_MS } from '../../../kernel/core_abstractions/util/safe-await.js';
 import { createTokenAnchor, ANCHOR_EVT_POPUP_BLOCKED, ANCHOR_EVT_SIGNIN_REQUIRED } from '../../core_abstractions/token-anchor.js';
-import { ACCESS_TOKEN_ISSUED_KEY } from '../../core_abstractions/token.js';
 import { fetchUserinfo } from './userinfo.js';
 import { IDENTITY_SCOPE } from '../../core_abstractions/oauth-scope.js';
 
 const CLIENT_ID                = '875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com'; // Makefile sed target
-const ID_TOKEN_KEY             = 'vdg.auth.id_token';
-const ACCESS_TOKEN_KEY         = 'vdg.auth.access_token';
-const ACCESS_TOKEN_EXP_KEY     = 'vdg.auth.access_token_exp';
 // MUST stay below SAFE_AWAIT_DEFAULT_MS (the per-Drive-op safeAwait bound). On a static deploy
 // silent refresh can never succeed (F-50-01: no server, no gesture) and GIS can hang without
 // ever firing error_callback — this timer is the only exit. If it fires AFTER the op's 8s
@@ -36,7 +34,7 @@ const SILENT_REFRESH_TIMEOUT_MS = Math.max(1_000, SAFE_AWAIT_DEFAULT_MS - 2_000)
 // a different account than the one signed in (wrong identity, wrong users/<account> routing).
 // Always pin the mint to the current session's email.
 function _sessionEmail() {
-  const token = localStorage.getItem(ID_TOKEN_KEY);
+  const token = localStorage.getItem(idTokenKey());
   const payload = token ? parseIdToken(token) : null;
   if (payload?.email) return payload.email;
   // Expired session: getCurrentUser() deletes the stale id_token, which used to erase the
@@ -44,7 +42,7 @@ function _sessionEmail() {
   // DEFAULT account and the verify had nothing to check against (silent account flip on
   // reconnect). The role cache {email, role} survives expiry; it IS the working account.
   try {
-    const raw = localStorage.getItem(ROLE_CACHE_KEY);
+    const raw = localStorage.getItem(roleCacheKey());
     const email = raw ? JSON.parse(raw)?.email : null;
     return email || undefined;
   } catch { return undefined; /* corrupt cache reads as no anchor — sign-in re-establishes it */ }
@@ -69,7 +67,7 @@ function _anchor() {
   // is all the server needs to mint a session. Asking for a wider scope got Google's "hasn't
   // verified this app" warning in front of every reconnect, for a permission the build never uses.
   scope:    IDENTITY_SCOPE,
-  keys:     { token: ACCESS_TOKEN_KEY, exp: ACCESS_TOKEN_EXP_KEY, issued: ACCESS_TOKEN_ISSUED_KEY },
+  keys:     { token: accessTokenKey(), exp: accessTokenExpKey(), issued: accessTokenIssuedKey() },
   loginHint:       _sessionEmail,
   verifyAccount:   _verifySameAccount,
   ensurePopup:     ensureWindowOpen, // F-49-01 — restore a native window.open an ad-blocker may have nulled

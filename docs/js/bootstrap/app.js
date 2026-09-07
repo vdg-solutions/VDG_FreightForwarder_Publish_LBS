@@ -23,7 +23,7 @@ import {
 } from "./chunk-GRBWOHUK.js";
 import {
   jobTracker
-} from "./chunk-YFGWKASP.js";
+} from "./chunk-JX5PJORQ.js";
 import {
   bindManifestComposer
 } from "./chunk-3FXNTAAE.js";
@@ -128,7 +128,6 @@ import {
   bindBillingPublish
 } from "./chunk-SXXIG76D.js";
 import {
-  ROLE_CACHE_KEY,
   bindFsmAutoAdvance,
   bindIdentityProvider,
   bindJobNoGen,
@@ -146,7 +145,7 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-U3O66ZTM.js";
+} from "./chunk-WXAFWACR.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
@@ -230,6 +229,16 @@ import {
   bindFxRateRepo,
   fxRateRepo
 } from "./chunk-KQNTGIY5.js";
+import {
+  accessTokenExpKey,
+  accessTokenIssuedKey,
+  accessTokenKey,
+  idTokenKey,
+  profileKey,
+  resolveIdentityCacheKeys,
+  roleCacheKey,
+  sessionTokenKey
+} from "./chunk-DT34M7SM.js";
 import {
   bindCustomer360Composer
 } from "./chunk-TE5ZYPE3.js";
@@ -618,7 +627,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build cd92f059">v0.4.81 (cd92f059)</span>
+        <span class="font-mono whitespace-nowrap" title="build 14f70ba2">v0.4.82 (14f70ba2)</span>
       </div>
     `;
   }
@@ -648,7 +657,6 @@ window._vdgSidebarTest = { v1Items: V1_ITEMS, hasRole };
 import { LitElement as LitElement2, html as html4 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
 
 // output/web/js.tmp/implementations/storage/core_abstractions/profile-cache.js
-var PROFILE_KEY = "vdg.auth.profile";
 var _impl = null;
 function bindProfileCache(impl) {
   _impl = impl;
@@ -2352,7 +2360,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.81 (cd92f059)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.82 (14f70ba2)</div>
         </div>
       </div>
     </div>`;
@@ -2434,7 +2442,7 @@ function takeAuthError() {
 }
 function _readCache() {
   try {
-    return JSON.parse(localStorage.getItem(ROLE_CACHE_KEY) || "null");
+    return JSON.parse(localStorage.getItem(roleCacheKey()) || "null");
   } catch {
     return null;
   }
@@ -2471,12 +2479,12 @@ var authPlatform = {
   auth_cache_read: async () => _readCache(),
   auth_cache_write: async (entry) => {
     try {
-      localStorage.setItem(ROLE_CACHE_KEY, JSON.stringify(entry));
+      localStorage.setItem(roleCacheKey(), JSON.stringify(entry));
     } catch {
     }
   },
   auth_cache_clear: async () => {
-    localStorage.removeItem(ROLE_CACHE_KEY);
+    localStorage.removeItem(roleCacheKey());
   },
   // F-42-05: the route guard reads the Rust principal directly (auth_session_roles), so this is
   // announcement-only now — a real change fires the event, the chrome re-renders and re-reads.
@@ -3004,8 +3012,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=cd92f059", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=cd92f059", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=14f70ba2", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=14f70ba2", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3098,7 +3106,7 @@ function bootFallbackMount() {
 async function renderBootFailure(err, { onRetryRepoInit = () => location.reload() } = {}) {
   const mount = bootFallbackMount();
   if (err?.name === ROLE_PROBE_TIMEOUT) {
-    const { renderLoadingBanner } = await import("./auth-fallback-views-6TEABO7S.js");
+    const { renderLoadingBanner } = await import("./auth-fallback-views-A5FEVVSV.js");
     renderLoadingBanner(document.getElementById(APP_ROOT_ID));
     return;
   }
@@ -3227,7 +3235,6 @@ function _i6() {
 var createTokenAnchor = (...a) => _i6().createTokenAnchor(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/token.js
-var ACCESS_TOKEN_ISSUED_KEY = "vdg.auth.access_token_issued";
 var _impl7 = null;
 function bindTokenAuthority(impl) {
   _impl7 = impl;
@@ -3317,7 +3324,6 @@ var SharedIoPort = class {
 
 // output/web/js.tmp/implementations/storage/implementations/server/backend.js
 var BACKEND_SERVER = "server";
-var SESSION_TOKEN_KEY = "vdg.session-token";
 var BACKEND_KEY = "vdg.backend";
 var SERVER_HEALTH_EVENT = "vdg:server-health";
 var WASM_READY_EVENT = "vdg:wasm-ready";
@@ -3376,11 +3382,11 @@ async function adoptSessionToken2(token) {
 function rememberSessionToken2(token) {
   try {
     if (token) {
-      sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+      sessionStorage.setItem(sessionTokenKey(), token);
     } else {
-      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      sessionStorage.removeItem(sessionTokenKey());
     }
-    localStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem(sessionTokenKey());
   } catch {
   }
 }
@@ -3459,13 +3465,13 @@ var popupGuard = { ensureWindowOpen: ensureWindowOpen2, isNativeOpen };
 // output/web/js.tmp/implementations/storage/implementations/auth/profile-cache.js
 function readCachedProfile2() {
   try {
-    return JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+    return JSON.parse(localStorage.getItem(profileKey()) || "null");
   } catch {
     return null;
   }
 }
 function writeCachedProfile2({ email, name, picture } = {}) {
-  localStorage.setItem(PROFILE_KEY, JSON.stringify({
+  localStorage.setItem(profileKey(), JSON.stringify({
     email: email || "",
     name: name || "",
     picture: picture || ""
@@ -3637,7 +3643,6 @@ var b64Decode = (...a) => _i9().decode(...a);
 var b64Encode = (...a) => _i9().encode(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/id-token.js
-var TOKEN_KEY = "vdg.auth.id_token";
 function parseIdToken(token) {
   try {
     const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -3699,16 +3704,13 @@ var IDENTITY_SCOPE = "openid email profile";
 
 // output/web/js.tmp/implementations/storage/implementations/auth/access-token.js
 var CLIENT_ID = "875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com";
-var ID_TOKEN_KEY = "vdg.auth.id_token";
-var ACCESS_TOKEN_KEY = "vdg.auth.access_token";
-var ACCESS_TOKEN_EXP_KEY = "vdg.auth.access_token_exp";
 var SILENT_REFRESH_TIMEOUT_MS = Math.max(1e3, SAFE_AWAIT_DEFAULT_MS - 2e3);
 function _sessionEmail() {
-  const token = localStorage.getItem(ID_TOKEN_KEY);
+  const token = localStorage.getItem(idTokenKey());
   const payload = token ? parseIdToken(token) : null;
   if (payload?.email) return payload.email;
   try {
-    const raw = localStorage.getItem(ROLE_CACHE_KEY);
+    const raw = localStorage.getItem(roleCacheKey());
     const email = raw ? JSON.parse(raw)?.email : null;
     return email || void 0;
   } catch {
@@ -3729,7 +3731,7 @@ function _anchor() {
     // is all the server needs to mint a session. Asking for a wider scope got Google's "hasn't
     // verified this app" warning in front of every reconnect, for a permission the build never uses.
     scope: IDENTITY_SCOPE,
-    keys: { token: ACCESS_TOKEN_KEY, exp: ACCESS_TOKEN_EXP_KEY, issued: ACCESS_TOKEN_ISSUED_KEY },
+    keys: { token: accessTokenKey(), exp: accessTokenExpKey(), issued: accessTokenIssuedKey() },
     loginHint: _sessionEmail,
     verifyAccount: _verifySameAccount,
     ensurePopup: ensureWindowOpen,
@@ -3829,20 +3831,20 @@ function renderSignInButton2(container, { hydrate, clientId }) {
 
 // output/web/js.tmp/implementations/storage/implementations/auth/google-oauth.js
 var CLIENT_ID2 = "875515041729-klcro7nakobu353ktf0k2s2fkuu7u38n.apps.googleusercontent.com";
-var ACCESS_TOKEN_KEY2 = "vdg.auth.access_token";
-var ACCESS_TOKEN_EXP_KEY2 = "vdg.auth.access_token_exp";
 var GIS_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 var GIS_SCRIPT_TIMEOUT = 1e4;
 var DEFAULT_TOKEN_TTL_SEC = 3600;
-var AUTH_STORAGE_KEYS = Object.freeze([
-  TOKEN_KEY,
-  ACCESS_TOKEN_KEY2,
-  ACCESS_TOKEN_EXP_KEY2,
-  ROLE_CACHE_KEY,
-  PROFILE_KEY,
-  "vdg.session-token"
-  // display profile & server session token
-]);
+function authStorageKeys() {
+  return [
+    idTokenKey(),
+    accessTokenKey(),
+    accessTokenExpKey(),
+    roleCacheKey(),
+    profileKey(),
+    sessionTokenKey()
+    // display profile & server session token
+  ];
+}
 var _currentUser = null;
 function wasmApi2() {
   const m = window.__vdg_wasm;
@@ -3851,15 +3853,15 @@ function wasmApi2() {
 }
 function getCurrentUser2() {
   if (_currentUser) return _currentUser;
-  const stored = localStorage.getItem(TOKEN_KEY);
+  const stored = localStorage.getItem(idTokenKey());
   if (!stored) return null;
   _currentUser = buildUser(stored);
-  if (!_currentUser) localStorage.removeItem(TOKEN_KEY);
-  if (_currentUser && !localStorage.getItem(PROFILE_KEY)) writeCachedProfile(_currentUser);
+  if (!_currentUser) localStorage.removeItem(idTokenKey());
+  if (_currentUser && !localStorage.getItem(profileKey())) writeCachedProfile(_currentUser);
   return _currentUser;
 }
 function signOut2() {
-  for (const k of AUTH_STORAGE_KEYS) localStorage.removeItem(k);
+  for (const k of authStorageKeys()) localStorage.removeItem(k);
   _currentUser = null;
   return Promise.resolve().then(() => wasmApi2().auth_session_close()).then((res) => {
     if (!res?.ok) console.warn("sign-out: server session not ended: HTTP", res?.status);
@@ -3868,29 +3870,29 @@ function signOut2() {
   }).finally(() => rememberSessionToken(""));
 }
 function wasPreviouslySignedIn2() {
-  return localStorage.getItem(ACCESS_TOKEN_EXP_KEY2) != null;
+  return localStorage.getItem(accessTokenExpKey()) != null;
 }
 function restampIdTokenExp(accessExpMs) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(idTokenKey());
   if (!token) return false;
   const payload = parseIdToken(token);
   if (!payload) return false;
   payload.exp = Math.floor(accessExpMs / 1e3);
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(payload));
+  localStorage.setItem(idTokenKey(), encodeSyntheticIdToken(payload));
   _currentUser = null;
   return true;
 }
 function _persistAccessToken(resp) {
   const expMs = Date.now() + (resp.expires_in || DEFAULT_TOKEN_TTL_SEC) * 1e3;
-  localStorage.removeItem(ACCESS_TOKEN_KEY2);
-  localStorage.removeItem(ACCESS_TOKEN_EXP_KEY2);
+  localStorage.removeItem(accessTokenKey());
+  localStorage.removeItem(accessTokenExpKey());
   return expMs;
 }
 async function rebuildSessionFromStoredToken2() {
   const me = await serverSessionIdentity();
   if (!me) return null;
   const cached2 = readCachedProfile();
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken({
+  localStorage.setItem(idTokenKey(), encodeSyntheticIdToken({
     email: me.email,
     name: me.name || cached2?.name || "",
     picture: cached2?.picture || "",
@@ -3921,8 +3923,8 @@ async function hydrateSessionFromToken2(resp) {
     sub: info.sub,
     exp: expSec
   };
-  console.log("[Auth] Writing TOKEN_KEY with payload:", tokenPayload);
-  localStorage.setItem(TOKEN_KEY, encodeSyntheticIdToken(tokenPayload));
+  console.log("[Auth] Writing id_token with payload:", tokenPayload);
+  localStorage.setItem(idTokenKey(), encodeSyntheticIdToken(tokenPayload));
   writeCachedProfile(info);
   _currentUser = null;
   const builtUser = getCurrentUser2();
@@ -4412,14 +4414,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-GXNUXJU6.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-NXCD26PY.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-GXNUXJU6.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-NXCD26PY.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4521,7 +4523,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.81 (cd92f059)";
+var APP_VERSION = "v0.4.82 (14f70ba2)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -6187,7 +6189,7 @@ async function _deferredInit(user, db, repo3) {
       const locale = prefsResult.ok ? prefsResult.value?.locale || "vi" : "vi";
       if (locale !== "vi") await loadLocale(locale);
     }
-    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-KSOFVZ65.js");
+    const { startDeltaTick, startOutboxDrain, startHealthPoll } = await import("./sync-schedulers-VM42SA6L.js");
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
@@ -6573,6 +6575,7 @@ async function main() {
   try {
     await composeStorage();
     const wasm4 = await wasmReady;
+    resolveIdentityCacheKeys(wasm4);
     wasm4.freight_app_init(createPlatform({ repo: null }));
     configureAuthPlatform({ renderLoginPage });
     composeAuth(wasm4);

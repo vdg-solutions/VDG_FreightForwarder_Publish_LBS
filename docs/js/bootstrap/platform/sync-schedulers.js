@@ -11,10 +11,28 @@ const DELTA_JOB_ID       = 'sync-delta';
 const DRAIN_TRIGGER_EVENTS  = ['vdg:sync-now', 'vdg:sync-force-retry', 'online'];
 const AUTH_DEAD_EVENT       = 'vdg:auth-needs-reconnect';
 const AUTH_RECONNECTED_EVENT = 'vdg:auth-reconnected';
+const SYNC_ERROR_EVENT      = 'vdg:sync-error';
+// charterdb_client::core_abstractions::reconcile::REASON_UNAUTHORIZED — the ONE reason code every
+// sync failure (delta tick, bootstrap, outbox push, the SDK's own SyncFailed) can carry, decided
+// entirely in Rust (flush_error_reason). This module only executes what that verdict implies.
+const REASON_UNAUTHORIZED   = 'unauthorized';
 
 const DELTA_COMMANDS = { pause: 'cmd_pause', resume: 'cmd_resume', run_now: 'cmd_run_now' };
 
 const wasm = () => window.__vdg_wasm;
+
+// ── auth invalidation (B-15-38-04) ───────────────────────────────────────────
+// A 401 anywhere on the sync path proves the cached identity is dead — Rust decided that the
+// moment it classified the failure as REASON_UNAUTHORIZED, not here. This listener only executes
+// the two things that decision implies: drop the cache (auth_clear_role_cache, the same export
+// the "force re-probe" dev button already calls) and hand the user back the exact reconnect path
+// OUTCOME_DEGRADED already uses at boot (compose-ui/auth.js) — the SAME two events topbar.js
+// already listens for, so the red chip + its click-to-sign-in wiring needs no new code at all.
+window.addEventListener(SYNC_ERROR_EVENT, (e) => {
+  if (e.detail?.reason !== REASON_UNAUTHORIZED) return;
+  wasm()?.auth_clear_role_cache?.({});
+  window.dispatchEvent(new CustomEvent(AUTH_DEAD_EVENT));
+});
 
 // ── background job tracker ────────────────────────────────────────────────────
 // Listens from module load: a job that reports before the panel is opened must still show up.
