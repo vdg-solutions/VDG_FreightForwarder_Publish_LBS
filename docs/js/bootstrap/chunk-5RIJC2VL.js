@@ -3,12 +3,13 @@ import {
 } from "./chunk-OXNK6IJ2.js";
 import {
   getRateForDate
-} from "./chunk-RIEF2VNQ.js";
+} from "./chunk-DUF7EQWG.js";
 import {
   lineVnd
 } from "./chunk-Z6T6WECV.js";
 import {
   currentLocale,
+  fmtDate,
   t
 } from "./chunk-5L442NSS.js";
 
@@ -119,17 +120,19 @@ function _recomputeVndCell(row, side) {
   const bookCurrency = bookCurrencyOf(row);
   const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrency);
   vndEl.value = fmtVndNum(vnd, bookCurrency);
-  _markUnresolvedRate(rateEl, amtEl?.value, curEl?.value, bookCurrency);
+  _updateRateHint(rateEl, amtEl?.value, curEl?.value, bookCurrency);
 }
-function _markUnresolvedRate(rateEl, amount, currency, bookCurrency) {
+function _updateRateHint(rateEl, amount, currency, bookCurrency) {
   if (!rateEl) return;
   const foreign = !!currency && currency !== (bookCurrency || VND_CURRENCY);
   const hasAmount = amount !== void 0 && amount !== null && String(amount).trim() !== "" && Number(amount) !== 0;
   const noRate = !rateEl.value || Number(rateEl.value) <= 0;
   const unresolved = foreign && hasAmount && noRate;
-  rateEl.classList.toggle("border-amber-400", unresolved);
+  const fallbackDate = rateEl.dataset.fxFallbackDate || "";
+  rateEl.classList.toggle("border-amber-400", unresolved || !!fallbackDate);
   rateEl.classList.toggle("bg-amber-50", unresolved);
   if (unresolved) rateEl.title = t("sales_new.validation.line_fx_no_rate_hint");
+  else if (fallbackDate) rateEl.title = t("sales_new.fx_rate.fallback_hint", { date: fmtDate(fallbackDate) });
   else rateEl.removeAttribute("title");
 }
 async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}) {
@@ -140,10 +143,16 @@ async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}) {
   if (!fxRepo || !currencyEl || currencyEl.value === VND_CURRENCY) return;
   if (rateEl?.dataset.manuallySet === "true") return;
   if (!overwrite && rateEl?.value !== "") return;
-  if (overwrite && rateEl) rateEl.value = "";
-  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value, side);
-  if (rateEl && rateEl.dataset.manuallySet !== "true" && (fetched != null || overwrite)) {
-    if (fetched != null) rateEl.value = fetched;
+  if (overwrite && rateEl) {
+    rateEl.value = "";
+    delete rateEl.dataset.fxFallbackDate;
+  }
+  const resolved = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value, side);
+  const rate = resolved?.rate ?? null;
+  if (rateEl && rateEl.dataset.manuallySet !== "true" && (rate != null || overwrite)) {
+    if (rate != null) rateEl.value = rate;
+    if (resolved?.isFallback) rateEl.dataset.fxFallbackDate = resolved.validTo;
+    else delete rateEl.dataset.fxFallbackDate;
     _recomputeVndCell(row, side);
     row.dispatchEvent(new Event("input", { bubbles: true }));
   }
@@ -159,8 +168,10 @@ async function _onCurrencyChange(row, side, fxRepo) {
     if (locked) {
       rateEl.value = rate;
       delete rateEl.dataset.manuallySet;
+      delete rateEl.dataset.fxFallbackDate;
     } else if (rateEl.dataset.manuallySet !== "true") {
       rateEl.value = "";
+      delete rateEl.dataset.fxFallbackDate;
     }
   }
   _recomputeVndCell(row, side);
@@ -189,7 +200,10 @@ function wireLineFx(tbody, fxRepo, docDate) {
     }
     const rateSide = _sideOf(e.target.name, "_fx_rate");
     if (rateSide) {
-      if (e.isTrusted) e.target.dataset.manuallySet = "true";
+      if (e.isTrusted) {
+        e.target.dataset.manuallySet = "true";
+        delete e.target.dataset.fxFallbackDate;
+      }
       _recomputeVndCell(e.target.closest("tr[data-line]"), rateSide);
     }
   });

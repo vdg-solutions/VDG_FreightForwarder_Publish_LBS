@@ -1,6 +1,6 @@
 import {
   getRateForDate
-} from "./chunk-RIEF2VNQ.js";
+} from "./chunk-DUF7EQWG.js";
 import {
   AR_BUCKET_31_60,
   AR_BUCKET_61_90,
@@ -16,7 +16,7 @@ import {
 } from "./chunk-7INC2TTZ.js";
 import {
   fxRateRepo
-} from "./chunk-KQNTGIY5.js";
+} from "./chunk-GXRUQ77E.js";
 import {
   addReceivableNote,
   cashFlowInputs,
@@ -49,7 +49,7 @@ async function fetchClosingRatesBuy(billing) {
   const rates = {};
   await Promise.all(currencies.map(async (currency) => {
     try {
-      const rate = await getRateForDate(fxRateRepo, dateStr, currency, REVAL_DIRECTION);
+      const { rate } = await getRateForDate(fxRateRepo, dateStr, currency, REVAL_DIRECTION);
       if (rate) rates[currency] = rate;
     } catch (err) {
       console.error(`[cash-flow] closing rate unavailable for ${currency}:`, err);

@@ -19,9 +19,11 @@ const REASON_LABEL_KEYS = {
 
 // currency VND is a locked self-pair (rate=1, no lookup needed); missing repo/date → no reference
 // (band check is skipped downstream, ≤0 check still applies) — mirrors pnl-line-fx.js's prefillFxRate.
+// Returns the named resolution `{ rate, validFrom, validTo, isFallback }` (B-15-38-07) — the band
+// check below only reads `.rate`, but the fact is not thrown away at this seam either.
 async function _resolveReference(fxRepo, fxDate, currency, direction) {
-  if (currency === VND_CURRENCY) return 1;
-  if (!fxRepo || !fxDate) return null;
+  if (currency === VND_CURRENCY) return { rate: 1, validFrom: fxDate, validTo: fxDate, isFallback: false };
+  if (!fxRepo || !fxDate) return { rate: null, validFrom: null, validTo: null, isFallback: false };
   return getRateForDate(fxRepo, fxDate, currency, direction);
 }
 
@@ -37,10 +39,10 @@ function _ratesUnreadable(fxRepo) {
 // to evaluate, same gating as validateShipmentForm's VR-01 hard-block (amount present → checks apply).
 async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }, referenceUnreadable) {
   if (!amount || !currency) return;
-  const referenceRate = await _resolveReference(fxRepo, fxDate, currency, direction);
-  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate, referenceUnreadable });
+  const reference = await _resolveReference(fxRepo, fxDate, currency, direction);
+  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate: reference.rate, referenceUnreadable });
   if (isFlagged) {
-    flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason, threshold });
+    flagged.push({ lineRef, currency, fxRate, referenceRate: reference.rate, fxDate, reason, threshold });
   }
 }
 

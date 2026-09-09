@@ -28,6 +28,7 @@ var customerForNote = (...a) => _i().customerForNote(...a);
 var createCustomerDraft = (...a) => _i().createCustomerDraft(...a);
 var shipmentMonth = (...a) => _i().shipmentMonth(...a);
 var maySeeJobTotal = (...a) => _i().maySeeJobTotal(...a);
+var jobHasNoCosts = (...a) => _i().jobHasNoCosts(...a);
 
 export {
   bindSalesReads,
@@ -51,5 +52,6 @@ export {
   customerForNote,
   createCustomerDraft,
   shipmentMonth,
-  maySeeJobTotal
+  maySeeJobTotal,
+  jobHasNoCosts
 };

@@ -3,7 +3,7 @@ import {
 } from "./chunk-OXNK6IJ2.js";
 import {
   clearRateCache
-} from "./chunk-RIEF2VNQ.js";
+} from "./chunk-DUF7EQWG.js";
 import {
   isViewSuperseded
 } from "./chunk-2PLULDG2.js";
@@ -16,7 +16,7 @@ import {
 import "./chunk-NGKBNKFN.js";
 import {
   fxRateRepo
-} from "./chunk-KQNTGIY5.js";
+} from "./chunk-GXRUQ77E.js";
 import {
   renderMasterLoadRetryStatus,
   safeMasterLoad
@@ -65,6 +65,11 @@ async function loadDefaultSource() {
 function sourceLabel(src) {
   const map = { SBV: "fx.source.sbv", Vietcombank: "fx.source.vcb", Manual: "fx.source.manual" };
   return t(map[src] || "fx.source.manual");
+}
+function foldListDegraded(listRes, repo) {
+  if (!listRes.ok || listRes.value.length > 0) return listRes;
+  if (!repo?.hasListDegraded?.()) return listRes;
+  return { ok: false, error: new Error("fx-rates-list-degraded") };
 }
 function renderGrid(container, entries, onEdit, onDelete) {
   if (!entries.length) {
@@ -162,10 +167,11 @@ async function render(root) {
   const statusEl = root.querySelector("#fx-status");
   async function reload(prefill = {}) {
     if (isViewSuperseded(root)) return;
-    const [listRes, srcRes] = await Promise.all([
+    const [rawListRes, srcRes] = await Promise.all([
       safeMasterLoad(() => fxRateRepo.listAll(), LOAD_TAG, VIEW_DATA_LOAD_BUDGET_MS),
       safeMasterLoad(loadDefaultSource, SOURCE_TAG, VIEW_DATA_LOAD_BUDGET_MS)
     ]);
+    const listRes = foldListDegraded(rawListRes, fxRateRepo);
     if (isViewSuperseded(root)) return;
     defSrc = srcRes.ok ? srcRes.value : "Manual";
     if (!listRes.ok) {
@@ -198,7 +204,11 @@ async function render(root) {
     } catch (err) {
       toast("error", err.message);
     }
-    await reload();
+    try {
+      await reload();
+    } catch (err) {
+      toast("error", err.message);
+    }
   }
   function wireForm(deleteFirst) {
     const form = root.querySelector("#fx-add-form");
@@ -250,5 +260,6 @@ async function render(root) {
   await reload();
 }
 export {
+  foldListDegraded,
   render
 };

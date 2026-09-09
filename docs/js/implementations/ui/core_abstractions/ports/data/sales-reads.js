@@ -65,3 +65,6 @@ export const shipmentMonth = (...a) => _i().shipmentMonth(...a);
 /// () -> may the signed-in reader be shown a job's TOTAL profit or loss? False for anyone not
 /// guaranteed every line of it — a sum over a partial set is a different number, not a smaller one.
 export const maySeeJobTotal = (...a) => _i().maySeeJobTotal(...a);
+/// (lines) -> does this job's cost side carry nothing at all? B-15-38-08: a job priced but not yet
+/// costed sums to a big positive figure that is arithmetically correct and not yet settled.
+export const jobHasNoCosts = (...a) => _i().jobHasNoCosts(...a);

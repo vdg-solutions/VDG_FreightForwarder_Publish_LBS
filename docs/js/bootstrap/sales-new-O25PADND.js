@@ -12,7 +12,7 @@ import {
   summarizeLineCurrencies,
   vndCellHtml,
   wireLineFx
-} from "./chunk-6YFBIXDJ.js";
+} from "./chunk-5RIJC2VL.js";
 import {
   mountDateHints
 } from "./chunk-OXNK6IJ2.js";
@@ -24,7 +24,7 @@ import {
 } from "./chunk-OCM54TMO.js";
 import {
   getRateForDate
-} from "./chunk-RIEF2VNQ.js";
+} from "./chunk-DUF7EQWG.js";
 import {
   resolveShipmentState
 } from "./chunk-DVXWC4LN.js";
@@ -100,7 +100,7 @@ import {
   listCustomerMasters,
   listQuotations,
   listWeightUnitCodes
-} from "./chunk-PUYI7C66.js";
+} from "./chunk-ZYZ6J7HL.js";
 import {
   REVENUE_SEEN,
   getEnvelope,
@@ -3222,8 +3222,8 @@ var REASON_LABEL_KEYS = {
   no_reference: "sales_new.fx_deviation.reason_no_reference"
 };
 async function _resolveReference(fxRepo, fxDate, currency, direction) {
-  if (currency === VND_CURRENCY2) return 1;
-  if (!fxRepo || !fxDate) return null;
+  if (currency === VND_CURRENCY2) return { rate: 1, validFrom: fxDate, validTo: fxDate, isFallback: false };
+  if (!fxRepo || !fxDate) return { rate: null, validFrom: null, validTo: null, isFallback: false };
   return getRateForDate(fxRepo, fxDate, currency, direction);
 }
 function _ratesUnreadable(fxRepo) {
@@ -3231,10 +3231,10 @@ function _ratesUnreadable(fxRepo) {
 }
 async function _checkSide(flagged, fxRepo, lineRef, { amount, currency, fxRate, fxDate, direction }, referenceUnreadable) {
   if (!amount || !currency) return;
-  const referenceRate = await _resolveReference(fxRepo, fxDate, currency, direction);
-  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate, referenceUnreadable });
+  const reference = await _resolveReference(fxRepo, fxDate, currency, direction);
+  const { flagged: isFlagged, reason, threshold } = detectFxDeviation({ currency, fxRate, referenceRate: reference.rate, referenceUnreadable });
   if (isFlagged) {
-    flagged.push({ lineRef, currency, fxRate, referenceRate, fxDate, reason, threshold });
+    flagged.push({ lineRef, currency, fxRate, referenceRate: reference.rate, fxDate, reason, threshold });
   }
 }
 async function findFxDeviations(state = {}, fxRepo) {
@@ -3332,7 +3332,7 @@ function showToast(msg, type = "info") {
 }
 async function _fxRepo() {
   try {
-    const { fxRateRepo } = await import("./fx-rate-repo-A2MFJJ6T.js");
+    const { fxRateRepo } = await import("./fx-rate-repo-CM7KNQ3F.js");
     return fxRateRepo;
   } catch {
     return null;

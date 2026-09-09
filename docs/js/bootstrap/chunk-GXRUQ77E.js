@@ -13,6 +13,7 @@ var fxRateRepo = {
   invalidateMonth: (...a) => _i().invalidateMonth(...a),
   listByMonth: (...a) => _i().listByMonth(...a),
   listAll: (...a) => _i().listAll(...a),
+  hasListDegraded: (...a) => _i().hasListDegraded(...a),
   deleteEntry: (...a) => _i().deleteEntry(...a),
   // F-29-01: fx-lookup.js's wasm-backed pair/direction/cache rules — see fx-rate-repo.js impl.
   pnlFxLookupPair: (...a) => _i().pnlFxLookupPair(...a),

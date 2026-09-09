@@ -36,6 +36,17 @@ function sourceLabel(src) {
   return t(map[src] || 'fx.source.manual');
 }
 
+/// B-15-38-05: `listAll` can legitimately answer `[]` while one month's read silently failed —
+/// same partition-tolerance `JsonlFxRateRepo` already gives a parse failure (the other rows still
+/// answer), so an empty ARRAY here is not proof of an empty TABLE. Fold the wasm side's own
+/// signal (`hasListDegraded`) into `!ok` so the existing retry path renders instead of the grid
+/// quietly reading "no_data" — mirrors master-load.js's `foldSyncFailure` shape.
+export function foldListDegraded(listRes, repo) {
+  if (!listRes.ok || listRes.value.length > 0) return listRes;
+  if (!repo?.hasListDegraded?.()) return listRes;
+  return { ok: false, error: new Error('fx-rates-list-degraded') };
+}
+
 function renderGrid(container, entries, onEdit, onDelete) {
   if (!entries.length) {
     container.innerHTML = `<p class="text-sm text-slate-400 py-4">${t('no_data')}</p>`;
@@ -145,10 +156,11 @@ export async function render(root) {
   // once per call (AC-03), never a pre-paint + post-paint double fetch.
   async function reload(prefill = {}) {
     if (isViewSuperseded(root)) return;
-    const [listRes, srcRes] = await Promise.all([
+    const [rawListRes, srcRes] = await Promise.all([
       safeMasterLoad(() => fxRateRepo.listAll(), LOAD_TAG, VIEW_DATA_LOAD_BUDGET_MS),
       safeMasterLoad(loadDefaultSource, SOURCE_TAG, VIEW_DATA_LOAD_BUDGET_MS),
     ]);
+    const listRes = foldListDegraded(rawListRes, fxRateRepo);
     if (isViewSuperseded(root)) return;
     defSrc = srcRes.ok ? srcRes.value : 'Manual';
     if (!listRes.ok) {
@@ -179,7 +191,14 @@ export async function render(root) {
     } catch (err) {
       toast('error', err.message);
     }
-    await reload();
+    // reload() used to sit outside every try — a throw from it (foldListDegraded's own error is
+    // caught inside reload via safeMasterLoad, but a genuine render-time throw is not) became an
+    // unhandled rejection with nothing shown, leaving the DOM in whatever state it caught mid-render.
+    try {
+      await reload();
+    } catch (err) {
+      toast('error', err.message);
+    }
   }
 
   function wireForm(deleteFirst) {

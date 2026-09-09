@@ -192,7 +192,7 @@ import {
 } from "./chunk-NGKBNKFN.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-JANBRVUT.js";
+} from "./chunk-3B3S6YF2.js";
 import "./chunk-NSJXCXJQ.js";
 import {
   bindActionGuard,
@@ -220,7 +220,7 @@ import {
 } from "./chunk-2OXEHGGR.js";
 import {
   bindSalesReads
-} from "./chunk-PUYI7C66.js";
+} from "./chunk-ZYZ6J7HL.js";
 import {
   bindAuthGate,
   requireAuth
@@ -228,7 +228,7 @@ import {
 import {
   bindFxRateRepo,
   fxRateRepo
-} from "./chunk-KQNTGIY5.js";
+} from "./chunk-GXRUQ77E.js";
 import {
   accessTokenExpKey,
   accessTokenIssuedKey,
@@ -627,7 +627,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 14f70ba2">v0.4.82 (14f70ba2)</span>
+        <span class="font-mono whitespace-nowrap" title="build a4f4cd82">v0.4.83 (a4f4cd82)</span>
       </div>
     `;
   }
@@ -2360,7 +2360,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.82 (14f70ba2)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.83 (a4f4cd82)</div>
         </div>
       </div>
     </div>`;
@@ -2784,6 +2784,10 @@ function createPlatform({ repo: repo3 }) {
     // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
     // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
     records_put_labeled: (kind, id, body, labels) => repo3.put_labeled(kind, id, body, labels),
+    // Both facts at once. A shipment needs its owner AND its period at create, and having to pick
+    // meant the owner was the one dropped -- so every job CustomerService opened was owned by CS.
+    // Carried, never decided here: wasm chose both values.
+    records_put_owned_labeled: (kind, id, body, owner, labels) => repo3.put_owned_labeled(kind, id, body, owner, labels),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
     records_invalidate_period_cache: (kind, period) => repo3.invalidate_period_cache(kind, period),
@@ -3012,8 +3016,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=14f70ba2", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=14f70ba2", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=a4f4cd82", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=a4f4cd82", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4414,14 +4418,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-NXCD26PY.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-O25PADND.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-NXCD26PY.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-O25PADND.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4523,7 +4527,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.82 (14f70ba2)";
+var APP_VERSION = "v0.4.83 (a4f4cd82)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4773,17 +4777,17 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
-  "/shipments": () => import("./shipments-E66WSHP2.js"),
+  "/shipments": () => import("./shipments-XKUHFWEZ.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
-  "/documents": () => import("./documents-NWJQ37PE.js"),
-  "/finance": () => import("./finance-dashboard-MF7VRT4A.js"),
+  "/documents": () => import("./documents-EZXFHRCF.js"),
+  "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
   "/finance/credit": () => import("./credit-dashboard-Z43BZ656.js"),
-  "/finance/demdet": () => import("./demdet-GTXBFS4Z.js"),
+  "/finance/demdet": () => import("./demdet-BSC4VQ26.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-TNFPVMRM.js"),
-  "/sales/analytics": () => import("./sales-analytics-JAZ6JM65.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-2UPKEXVO.js"),
+  "/sales/me": () => import("./sales-me-WJNHOL3M.js"),
+  "/sales/analytics": () => import("./sales-analytics-LNR27FBP.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-NPXRNJ4F.js"),
   "/sales/quote": () => import("./sales-quote-list-VCJTCXW6.js"),
   "/masters/customers": () => import("./masters-customers-H7WYGR5L.js"),
   "/masters/carriers": () => import("./masters-carriers-KPBFC56B.js"),
@@ -4796,7 +4800,7 @@ var VIEWS = {
   "/manager/pipeline": () => import("./pipeline-BNL2KN7U.js"),
   "/manager/approvals": () => import("./approvals-Y26PEFAC.js"),
   "/manager/reports/pnl": () => import("./pnl-report-HBXLLPCO.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-VHDCCII3.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-GKQQVWY7.js"),
   "/manager/finance/close-period": () => import("./close-period-VU27GZGX.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-2HHAP7F4.js"),
   "/manager/audit": () => import("./audit-6BPPMIH3.js"),
@@ -4811,7 +4815,7 @@ var VIEWS = {
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
   "/manager/users": () => import("./users-RTYASZ4K.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-PTOBKIXW.js"),
+  "/manager/fx-rates": () => import("./fx-rates-OGKPQUUA.js"),
   "/manager/settings": () => import("./settings-A7U2KLTX.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-OHLWBRU3.js"),
@@ -4833,14 +4837,14 @@ var VIEWS = {
   "/masters/local-charges": () => import("./local-charges-L7HWH22Y.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
   "/masters/shipment-states": () => import("./shipment-states-FYFD6YDG.js"),
-  "/quotes/air-calc": () => import("./air-calc-AFW3J5OP.js"),
+  "/quotes/air-calc": () => import("./air-calc-FKUEZJ5U.js"),
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-ZO3JZGHF.js"),
   // E-23 F-23-04
   "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-AH66Q2OU.js"),
+  "/accounting/settings": () => import("./settings-AY6YJ6YD.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-7JGXASVP.js"),
   // E-24 F-24-06
@@ -5027,11 +5031,13 @@ function bindSalesData({ wasm: wasm4 }) {
     listCommissionEntriesFor: async (shipmentRef) => rows(await wasm4.sales_commission_entries_for({ id: shipmentRef ?? null })),
     salesShareTotal: async (shipmentRefs) => (await wasm4.sales_share_total({ shipment_refs: shipmentRefs || [] })).total,
     listPnlLines: async () => rows(await wasm4.sales_pnl_lines({})),
-    // Both synchronous: they are rules, not reads. `shipmentMonth` decides which month a job's
-    // numbers land in; `maySeeJobTotal` decides whether this reader may be shown a company-level
-    // figure at all. The shell asks and renders — it does not compute either.
+    // All three are rules, not reads. `shipmentMonth` decides which month a job's numbers land
+    // in; `maySeeJobTotal` decides whether this reader may be shown a company-level figure at
+    // all; `jobHasNoCosts` decides whether that figure is still provisional. The shell asks and
+    // renders — it does not compute any of them.
     shipmentMonth: (row) => wasm4.sales_shipment_month(row ?? {}) ?? null,
     maySeeJobTotal: () => wasm4.sales_may_see_job_total(),
+    jobHasNoCosts: (lines) => wasm4.sales_job_has_no_costs(lines ?? []),
     listPnlLinesFor: async (shipmentRef) => rows(await wasm4.sales_pnl_lines_for({ id: shipmentRef ?? null })),
     listQuotations: async () => rows(await wasm4.sales_quotations({})),
     getQuotation: async (id) => record(await wasm4.sales_quotation({ id: id ?? null })),
@@ -6466,7 +6472,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-4IV6UZYE.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-OCO4ZQWA.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6474,7 +6480,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-JPOBC5DT.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-53VC3EDN.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6482,7 +6488,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-PK4B6VPW.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-VJZWY3JO.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6490,7 +6496,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-2UPKEXVO.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-NPXRNJ4F.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;

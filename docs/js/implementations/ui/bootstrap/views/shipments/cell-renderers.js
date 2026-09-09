@@ -27,16 +27,19 @@ export function pnlRenderer(params) {
   }
   const v = params.value;
   const positive = v >= 0;
+  // B-15-38-08: no cost lines yet means the figure is provisional, not settled — same neutral
+  // treatment whichever sign the revenue-only sum lands on, never the settled green.
+  const provisional = params.data?.pnlNoCosts === true;
   const div = document.createElement('div');
   div.className = 'flex items-center gap-2';
   const bar = document.createElement('div');
   bar.className = 'w-12 h-1.5 rounded-full overflow-hidden bg-slate-100';
   const fill = document.createElement('div');
   fill.style.width = `${Math.min(100, Math.abs(v) / 100)}%`;
-  fill.className = positive ? 'h-full bg-emerald-500' : 'h-full bg-red-500';
+  fill.className = provisional ? 'h-full bg-slate-300' : (positive ? 'h-full bg-emerald-500' : 'h-full bg-red-500');
   bar.appendChild(fill);
   const label = document.createElement('span');
-  label.className = `font-mono text-xs ${positive ? 'text-emerald-700' : 'text-red-700'} font-semibold`;
+  label.className = `font-mono text-xs ${provisional ? 'text-slate-500' : (positive ? 'text-emerald-700' : 'text-red-700')} font-semibold`;
   label.textContent = `${positive ? '+' : ''}${fmtNumber(v)}`;
   div.appendChild(bar);
   div.appendChild(label);

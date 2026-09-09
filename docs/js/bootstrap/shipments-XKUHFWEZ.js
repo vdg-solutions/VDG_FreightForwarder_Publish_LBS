@@ -6,7 +6,7 @@ import "./chunk-ETXXTRJC.js";
 import {
   chooseShipmentAffordance,
   runShipmentAffordance
-} from "./chunk-JANBRVUT.js";
+} from "./chunk-3B3S6YF2.js";
 import "./chunk-NSJXCXJQ.js";
 import {
   can
@@ -19,9 +19,10 @@ import {
   ensureShipmentStateAliases
 } from "./chunk-FJ72A4AS.js";
 import {
+  jobHasNoCosts,
   listPnlLines,
   maySeeJobTotal
-} from "./chunk-PUYI7C66.js";
+} from "./chunk-ZYZ6J7HL.js";
 import {
   shipmentLane
 } from "./chunk-V5UQPUBE.js";
@@ -65,16 +66,17 @@ function pnlRenderer(params) {
   }
   const v = params.value;
   const positive = v >= 0;
+  const provisional = params.data?.pnlNoCosts === true;
   const div = document.createElement("div");
   div.className = "flex items-center gap-2";
   const bar = document.createElement("div");
   bar.className = "w-12 h-1.5 rounded-full overflow-hidden bg-slate-100";
   const fill = document.createElement("div");
   fill.style.width = `${Math.min(100, Math.abs(v) / 100)}%`;
-  fill.className = positive ? "h-full bg-emerald-500" : "h-full bg-red-500";
+  fill.className = provisional ? "h-full bg-slate-300" : positive ? "h-full bg-emerald-500" : "h-full bg-red-500";
   bar.appendChild(fill);
   const label = document.createElement("span");
-  label.className = `font-mono text-xs ${positive ? "text-emerald-700" : "text-red-700"} font-semibold`;
+  label.className = `font-mono text-xs ${provisional ? "text-slate-500" : positive ? "text-emerald-700" : "text-red-700"} font-semibold`;
   label.textContent = `${positive ? "+" : ""}${fmtNumber(v)}`;
   div.appendChild(bar);
   div.appendChild(label);
@@ -259,6 +261,7 @@ async function loadRealData() {
       (l) => l.sell_amt != null || l.selling_vnd_collect != null || l.selling_amount != null
     );
     s.pnl = sellSeen && maySeeJobTotal() ? lines.reduce((acc, l) => acc + Number(l.sell_amt || l.selling_vnd_collect || 0) - Number(l.buy_amt || l.buying_vnd_pay || 0), 0) : void 0;
+    s.pnlNoCosts = s.pnl !== void 0 && jobHasNoCosts(lines);
   }
   return allShipments;
 }

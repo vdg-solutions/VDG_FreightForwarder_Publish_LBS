@@ -2,7 +2,7 @@
 // Split out of section-lines.js (already at the 350-line cap) — see design.md §4.
 import { getRateForDate } from '../../../../kernel/core_abstractions/util/fx-lookup.js';
 import { lineVnd } from '../../../core_abstractions/ports/flows/pnl-gate.js';
-import { currentLocale, t } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { currentLocale, fmtDate, t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountDateHints } from '../../util/date-input-hint.js';
 
 const VND_CURRENCY = 'VND';
@@ -69,7 +69,9 @@ export function bookCurrencyOf(el) {
 // collects (a receivable-like flow), valued at the bank's BUYING rate.
 const SIDE_DIRECTION = { buy: 'Sell', sell: 'Buy' };
 
-/** prefillFxRate — AC-04: thin wrapper over the (currency-generic) fx-rates lookup */
+/** prefillFxRate — AC-04: thin wrapper over the (currency-generic) fx-rates lookup. Returns the
+ *  named resolution `{ rate, validFrom, validTo, isFallback }` (B-15-38-07), or null when there is
+ *  nothing to look up yet — never a bare number, so the caller can never lose which day answered. */
 export async function prefillFxRate(fxRepo, currency, fxDate, side) {
   if (!fxRepo || !fxDate || !currency || currency === VND_CURRENCY) return null;
   return getRateForDate(fxRepo, fxDate, currency, SIDE_DIRECTION[side]);
@@ -179,7 +181,7 @@ function _recomputeVndCell(row, side) {
   const bookCurrency = bookCurrencyOf(row);
   const vnd = computeLineVnd(amtEl?.value, curEl?.value, rateEl?.value, bookCurrency);
   vndEl.value = fmtVndNum(vnd, bookCurrency);
-  _markUnresolvedRate(rateEl, amtEl?.value, curEl?.value, bookCurrency);
+  _updateRateHint(rateEl, amtEl?.value, curEl?.value, bookCurrency);
 }
 
 // B-47-07-03 sibling (B-47-07-02): a foreign line with an amount and no rate computes nothing, so
@@ -193,16 +195,22 @@ function _recomputeVndCell(row, side) {
 // The save gate still decides: pnl-fx-deviation-gate flags fx_rate <= 0 as non_positive and puts
 // a destructive confirm in the way. This is the earlier, quieter half -- it tells the person while
 // they are still typing, instead of at the end.
-function _markUnresolvedRate(rateEl, amount, currency, bookCurrency) {
+//
+// B-15-38-07: a rate the lookup filled in from an EARLIER day (`fxFallbackDate`, set by
+// prefillRowFx) gets its own quiet hint -- a statement of fact next to the figure, not a dialog --
+// so it never LOOKS identical to a same-day rate. "No rate at all" still outranks it.
+function _updateRateHint(rateEl, amount, currency, bookCurrency) {
   if (!rateEl) return;
-  const foreign   = !!currency && currency !== (bookCurrency || VND_CURRENCY);
-  const hasAmount = amount !== undefined && amount !== null && String(amount).trim() !== ""
-                    && Number(amount) !== 0;
-  const noRate    = !rateEl.value || Number(rateEl.value) <= 0;
-  const unresolved = foreign && hasAmount && noRate;
-  rateEl.classList.toggle("border-amber-400", unresolved);
+  const foreign     = !!currency && currency !== (bookCurrency || VND_CURRENCY);
+  const hasAmount   = amount !== undefined && amount !== null && String(amount).trim() !== ""
+                      && Number(amount) !== 0;
+  const noRate      = !rateEl.value || Number(rateEl.value) <= 0;
+  const unresolved  = foreign && hasAmount && noRate;
+  const fallbackDate = rateEl.dataset.fxFallbackDate || '';
+  rateEl.classList.toggle("border-amber-400", unresolved || !!fallbackDate);
   rateEl.classList.toggle("bg-amber-50", unresolved);
   if (unresolved) rateEl.title = t("sales_new.validation.line_fx_no_rate_hint");
+  else if (fallbackDate) rateEl.title = t("sales_new.fx_rate.fallback_hint", { date: fmtDate(fallbackDate) });
   else rateEl.removeAttribute("title");
 }
 
@@ -223,10 +231,15 @@ export async function prefillRowFx(row, side, fxRepo, { overwrite = false } = {}
   // D-N1: drop the previous currency/date's rate up front on an overwrite pass — if the
   // new lookup comes back null the cell ends empty instead of retaining a stale rate
   // (foreign→foreign switch, or a date change into a no-rate day)
-  if (overwrite && rateEl) rateEl.value = '';
-  const fetched = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value, side);
-  if (rateEl && rateEl.dataset.manuallySet !== 'true' && (fetched != null || overwrite)) {
-    if (fetched != null) rateEl.value = fetched;
+  if (overwrite && rateEl) { rateEl.value = ''; delete rateEl.dataset.fxFallbackDate; }
+  const resolved = await prefillFxRate(fxRepo, currencyEl.value, dateEl?.value, side);
+  const rate = resolved?.rate ?? null;
+  if (rateEl && rateEl.dataset.manuallySet !== 'true' && (rate != null || overwrite)) {
+    if (rate != null) rateEl.value = rate;
+    // B-15-38-07: carry the resolver's own fact onto the cell — a fallback rate says which
+    // day it came from instead of looking identical to a same-day rate.
+    if (resolved?.isFallback) rateEl.dataset.fxFallbackDate = resolved.validTo;
+    else delete rateEl.dataset.fxFallbackDate;
     _recomputeVndCell(row, side);
     row.dispatchEvent(new Event('input', { bubbles: true }));
   }
@@ -244,10 +257,12 @@ async function _onCurrencyChange(row, side, fxRepo) {
     if (locked) {
       rateEl.value = rate;
       delete rateEl.dataset.manuallySet;
+      delete rateEl.dataset.fxFallbackDate;
     } else if (rateEl.dataset.manuallySet !== 'true') {
       // unlocking (VND→foreign): drop the stale locked "1" so a missing master
       // rate leaves the cell empty, never a phantom 1:1 (D2)
       rateEl.value = '';
+      delete rateEl.dataset.fxFallbackDate;
     }
   }
   _recomputeVndCell(row, side);
@@ -285,7 +300,8 @@ export function wireLineFx(tbody, fxRepo, docDate) {
     }
     const rateSide = _sideOf(e.target.name, '_fx_rate');
     if (rateSide) {
-      if (e.isTrusted) e.target.dataset.manuallySet = 'true';
+      // a hand-typed rate carries no resolver fact — clear the fallback hint along with it.
+      if (e.isTrusted) { e.target.dataset.manuallySet = 'true'; delete e.target.dataset.fxFallbackDate; }
       _recomputeVndCell(e.target.closest('tr[data-line]'), rateSide);
     }
   });

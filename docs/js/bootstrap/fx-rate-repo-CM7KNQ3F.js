@@ -2,7 +2,7 @@ import {
   _resetFxRateRepo,
   bindFxRateRepo,
   fxRateRepo
-} from "./chunk-KQNTGIY5.js";
+} from "./chunk-GXRUQ77E.js";
 export {
   _resetFxRateRepo,
   bindFxRateRepo,

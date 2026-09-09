@@ -36,6 +36,12 @@ export class FxRateRepo {
      */
     getRate(date_str: string, pair: string, direction: string): Promise<any>;
     /**
+     * B-15-38-05: did the most recent `listAll` have to skip a month it could not read? The
+     * manager grid asks this before trusting an empty answer as "no rates" — a transient read
+     * failure on one month used to blank the whole table with no signal anything went wrong.
+     */
+    hasListDegraded(): boolean;
+    /**
      * B-15-38-02: does the loaded rate table hold rows the parser refused? The deviation gate
      * asks before deciding what an absent reference MEANS — an unread row is a blind check, an
      * unfilled date is not. Answers for the months already ingested; the gate runs after a save
@@ -47,7 +53,7 @@ export class FxRateRepo {
     listByMonth(ym: string): Promise<any>;
     pnlFxCacheClear(): void;
     pnlFxCacheGet(date_str: string, pair: string, direction: string): any;
-    pnlFxCachePut(date_str: string, pair: string, direction: string, rate?: number | null): void;
+    pnlFxCachePut(date_str: string, pair: string, direction: string, rate: number | null | undefined, valid_from: string | null | undefined, valid_to: string | null | undefined, is_fallback: boolean): void;
     pnlFxLookupPair(currency: string): string | undefined;
     pnlFxRequireDirection(direction: string): void;
 }
@@ -289,6 +295,14 @@ export class WasmEntityRepo {
      * derivation".
      */
     put_owned(kind: string, id: string, body: any, owner: string): Promise<any>;
+    /**
+     * CDB-DM-04 + CDB-DM-15 together: whose row it is AND which period it belongs to.
+     *
+     * `PutRequest` has always carried both; no entry point passed both, so a caller needing the
+     * pair had to choose which fact to lose. `ShipmentRepo` is that caller, and the fact it lost
+     * was the owner.
+     */
+    put_owned_labeled(kind: string, id: string, body: any, owner: string, labels: any): Promise<any>;
     sync_delta(): Promise<any>;
     /**
      * Every kind currently failing this session (`sync_health::mark_failed`, armed from both
@@ -1057,15 +1071,22 @@ export function sales_document_sources(req: any): Promise<any>;
  */
 export function sales_heal_job_no(req: any): Promise<any>;
 
-export function sales_ledger_version(req: any): any;
-
 /**
  * May the signed-in reader be shown a job's TOTAL profit or loss?
  *
  * Not "is there a sell figure in what came back" — that question let a rep who received one of
  * three revenue lines be shown a company-level number summed from a partial set, which reads as a
  * 71-million loss on a job that made 48 million. See `access_policy::may_see_job_total`.
+ * Does this job's cost side carry nothing at all? True when none of `lines` has a nonzero
+ * `buy_amt` or `buying_vnd_pay` — see `job_cost_presence::has_no_cost_lines`.
+ *
+ * The grid used to answer this itself by counting rows client-side; that made the "is this
+ * figure settled" call a JS opinion instead of a fact about the money. This is the only door.
  */
+export function sales_job_has_no_costs(lines: any): any;
+
+export function sales_ledger_version(req: any): any;
+
 export function sales_may_see_job_total(): boolean;
 
 export function sales_pnl_lines(req: any): Promise<any>;
@@ -1475,13 +1496,14 @@ export interface InitOutput {
     readonly fxraterepo_appendRate: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly fxraterepo_deleteEntry: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly fxraterepo_getRate: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly fxraterepo_hasListDegraded: (a: number) => number;
     readonly fxraterepo_hasUnreadableRates: (a: number) => number;
     readonly fxraterepo_invalidateMonth: (a: number, b: number, c: number, d: number) => void;
     readonly fxraterepo_listAll: (a: number) => number;
     readonly fxraterepo_listByMonth: (a: number, b: number, c: number) => number;
     readonly fxraterepo_pnlFxCacheClear: (a: number) => void;
     readonly fxraterepo_pnlFxCacheGet: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
-    readonly fxraterepo_pnlFxCachePut: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+    readonly fxraterepo_pnlFxCachePut: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => void;
     readonly fxraterepo_pnlFxLookupPair: (a: number, b: number, c: number, d: number) => void;
     readonly fxraterepo_pnlFxRequireDirection: (a: number, b: number, c: number, d: number) => void;
     readonly gen_uom_id: (a: number, b: number, c: number) => void;
@@ -1604,6 +1626,7 @@ export interface InitOutput {
     readonly sales_demdet_instances: (a: number) => number;
     readonly sales_document_sources: (a: number) => number;
     readonly sales_heal_job_no: (a: number) => number;
+    readonly sales_job_has_no_costs: (a: number, b: number) => void;
     readonly sales_ledger_version: (a: number, b: number) => void;
     readonly sales_may_see_job_total: () => number;
     readonly sales_pnl_lines: (a: number) => number;
@@ -1735,6 +1758,7 @@ export interface InitOutput {
     readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_put_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_put_owned: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
+    readonly wasmentityrepo_put_owned_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
     readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
@@ -1767,9 +1791,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15530: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15532: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11510: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15587: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15589: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11567: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

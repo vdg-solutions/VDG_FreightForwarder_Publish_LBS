@@ -33,7 +33,9 @@ export async function fetchClosingRatesBuy(billing) {
   const rates = {};
   await Promise.all(currencies.map(async (currency) => {
     try {
-      const rate = await getRateForDate(fxRateRepo, dateStr, currency, REVAL_DIRECTION);
+      // getRateForDate answers the named resolution (B-15-38-07) — this summary only ever
+      // shows the revalued total, never a per-currency rate, so only `.rate` is needed here.
+      const { rate } = await getRateForDate(fxRateRepo, dateStr, currency, REVAL_DIRECTION);
       if (rate) rates[currency] = rate;
     } catch (err) {
       console.error(`[cash-flow] closing rate unavailable for ${currency}:`, err); // DEV — degrades that currency's rows, doesn't block the screen

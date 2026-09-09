@@ -24,6 +24,11 @@ export function createPlatform({ repo }) {
     // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
     // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
     records_put_labeled: (kind, id, body, labels) => repo.put_labeled(kind, id, body, labels),
+    // Both facts at once. A shipment needs its owner AND its period at create, and having to pick
+    // meant the owner was the one dropped -- so every job CustomerService opened was owned by CS.
+    // Carried, never decided here: wasm chose both values.
+    records_put_owned_labeled: (kind, id, body, owner, labels) =>
+        repo.put_owned_labeled(kind, id, body, owner, labels),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
     records_invalidate_period_cache: (kind, period) => repo.invalidate_period_cache(kind, period),

@@ -8,7 +8,7 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { can } from '../../core_abstractions/ports/governance/action-guard.js';
 import { listShipments } from '../../core_abstractions/ports/data/shipment-repo.js';
-import { listPnlLines } from '../../core_abstractions/ports/data/sales-reads.js';
+import { listPnlLines, jobHasNoCosts } from '../../core_abstractions/ports/data/sales-reads.js';
 import { navigate } from '../router.js';
 import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer } from './shipments/cell-renderers.js';
 import { maySeeJobTotal } from '../../core_abstractions/ports/data/sales-reads.js';
@@ -175,6 +175,10 @@ export async function loadRealData() {
           acc + (Number(l.sell_amt || l.selling_vnd_collect || 0))
               - (Number(l.buy_amt  || l.buying_vnd_pay      || 0)), 0)
       : undefined;
+    // B-15-38-08: a job priced but not yet costed sums to a big positive figure that reads as
+    // settled — wasm decides "no costs yet" from the same lines the sum above was built from
+    // (job_cost_presence::has_no_cost_lines), never a row count taken here.
+    s.pnlNoCosts = s.pnl !== undefined && jobHasNoCosts(lines);
   }
   return allShipments;
 }
