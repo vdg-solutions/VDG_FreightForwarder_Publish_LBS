@@ -303,6 +303,19 @@ export class WasmEntityRepo {
      * was the owner.
      */
     put_owned_labeled(kind: string, id: string, body: any, owner: string, labels: any): Promise<any>;
+    /**
+     * CDB-DM-07: hand a record to somebody else. Owner changes; content does not.
+     *
+     * ONLINE, and deliberately not queued. Every other write here goes through the outbox so it
+     * survives a dead network; this one does not, because `OutboxOp` has no Reassign and inventing
+     * one would mean a hand-over sitting in a queue while both people believe it happened. A
+     * hand-over that cannot reach the server should fail in front of the person doing it.
+     *
+     * The local row's owner is corrected on success. Without that the client's own owner gate
+     * (`deny_if_not_owner`) would keep refusing the person who now owns the job, until the next
+     * pull — the receiving rep would be locked out of what they had just been handed.
+     */
+    reassign(kind: string, id: string, new_owner: string): Promise<any>;
     sync_delta(): Promise<any>;
     /**
      * Every kind currently failing this session (`sync_health::mark_failed`, armed from both
@@ -1759,6 +1772,7 @@ export interface InitOutput {
     readonly wasmentityrepo_put_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_put_owned: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly wasmentityrepo_put_owned_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
+    readonly wasmentityrepo_reassign: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
     readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
@@ -1791,9 +1805,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15587: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15589: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11567: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15611: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15613: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11589: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

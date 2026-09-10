@@ -29,6 +29,9 @@ export function createPlatform({ repo }) {
     // Carried, never decided here: wasm chose both values.
     records_put_owned_labeled: (kind, id, body, owner, labels) =>
         repo.put_owned_labeled(kind, id, body, owner, labels),
+    // CDB-DM-07: hand the record to somebody else. Its own action, its own permit — carried, never
+    // decided here.
+    records_reassign: (kind, id, newOwner) => repo.reassign(kind, id, newOwner),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
     records_invalidate_period_cache: (kind, period) => repo.invalidate_period_cache(kind, period),

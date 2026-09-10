@@ -627,7 +627,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build a4f4cd82">v0.4.83 (a4f4cd82)</span>
+        <span class="font-mono whitespace-nowrap" title="build c72aa71d">v0.4.84 (c72aa71d)</span>
       </div>
     `;
   }
@@ -2360,7 +2360,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.83 (a4f4cd82)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.84 (c72aa71d)</div>
         </div>
       </div>
     </div>`;
@@ -2788,6 +2788,9 @@ function createPlatform({ repo: repo3 }) {
     // meant the owner was the one dropped -- so every job CustomerService opened was owned by CS.
     // Carried, never decided here: wasm chose both values.
     records_put_owned_labeled: (kind, id, body, owner, labels) => repo3.put_owned_labeled(kind, id, body, owner, labels),
+    // CDB-DM-07: hand the record to somebody else. Its own action, its own permit — carried, never
+    // decided here.
+    records_reassign: (kind, id, newOwner) => repo3.reassign(kind, id, newOwner),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
     records_invalidate_period_cache: (kind, period) => repo3.invalidate_period_cache(kind, period),
@@ -3016,8 +3019,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=a4f4cd82", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=a4f4cd82", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=c72aa71d", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=c72aa71d", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4527,7 +4530,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.83 (a4f4cd82)";
+var APP_VERSION = "v0.4.84 (c72aa71d)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
