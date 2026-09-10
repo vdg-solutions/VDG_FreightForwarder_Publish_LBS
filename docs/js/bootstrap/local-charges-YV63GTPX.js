@@ -1,6 +1,6 @@
 import {
   createPricedGovernancePanel
-} from "./chunk-5SXE3TKQ.js";
+} from "./chunk-TSAQF5YW.js";
 import {
   SECOND_EYES_FIELD,
   readSettings
@@ -8,8 +8,8 @@ import {
 import {
   currentUserRole,
   currentUserRoles
-} from "./chunk-M3ODLRBG.js";
-import "./chunk-NGKBNKFN.js";
+} from "./chunk-XOCJWCT2.js";
+import "./chunk-YR3VHEVJ.js";
 import {
   renderMasterLoadRetryRow,
   safeMasterLoad

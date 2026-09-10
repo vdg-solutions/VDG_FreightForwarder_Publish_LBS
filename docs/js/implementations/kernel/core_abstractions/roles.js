@@ -14,6 +14,8 @@ export const ROLE_SALES_REP        = 'SalesRep';
 export const ROLE_CUSTOMER_SERVICE = 'CustomerService';
 export const ROLE_ACCOUNTANT       = 'Accountant';
 export const ROLE_AUDITOR          = 'Auditor';
+// People administration hat (owner 2026-09-10) — Manager or Accountant may carry it.
+export const ROLE_HUMAN_RESOURCES  = 'HumanResources';
 // AC-06: what an account with no grant is called on screen — the ABSENCE of a role, not one of
 // them. Rust declares the same sentinel beside the enum (`role.rs::ROLE_READ_ONLY`).
 export const ROLE_READ_ONLY        = 'ReadOnly';
@@ -21,4 +23,4 @@ export const ROLE_READ_ONLY        = 'ReadOnly';
 // Role::ALL, in the enum's order. An unknown name refuses the WHOLE grant file rather than being
 // dropped — a silently dropped hat reads to the user as an unexplained access denial.
 export const ROLE_NAMES = [ROLE_MANAGER, ROLE_SALES_MANAGER, ROLE_SALES_REP, ROLE_CUSTOMER_SERVICE,
-                           ROLE_ACCOUNTANT, ROLE_AUDITOR];
+                           ROLE_ACCOUNTANT, ROLE_AUDITOR, ROLE_HUMAN_RESOURCES];

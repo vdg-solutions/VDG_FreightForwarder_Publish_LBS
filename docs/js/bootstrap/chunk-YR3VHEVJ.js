@@ -5,6 +5,7 @@ var ROLE_SALES_REP = "SalesRep";
 var ROLE_CUSTOMER_SERVICE = "CustomerService";
 var ROLE_ACCOUNTANT = "Accountant";
 var ROLE_AUDITOR = "Auditor";
+var ROLE_HUMAN_RESOURCES = "HumanResources";
 var ROLE_READ_ONLY = "ReadOnly";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/roles.js
@@ -17,6 +18,7 @@ export {
   ROLE_CUSTOMER_SERVICE,
   ROLE_ACCOUNTANT,
   ROLE_AUDITOR,
+  ROLE_HUMAN_RESOURCES,
   ROLE_READ_ONLY,
   ROLES_RESOLVED_EVENT
 };

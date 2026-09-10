@@ -1,6 +1,6 @@
 import {
   ROLE_READ_ONLY
-} from "./chunk-NGKBNKFN.js";
+} from "./chunk-YR3VHEVJ.js";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/governance/route-guard.js
 var PENDING_ROUTE = "/pending-access";

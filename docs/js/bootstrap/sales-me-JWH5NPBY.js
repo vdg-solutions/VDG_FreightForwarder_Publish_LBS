@@ -11,7 +11,7 @@ import {
 } from "./chunk-VRYVVURA.js";
 import {
   ROLE_MANAGER
-} from "./chunk-NGKBNKFN.js";
+} from "./chunk-YR3VHEVJ.js";
 import {
   navigate
 } from "./chunk-H2H4WJDI.js";

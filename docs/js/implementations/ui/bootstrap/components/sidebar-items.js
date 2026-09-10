@@ -1,6 +1,6 @@
 // Nav item + group data — pure data, no Lit/DOM. Split out of sidebar.js (350-line cap) at the
 // same seam sidebar-collapse-state.js already cut: declarations here, rendering/interaction there.
-import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE, ROLE_AUDITOR } from '../../../ui/core_abstractions/roles.js';
+import { ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES_REP, ROLE_SALES_MANAGER, ROLE_CUSTOMER_SERVICE, ROLE_AUDITOR, ROLE_HUMAN_RESOURCES } from '../../../ui/core_abstractions/roles.js';
 
 // Active nav menu — labelKey resolved via t() at render time; role-filtered per viewer.
 export const V1_ITEMS = [
@@ -83,8 +83,10 @@ export const V1_ITEMS = [
   // Manager-only config, touched rarely — administering the workspace (role.rs) is a different
   // job from running or pricing the sales team above.
   { group: 'admin',     route: '/manager/commission-rules', labelKey: 'nav.reports.comm_rules', icon: 'check', managerOnly: true, allowRoles: [ROLE_MANAGER] },
-  // F-24-04: manager-only user CRUD
-  { group: 'admin',     route: '/admin/users',         labelKey: 'nav.admin.users',       icon: 'db',  managerOnly: true },
+  // F-24-04: manager-only user CRUD.
+  // Owner 2026-09-10: allowRoles opens this to HumanResources too — access_policy.rs's "/admin"
+  // rule matches exactly; managerOnly kept the same way F-24-05's ledger entry does.
+  { group: 'admin',     route: '/admin/users',         labelKey: 'nav.admin.users',       icon: 'db',  managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_HUMAN_RESOURCES] },
   // F-29-10: FX admin was route-only (no sidebar entry) — Manager-only config, not a sales lookup.
   { group: 'admin',     route: '/manager/fx-rates',         labelKey: 'nav.masters.fx_rates',       icon: 'db', managerOnly: true, allowRoles: [ROLE_MANAGER] },
   // F-18-11: alias-editor only (writers manager-only, Q3) — no browse value for SalesRep.

@@ -971,6 +971,7 @@
   "admin.users.role.customer_service": "CS — Chứng từ & Điều hành",
   "admin.users.role.accountant": "Kế toán",
   "admin.users.role.auditor": "Kiểm toán",
+  "admin.users.role.human_resources": "Nhân sự",
   "admin.users.hats.title": "Quyền bổ sung",
   "admin.users.hats.hint": "Gán thêm cho bất kỳ nhân viên nào, không phụ thuộc vai trò chính.",
   "admin.users.modal.add_title": "Thêm người dùng",

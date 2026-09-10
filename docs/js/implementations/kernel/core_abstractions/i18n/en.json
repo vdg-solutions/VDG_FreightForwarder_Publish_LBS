@@ -971,6 +971,7 @@
   "admin.users.role.customer_service": "Customer Service",
   "admin.users.role.accountant": "Accountant",
   "admin.users.role.auditor": "Auditor",
+  "admin.users.role.human_resources": "Human Resources",
   "admin.users.hats.title": "Additional rights",
   "admin.users.hats.hint": "Assignable to any employee, independent of their primary role.",
   "admin.users.modal.add_title": "Add User",

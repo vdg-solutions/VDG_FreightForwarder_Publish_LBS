@@ -2,10 +2,11 @@ import {
   ROLE_ACCOUNTANT,
   ROLE_AUDITOR,
   ROLE_CUSTOMER_SERVICE,
+  ROLE_HUMAN_RESOURCES,
   ROLE_MANAGER,
   ROLE_SALES_MANAGER,
   ROLE_SALES_REP
-} from "./chunk-NGKBNKFN.js";
+} from "./chunk-YR3VHEVJ.js";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/manager/users-view-composer.js
 var ROLE_VALUES = [
@@ -14,7 +15,8 @@ var ROLE_VALUES = [
   ROLE_SALES_REP,
   ROLE_CUSTOMER_SERVICE,
   ROLE_ACCOUNTANT,
-  ROLE_AUDITOR
+  ROLE_AUDITOR,
+  ROLE_HUMAN_RESOURCES
 ];
 var ASSIGNABLE_ROLES = [...ROLE_VALUES];
 var ROLE_LABEL_KEYS = {
@@ -23,7 +25,8 @@ var ROLE_LABEL_KEYS = {
   [ROLE_SALES_REP]: "admin.users.role.sales_rep",
   [ROLE_CUSTOMER_SERVICE]: "admin.users.role.customer_service",
   [ROLE_ACCOUNTANT]: "admin.users.role.accountant",
-  [ROLE_AUDITOR]: "admin.users.role.auditor"
+  [ROLE_AUDITOR]: "admin.users.role.auditor",
+  [ROLE_HUMAN_RESOURCES]: "admin.users.role.human_resources"
 };
 function rolesFromForm(overlay) {
   const ticked = new Set([...overlay.querySelectorAll("input[data-role]")].filter((el) => el.checked).map((el) => el.dataset.role));

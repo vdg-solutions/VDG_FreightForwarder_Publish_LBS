@@ -17,6 +17,11 @@ import { openEditUserModal } from './user-edit-modal.js';
 import { showConfirm }       from '../../helpers/show-confirm.js';
 import { listUsers, patchUser } from '../../../../storage/core_abstractions/user-directory.js';
 import { usersErrorMessage } from './users-error-message.js';
+// Affordance only — the server (default_policy.cedar) is the authority and 403s regardless;
+// this just keeps a Manager without the HumanResources hat from staring at buttons that always
+// fail. Decision comes from the same Rust action policy every other screen's can() reaches
+// (action_policy.rs via governance_action_guard), never a role-name string compared here.
+import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
 
 const TOAST_MS = 4_000;
 const DEFAULT_ACTIVE_FILTER = '';
@@ -34,12 +39,14 @@ function shellHtml() {
       <div class="flex items-center justify-between">
         <div class="text-lg font-semibold text-slate-900">${t('admin.users.title')}</div>
         <div class="flex gap-2">
+          ${can('user.audit.read') ? `
           <button id="btn-view-audit-log" class="px-4 py-2 text-xs rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
             ${t('admin.users.audit_log.link_text')}
-          </button>
+          </button>` : ''}
+          ${can('user.create') ? `
           <button id="btn-add-user" class="px-4 py-2 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             ${t('admin.users.add_button')}
-          </button>
+          </button>` : ''}
         </div>
       </div>
       <div id="usr-filter-bar"></div>
@@ -114,10 +121,12 @@ export async function render(root) {
   root.innerHTML = shellHtml();
   root.querySelector('#usr-filter-bar').innerHTML = filterBarHtml(_filter);
   bindFilterBar(root);
-  root.querySelector('#btn-add-user').addEventListener('click', () => {
+  // Buttons render only when can() admits the action (shellHtml above) — optional chaining here
+  // is what a hidden button (no element to bind) needs, not a second permission decision.
+  root.querySelector('#btn-add-user')?.addEventListener('click', () => {
     openAddUserModal({ onAdded: () => _reload(root) });
   });
-  root.querySelector('#btn-view-audit-log').addEventListener('click', () => navigate('/admin/users/audit-log'));
+  root.querySelector('#btn-view-audit-log')?.addEventListener('click', () => navigate('/admin/users/audit-log'));
 
   await _reload(root);
 }

@@ -14,8 +14,11 @@ import {
   roleCheckboxesHtml,
   rolesFromForm,
   sortUsersByEmail
-} from "./chunk-V332J5YU.js";
-import "./chunk-NGKBNKFN.js";
+} from "./chunk-CSY7BXV6.js";
+import "./chunk-YR3VHEVJ.js";
+import {
+  can
+} from "./chunk-GOIBPTZO.js";
 import {
   navigate
 } from "./chunk-H2H4WJDI.js";
@@ -82,10 +85,10 @@ function renderUsersTable(container, users) {
       <td class="px-3 py-2">
         <div class="flex gap-1">
           ${u.active ? `
-            <button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t("admin.users.action.edit")}</button>
-            <button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t("admin.users.action.deactivate")}</button>
+            ${can("user.edit") ? `<button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t("admin.users.action.edit")}</button>` : ""}
+            ${can("user.deactivate") ? `<button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t("admin.users.action.deactivate")}</button>` : ""}
           ` : `
-            <button data-act="reactivate" class="px-2 py-0.5 text-[11px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">${t("admin.users.action.reactivate")}</button>
+            ${can("user.edit") ? `<button data-act="reactivate" class="px-2 py-0.5 text-[11px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">${t("admin.users.action.reactivate")}</button>` : ""}
           `}
         </div>
       </td>
@@ -266,12 +269,14 @@ function shellHtml() {
       <div class="flex items-center justify-between">
         <div class="text-lg font-semibold text-slate-900">${t("admin.users.title")}</div>
         <div class="flex gap-2">
+          ${can("user.audit.read") ? `
           <button id="btn-view-audit-log" class="px-4 py-2 text-xs rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
             ${t("admin.users.audit_log.link_text")}
-          </button>
+          </button>` : ""}
+          ${can("user.create") ? `
           <button id="btn-add-user" class="px-4 py-2 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700">
             ${t("admin.users.add_button")}
-          </button>
+          </button>` : ""}
         </div>
       </div>
       <div id="usr-filter-bar"></div>
@@ -337,10 +342,10 @@ async function render(root) {
   root.innerHTML = shellHtml();
   root.querySelector("#usr-filter-bar").innerHTML = filterBarHtml(_filter);
   bindFilterBar(root);
-  root.querySelector("#btn-add-user").addEventListener("click", () => {
+  root.querySelector("#btn-add-user")?.addEventListener("click", () => {
     openAddUserModal({ onAdded: () => _reload(root) });
   });
-  root.querySelector("#btn-view-audit-log").addEventListener("click", () => navigate("/admin/users/audit-log"));
+  root.querySelector("#btn-view-audit-log")?.addEventListener("click", () => navigate("/admin/users/audit-log"));
   await _reload(root);
 }
 export {

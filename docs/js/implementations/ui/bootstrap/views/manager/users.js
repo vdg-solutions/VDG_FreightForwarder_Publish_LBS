@@ -10,10 +10,12 @@
 // reachable by direct URL for a manager who still needs to fix a sales_code or commission
 // override.
 //
-// Both /admin/users and this route are Manager-only (access_policy.rs), so the manager landing
-// here already has full reach to /admin/users -- there is no persona that can create/deactivate a
-// user and yet gets stuck on this screen. The notice banner just says so instead of leaving what
-// reads like a dead-end list with no add/delete of its own.
+// Owner ruling 2026-09-10 ("làm cho triệt để, cho role nhân sự"): sales_code/commission-override
+// administration is personnel administration, same hat as grants -- this route moved to
+// HumanResources alone (access_policy.rs), same as /admin/users, so whoever lands here already has
+// full reach to /admin/users too -- there is no persona that can create/deactivate a user and yet
+// gets stuck on this screen. The notice banner just says so instead of leaving what reads like a
+// dead-end list with no add/delete of its own.
 
 import { editProfile } from '../../../core_abstractions/ports/flows/user-provisioning.js';
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';

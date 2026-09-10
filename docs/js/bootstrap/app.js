@@ -154,7 +154,7 @@ import {
 } from "./chunk-Z6T6WECV.js";
 import {
   bindUsersViewComposer
-} from "./chunk-V332J5YU.js";
+} from "./chunk-CSY7BXV6.js";
 import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
@@ -179,17 +179,18 @@ import {
   homeRouteForRole,
   normalizeRole,
   routeGuard
-} from "./chunk-M3ODLRBG.js";
+} from "./chunk-XOCJWCT2.js";
 import {
   ROLES_RESOLVED_EVENT,
   ROLE_ACCOUNTANT,
   ROLE_AUDITOR,
   ROLE_CUSTOMER_SERVICE,
+  ROLE_HUMAN_RESOURCES,
   ROLE_MANAGER,
   ROLE_READ_ONLY,
   ROLE_SALES_MANAGER,
   ROLE_SALES_REP
-} from "./chunk-NGKBNKFN.js";
+} from "./chunk-YR3VHEVJ.js";
 import {
   bindShipmentVoidDelete
 } from "./chunk-3B3S6YF2.js";
@@ -423,8 +424,10 @@ var V1_ITEMS = [
   // Manager-only config, touched rarely — administering the workspace (role.rs) is a different
   // job from running or pricing the sales team above.
   { group: "admin", route: "/manager/commission-rules", labelKey: "nav.reports.comm_rules", icon: "check", managerOnly: true, allowRoles: [ROLE_MANAGER] },
-  // F-24-04: manager-only user CRUD
-  { group: "admin", route: "/admin/users", labelKey: "nav.admin.users", icon: "db", managerOnly: true },
+  // F-24-04: manager-only user CRUD.
+  // Owner 2026-09-10: allowRoles opens this to HumanResources too — access_policy.rs's "/admin"
+  // rule matches exactly; managerOnly kept the same way F-24-05's ledger entry does.
+  { group: "admin", route: "/admin/users", labelKey: "nav.admin.users", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER, ROLE_HUMAN_RESOURCES] },
   // F-29-10: FX admin was route-only (no sidebar entry) — Manager-only config, not a sales lookup.
   { group: "admin", route: "/manager/fx-rates", labelKey: "nav.masters.fx_rates", icon: "db", managerOnly: true, allowRoles: [ROLE_MANAGER] },
   // F-18-11: alias-editor only (writers manager-only, Q3) — no browse value for SalesRep.
@@ -627,7 +630,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build da8172d0">v0.4.85 (da8172d0)</span>
+        <span class="font-mono whitespace-nowrap" title="build ba4d4cda">v0.4.86 (ba4d4cda)</span>
       </div>
     `;
   }
@@ -2360,7 +2363,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.85 (da8172d0)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.86 (ba4d4cda)</div>
         </div>
       </div>
     </div>`;
@@ -3019,8 +3022,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=da8172d0", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=da8172d0", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=ba4d4cda", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ba4d4cda", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4421,14 +4424,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-O25PADND.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-UEZWUVWU.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-O25PADND.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-UEZWUVWU.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4530,7 +4533,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.85 (da8172d0)";
+var APP_VERSION = "v0.4.86 (ba4d4cda)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4788,21 +4791,21 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-BSC4VQ26.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-WJNHOL3M.js"),
+  "/sales/me": () => import("./sales-me-JWH5NPBY.js"),
   "/sales/analytics": () => import("./sales-analytics-LNR27FBP.js"),
   "/sales/quote/new": () => import("./sales-quote-new-NPXRNJ4F.js"),
   "/sales/quote": () => import("./sales-quote-list-VCJTCXW6.js"),
   "/masters/customers": () => import("./masters-customers-H7WYGR5L.js"),
   "/masters/carriers": () => import("./masters-carriers-KPBFC56B.js"),
   "/masters/services": () => import("./masters-services-N4BVLNGW.js"),
-  "/help": () => import("./help-O2HJDF2F.js"),
-  "/pending-access": () => import("./pending-access-7DMAML24.js"),
+  "/help": () => import("./help-SUXYXL6K.js"),
+  "/pending-access": () => import("./pending-access-ZK6HVXUW.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-V5PXYOYF.js"),
+  "/manager/pipeline": () => import("./pipeline-M7E3NMVE.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-HB6FS74N.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
   "/manager/finance/close-period": () => import("./close-period-NP2WWF4D.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-WD43MMQJ.js"),
@@ -4810,7 +4813,7 @@ var VIEWS = {
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-UM7YNMAD.js"),
-  "/manager/finance/commissions": () => import("./commissions-ALI5X7FD.js"),
+  "/manager/finance/commissions": () => import("./commissions-POJGFCI3.js"),
   "/manager/commission-rules": () => import("./commission-rules-TKSNVF5A.js"),
   "/manager/exceptions": () => import("./exceptions-5XKVRTLH.js"),
   // E-15
@@ -4818,7 +4821,7 @@ var VIEWS = {
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
   "/manager/users": () => import("./users-NM4HWBMH.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-OGKPQUUA.js"),
+  "/manager/fx-rates": () => import("./fx-rates-TXRWGM3H.js"),
   "/manager/settings": () => import("./settings-A7U2KLTX.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-OHLWBRU3.js"),
@@ -4834,22 +4837,22 @@ var VIEWS = {
   "/masters/uld-types": () => import("./uld-types-6DLCU6JA.js"),
   "/manager/manifest": () => import("./manifest-RCWOWF5I.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-QCTUK67N.js"),
+  "/masters/air-rates": () => import("./air-rates-VAWPSOCS.js"),
   // E-25 / E-26 — sea-freight local charge masters
   "/masters/units-of-measure": () => import("./units-of-measure-DKR3YGMA.js"),
-  "/masters/local-charges": () => import("./local-charges-L7HWH22Y.js"),
+  "/masters/local-charges": () => import("./local-charges-YV63GTPX.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
   "/masters/shipment-states": () => import("./shipment-states-FYFD6YDG.js"),
   "/quotes/air-calc": () => import("./air-calc-FKUEZJ5U.js"),
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-NTRFSNTH.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-7XCCZYZC.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-AY6YJ6YD.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-7JGXASVP.js"),
+  "/admin/users": () => import("./users-view-EK3OHL36.js"),
   // E-24 F-24-06
   "/admin/users/audit-log": () => import("./user-audit-log-view-2BVILWHD.js")
 };
@@ -6495,7 +6498,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-VJZWY3JO.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-Y65XPB45.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;

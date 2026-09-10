@@ -8,6 +8,9 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { ROLE_VALUES, ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/manager/users-view-composer.js';
+// The server (default_policy.cedar) is the authority; this is only the affordance, so a session
+// caught between a stale cache and a real 403 still fails safe there, not here.
+import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
 
 const SKELETON_ROWS = 4;
 const STATUS_FILTER_ACTIVE = 'active';
@@ -77,10 +80,10 @@ export function renderUsersTable(container, users) {
       <td class="px-3 py-2">
         <div class="flex gap-1">
           ${u.active ? `
-            <button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t('admin.users.action.edit')}</button>
-            <button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t('admin.users.action.deactivate')}</button>
+            ${can('user.edit') ? `<button data-act="edit" class="px-2 py-0.5 text-[11px] rounded bg-slate-50 text-slate-700 hover:bg-slate-100">${t('admin.users.action.edit')}</button>` : ''}
+            ${can('user.deactivate') ? `<button data-act="deactivate" class="px-2 py-0.5 text-[11px] rounded bg-red-50 text-red-700 hover:bg-red-100">${t('admin.users.action.deactivate')}</button>` : ''}
           ` : `
-            <button data-act="reactivate" class="px-2 py-0.5 text-[11px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">${t('admin.users.action.reactivate')}</button>
+            ${can('user.edit') ? `<button data-act="reactivate" class="px-2 py-0.5 text-[11px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100">${t('admin.users.action.reactivate')}</button>` : ''}
           `}
         </div>
       </td>
