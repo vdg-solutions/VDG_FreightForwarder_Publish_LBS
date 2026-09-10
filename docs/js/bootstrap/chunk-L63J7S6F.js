@@ -23,6 +23,7 @@ var deleteCommissionRule = (...a) => _i().deleteCommissionRule(...a);
 var auditTrail = (...a) => _i().auditTrail(...a);
 var pendingApprovals = (...a) => _i().pendingApprovals(...a);
 var approvalDecisionLog = (...a) => _i().approvalDecisionLog(...a);
+var approvalArrival = (...a) => _i().approvalArrival(...a);
 var exceptionCaseload = (...a) => _i().exceptionCaseload(...a);
 var pipelineShipments = (...a) => _i().pipelineShipments(...a);
 var manifestFilings = (...a) => _i().manifestFilings(...a);
@@ -50,6 +51,7 @@ export {
   auditTrail,
   pendingApprovals,
   approvalDecisionLog,
+  approvalArrival,
   exceptionCaseload,
   pipelineShipments,
   manifestFilings,

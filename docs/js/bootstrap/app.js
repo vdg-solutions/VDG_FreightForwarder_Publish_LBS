@@ -244,7 +244,7 @@ import {
 } from "./chunk-TE5ZYPE3.js";
 import {
   bindReportReads
-} from "./chunk-T5ZHX2YX.js";
+} from "./chunk-L63J7S6F.js";
 import {
   KIND_SHIPMENT,
   REVENUE_SEEN,
@@ -627,7 +627,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build c72aa71d">v0.4.84 (c72aa71d)</span>
+        <span class="font-mono whitespace-nowrap" title="build da8172d0">v0.4.85 (da8172d0)</span>
       </div>
     `;
   }
@@ -2360,7 +2360,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.84 (c72aa71d)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.85 (da8172d0)</div>
         </div>
       </div>
     </div>`;
@@ -3019,8 +3019,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=c72aa71d", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=c72aa71d", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=da8172d0", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=da8172d0", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4405,7 +4405,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-DEVXFRPQ.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-PY2C4OYD.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4413,7 +4413,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-VANA7H5P.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-CKBDZTIR.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4530,7 +4530,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.84 (c72aa71d)";
+var APP_VERSION = "v0.4.85 (da8172d0)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4800,23 +4800,23 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-BNL2KN7U.js"),
-  "/manager/approvals": () => import("./approvals-Y26PEFAC.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-HBXLLPCO.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-GKQQVWY7.js"),
-  "/manager/finance/close-period": () => import("./close-period-VU27GZGX.js"),
-  "/manager/finance/self-approved-review": () => import("./self-approved-review-2HHAP7F4.js"),
-  "/manager/audit": () => import("./audit-6BPPMIH3.js"),
+  "/manager/pipeline": () => import("./pipeline-V5PXYOYF.js"),
+  "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-HB6FS74N.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
+  "/manager/finance/close-period": () => import("./close-period-NP2WWF4D.js"),
+  "/manager/finance/self-approved-review": () => import("./self-approved-review-WD43MMQJ.js"),
+  "/manager/audit": () => import("./audit-U7TFO5DK.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-X4TD2GCN.js"),
-  "/manager/finance/commissions": () => import("./commissions-DOBGSUUL.js"),
-  "/manager/commission-rules": () => import("./commission-rules-QAH2DJKC.js"),
-  "/manager/exceptions": () => import("./exceptions-LBA2XDH3.js"),
+  "/manager/sales": () => import("./sales-UM7YNMAD.js"),
+  "/manager/finance/commissions": () => import("./commissions-ALI5X7FD.js"),
+  "/manager/commission-rules": () => import("./commission-rules-TKSNVF5A.js"),
+  "/manager/exceptions": () => import("./exceptions-5XKVRTLH.js"),
   // E-15
   "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
-  "/manager/users": () => import("./users-RTYASZ4K.js"),
+  "/manager/users": () => import("./users-NM4HWBMH.js"),
   // E-15 F-15-36
   "/manager/fx-rates": () => import("./fx-rates-OGKPQUUA.js"),
   "/manager/settings": () => import("./settings-A7U2KLTX.js"),
@@ -4832,7 +4832,7 @@ var VIEWS = {
   "/masters/ocean-tariff": () => import("./ocean-tariff-YQTFNNR3.js"),
   // E-16 F-16-04
   "/masters/uld-types": () => import("./uld-types-6DLCU6JA.js"),
-  "/manager/manifest": () => import("./manifest-ZVYAZKFZ.js"),
+  "/manager/manifest": () => import("./manifest-RCWOWF5I.js"),
   // E-16 F-16-05
   "/masters/air-rates": () => import("./air-rates-QCTUK67N.js"),
   // E-25 / E-26 — sea-freight local charge masters
@@ -4842,7 +4842,7 @@ var VIEWS = {
   "/masters/shipment-states": () => import("./shipment-states-FYFD6YDG.js"),
   "/quotes/air-calc": () => import("./air-calc-FKUEZJ5U.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-ZO3JZGHF.js"),
+  "/manager/air-invoice": () => import("./air-invoice-NTRFSNTH.js"),
   // E-23 F-23-04
   "/accounting/ledger": () => import("./ledger-viewer-ZRNJSIYX.js"),
   // E-23 F-23-05
@@ -4979,6 +4979,10 @@ function bindReportReads2(wasm4) {
     auditTrail: async (offset = 0, limit = NO_LIMIT) => raise(await wasm4.data_audit_trail({ offset, limit })).rows,
     pendingApprovals: async () => raise(await wasm4.data_pending_approvals({})).rows,
     approvalDecisionLog: async () => raise(await wasm4.data_approval_decision_log({})).rows,
+    approvalArrival: (previousIds, currentIds) => {
+      const decision = wasm4.manager_approval_arrival([previousIds, currentIds]);
+      return { shouldToast: decision.should_toast, newCount: decision.new_count };
+    },
     exceptionCaseload: async () => raise(await wasm4.data_exception_caseload({})).rows,
     pipelineShipments: async () => raise(await wasm4.data_pipeline_shipments({})).rows,
     manifestFilings: async () => raise(await wasm4.data_manifest_filings({})).rows,

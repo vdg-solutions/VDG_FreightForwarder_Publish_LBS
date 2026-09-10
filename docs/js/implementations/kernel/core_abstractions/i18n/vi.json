@@ -1686,7 +1686,7 @@
   "self_approved_review.title": "Rà soát tự duyệt",
   "self_approved_review.subtitle": "Quyết định do chính người duyệt tự yêu cầu — kiểm soát phát hiện sau, đọc một lượt khi chốt kỳ.",
   "self_approved_review.label.period": "Kỳ",
-  "self_approved_review.empty": "Không có bản ghi tự duyệt trong kỳ này — mọi quyết định đều do người khác duyệt.",
+  "self_approved_review.empty": "Không có bản ghi tự duyệt trong kỳ này.",
   "self_approved_review.count": "{n} bản ghi tự duyệt",
   "self_approved_review.col.decided_at": "Thời điểm duyệt",
   "self_approved_review.col.decided_by": "Người duyệt",

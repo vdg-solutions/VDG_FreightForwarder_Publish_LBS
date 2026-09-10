@@ -5,7 +5,7 @@ import { APPROVAL_SLA_HOURS } from '../../components/approval-card.js';
 import { showConfirm } from '../../helpers/show-confirm.js';
 import { decide }    from '../../../core_abstractions/ports/flows/approval-orchestrator.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
-import { pendingApprovals } from '../../../core_abstractions/ports/data/report-reads.js';
+import { pendingApprovals, approvalArrival } from '../../../core_abstractions/ports/data/report-reads.js';
 
 const TOAST_AUTODISMISS_MS = 5_000;
 /// vdg:entity-changed topic, not a collection this screen names to read it.
@@ -153,8 +153,15 @@ export async function render(root) {
   _onEntity = async (e) => {
     const { kind } = e.detail || {};
     if (kind !== KIND_APPROVAL) return;
+    // vdg:entity-changed fires on a record upsert, an eviction, AND a resync completing
+    // (event_bridge_tests.rs) -- one event name, three unrelated facts -- so it cannot itself
+    // mean "a new request arrived". The toast is gated on wasm's own set-difference instead.
+    const previousIds = _items.map((a) => a.id);
     _items = await loadItems();
     renderCards(root, _items);
+    const currentIds = _items.map((a) => a.id);
+    const { shouldToast } = approvalArrival(previousIds, currentIds);
+    if (!shouldToast) return;
     window.dispatchEvent(new CustomEvent('vdg:toast', {
       detail: { type: 'info', message: t('approvals.toast.new_request'), duration: TOAST_AUTODISMISS_MS },
     }));

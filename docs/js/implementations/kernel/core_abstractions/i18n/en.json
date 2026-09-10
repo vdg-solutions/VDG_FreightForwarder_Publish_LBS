@@ -1686,7 +1686,7 @@
   "self_approved_review.title": "Self-Approved Decisions Review",
   "self_approved_review.subtitle": "Decisions where the approver was also the requester — a detective control, read in one pass at period close.",
   "self_approved_review.label.period": "Period",
-  "self_approved_review.empty": "No self-approved records this period — every decision was approved by someone else.",
+  "self_approved_review.empty": "No self-approved records this period.",
   "self_approved_review.count": "{n} self-approved",
   "self_approved_review.col.decided_at": "Decided At",
   "self_approved_review.col.decided_by": "Decided By",

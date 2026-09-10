@@ -79,6 +79,10 @@ export function bindReportReads(wasm) {
       raise(await wasm.data_audit_trail({ offset, limit })).rows,
     pendingApprovals:    async () => raise(await wasm.data_pending_approvals({})).rows,
     approvalDecisionLog: async () => raise(await wasm.data_approval_decision_log({})).rows,
+    approvalArrival: (previousIds, currentIds) => {
+      const decision = wasm.manager_approval_arrival([previousIds, currentIds]);
+      return { shouldToast: decision.should_toast, newCount: decision.new_count };
+    },
     exceptionCaseload:   async () => raise(await wasm.data_exception_caseload({})).rows,
     pipelineShipments:   async () => raise(await wasm.data_pipeline_shipments({})).rows,
     manifestFilings:     async () => raise(await wasm.data_manifest_filings({})).rows,

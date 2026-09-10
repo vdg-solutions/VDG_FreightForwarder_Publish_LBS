@@ -3,7 +3,7 @@ import {
 } from "./chunk-TBGPODD6.js";
 import {
   approvalDecisionLog
-} from "./chunk-T5ZHX2YX.js";
+} from "./chunk-L63J7S6F.js";
 import {
   fmtDate,
   t
@@ -61,7 +61,7 @@ function recompute() {
 function renderTable(root) {
   const tbody = root.querySelector("#sar-tbody");
   if (!tbody) return;
-  tbody.innerHTML = _rows.length === 0 ? `<tr><td colspan="7" class="px-4 py-10 text-center text-emerald-600 text-xs">${t("self_approved_review.empty")}</td></tr>` : _rows.map(rowHtml).join("");
+  tbody.innerHTML = _rows.length === 0 ? `<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400 text-xs">${t("self_approved_review.empty")}</td></tr>` : _rows.map(rowHtml).join("");
   root.querySelector("#sar-count").textContent = t("self_approved_review.count", { n: _rows.length });
 }
 async function reload(root) {

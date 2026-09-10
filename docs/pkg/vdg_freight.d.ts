@@ -885,6 +885,14 @@ export function manager_air_pnl(req: any): any;
 
 export function manager_ap_payables(req: any): any;
 
+/**
+ * `req` is `[previousIds, currentIds]`, the pending approval-request ids the approvals screen
+ * held before and after its reload. `vdg:entity-changed` also fires on a resync pull, an
+ * eviction, and this screen's own approve/reject write -- see `approval_arrival::newly_arrived`
+ * for why none of those means "a new request arrived".
+ */
+export function manager_approval_arrival(req: any): any;
+
 export function manager_ar_aging(req: any): any;
 
 export function manager_ar_timeline(req: any): any;
@@ -1571,6 +1579,7 @@ export interface InitOutput {
     readonly manager_air_invoice: (a: number, b: number) => void;
     readonly manager_air_pnl: (a: number, b: number) => void;
     readonly manager_ap_payables: (a: number, b: number) => void;
+    readonly manager_approval_arrival: (a: number, b: number) => void;
     readonly manager_ar_aging: (a: number, b: number) => void;
     readonly manager_ar_timeline: (a: number, b: number) => void;
     readonly manager_audit_log_csv: (a: number, b: number) => void;
@@ -1805,9 +1814,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15611: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15613: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11589: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15622: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15624: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11600: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

@@ -71,6 +71,10 @@ export const auditTrail = (...a) => _i().auditTrail(...a);
 export const pendingApprovals = (...a) => _i().pendingApprovals(...a);
 /// () -> every approval decision on record; the reviewer picks the period, not this read.
 export const approvalDecisionLog = (...a) => _i().approvalDecisionLog(...a);
+/// (previousIds, currentIds) -> { shouldToast, newCount }: is there a pending id in `currentIds`
+/// that wasn't in `previousIds`. `vdg:entity-changed` also fires on a resync and on an eviction,
+/// so the screen asks this instead of treating the event itself as "a request arrived".
+export const approvalArrival = (...a) => _i().approvalArrival(...a);
 /// () -> the exceptions the command centre triages, open AND closed (MTTR needs the closed ones).
 export const exceptionCaseload = (...a) => _i().exceptionCaseload(...a);
 /// () -> the jobs on the pipeline board.

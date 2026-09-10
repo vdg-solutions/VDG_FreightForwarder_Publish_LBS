@@ -5,8 +5,9 @@ import {
   statusBadgeLabel
 } from "./chunk-VRYVVURA.js";
 import {
+  approvalArrival,
   pendingApprovals
-} from "./chunk-T5ZHX2YX.js";
+} from "./chunk-L63J7S6F.js";
 import {
   getActiveSalesReps
 } from "./chunk-4H4Y6OOD.js";
@@ -385,8 +386,12 @@ async function render(root) {
   _onEntity = async (e) => {
     const { kind } = e.detail || {};
     if (kind !== KIND_APPROVAL) return;
+    const previousIds = _items.map((a) => a.id);
     _items = await loadItems();
     renderCards(root, _items);
+    const currentIds = _items.map((a) => a.id);
+    const { shouldToast } = approvalArrival(previousIds, currentIds);
+    if (!shouldToast) return;
     window.dispatchEvent(new CustomEvent("vdg:toast", {
       detail: { type: "info", message: t("approvals.toast.new_request"), duration: TOAST_AUTODISMISS_MS }
     }));

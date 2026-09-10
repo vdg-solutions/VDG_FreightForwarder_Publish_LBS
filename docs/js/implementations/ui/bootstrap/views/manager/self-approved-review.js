@@ -68,9 +68,9 @@ function recompute() {
 function renderTable(root) {
   const tbody = root.querySelector('#sar-tbody');
   if (!tbody) return;
-  // An empty period is the GOOD outcome (nobody self-approved) — the copy says so, not "no data".
+  // Empty table = no self-approval was logged, not proof none happened — stay neutral, not green.
   tbody.innerHTML = _rows.length === 0
-    ? `<tr><td colspan="7" class="px-4 py-10 text-center text-emerald-600 text-xs">${t('self_approved_review.empty')}</td></tr>`
+    ? `<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400 text-xs">${t('self_approved_review.empty')}</td></tr>`
     : _rows.map(rowHtml).join('');
   root.querySelector('#sar-count').textContent = t('self_approved_review.count', { n: _rows.length });
 }
