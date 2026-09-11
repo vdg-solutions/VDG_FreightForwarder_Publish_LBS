@@ -579,6 +579,7 @@
   "topbar.sync.tooltip.lastError": "Last error: {reason}",
   "topbar.sync.tooltip.max_retries_reason": "max retries exceeded",
   "topbar.sync.tooltip.rate_budget_reason": "paused — too many requests this session",
+  "topbar.sync.tooltip.throttled_reason": "server rate limit — pausing, will retry automatically",
   "topbar.sync.tooltip.high_volume_reason": "syncing more than usual ({n} requests)",
   "topbar.sync.tooltip.reconnect": "Session expired — click to sign in",
   "topbar.sync.tooltip.auth_pending": "Paused — will reconnect on your next action",

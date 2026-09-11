@@ -579,6 +579,7 @@
   "topbar.sync.tooltip.lastError": "Lỗi gần nhất: {reason}",
   "topbar.sync.tooltip.max_retries_reason": "đã hết số lần thử lại",
   "topbar.sync.tooltip.rate_budget_reason": "tạm dừng — quá nhiều yêu cầu trong phiên này",
+  "topbar.sync.tooltip.throttled_reason": "máy chủ đang giới hạn tốc độ — tạm dừng gửi, sẽ tự thử lại",
   "topbar.sync.tooltip.high_volume_reason": "đang đồng bộ nhiều hơn bình thường ({n} yêu cầu)",
   "topbar.sync.tooltip.reconnect": "Phiên đăng nhập đã hết hạn — bấm để đăng nhập lại",
   "topbar.sync.tooltip.auth_pending": "Tạm dừng — sẽ tự nối lại khi thao tác",

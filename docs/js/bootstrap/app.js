@@ -630,7 +630,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build ba4d4cda">v0.4.86 (ba4d4cda)</span>
+        <span class="font-mono whitespace-nowrap" title="build 210ac52b">v0.4.87 (210ac52b)</span>
       </div>
     `;
   }
@@ -1134,6 +1134,7 @@ function createSyncHandlers(host) {
       host._lastError = null;
       host._lastNotifiedStuckEpisode = 0;
       host._syncing = false;
+      host._backoff429 = false;
       if (e.detail?.quarantined !== void 0) host._quarantinedCount = e.detail.quarantined;
     },
     // Pull heartbeat only — must NOT clear retry/error state (those are push-side signals)
@@ -1144,7 +1145,8 @@ function createSyncHandlers(host) {
       host._retryStreak++;
       host._retrying = true;
       host._syncing = false;
-      host._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.reason === "rate_budget" ? t("topbar.sync.tooltip.rate_budget_reason") : e.detail?.error ?? null;
+      host._backoff429 = e.detail?.reason === "throttled";
+      host._lastError = e.detail?.reason === "max_retries" ? t("topbar.sync.tooltip.max_retries_reason") : e.detail?.reason === "rate_budget" ? t("topbar.sync.tooltip.rate_budget_reason") : e.detail?.reason === "throttled" ? t("topbar.sync.tooltip.throttled_reason") : e.detail?.error ?? null;
       if (e.detail?.reason === "record_skipped") {
         window.__vdg_repo?.outbox_snapshot?.().then((snap) => {
           if (snap) host._quarantinedCount = snap.quarantined ?? host._quarantinedCount;
@@ -2363,7 +2365,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.86 (ba4d4cda)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.87 (210ac52b)</div>
         </div>
       </div>
     </div>`;
@@ -3022,8 +3024,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=ba4d4cda", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ba4d4cda", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=210ac52b", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=210ac52b", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4533,7 +4535,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.86 (ba4d4cda)";
+var APP_VERSION = "v0.4.87 (210ac52b)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;

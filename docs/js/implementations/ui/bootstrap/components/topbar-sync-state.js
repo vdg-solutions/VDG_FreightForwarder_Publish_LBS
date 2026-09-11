@@ -23,7 +23,7 @@ export function createSyncHandlers(host) {
     onSyncComplete: (e) => {
       host._lastSyncMs = e.detail?.ts ?? Date.now(); host._retryStreak = 0;
       host._retrying = false; host._lastError = null; host._lastNotifiedStuckEpisode = 0;
-      host._syncing = false;
+      host._syncing = false; host._backoff429 = false;
       // outbox.rs's own drain-complete check is gated on PENDING rows only (a quarantined row is
       // excluded on purpose, see outbox.rs::outbox_len) — this event can fire true while a
       // quarantined row still sits in the outbox. Carrying the count here is what stops that
@@ -39,10 +39,16 @@ export function createSyncHandlers(host) {
       // reader must be able to tell "my own client is refusing calls" from an ordinary network
       // blip, which is exactly the distinction that stayed invisible through the 2026-08-25
       // incident (a console.warn nobody watches is not a report).
+      // F-19-06: throttled = charterdb_client's REASON_THROTTLED (reconcile.rs) — a REAL server
+      // 429, distinct from rate_budget (this client's own refusal). Only this reason lights
+      // backoff429, the chip's dedicated orange signal for it (topbar-sync-chip.js::computeChipState).
+      host._backoff429 = e.detail?.reason === 'throttled';
       host._lastError = e.detail?.reason === 'max_retries'
         ? t('topbar.sync.tooltip.max_retries_reason')
         : e.detail?.reason === 'rate_budget'
         ? t('topbar.sync.tooltip.rate_budget_reason')
+        : e.detail?.reason === 'throttled'
+        ? t('topbar.sync.tooltip.throttled_reason')
         : (e.detail?.error ?? null);
       // D12: a remote-decode skip (event_bridge.rs's own "record_skipped" reason) never touches
       // the outbox, so the vdg:outbox-changed/vdg:sync-complete events this chip already reads
