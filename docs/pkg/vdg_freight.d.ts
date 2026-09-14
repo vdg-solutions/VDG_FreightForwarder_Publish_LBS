@@ -388,10 +388,10 @@ export function access_redirect_for(route: string, roles: string): string;
 export function access_roles_from_record(record_json: string): string;
 
 /**
- * Applies a lifecycle event to the entity's stored state via the real
- * ShipmentFsm, persists the new state, and appends a transition record.
+ * The manual "advance" button. Guarded, permissive-dependency-policy computation off the
+ * record's OWN current state — no side effects.
  */
-export function apply_fsm_event(entity_id: string, event: string): any;
+export function apply_fsm_event(entity_id: string, record_json: string, event: string): any;
 
 export function auth_adopt_session(req: any): Promise<any>;
 
@@ -664,6 +664,8 @@ export function flows_active_sales_reps(req: any): Promise<any>;
 
 export function flows_air_calc(req: any): any;
 
+export function flows_apply_event(req: any): Promise<any>;
+
 export function flows_approval_decide(req: any): Promise<any>;
 
 export function flows_assert_rep_code(req: any): Promise<any>;
@@ -710,11 +712,11 @@ export function flows_migrate_shipment_states(req: any): Promise<any>;
 
 export function flows_mine_only(req: any): any;
 
+export function flows_move_to(req: any): Promise<any>;
+
 export function flows_next_local_seq(req: any): Promise<any>;
 
 export function flows_note_lines(req: any): any;
-
-export function flows_persist_advanced_state(req: any): Promise<any>;
 
 export function flows_pnl_fx_deviation(req: any): any;
 
@@ -737,10 +739,6 @@ export function flows_quote_delete_apply(req: any): Promise<any>;
 export function flows_quote_delete_plan(req: any): any;
 
 export function flows_quote_totals(req: any): any;
-
-export function flows_register_entity(req: any): Promise<any>;
-
-export function flows_rehydrate_fsm(req: any): Promise<any>;
 
 export function flows_rep_code_valid(req: any): any;
 
@@ -803,8 +801,6 @@ export function fx_rate_validate_spread(raw_buy: string, raw_sell: string): void
 export function fx_rate_validate_value(raw_value: string): void;
 
 export function gen_uom_id(code: string): string;
-
-export function get_entity_state(entity_id: string): any;
 
 export function get_transition_log(entity_id: string): any;
 
@@ -1049,11 +1045,11 @@ export function proposal_propose(input_json: string, author_role: string): any;
 export function proposal_reject(proposal_json: string, actor_role: string, actor_user: string, reason: string): any;
 
 /**
- * Registers a shipment into the FSM state map — register-if-absent (AC-09
- * idempotency lives here, not in every JS caller). No-op if the entity
- * already has a stored state.
+ * Append-only note for the History tab (`get_transition_log`). Called ONLY after the record
+ * write that actually moved the shipment has landed — never consulted for current state, a
+ * display-only side effect that is safe to lose on reload.
  */
-export function register_entity(entity_id: string, state: string): void;
+export function record_fsm_transition(entity_id: string, hops_json: string): void;
 
 /**
  * Prepared write with text/null params — INSERT/UPDATE/DELETE that need bind params.
@@ -1175,27 +1171,23 @@ export function server_health_probe(): Promise<any>;
 export function shipment_action_bar(publish_state: string): any;
 
 /**
- * E-40 — the owner's rule: "dữ liệu đủ thì đẩy qua". From the entity's stored state, keep
- * advancing while the NEXT hop has a non-empty requirement list and EVERY row is affirmatively
- * Met by the record (Unknown never advances — auto needs positive evidence; the manual button
- * keeps its permissive policy as the escape hatch). Returns the state the job ends at.
+ * E-40 — the owner's rule: "dữ liệu đủ thì đẩy qua". From the RECORD's own current state, keep
+ * advancing while the NEXT hop's requirement list is non-empty and every row is affirmatively
+ * Met. Returns every hop it would make; nothing is written or logged here.
  */
-export function shipment_auto_advance(entity_id: string, shipment_json: string): any;
+export function shipment_auto_advance(entity_id: string, record_json: string): any;
 
 /**
- * The real kanban drag move. Builds the record's own registry/context (same shape as
- * `shipment_auto_advance`) so the real guards see real data, resolves the event off
- * `event_for_hop`, then runs it through `run_transition` — the one place a shipment's stored
- * state actually moves, persisting the state and appending the audit row.
+ * The real kanban drag move. Resolves `to_state` to its event against the RECORD's own current
+ * state (never a board-held guess), runs the real data-driven guards. No side effects.
  */
-export function shipment_move_to(entity_id: string, to_state: string, shipment_json: string): any;
+export function shipment_move_to(entity_id: string, record_json: string, to_state: string): any;
 
 /**
  * `{ current, off_path, phases: [{ state, position, requirements }] }`.
  *
- * The state comes from the FSM state map when the entity is registered, and from the record's own
- * `state` otherwise — a job whose boot registration has not run yet still has a real state, and
- * showing it at Created would be a lie the user cannot correct.
+ * ADO #120: the state comes from the record's own `state` field — the only place a shipment's
+ * current state is read from. There is no local state map to fall back to or drift from.
  */
 export function shipment_phases(entity_id: string, shipment_json: string): string;
 
@@ -1367,7 +1359,7 @@ export interface InitOutput {
     readonly access_is_account: (a: number, b: number) => number;
     readonly access_redirect_for: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly access_roles_from_record: (a: number, b: number, c: number) => void;
-    readonly apply_fsm_event: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly apply_fsm_event: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly auth_adopt_session: (a: number) => number;
     readonly auth_clear_role_cache: (a: number) => number;
     readonly auth_detect_role: (a: number) => number;
@@ -1458,6 +1450,7 @@ export interface InitOutput {
     readonly flows_accept_quote: (a: number) => number;
     readonly flows_active_sales_reps: (a: number) => number;
     readonly flows_air_calc: (a: number, b: number) => void;
+    readonly flows_apply_event: (a: number) => number;
     readonly flows_approval_decide: (a: number) => number;
     readonly flows_assert_rep_code: (a: number) => number;
     readonly flows_assign_job_no: (a: number) => number;
@@ -1481,9 +1474,9 @@ export interface InitOutput {
     readonly flows_license_resolve: (a: number) => number;
     readonly flows_migrate_shipment_states: (a: number) => number;
     readonly flows_mine_only: (a: number, b: number) => void;
+    readonly flows_move_to: (a: number) => number;
     readonly flows_next_local_seq: (a: number) => number;
     readonly flows_note_lines: (a: number, b: number) => void;
-    readonly flows_persist_advanced_state: (a: number) => number;
     readonly flows_pnl_fx_deviation: (a: number, b: number) => void;
     readonly flows_pnl_line_vnd: (a: number, b: number) => void;
     readonly flows_pnl_vnd_invariant: (a: number, b: number) => void;
@@ -1495,8 +1488,6 @@ export interface InitOutput {
     readonly flows_quote_delete_apply: (a: number) => number;
     readonly flows_quote_delete_plan: (a: number, b: number) => void;
     readonly flows_quote_totals: (a: number, b: number) => void;
-    readonly flows_register_entity: (a: number) => number;
-    readonly flows_rehydrate_fsm: (a: number) => number;
     readonly flows_rep_code_valid: (a: number, b: number) => void;
     readonly flows_repo_max_seq: (a: number) => number;
     readonly flows_sales_analytics: (a: number, b: number) => void;
@@ -1528,7 +1519,6 @@ export interface InitOutput {
     readonly fxraterepo_pnlFxLookupPair: (a: number, b: number, c: number, d: number) => void;
     readonly fxraterepo_pnlFxRequireDirection: (a: number, b: number, c: number, d: number) => void;
     readonly gen_uom_id: (a: number, b: number, c: number) => void;
-    readonly get_entity_state: (a: number, b: number, c: number) => void;
     readonly get_transition_log: (a: number, b: number, c: number) => void;
     readonly get_validation_errors: (a: number) => void;
     readonly governance_action_guard: (a: number, b: number) => void;
@@ -1634,7 +1624,7 @@ export interface InitOutput {
     readonly proposal_merge: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
     readonly proposal_propose: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly proposal_reject: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
-    readonly register_entity: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly record_fsm_transition: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly run: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly sales_air_rate_cards: (a: number) => number;
     readonly sales_billing_records: (a: number) => number;
@@ -1800,10 +1790,10 @@ export interface InitOutput {
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
     readonly wasmentityrepo_userRepo: (a: number) => number;
-    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
-    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
+    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
+    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1814,9 +1804,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15626: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15639: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11609: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15636: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15649: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11624: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

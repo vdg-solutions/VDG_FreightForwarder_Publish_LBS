@@ -52,8 +52,14 @@ export const flowsPlatform = {
   // verdict the repo enforces is the one the screen renders. The Rust i64 param is a JS BigInt.
   flows_license_arm: async (license, nowUnix) => wasm().license_arm(license, BigInt(Math.trunc(nowUnix))),
 
-  flows_fsm_register:     async (entityId, state)    => wasm().register_entity(entityId, state) ?? null,
-  flows_fsm_auto_advance: async (entityId, shipment) => wasm().shipment_auto_advance(entityId, JSON.stringify(shipment)) ?? null,
+  // ADO #120: every fsm_* bridge call is a PURE guarded computation off the record `record`
+  // carries — none of them touch localStorage. `flows_fsm_record_transition` is the only one
+  // with a side effect (the in-memory History log), and it is only ever called by FsmIngest
+  // AFTER the record write it describes has already landed.
+  flows_fsm_apply_event:      async (entityId, record, event)   => wasm().apply_fsm_event(entityId, JSON.stringify(record), event) ?? null,
+  flows_fsm_move_to:          async (entityId, record, toState) => wasm().shipment_move_to(entityId, JSON.stringify(record), toState) ?? null,
+  flows_fsm_auto_advance:     async (entityId, record)          => wasm().shipment_auto_advance(entityId, JSON.stringify(record)) ?? null,
+  flows_fsm_record_transition: async (entityId, hops)           => wasm().record_fsm_transition(entityId, JSON.stringify(hops)) ?? null,
   flows_mint_quote_ref:   async (salt)               => repo()?.mint_quote_ref(String(salt || '')) ?? null,
 
   flows_today_local:       async () => todayLocal(),

@@ -90,11 +90,17 @@ export function composeFlows(wasm) {
     derive: (pnlLineRows, noteType) => wasm.flows_note_lines({ lines: pnlLineRows || [], note_type: noteType || '' }),
   });
 
+  // ADO #120: FsmIngest re-reads the record itself and refuses a stale write, so these two are
+  // the ONLY lawful way a shipment's state gets written — the manual button and the kanban drag.
   bindFsmIngest({
-    registerFsmEntity: (ref, state) => wasm.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
-    rehydrateFsmStates: () => wasm.flows_rehydrate_fsm(EMPTY),
-    persistAdvancedState: (_repo, ref, state) =>
-      wasm.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null }),
+    applyShipmentEvent: async (_repo, ref, event) => {
+      const r = await wasm.flows_apply_event({ shipment_ref: ref ?? null, event: event ?? null });
+      return r.ok ? { ok: true, state: r.state } : { ok: false, error: r.error };
+    },
+    moveShipmentTo: async (_repo, ref, toState) => {
+      const r = await wasm.flows_move_to({ shipment_ref: ref ?? null, to_state: toState ?? null });
+      return r.ok ? { ok: true, state: r.state } : { ok: false, error: r.error };
+    },
   });
 
   bindFsmAutoAdvance({

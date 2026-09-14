@@ -1,9 +1,9 @@
-// fsm-ingest — port: registering a shipment into the FSM state map, rehydrating the map after a
-// reload, and mirroring an advance back into the record of truth.
+// fsm-ingest — port: the two lawful ways a shipment's state changes. Both re-read the record
+// inside FsmIngest and refuse to write if it moved underneath — see fsm_ingest.rs (ADO #120).
 
 let _impl = null;
 
-/// Root bootstrap binds { registerFsmEntity, rehydrateFsmStates, persistAdvancedState } once.
+/// Root bootstrap binds { applyShipmentEvent, moveShipmentTo } once.
 export function bindFsmIngest(impl) { _impl = impl; }
 
 function _i() {
@@ -11,9 +11,7 @@ function _i() {
   return _impl;
 }
 
-/// (ref, state) -> registered (register-if-absent; never regresses an advanced state)
-export const registerFsmEntity = (...a) => _i().registerFsmEntity(...a);
-/// (repo) -> sweeps every stored shipment back into the state map
-export const rehydrateFsmStates = (...a) => _i().rehydrateFsmStates(...a);
-/// (repo, ref, state) -> writes the state onto the record and announces the change
-export const persistAdvancedState = (...a) => _i().persistAdvancedState(...a);
+/// (repo, ref, event) -> { ok, state } | { ok: false, error } — the manual "advance" button.
+export const applyShipmentEvent = (...a) => _i().applyShipmentEvent(...a);
+/// (repo, ref, toState) -> { ok, state } | { ok: false, error } — the kanban drag move.
+export const moveShipmentTo = (...a) => _i().moveShipmentTo(...a);

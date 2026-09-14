@@ -7,8 +7,9 @@
 // its failure mode is a screen saying a job is ready while the FSM refuses to advance it.
 //
 // This component renders EDIT FOCUS, not state. Clicking a phase moves what the form is showing;
-// it does not move the shipment. `state` only ever changes through apply_fsm_event, which is
-// guarded and audited — see backlog/wiki/shipment-collaboration-model.md §3.
+// it does not move the shipment. `state` only ever changes through FsmIngest (applyShipmentEvent /
+// moveShipmentTo / auto-advance), guarded and audited — see
+// backlog/wiki/shipment-collaboration-model.md §3.
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 // The role labels already exist and are pinned to the Rust enum by role-catalog-parity; a second

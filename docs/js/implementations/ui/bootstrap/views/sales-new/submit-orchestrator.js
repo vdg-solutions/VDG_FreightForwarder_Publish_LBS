@@ -11,7 +11,6 @@ import { putShipment, rollbackShipmentCreate, getEnvelope } from '../../../core_
 import {
   mintShipmentRef, resolveJobNo, healJobNoCollision, nextLedgerVersion, submissionErrorKeys, writeSideRecords, resolvePublishState } from '../../../core_abstractions/ports/data/shipment-submit.js';
 import { ensureShipmentStateAliases } from '../../../core_abstractions/ports/flows/shipment-state-aliases.js';
-import { registerFsmEntity } from '../../../core_abstractions/ports/flows/fsm-ingest.js';
 import { autoAdvanceShipment } from '../../../core_abstractions/ports/flows/fsm-auto-advance.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
@@ -114,7 +113,6 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
   // that lost the arbitration comes back re-minted and already re-saved — carry on with THAT one,
   // the publish snapshot below reads the Job No off it.
   shipment = await healJobNoCollision(shipment, salesRepId);
-  await registerFsmEntity(ref, shipment.state); // F-19-88 AC-01: make it a first-class FSM entity
 
   const warnings = [];
   if (!shipment.pnl_lines || shipment.pnl_lines.length === 0) {
@@ -178,7 +176,6 @@ export async function updateForm(state, repo, salesRepId, ref, opts = {}) {
   shipment._ledger_version = version;
   await putShipment(repo, shipment);
   shipment = await healJobNoCollision(shipment, salesRepId);
-  await registerFsmEntity(ref, shipment.state); // AC-09: register-if-absent, never regresses an advanced state
 
   // Both sets replaced together, before the publish. Nothing in the snapshot reads the pnl_line
   // entities — it is built from the shipment payload — so this only means the two row sets can no

@@ -7,7 +7,7 @@ import { showConfirm } from '../helpers/show-confirm.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { CANCELLED_STATE, chooseShipmentAffordance, runShipmentAffordance } from '../../core_abstractions/ports/flows/shipment-void-delete.js';
 import { NEXT_EVENT, TRANSITION_LABEL } from './shipment-lifecycle-map.js';
-import { persistAdvancedState } from '../../core_abstractions/ports/flows/fsm-ingest.js';
+import { applyShipmentEvent } from '../../core_abstractions/ports/flows/fsm-ingest.js';
 
 const PANEL_WIDTH_PX     = 480;
 const SLIDE_DURATION_MS  = 250;
@@ -29,7 +29,6 @@ class VdgDetailPanel extends LitElement {
     transitioning:   { type: Boolean, state: true },
     timeline:        { type: Array,   state: true },
     wasmReady:       { type: Boolean, state: true },
-    notFound:        { type: Boolean, state: true },
     commissionEl:    { type: Object,  state: true },
   };
 
@@ -40,13 +39,13 @@ class VdgDetailPanel extends LitElement {
     this.shipment = null; this.activeTab = 'Overview';
     this.liveState = null; this.transitionError = null;
     this.transitioning = false; this.timeline = null;
-    this.wasmReady = false; this.notFound = false;
+    this.wasmReady = false;
     this.commissionEl = null;
     this._requestId = INITIAL_REQUEST_ID; this._escListener = null;
     this._onWasmReady = () => {
-      this.wasmReady = typeof window.__vdg_wasm?.get_entity_state === 'function';
+      this.wasmReady = typeof window.__vdg_wasm?.flows_apply_event === 'function';
       if (this.wasmReady && this.shipment && !this.liveState) {
-        this._loadEntityState();
+        this.liveState = this.shipment.state;
         if (this.activeTab === 'History') this._loadTimeline();
       }
     };
@@ -73,13 +72,15 @@ class VdgDetailPanel extends LitElement {
     });
   }
 
-  // Public: open panel with row data
+  // Public: open panel with row data. `liveState` is seeded from the record the grid handed in
+  // (ADO #120: the record is the only source of a shipment's state) and only ever moves again
+  // when a transition the operator actually wrote back succeeds — never from a separate read.
   open(rowData) {
     this.shipment = rowData; this.activeTab = 'Overview';
-    this.liveState = null; this.transitionError = null;
+    this.liveState = rowData?.state ?? null; this.transitionError = null;
     this.transitioning = false; this.timeline = null;
-    this.notFound = false; this.commissionEl = null;
-    this.wasmReady = typeof window.__vdg_wasm?.get_entity_state === 'function';
+    this.commissionEl = null;
+    this.wasmReady = typeof window.__vdg_wasm?.flows_apply_event === 'function';
     this.removeAttribute('hidden');
     requestAnimationFrame(() => {
       this.classList.remove('translate-x-full');
@@ -88,7 +89,6 @@ class VdgDetailPanel extends LitElement {
     this._removeEscListener();
     this._escListener = (e) => { if (e.key === 'Escape') this.close(); };
     document.addEventListener('keydown', this._escListener);
-    if (this.wasmReady) this._loadEntityState();
   }
 
   // Public: close panel
@@ -108,22 +108,6 @@ class VdgDetailPanel extends LitElement {
     this._escListener = null;
   }
 
-  async _loadEntityState() {
-    const myId = ++this._requestId;
-    try {
-      const state = await window.__vdg_wasm.get_entity_state(this.shipment.ref);
-      if (this._requestId !== myId) return;
-      this.liveState = state;
-    } catch (err) {
-      if (this._requestId !== myId) return;
-      try {
-        const env = JSON.parse(err.message);
-        if (env.code === 'NOT_FOUND') this.notFound = true;
-        else console.warn('[VDG] get_entity_state:', env); // DEV
-      } catch { /* non-JSON — keep shipment.state */ }
-    }
-  }
-
   async _loadTimeline() {
     if (this.timeline !== null || !this.wasmReady) return;
     const myId = ++this._requestId;
@@ -137,6 +121,10 @@ class VdgDetailPanel extends LitElement {
     }
   }
 
+  // ADO #120: one call. `applyShipmentEvent` re-reads the record inside FsmIngest, computes the
+  // hop off THAT (never off `this.liveState`, which can be stale the moment a second device or
+  // tab already moved the job), writes it, and only then answers — so a refusal here means the
+  // write genuinely did not happen, never a phantom "applied" the record disagrees with.
   async _applyTransition() {
     if (!this.wasmReady) { this.transitionError = t('shipment.detail.wasm_not_available'); return; }
     if (!navigator.onLine) { this.transitionError = t('shipment.detail.offline_no_transition'); return; }
@@ -146,15 +134,18 @@ class VdgDetailPanel extends LitElement {
     this.transitioning = true; this.transitionError = null;
     const myId = ++this._requestId;
     try {
-      const result = await window.apply_fsm_event(this.shipment.ref, event);
+      const result = await applyShipmentEvent(window.__vdg_repo, this.shipment.ref, event);
       if (this._requestId !== myId) return;
-      this.liveState = result; this.timeline = null;
-      await persistAdvancedState(window.__vdg_repo, this.shipment.ref, result); // repo stays authoritative
-      this._toast(t('shipment.detail.transition_applied', { from: t('shipment.status.' + prevState), to: t('shipment.status.' + result) }));
+      if (!result.ok) {
+        try { this.transitionError = guardMessage(JSON.parse(result.error)); }
+        catch { this.transitionError = t('shipment.detail.transition_failed', { error: result.error }); }
+        return;
+      }
+      this.liveState = result.state; this.shipment = { ...this.shipment, state: result.state }; this.timeline = null;
+      this._toast(t('shipment.detail.transition_applied', { from: t('shipment.status.' + prevState), to: t('shipment.status.' + result.state) }));
     } catch (err) {
       if (this._requestId !== myId) return;
-      try { this.transitionError = guardMessage(JSON.parse(err.message)); }
-      catch { this.transitionError = t('shipment.detail.transition_failed', { error: err.message }); }
+      this.transitionError = t('shipment.detail.transition_failed', { error: err.message });
     } finally { if (this._requestId === myId) this.transitioning = false; }
   }
 
@@ -191,7 +182,6 @@ class VdgDetailPanel extends LitElement {
           </button>
         </div>
         ${!this.wasmReady ? html`<div class="mx-4 mt-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs">${t('shipment.detail.wasm_unavailable')}</div>` : ''}
-        ${this.notFound ? html`<div class="mx-4 mt-3 px-3 py-2 rounded-md bg-red-50 border border-red-200 text-xs" style="color:${ERROR_COLOR}">${t('shipment.detail.not_found', { ref: this.shipment.ref })}</div>` : ''}
         <div class="flex border-b border-slate-200 shrink-0 overflow-x-auto scrollbar-thin">
           ${TABS.map(tab => html`<button @click=${() => this._onTabClick(tab)}
             class="px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${this.activeTab === tab ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-900'}">${t('shipment.detail.tab.' + tab.toLowerCase())}</button>`)}
@@ -260,7 +250,7 @@ class VdgDetailPanel extends LitElement {
     // That throw escaped render(), so Lit rendered NOTHING: the detail panel opened as a blank
     // white pane for every shipment whose state was not `Closed` (the one branch that returns
     // before reaching the call), for every role. The name is what caused it; keep them distinct.
-    const armed = this.wasmReady && !this.notFound;
+    const armed = this.wasmReady;
     return html`
       <div class="mt-4">
         <button @click=${() => this._applyTransition()} ?disabled=${!armed || this.transitioning}
@@ -273,11 +263,9 @@ class VdgDetailPanel extends LitElement {
   }
 
   // F-19-77 AC-01/02/05 — manager-only Void/Delete control. Decision keys ONLY on the stored
-  // shipment record (publish_state/state) — same rule as the grid row action (shipments.js) —
-  // never on this.notFound (wasm get_entity_state NOT_FOUND is a different, unrelated orphan
-  // class tracked separately as F-19-88). This keeps the grid and the detail panel in agreement
-  // for the same shipment (F-19-77 rework D-1): a published shipment always offers Void here,
-  // never Delete.
+  // shipment record (publish_state/state) — same rule as the grid row action (shipments.js).
+  // This keeps the grid and the detail panel in agreement for the same shipment (F-19-77 rework
+  // D-1): a published shipment always offers Void here, never Delete.
   _renderVoidDelete(cur) {
     if (!can('shipment.void')) return html``;
     const affordance = chooseShipmentAffordance({ ...this.shipment, state: cur });

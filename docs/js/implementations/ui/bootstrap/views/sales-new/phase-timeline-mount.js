@@ -18,7 +18,7 @@ export const DRAFT_TIMELINE_REF = 'draft:new';
  *
  * Focus is not state. Clicking a phase the job has already passed opens it for correction — which
  * is the back-and-forth between CS and Sales the owner asked for — and never moves the shipment
- * backwards. `state` only changes through apply_fsm_event, which is guarded and audited.
+ * backwards. `state` only changes through FsmIngest, which is guarded and audited.
  *
  * A shipment the FSM does not recognise gets no timeline rather than an empty one: "this job has
  * no phases" is a different claim from "we could not work out where it is".

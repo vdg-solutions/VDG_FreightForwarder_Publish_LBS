@@ -193,16 +193,14 @@ import {
 } from "./chunk-YR3VHEVJ.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-3B3S6YF2.js";
-import "./chunk-NSJXCXJQ.js";
+} from "./chunk-VTLMLJG6.js";
+import {
+  bindFsmIngest
+} from "./chunk-X7CMHTHM.js";
 import {
   bindActionGuard,
   can
 } from "./chunk-GOIBPTZO.js";
-import {
-  bindFsmIngest,
-  rehydrateFsmStates
-} from "./chunk-VTRTBWKI.js";
 import {
   initRouter,
   navigate
@@ -630,7 +628,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 5b879edf">v0.4.88 (5b879edf)</span>
+        <span class="font-mono whitespace-nowrap" title="build cb628da4">v0.4.89 (cb628da4)</span>
       </div>
     `;
   }
@@ -2365,7 +2363,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.88 (5b879edf)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.89 (cb628da4)</div>
         </div>
       </div>
     </div>`;
@@ -2729,8 +2727,14 @@ var flowsPlatform = {
   // license_arm classifies AND arms the wasm write guard — the boot gate goes through here so the
   // verdict the repo enforces is the one the screen renders. The Rust i64 param is a JS BigInt.
   flows_license_arm: async (license, nowUnix) => wasm().license_arm(license, BigInt(Math.trunc(nowUnix))),
-  flows_fsm_register: async (entityId, state) => wasm().register_entity(entityId, state) ?? null,
-  flows_fsm_auto_advance: async (entityId, shipment) => wasm().shipment_auto_advance(entityId, JSON.stringify(shipment)) ?? null,
+  // ADO #120: every fsm_* bridge call is a PURE guarded computation off the record `record`
+  // carries — none of them touch localStorage. `flows_fsm_record_transition` is the only one
+  // with a side effect (the in-memory History log), and it is only ever called by FsmIngest
+  // AFTER the record write it describes has already landed.
+  flows_fsm_apply_event: async (entityId, record, event) => wasm().apply_fsm_event(entityId, JSON.stringify(record), event) ?? null,
+  flows_fsm_move_to: async (entityId, record, toState) => wasm().shipment_move_to(entityId, JSON.stringify(record), toState) ?? null,
+  flows_fsm_auto_advance: async (entityId, record) => wasm().shipment_auto_advance(entityId, JSON.stringify(record)) ?? null,
+  flows_fsm_record_transition: async (entityId, hops) => wasm().record_fsm_transition(entityId, JSON.stringify(hops)) ?? null,
   flows_mint_quote_ref: async (salt) => repo2()?.mint_quote_ref(String(salt || "")) ?? null,
   flows_today_local: async () => todayLocal(),
   flows_active_workspace: async () => activeWorkspaceName(),
@@ -2987,9 +2991,10 @@ var BRIDGE_EXPORTS = [
   "vdg_version",
   "process_excel_file",
   "get_validation_errors",
-  "apply_fsm_event",
-  "get_entity_state",
-  "register_entity",
+  // ADO #120: apply_fsm_event/shipment_move_to/shipment_auto_advance/record_fsm_transition are
+  // pure FSM bridge calls now reached only through window.__vdg_wasm.flows_* (FsmIngest, the
+  // record-authoritative write path) — no bare global alias needed. get_entity_state and
+  // register_entity are gone: the shipment record is the only place state is read from.
   "drain_events",
   "get_transition_log",
   "import_booking_excel_wasm",
@@ -3024,8 +3029,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=5b879edf", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=5b879edf", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=cb628da4", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=cb628da4", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4426,14 +4431,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-UEZWUVWU.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-ZMN4ZCLP.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-UEZWUVWU.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-ZMN4ZCLP.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4535,7 +4540,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.88 (5b879edf)";
+var APP_VERSION = "v0.4.89 (cb628da4)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4785,7 +4790,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
-  "/shipments": () => import("./shipments-XKUHFWEZ.js"),
+  "/shipments": () => import("./shipments-NWMSDQXW.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4805,7 +4810,7 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-M7E3NMVE.js"),
+  "/manager/pipeline": () => import("./pipeline-UG6AJNLJ.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
   "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
@@ -5792,9 +5797,14 @@ function composeFlows(wasm4) {
     derive: (pnlLineRows, noteType) => wasm4.flows_note_lines({ lines: pnlLineRows || [], note_type: noteType || "" })
   });
   bindFsmIngest({
-    registerFsmEntity: (ref, state) => wasm4.flows_register_entity({ entity_id: ref ?? null, state: state ?? null }),
-    rehydrateFsmStates: () => wasm4.flows_rehydrate_fsm(EMPTY2),
-    persistAdvancedState: (_repo, ref, state) => wasm4.flows_persist_advanced_state({ shipment_ref: ref ?? null, state: state ?? null })
+    applyShipmentEvent: async (_repo, ref, event) => {
+      const r = await wasm4.flows_apply_event({ shipment_ref: ref ?? null, event: event ?? null });
+      return r.ok ? { ok: true, state: r.state } : { ok: false, error: r.error };
+    },
+    moveShipmentTo: async (_repo, ref, toState) => {
+      const r = await wasm4.flows_move_to({ shipment_ref: ref ?? null, to_state: toState ?? null });
+      return r.ok ? { ok: true, state: r.state } : { ok: false, error: r.error };
+    }
   });
   bindFsmAutoAdvance({
     autoAdvanceShipment: async (_repo, shipment) => (await wasm4.flows_auto_advance({ shipment: shipment || {} })).advanced_to ?? null
@@ -6175,8 +6185,6 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   window.__vdg_io = ioPort;
   wasmMod.freight_app_init(createPlatform({ repo: repo3 }));
   composeUi(wasmMod);
-  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo3), CACHE_OP_TIMEOUT_MS, null, "fsm-rehydrate");
-  if (!rehydrateResult.ok) return _storeUnresponsive("fsm-rehydrate");
   fsm.dispatch(BootEvent.REPO_BUILT);
   stepRef.value = STEP_LICENSE_GATE;
   const app = document.getElementById("app");

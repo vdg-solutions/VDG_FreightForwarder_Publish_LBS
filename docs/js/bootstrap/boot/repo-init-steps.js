@@ -12,7 +12,6 @@ import { loadLocale } from '../../implementations/kernel/core_abstractions/i18n/
 import { APP_VERSION } from '../../implementations/kernel/core_abstractions/version.js';
 import { runLicenseGate } from './license-boot-gate.js';
 import { loadWasmOrThrow } from './wasm-loader.js';
-import { rehydrateFsmStates } from '../../implementations/ui/core_abstractions/ports/flows/fsm-ingest.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
 import { DEV_SEAMS_ENABLED } from '../platform/dev-seams.js';
@@ -80,8 +79,10 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   wasmMod.freight_app_init(createPlatform({ repo }));
   composeUi(wasmMod);
 
-  const rehydrateResult = await safeAwait(rehydrateFsmStates(repo), CACHE_OP_TIMEOUT_MS, null, 'fsm-rehydrate');
-  if (!rehydrateResult.ok) return _storeUnresponsive('fsm-rehydrate');
+  // ADO #120: there used to be an fsm-rehydrate sweep here that primed a per-browser FSM state
+  // map from the record store. That map is gone — a shipment's state is read from its record on
+  // demand now, nothing to warm at boot — so this step was removed rather than left as a no-op
+  // canary; `repo-init:sqlite-warm` above already covers the store-responsiveness check it rode.
 
   // 5. License gate
   fsm.dispatch(BootEvent.REPO_BUILT);

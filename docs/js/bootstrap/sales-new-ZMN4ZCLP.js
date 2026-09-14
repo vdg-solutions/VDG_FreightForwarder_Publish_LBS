@@ -79,9 +79,6 @@ import {
   ROLE_MANAGER
 } from "./chunk-YR3VHEVJ.js";
 import {
-  registerFsmEntity
-} from "./chunk-VTRTBWKI.js";
-import {
   navigate
 } from "./chunk-H2H4WJDI.js";
 import {
@@ -3124,7 +3121,6 @@ async function submitForm(state, repo, salesRepId, opts = {}) {
   shipment._ledger_version = version;
   await putShipment(repo, shipment);
   shipment = await healJobNoCollision(shipment, salesRepId);
-  await registerFsmEntity(ref, shipment.state);
   const warnings = [];
   if (!shipment.pnl_lines || shipment.pnl_lines.length === 0) {
     warnings.push(WARN_PNL_LINES_MISSING);
@@ -3160,7 +3156,6 @@ async function updateForm(state, repo, salesRepId, ref, opts = {}) {
   shipment._ledger_version = version;
   await putShipment(repo, shipment);
   shipment = await healJobNoCollision(shipment, salesRepId);
-  await registerFsmEntity(ref, shipment.state);
   await _writeSideRecords(ref, shipment, salesRepId, version, false);
   if (publish) await _handOverToAccounting(repo, shipment);
   const advancedTo = await autoAdvanceShipment(repo, shipment);

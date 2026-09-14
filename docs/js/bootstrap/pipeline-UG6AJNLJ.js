@@ -17,11 +17,9 @@ import {
 } from "./chunk-XOCJWCT2.js";
 import "./chunk-YR3VHEVJ.js";
 import {
-  guardMessage
-} from "./chunk-NSJXCXJQ.js";
-import {
-  persistAdvancedState
-} from "./chunk-VTRTBWKI.js";
+  guardMessage,
+  moveShipmentTo
+} from "./chunk-X7CMHTHM.js";
 import {
   shipmentLane
 } from "./chunk-V5UQPUBE.js";
@@ -288,12 +286,12 @@ var VdgKanbanBoard = class extends LitElement {
 customElements.define("vdg-kanban-board", VdgKanbanBoard);
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/pipeline-transition.js
-async function applyShipmentTransition({ id, to, shipments, repo, wasm }) {
+async function applyShipmentTransition({ id, to, shipments, repo }) {
   const s = shipments.find((x) => x.id === id);
   if (!s) return null;
-  const nextState = typeof wasm?.shipment_move_to === "function" ? await wasm.shipment_move_to(id, to, JSON.stringify(s)) : to;
-  if (repo) await persistAdvancedState(repo, id, nextState);
-  return nextState;
+  const result = await moveShipmentTo(repo, id, to);
+  if (!result.ok) throw new Error(result.error || "shipment transition refused");
+  return result.state;
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/pipeline.js
@@ -498,7 +496,7 @@ async function render(root) {
   content.addEventListener("vdg:transition-request", async (e) => {
     const { id, to } = e.detail;
     try {
-      await applyShipmentTransition({ id, to, shipments: _shipments, repo: getRepo(), wasm: window.__vdg_wasm });
+      await applyShipmentTransition({ id, to, shipments: _shipments, repo: getRepo() });
     } catch (err) {
       let message = err.message;
       try {

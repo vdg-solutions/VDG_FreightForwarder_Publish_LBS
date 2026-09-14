@@ -8,9 +8,10 @@ export const BRIDGE_EXPORTS = [
   'vdg_version',
   'process_excel_file',
   'get_validation_errors',
-  'apply_fsm_event',
-  'get_entity_state',
-  'register_entity',
+  // ADO #120: apply_fsm_event/shipment_move_to/shipment_auto_advance/record_fsm_transition are
+  // pure FSM bridge calls now reached only through window.__vdg_wasm.flows_* (FsmIngest, the
+  // record-authoritative write path) — no bare global alias needed. get_entity_state and
+  // register_entity are gone: the shipment record is the only place state is read from.
   'drain_events',
   'get_transition_log',
   'import_booking_excel_wasm',
@@ -61,8 +62,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL('pkg/vdg_freight.js?v=5b879edf', document.baseURI).href);
-      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=5b879edf', document.baseURI).href;
+      const mod = await import(new URL('pkg/vdg_freight.js?v=cb628da4', document.baseURI).href);
+      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=cb628da4', document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;

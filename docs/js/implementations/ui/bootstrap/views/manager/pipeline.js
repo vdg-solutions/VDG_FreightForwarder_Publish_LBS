@@ -243,7 +243,7 @@ export async function render(root) {
   content.addEventListener('vdg:transition-request', async (e) => {
     const { id, to } = e.detail;
     try {
-      await applyShipmentTransition({ id, to, shipments: _shipments, repo: getRepo(), wasm: window.__vdg_wasm });
+      await applyShipmentTransition({ id, to, shipments: _shipments, repo: getRepo() });
     } catch (err) {
       // A refused transition is never swallowed — surface the real reason to the user.
       let message = err.message;
