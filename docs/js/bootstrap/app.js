@@ -193,10 +193,10 @@ import {
 } from "./chunk-YR3VHEVJ.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-VTLMLJG6.js";
+} from "./chunk-WXY77IXQ.js";
 import {
   bindFsmIngest
-} from "./chunk-X7CMHTHM.js";
+} from "./chunk-HB7RC7RQ.js";
 import {
   bindActionGuard,
   can
@@ -628,7 +628,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build cb628da4">v0.4.89 (cb628da4)</span>
+        <span class="font-mono whitespace-nowrap" title="build 426e125a">v0.4.90 (426e125a)</span>
       </div>
     `;
   }
@@ -2363,7 +2363,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.89 (cb628da4)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.90 (426e125a)</div>
         </div>
       </div>
     </div>`;
@@ -3029,8 +3029,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=cb628da4", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=cb628da4", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=426e125a", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=426e125a", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4540,7 +4540,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.89 (cb628da4)";
+var APP_VERSION = "v0.4.90 (426e125a)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4790,7 +4790,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
-  "/shipments": () => import("./shipments-NWMSDQXW.js"),
+  "/shipments": () => import("./shipments-FCZAYCDA.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4810,7 +4810,7 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-UG6AJNLJ.js"),
+  "/manager/pipeline": () => import("./pipeline-FVPGQXZO.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
   "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),

@@ -1,24 +1,30 @@
+import { t } from '../i18n/index.js';
+
 // Contract: matches ErrorEnvelope.code from js_bridge.rs exactly.
 // GUARD_VIOLATION uses message field as suffix — see guardMessage().
-const GUARD_MESSAGES = {
+// Values are i18n KEYS, never rendered text — every string a user sees goes through t() (F-19-88
+// QA finding: this table used to hold raw English literals, which is why "This transition is not
+// valid from the current state" rendered untranslated in the VI UI).
+const GUARD_MESSAGE_KEYS = {
   GUARD_VIOLATION:          null,
-  CREDIT_SUSPENDED:         'Customer credit is suspended or blacklisted — contact Finance',
-  OPEN_EXCEPTION:           'Open exception(s) must be resolved before this transition',
-  BILLING_NOT_PAID:         'Billing has not been fully paid',
-  QUOTATION_NOT_ACCEPTED:   'Quotation has not been accepted yet',
-  BOOKING_NOT_CONFIRMED:    'Carrier booking is not confirmed',
-  CONTAINER_NOT_LOADED:     'One or more containers are not loaded onto vessel',
-  CUSTOMS_NOT_CLEARED:      'Customs clearance has not been completed',
-  DG_COMPLIANCE_PENDING:    'DG compliance is pending or rejected',
-  ALREADY_IN_TARGET_STATE:  'Shipment is already in this state',
-  INVALID_TRANSITION:       'This transition is not valid from the current state',
-  NOT_FOUND:                'Shipment record not found',
-  STORAGE:                  'Storage error — please refresh and retry',
+  CREDIT_SUSPENDED:         'guard.credit_suspended',
+  OPEN_EXCEPTION:           'guard.open_exception',
+  BILLING_NOT_PAID:         'guard.billing_not_paid',
+  QUOTATION_NOT_ACCEPTED:   'guard.quotation_not_accepted',
+  BOOKING_NOT_CONFIRMED:    'guard.booking_not_confirmed',
+  CONTAINER_NOT_LOADED:     'guard.container_not_loaded',
+  CUSTOMS_NOT_CLEARED:      'guard.customs_not_cleared',
+  DG_COMPLIANCE_PENDING:    'guard.dg_compliance_pending',
+  ALREADY_IN_TARGET_STATE:  'guard.already_in_target_state',
+  INVALID_TRANSITION:       'guard.invalid_transition',
+  NOT_FOUND:                'guard.not_found',
+  STORAGE:                  'guard.storage',
 };
 
 export function guardMessage(envelope) {
   if (envelope.code === 'GUARD_VIOLATION') {
-    return `Guard condition not met: ${envelope.message}`;
+    return t('guard.violation', { message: envelope.message });
   }
-  return GUARD_MESSAGES[envelope.code] ?? `Transition failed: ${envelope.message}`;
+  const key = GUARD_MESSAGE_KEYS[envelope.code];
+  return key ? t(key) : t('guard.transition_failed', { message: envelope.message });
 }
