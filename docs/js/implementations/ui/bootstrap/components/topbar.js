@@ -10,6 +10,7 @@ import { navigate } from '../router.js';
 import { loadLocale, currentLocale, t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveBreadcrumb } from './breadcrumb-resolver.js';
 import { computeChipState, renderSyncChip, buildAriaLabel, decideChipAction, CHIP_ACTION, displayLastSyncMs } from './topbar-sync-chip.js';
+import { openSyncAttentionModal } from './sync-attention-modal.js';
 import { renderModeToggle, readMode, MODE_LS_KEY } from './topbar-mode-toggle.js';
 import { renderAvatar, savePref, badgeLabel, renderBadge } from './topbar-helpers.js';
 import { renderUserMenu, renderSwBanner } from './topbar-menus.js';
@@ -185,6 +186,7 @@ class VdgTopbar extends LitElement {
     const action = decideChipAction({ state, user, online: this._online, lastError: this._lastError,
                                       authReconnect: this._authReconnect });
     if (action === CHIP_ACTION.NOOP) return;
+    if (action === CHIP_ACTION.SHOW_ATTENTION_ITEMS) { openSyncAttentionModal(); return; }
     if (action === CHIP_ACTION.SIGNIN) { window.dispatchEvent(new CustomEvent('vdg:auth-signin-request')); return; }
     if (action === CHIP_ACTION.WAITING_NETWORK) { window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'warn', message: t('topbar.sync.action.waiting_network') } })); return; }
     if (action === CHIP_ACTION.RECONNECT) { window.dispatchEvent(new CustomEvent('vdg:auth-reconnect-request')); return; }

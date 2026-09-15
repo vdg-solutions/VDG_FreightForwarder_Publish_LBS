@@ -316,6 +316,12 @@ export class WasmEntityRepo {
      * pull — the receiving rep would be locked out of what they had just been handed.
      */
     reassign(kind: string, id: string, new_owner: string): Promise<any>;
+    /**
+     * Every item behind `outbox_snapshot`'s own `quarantined` count -- `outbox/attention.rs::
+     * attention_items`'s own doc comment: the SAME two sources, so the number and this list can
+     * never disagree. Async: the outbox half is a `cache_list` read.
+     */
+    sync_attention_items(): Promise<any>;
     sync_delta(): Promise<any>;
     /**
      * Every kind currently failing this session (`sync_health::mark_failed`, armed from both
@@ -1772,6 +1778,7 @@ export interface InitOutput {
     readonly wasmentityrepo_put_owned: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
     readonly wasmentityrepo_put_owned_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly wasmentityrepo_reassign: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasmentityrepo_sync_attention_items: (a: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
     readonly wasmentityrepo_sync_failed_kinds: (a: number) => number;
     readonly wasmentityrepo_sync_failed_reason: (a: number, b: number) => void;
@@ -1787,9 +1794,9 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
@@ -1804,9 +1811,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15651: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15664: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11639: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_15735: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_15748: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_11722: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

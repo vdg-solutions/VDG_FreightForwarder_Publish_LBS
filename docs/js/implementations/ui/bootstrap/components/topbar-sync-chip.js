@@ -275,7 +275,8 @@ export function renderSyncChip({
 
 // AC-06 — chip click actions; centralizes the reconnect-click decision (unit-testable)
 export const CHIP_ACTION = { NOOP:'noop', SIGNIN:'signin', WAITING_NETWORK:'waiting_network',
-  FORCE_RETRY:'force_retry', RECONNECT:'reconnect', SYNC_NOW:'sync_now' };
+  FORCE_RETRY:'force_retry', RECONNECT:'reconnect', SYNC_NOW:'sync_now',
+  SHOW_ATTENTION_ITEMS:'show_attention_items' };
 
 // AC-06 — pure click decision; reconnect wins over signin/offline when authReconnect is set
 /// This deployment keeps its data on the server, so the browser holds a SERVER session — the
@@ -290,8 +291,9 @@ export function decideChipAction({ state, user, online, lastError, authReconnect
   // the quarantined case below.
   if (state === 'backup_stale')               return CHIP_ACTION.NOOP;
   if (state === 'pending')                    return CHIP_ACTION.NOOP; // F-50-01 AC-12 — click isn't swallowed: the window-level gesture listener still fires independently
-  // A quarantined row needs a code fix, not a retry — nothing behind this click could resolve it.
-  if (state === 'quarantined')                return CHIP_ACTION.NOOP;
+  // A quarantined row needs a human to look at it, not a retry — the click opens the item list
+  // (owner: "cần làm 1 cái view để nhấn vô đó nó hiển thị ra các mục lỗi").
+  if (state === 'quarantined')                return CHIP_ACTION.SHOW_ATTENTION_ITEMS;
   // Volatile store: the one useful act is pushing the outbox to the server NOW, before the tab
   // (and the RAM database under it) goes away. 'rebuilt' takes the same default further down.
   if (state === 'volatile')                   return CHIP_ACTION.SYNC_NOW;

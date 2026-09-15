@@ -288,6 +288,7 @@ import {
   bindWasmFormat,
   currentLocale,
   fmtDate,
+  fmtNumber,
   loadLocale,
   nowMs,
   t
@@ -628,7 +629,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 426e125a">v0.4.90 (426e125a)</span>
+        <span class="font-mono whitespace-nowrap" title="build 231b61b3">v0.4.91 (231b61b3)</span>
       </div>
     `;
   }
@@ -978,14 +979,15 @@ var CHIP_ACTION = {
   WAITING_NETWORK: "waiting_network",
   FORCE_RETRY: "force_retry",
   RECONNECT: "reconnect",
-  SYNC_NOW: "sync_now"
+  SYNC_NOW: "sync_now",
+  SHOW_ATTENTION_ITEMS: "show_attention_items"
 };
 function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === "yellow") return CHIP_ACTION.NOOP;
   if (state === "backing_up") return CHIP_ACTION.NOOP;
   if (state === "backup_stale") return CHIP_ACTION.NOOP;
   if (state === "pending") return CHIP_ACTION.NOOP;
-  if (state === "quarantined") return CHIP_ACTION.NOOP;
+  if (state === "quarantined") return CHIP_ACTION.SHOW_ATTENTION_ITEMS;
   if (state === "volatile") return CHIP_ACTION.SYNC_NOW;
   if (state === "red" && authReconnect) return CHIP_ACTION.SIGNIN;
   if (state === "red" && !user) return CHIP_ACTION.SIGNIN;
@@ -993,6 +995,71 @@ function decideChipAction({ state, user, online, lastError, authReconnect }) {
   if (state === "unreachable") return CHIP_ACTION.FORCE_RETRY;
   if (state === "orange" && lastError) return CHIP_ACTION.FORCE_RETRY;
   return CHIP_ACTION.SYNC_NOW;
+}
+
+// output/web/js.tmp/implementations/ui/bootstrap/components/sync-attention-modal.js
+var REASON_CODE_TO_KEY = {
+  undecodable_content: "topbar.sync.attention.reason.undecodable_content",
+  permission_denied: "topbar.sync.attention.reason.permission_denied",
+  not_found: "topbar.sync.attention.reason.not_found",
+  validation_refused: "topbar.sync.attention.reason.validation_refused",
+  unsupported_kind: "topbar.sync.attention.reason.unsupported_kind",
+  other: "topbar.sync.attention.reason.other"
+};
+var REASON_FALLBACK_KEY = "topbar.sync.attention.reason.other";
+function reasonText(reasonCode) {
+  return t(REASON_CODE_TO_KEY[reasonCode] ?? REASON_FALLBACK_KEY);
+}
+function fmtWhen(ms) {
+  if (!ms) return "\u2014";
+  return new Date(ms).toLocaleString(currentLocale() === "vi" ? "vi-VN" : "en-US");
+}
+function itemRow(item) {
+  const label = item.record_label || `${item.collection} / ${item.record_id}`;
+  return `
+    <tr class="border-b border-slate-100">
+      <td class="px-3 py-2">
+        <div class="font-medium text-slate-800">${label}</div>
+        <div class="text-[11px] text-slate-400 font-mono">${item.collection} \xB7 ${item.record_id}</div>
+      </td>
+      <td class="px-3 py-2">${reasonText(item.reason_code)}</td>
+      <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${fmtWhen(item.last_seen_ms)}</td>
+      <td class="px-3 py-2 text-right font-mono">${fmtNumber(item.attempts)}</td>
+    </tr>`;
+}
+async function openSyncAttentionModal() {
+  let items = [];
+  try {
+    items = await window.__vdg_repo?.sync_attention_items?.() || [];
+  } catch (e) {
+    window.dispatchEvent(new CustomEvent("vdg:toast", {
+      detail: { type: "error", message: t("topbar.sync.attention.load_failed") }
+    }));
+    return;
+  }
+  const body = items.length ? `<table class="w-full text-left border-collapse text-xs">
+         <thead>
+           <tr class="bg-slate-50 text-slate-500 uppercase text-[10px]">
+             <th class="px-3 py-2">${t("topbar.sync.attention.col_record")}</th>
+             <th class="px-3 py-2">${t("topbar.sync.attention.col_reason")}</th>
+             <th class="px-3 py-2">${t("topbar.sync.attention.col_when")}</th>
+             <th class="px-3 py-2 text-right">${t("topbar.sync.attention.col_attempts")}</th>
+           </tr>
+         </thead>
+         <tbody>${items.map(itemRow).join("")}</tbody>
+       </table>` : `<div class="px-6 py-10 text-center text-slate-400 text-sm">${t("topbar.sync.attention.empty")}</div>`;
+  const dlg = document.createElement("dialog");
+  dlg.className = "rounded-xl shadow-2xl p-0 w-[640px] max-w-[95vw] bg-white backdrop:bg-black/40";
+  dlg.innerHTML = `
+    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+      <div class="font-semibold text-slate-900 text-sm">${t("topbar.sync.attention.title")}</div>
+      <button class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500" onclick="this.closest('dialog').close()">\u2715</button>
+    </div>
+    <div class="max-h-[70vh] overflow-y-auto">${body}</div>
+  `;
+  document.body.appendChild(dlg);
+  dlg.addEventListener("close", () => dlg.remove());
+  dlg.showModal();
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar-helpers.js
@@ -1455,6 +1522,10 @@ var VdgTopbar = class extends LitElement2 {
       authReconnect: this._authReconnect
     });
     if (action === CHIP_ACTION.NOOP) return;
+    if (action === CHIP_ACTION.SHOW_ATTENTION_ITEMS) {
+      openSyncAttentionModal();
+      return;
+    }
     if (action === CHIP_ACTION.SIGNIN) {
       window.dispatchEvent(new CustomEvent("vdg:auth-signin-request"));
       return;
@@ -2363,7 +2434,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.90 (426e125a)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.91 (231b61b3)</div>
         </div>
       </div>
     </div>`;
@@ -3029,8 +3100,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=426e125a", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=426e125a", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=231b61b3", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=231b61b3", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4540,7 +4611,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.90 (426e125a)";
+var APP_VERSION = "v0.4.91 (231b61b3)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
