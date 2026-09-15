@@ -19,9 +19,6 @@ const GUARD_MESSAGE_KEYS = {
   INVALID_TRANSITION:       'guard.invalid_transition',
   NOT_FOUND:                'guard.not_found',
   STORAGE:                  'guard.storage',
-  // cas-write-path.md §5.4: FsmIngest's write-intent submit refusals.
-  STALE_BASE:               'save.error.stale_base',
-  SAVE_TOO_LARGE:           'save.error.too_large',
 };
 
 export function guardMessage(envelope) {

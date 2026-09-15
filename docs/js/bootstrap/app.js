@@ -193,10 +193,10 @@ import {
 } from "./chunk-YR3VHEVJ.js";
 import {
   bindShipmentVoidDelete
-} from "./chunk-X6BD6MV4.js";
+} from "./chunk-WXY77IXQ.js";
 import {
   bindFsmIngest
-} from "./chunk-4HAITEXH.js";
+} from "./chunk-HB7RC7RQ.js";
 import {
   bindActionGuard,
   can
@@ -605,12 +605,12 @@ var VdgSidebar = class extends LitElement {
         return html`<div class="px-4 py-3 text-xs text-slate-400" role="status">${t(msgKey)}</div>`;
       }
       const activeGroup = activeGroupKey(visible, this.activeRoute);
-      let shown2 = 0;
+      let shown = 0;
       return V1_GROUPS.map((g) => {
         const items = visible.filter((i) => i.group === g.key);
         if (items.length === 0) return "";
-        const first = shown2 === 0;
-        shown2 += 1;
+        const first = shown === 0;
+        shown += 1;
         const collapsed = isGroupCollapsed(this._collapsed, g.key, activeGroup);
         return html`
               <div data-nav-group="${g.key}">
@@ -629,7 +629,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 837a09d7">v0.4.92 (837a09d7)</span>
+        <span class="font-mono whitespace-nowrap" title="build 231b61b3">v0.4.91 (231b61b3)</span>
       </div>
     `;
   }
@@ -1004,20 +1004,9 @@ var REASON_CODE_TO_KEY = {
   not_found: "topbar.sync.attention.reason.not_found",
   validation_refused: "topbar.sync.attention.reason.validation_refused",
   unsupported_kind: "topbar.sync.attention.reason.unsupported_kind",
-  record_changed: "topbar.sync.attention.reason.record_changed",
-  state_moved: "topbar.sync.attention.reason.state_moved",
-  create_collided: "topbar.sync.attention.reason.create_collided",
   other: "topbar.sync.attention.reason.other"
 };
 var REASON_FALLBACK_KEY = "topbar.sync.attention.reason.other";
-var ACTION_TO_KEY = {
-  reapply: "attention.action.reapply",
-  discard: "attention.action.discard",
-  open: "attention.action.open"
-};
-var OPEN_ROUTE = { shipment: (id) => `#/sales/edit/${encodeURIComponent(id)}` };
-var OUTCOME_STALE = "stale";
-var ACTION_ATTR = "data-intent-action";
 function reasonText(reasonCode) {
   return t(REASON_CODE_TO_KEY[reasonCode] ?? REASON_FALLBACK_KEY);
 }
@@ -1025,67 +1014,27 @@ function fmtWhen(ms) {
   if (!ms) return "\u2014";
   return new Date(ms).toLocaleString(currentLocale() === "vi" ? "vi-VN" : "en-US");
 }
-var shown = (v) => v === null || v === void 0 || v === "" ? "\u2014" : typeof v === "object" ? JSON.stringify(v) : String(v);
-function changeLines(item) {
-  const changes = item.changes || [];
-  const lines = changes.map((c) => `
-    <div class="text-[11px] text-slate-600"><span class="font-mono">${c.field}</span>:
-      ${t("attention.change.yours")} <b>${shown(c.yours)}</b> \xB7
-      ${t("attention.change.from")} ${shown(c.from)} \xB7
-      ${t("attention.change.now")} ${shown(c.now)}</div>`);
-  if (item.dependents) lines.push(`<div class="text-[11px] text-slate-400">${t("attention.dependents", { n: fmtNumber(item.dependents) })}</div>`);
-  return lines.join("");
-}
-function actionButtons(item) {
-  if (!item.intent_id) return "";
-  return (item.actions || []).filter((a) => ACTION_TO_KEY[a] && (a !== "open" || OPEN_ROUTE[item.collection])).map((a) => `
-    <button type="button" ${ACTION_ATTR}="${a}" data-intent-id="${item.intent_id}"
-      class="px-2 py-1 text-[11px] rounded border border-slate-300 hover:bg-slate-100">${t(ACTION_TO_KEY[a])}</button>`).join(" ");
-}
 function itemRow(item) {
   const label = item.record_label || `${item.collection} / ${item.record_id}`;
   return `
-    <tr class="border-b border-slate-100 align-top">
+    <tr class="border-b border-slate-100">
       <td class="px-3 py-2">
         <div class="font-medium text-slate-800">${label}</div>
         <div class="text-[11px] text-slate-400 font-mono">${item.collection} \xB7 ${item.record_id}</div>
       </td>
-      <td class="px-3 py-2">${reasonText(item.reason_code)}${changeLines(item)}</td>
+      <td class="px-3 py-2">${reasonText(item.reason_code)}</td>
       <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${fmtWhen(item.last_seen_ms)}</td>
       <td class="px-3 py-2 text-right font-mono">${fmtNumber(item.attempts)}</td>
-      <td class="px-3 py-2 text-right whitespace-nowrap">${actionButtons(item)}</td>
     </tr>`;
-}
-function toast(type, message) {
-  window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type, message } }));
-}
-async function onAction(dlg, button, items) {
-  const action = button.getAttribute(ACTION_ATTR);
-  const intentId = button.getAttribute("data-intent-id");
-  const item = items.find((i) => i.intent_id === intentId);
-  if (action === "open") {
-    window.location.hash = OPEN_ROUTE[item.collection](item.record_id);
-    dlg.close();
-    return;
-  }
-  const wasm4 = window.__vdg_wasm;
-  const call = action === "reapply" ? wasm4?.sync_intent_reapply : wasm4?.sync_intent_discard;
-  try {
-    const reply = await call({ intent_id: intentId });
-    if (!reply?.ok) toast("error", t("attention.action.failed", { error: reply?.error ?? "" }));
-    else if (reply.outcome === OUTCOME_STALE) toast("info", t("save.error.stale_base"));
-  } catch (e) {
-    toast("error", t("attention.action.failed", { error: e?.message ?? String(e) }));
-  }
-  dlg.close();
-  openSyncAttentionModal();
 }
 async function openSyncAttentionModal() {
   let items = [];
   try {
     items = await window.__vdg_repo?.sync_attention_items?.() || [];
   } catch (e) {
-    toast("error", t("topbar.sync.attention.load_failed"));
+    window.dispatchEvent(new CustomEvent("vdg:toast", {
+      detail: { type: "error", message: t("topbar.sync.attention.load_failed") }
+    }));
     return;
   }
   const body = items.length ? `<table class="w-full text-left border-collapse text-xs">
@@ -1095,13 +1044,12 @@ async function openSyncAttentionModal() {
              <th class="px-3 py-2">${t("topbar.sync.attention.col_reason")}</th>
              <th class="px-3 py-2">${t("topbar.sync.attention.col_when")}</th>
              <th class="px-3 py-2 text-right">${t("topbar.sync.attention.col_attempts")}</th>
-             <th class="px-3 py-2 text-right">${t("topbar.sync.attention.col_actions")}</th>
            </tr>
          </thead>
          <tbody>${items.map(itemRow).join("")}</tbody>
        </table>` : `<div class="px-6 py-10 text-center text-slate-400 text-sm">${t("topbar.sync.attention.empty")}</div>`;
   const dlg = document.createElement("dialog");
-  dlg.className = "rounded-xl shadow-2xl p-0 w-[760px] max-w-[95vw] bg-white backdrop:bg-black/40";
+  dlg.className = "rounded-xl shadow-2xl p-0 w-[640px] max-w-[95vw] bg-white backdrop:bg-black/40";
   dlg.innerHTML = `
     <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
       <div class="font-semibold text-slate-900 text-sm">${t("topbar.sync.attention.title")}</div>
@@ -1109,16 +1057,9 @@ async function openSyncAttentionModal() {
     </div>
     <div class="max-h-[70vh] overflow-y-auto">${body}</div>
   `;
-  dlg.addEventListener("click", (ev) => {
-    const button = ev.target.closest?.(`[${ACTION_ATTR}]`);
-    if (button) onAction(dlg, button, items);
-  });
   document.body.appendChild(dlg);
   dlg.addEventListener("close", () => dlg.remove());
   dlg.showModal();
-}
-function bindIntentNotices() {
-  window.addEventListener("vdg:intent-settled", () => toast("info", t("intent.settled.already_in_state")));
 }
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar-helpers.js
@@ -2493,7 +2434,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.92 (837a09d7)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.91 (231b61b3)</div>
         </div>
       </div>
     </div>`;
@@ -2994,7 +2935,7 @@ var BTN_LABEL_KEY = {
 var RETRY_HINT_KEY = {
   [SERVER_ACCESS_REASON_SESSION]: "server_access.session.retry_failed"
 };
-function renderServerAccessGateScreen(container, { reason, actionFailed = false, onAction: onAction2 } = {}) {
+function renderServerAccessGateScreen(container, { reason, actionFailed = false, onAction } = {}) {
   if (!container) return;
   const btnId = BTN_ID[reason] || TRANSIENT_RETRY_BTN_ID;
   const labelKey = BTN_LABEL_KEY[reason];
@@ -3011,7 +2952,7 @@ function renderServerAccessGateScreen(container, { reason, actionFailed = false,
       </button>
     </div>`;
   container.querySelector(`#${btnId}`)?.addEventListener("click", () => {
-    if (onAction2) onAction2();
+    if (onAction) onAction();
     else location.reload();
   });
 }
@@ -3159,8 +3100,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=837a09d7", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=837a09d7", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=231b61b3", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=231b61b3", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3437,16 +3378,6 @@ var SharedIoPort = class {
   }
   cache_put_meta(key, body) {
     return localStore().cache_put_meta(key, body);
-  }
-  // Write intents (cas-write-path.md §5.8): pass-through; the transaction runs in the Rust worker.
-  intent_list() {
-    return localStore().intent_list();
-  }
-  intent_pending_pack() {
-    return localStore().intent_pending_pack();
-  }
-  intent_commit(txn) {
-    return localStore().intent_commit(txn);
   }
   async dispatch_event(eventName, detail) {
     dispatchAppEvent(eventName, detail);
@@ -4357,10 +4288,7 @@ var sqliteStore = {
   cache_get_wma: (key) => _injected ? _injected.cache_get_wma(key) : op("getWma", { key }),
   cache_put_wma: (key, body) => _injected ? _injected.cache_put_wma(key, body) : op("putWma", { key, body }),
   cache_list_notifications: () => _injected ? _injected.cache_list_notifications() : op("listNotifications", {}),
-  cache_put_notification: (n) => _injected ? _injected.cache_put_notification(n) : op("putNotification", { body: n }),
-  intent_list: () => _injected ? _injected.intent_list() : op("intentList", {}),
-  intent_pending_pack: () => _injected ? _injected.intent_pending_pack() : op("intentPendingPack", {}),
-  intent_commit: (txn) => _injected ? _injected.intent_commit(txn) : op("intentCommit", { body: txn })
+  cache_put_notification: (n) => _injected ? _injected.cache_put_notification(n) : op("putNotification", { body: n })
 };
 function sqlCountEntities2() {
   return _injected ? _injected.count_entities() : op("countEntities", {});
@@ -4683,7 +4611,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.92 (837a09d7)";
+var APP_VERSION = "v0.4.91 (231b61b3)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4933,7 +4861,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
-  "/shipments": () => import("./shipments-22WXT3Y4.js"),
+  "/shipments": () => import("./shipments-FCZAYCDA.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4953,7 +4881,7 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-M2JF2LPJ.js"),
+  "/manager/pipeline": () => import("./pipeline-FVPGQXZO.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
   "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
@@ -6706,7 +6634,6 @@ function bootApp(user, db) {
   initWmaListener();
   initConflictModal();
   initMergeToast();
-  bindIntentNotices();
   const defaultRoute = homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);
   if (window.__vdg_wasm?.vdg_version) {

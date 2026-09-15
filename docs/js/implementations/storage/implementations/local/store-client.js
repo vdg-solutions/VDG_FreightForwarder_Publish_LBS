@@ -289,9 +289,6 @@ export const sqliteStore = {
   cache_put_wma: (key, body)   => (_injected ? _injected.cache_put_wma(key, body)  : op('putWma',     { key, body })),
   cache_list_notifications: () => (_injected ? _injected.cache_list_notifications() : op('listNotifications', {})),
   cache_put_notification: (n)  => (_injected ? _injected.cache_put_notification(n) : op('putNotification', { body: n })),
-  intent_list: ()              => (_injected ? _injected.intent_list()            : op('intentList', {})),
-  intent_pending_pack: ()      => (_injected ? _injected.intent_pending_pack()    : op('intentPendingPack', {})),
-  intent_commit: (txn)         => (_injected ? _injected.intent_commit(txn)       : op('intentCommit', { body: txn })),
 };
 
 // auth-gate cold-boot entity count (was sqlSelectValue('SELECT count(*) …')). Rust owns the query.

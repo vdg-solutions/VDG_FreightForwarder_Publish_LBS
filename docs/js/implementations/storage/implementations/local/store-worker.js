@@ -6,9 +6,9 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: 837a09d7 is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: 231b61b3 is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=837a09d7', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=231b61b3', import.meta.url).href;
 
 // durability_verdict.rs contract — verdict kinds sqlite_init returns. Named here only to relay
 // and log; the classification itself happened in Rust.
@@ -70,8 +70,7 @@ function runOp(m) {
           store_get_meta, store_put_meta, store_delete_meta,
           store_get_wma, store_put_wma,
           store_list_notifications, store_put_notification,
-          store_count_entities,
-          store_intent_list, store_intent_pending_pack, store_intent_commit } = _mod;
+          store_count_entities } = _mod;
   switch (m.op) {
     case 'init':              return _durability;
     case 'get':               return store_get(m.kind, m.id);
@@ -86,9 +85,6 @@ function runOp(m) {
     case 'listNotifications': return store_list_notifications();
     case 'putNotification':   store_put_notification(m.body); return null;
     case 'countEntities':     return store_count_entities();
-    case 'intentList':        return store_intent_list();
-    case 'intentPendingPack': return store_intent_pending_pack();
-    case 'intentCommit':      store_intent_commit(m.body); return null;
     default: throw new Error('unknown sqlite op: ' + m.op);
   }
 }
