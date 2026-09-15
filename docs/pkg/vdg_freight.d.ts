@@ -1251,6 +1251,12 @@ export function store_get_meta(key: string): any;
 
 export function store_get_wma(key: string): any;
 
+export function store_intent_commit(txn: any): void;
+
+export function store_intent_list(): any;
+
+export function store_intent_pending_pack(): any;
+
 export function store_list(kind: string): any;
 
 export function store_list_notifications(): any;
@@ -1280,6 +1286,16 @@ export function sync_due_soon_mark(req: any): Promise<any>;
 export function sync_due_soon_rows(req: any): Promise<any>;
 
 export function sync_error_capture(req: any): Promise<any>;
+
+/**
+ * "Cần xử lý" → discard: the local store already holds the server's record, nothing else changes.
+ */
+export function sync_intent_discard(req: any): Promise<any>;
+
+/**
+ * "Cần xử lý" → re-apply: a new conditional write on the fresh record, only by explicit click.
+ */
+export function sync_intent_reapply(req: any): Promise<any>;
 
 export function sync_job_event(req: any): any;
 
@@ -1677,6 +1693,9 @@ export interface InitOutput {
     readonly store_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly store_get_meta: (a: number, b: number, c: number) => void;
     readonly store_get_wma: (a: number, b: number, c: number) => void;
+    readonly store_intent_commit: (a: number, b: number) => void;
+    readonly store_intent_list: (a: number) => void;
+    readonly store_intent_pending_pack: (a: number) => void;
     readonly store_list: (a: number, b: number, c: number) => void;
     readonly store_list_notifications: (a: number) => void;
     readonly store_put: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
@@ -1692,6 +1711,8 @@ export interface InitOutput {
     readonly sync_due_soon_mark: (a: number) => number;
     readonly sync_due_soon_rows: (a: number) => number;
     readonly sync_error_capture: (a: number) => number;
+    readonly sync_intent_discard: (a: number) => number;
+    readonly sync_intent_reapply: (a: number) => number;
     readonly sync_job_event: (a: number, b: number) => void;
     readonly sync_user_audit_read: (a: number) => number;
     readonly sync_wma_dismiss: (a: number, b: number) => void;
@@ -1794,9 +1815,9 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
@@ -1811,9 +1832,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15735: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15748: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11722: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16940: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16953: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12431: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

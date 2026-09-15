@@ -32,6 +32,11 @@ export class SharedIoPort {
   cache_get_meta(key)       { return localStore().cache_get_meta(key); }
   cache_put_meta(key, body) { return localStore().cache_put_meta(key, body); }
 
+  // Write intents (cas-write-path.md §5.8): pass-through; the transaction runs in the Rust worker.
+  intent_list()             { return localStore().intent_list(); }
+  intent_pending_pack()     { return localStore().intent_pending_pack(); }
+  intent_commit(txn)        { return localStore().intent_commit(txn); }
+
   async dispatch_event(eventName, detail) {
     dispatchAppEvent(eventName, detail);
   }
