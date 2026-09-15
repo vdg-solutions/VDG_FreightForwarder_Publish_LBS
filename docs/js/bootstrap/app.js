@@ -192,11 +192,13 @@ import {
   ROLE_SALES_REP
 } from "./chunk-YR3VHEVJ.js";
 import {
-  bindShipmentVoidDelete
-} from "./chunk-WXY77IXQ.js";
+  bindIntentNotices,
+  bindShipmentVoidDelete,
+  openSyncAttentionModal
+} from "./chunk-IU46KE2S.js";
 import {
   bindFsmIngest
-} from "./chunk-HB7RC7RQ.js";
+} from "./chunk-4HAITEXH.js";
 import {
   bindActionGuard,
   can
@@ -288,7 +290,6 @@ import {
   bindWasmFormat,
   currentLocale,
   fmtDate,
-  fmtNumber,
   loadLocale,
   nowMs,
   t
@@ -629,7 +630,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 231b61b3">v0.4.91 (231b61b3)</span>
+        <span class="font-mono whitespace-nowrap" title="build 80b8d2fc">v0.4.94 (80b8d2fc)</span>
       </div>
     `;
   }
@@ -997,71 +998,6 @@ function decideChipAction({ state, user, online, lastError, authReconnect }) {
   return CHIP_ACTION.SYNC_NOW;
 }
 
-// output/web/js.tmp/implementations/ui/bootstrap/components/sync-attention-modal.js
-var REASON_CODE_TO_KEY = {
-  undecodable_content: "topbar.sync.attention.reason.undecodable_content",
-  permission_denied: "topbar.sync.attention.reason.permission_denied",
-  not_found: "topbar.sync.attention.reason.not_found",
-  validation_refused: "topbar.sync.attention.reason.validation_refused",
-  unsupported_kind: "topbar.sync.attention.reason.unsupported_kind",
-  other: "topbar.sync.attention.reason.other"
-};
-var REASON_FALLBACK_KEY = "topbar.sync.attention.reason.other";
-function reasonText(reasonCode) {
-  return t(REASON_CODE_TO_KEY[reasonCode] ?? REASON_FALLBACK_KEY);
-}
-function fmtWhen(ms) {
-  if (!ms) return "\u2014";
-  return new Date(ms).toLocaleString(currentLocale() === "vi" ? "vi-VN" : "en-US");
-}
-function itemRow(item) {
-  const label = item.record_label || `${item.collection} / ${item.record_id}`;
-  return `
-    <tr class="border-b border-slate-100">
-      <td class="px-3 py-2">
-        <div class="font-medium text-slate-800">${label}</div>
-        <div class="text-[11px] text-slate-400 font-mono">${item.collection} \xB7 ${item.record_id}</div>
-      </td>
-      <td class="px-3 py-2">${reasonText(item.reason_code)}</td>
-      <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${fmtWhen(item.last_seen_ms)}</td>
-      <td class="px-3 py-2 text-right font-mono">${fmtNumber(item.attempts)}</td>
-    </tr>`;
-}
-async function openSyncAttentionModal() {
-  let items = [];
-  try {
-    items = await window.__vdg_repo?.sync_attention_items?.() || [];
-  } catch (e) {
-    window.dispatchEvent(new CustomEvent("vdg:toast", {
-      detail: { type: "error", message: t("topbar.sync.attention.load_failed") }
-    }));
-    return;
-  }
-  const body = items.length ? `<table class="w-full text-left border-collapse text-xs">
-         <thead>
-           <tr class="bg-slate-50 text-slate-500 uppercase text-[10px]">
-             <th class="px-3 py-2">${t("topbar.sync.attention.col_record")}</th>
-             <th class="px-3 py-2">${t("topbar.sync.attention.col_reason")}</th>
-             <th class="px-3 py-2">${t("topbar.sync.attention.col_when")}</th>
-             <th class="px-3 py-2 text-right">${t("topbar.sync.attention.col_attempts")}</th>
-           </tr>
-         </thead>
-         <tbody>${items.map(itemRow).join("")}</tbody>
-       </table>` : `<div class="px-6 py-10 text-center text-slate-400 text-sm">${t("topbar.sync.attention.empty")}</div>`;
-  const dlg = document.createElement("dialog");
-  dlg.className = "rounded-xl shadow-2xl p-0 w-[640px] max-w-[95vw] bg-white backdrop:bg-black/40";
-  dlg.innerHTML = `
-    <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-      <div class="font-semibold text-slate-900 text-sm">${t("topbar.sync.attention.title")}</div>
-      <button class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500" onclick="this.closest('dialog').close()">\u2715</button>
-    </div>
-    <div class="max-h-[70vh] overflow-y-auto">${body}</div>
-  `;
-  document.body.appendChild(dlg);
-  dlg.addEventListener("close", () => dlg.remove());
-  dlg.showModal();
-}
-
 // output/web/js.tmp/implementations/ui/bootstrap/components/topbar-helpers.js
 import { html as html2 } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
 var BADGE_MAX = 99;
@@ -1229,14 +1165,14 @@ function createSyncHandlers(host) {
     onServerHealth: (e) => {
       if (e.detail?.unreachable) {
         host._serverBacklog = 0;
-        host._serverQuarantined = 0;
+        host._backupQuarantined = 0;
         host._mirrorBacklog = null;
         host.requestUpdate();
         return;
       }
       if (e.detail?.backlog_depth !== void 0) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
-      if (e.detail?.server_quarantined_depth !== void 0) {
-        host._serverQuarantined = Number(e.detail.server_quarantined_depth) || 0;
+      if (e.detail?.backup_quarantined_depth !== void 0) {
+        host._backupQuarantined = Number(e.detail.backup_quarantined_depth) || 0;
       }
       if (e.detail?.[MIRROR_BACKLOG_PROP] !== void 0) host._mirrorBacklog = e.detail[MIRROR_BACKLOG_PROP];
       if (e.detail?.provider) host._serverProvider = e.detail.provider;
@@ -1325,8 +1261,8 @@ var VdgTopbar = class extends LitElement2 {
     // outbox.rs's own decided, permanent refusal count
     _storeDurability: { type: Object, state: true },
     // durability_verdict.rs verdict; null until the store opens
-    _serverQuarantined: { type: Number, state: true }
-    // charterdb's mirror.quarantined_depth (CDB-DUR-09)
+    _backupQuarantined: { type: Number, state: true }
+    // mirror_quarantine_cache::len() (ADO #123) — same cache the attention dialog lists
   };
   createRenderRoot() {
     return this;
@@ -1363,7 +1299,7 @@ var VdgTopbar = class extends LitElement2 {
     this._storeDurability = window.__vdg_storeDurability ?? null;
     this._syncing = false;
     this._quarantinedCount = 0;
-    this._serverQuarantined = 0;
+    this._backupQuarantined = 0;
     this._onNav = (e) => {
       this.route = e.detail.route;
     };
@@ -1565,7 +1501,7 @@ var VdgTopbar = class extends LitElement2 {
     const now = Date.now();
     const syncFailed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).length > 0;
     const unreachable = !!window.__vdg_repo?.sync_server_unreachable?.();
-    const quarantinedTotal = this._quarantinedCount + this._serverQuarantined;
+    const quarantinedTotal = this._quarantinedCount + this._backupQuarantined;
     const state = computeChipState({
       pending: this._outboxCount,
       syncFailed,
@@ -2434,7 +2370,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.91 (231b61b3)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.94 (80b8d2fc)</div>
         </div>
       </div>
     </div>`;
@@ -3100,8 +3036,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=231b61b3", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=231b61b3", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=80b8d2fc", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=80b8d2fc", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3378,6 +3314,19 @@ var SharedIoPort = class {
   }
   cache_put_meta(key, body) {
     return localStore().cache_put_meta(key, body);
+  }
+  // Write intents (cas-write-path.md §5.8): pass-through; the transaction runs in the Rust worker.
+  intent_list() {
+    return localStore().intent_list();
+  }
+  intent_pending_pack() {
+    return localStore().intent_pending_pack();
+  }
+  intent_parked_list() {
+    return localStore().intent_parked_list();
+  }
+  intent_commit(txn) {
+    return localStore().intent_commit(txn);
   }
   async dispatch_event(eventName, detail) {
     dispatchAppEvent(eventName, detail);
@@ -4288,7 +4237,11 @@ var sqliteStore = {
   cache_get_wma: (key) => _injected ? _injected.cache_get_wma(key) : op("getWma", { key }),
   cache_put_wma: (key, body) => _injected ? _injected.cache_put_wma(key, body) : op("putWma", { key, body }),
   cache_list_notifications: () => _injected ? _injected.cache_list_notifications() : op("listNotifications", {}),
-  cache_put_notification: (n) => _injected ? _injected.cache_put_notification(n) : op("putNotification", { body: n })
+  cache_put_notification: (n) => _injected ? _injected.cache_put_notification(n) : op("putNotification", { body: n }),
+  intent_list: () => _injected ? _injected.intent_list() : op("intentList", {}),
+  intent_pending_pack: () => _injected ? _injected.intent_pending_pack() : op("intentPendingPack", {}),
+  intent_parked_list: () => _injected ? _injected.intent_parked_list() : op("intentParkedList", {}),
+  intent_commit: (txn) => _injected ? _injected.intent_commit(txn) : op("intentCommit", { body: txn })
 };
 function sqlCountEntities2() {
   return _injected ? _injected.count_entities() : op("countEntities", {});
@@ -4554,7 +4507,7 @@ function _showCheatsheet() {
   d.innerHTML = `
     <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
       <span class="font-semibold text-slate-900">Keyboard Shortcuts</span>
-      <button onclick="this.closest('dialog').close()"
+      <button type="button" data-dialog-close
               class="text-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-label="Close cheatsheet">\u2715</button>
     </div>
@@ -4570,6 +4523,9 @@ function _showCheatsheet() {
       <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">?</kbd> This cheatsheet</div>
       <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">Esc</kbd> Close panel</div>
     </div>`;
+  d.addEventListener("click", (ev) => {
+    if (ev.target.closest?.("[data-dialog-close]")) d.close();
+  });
   document.body.appendChild(d);
   d.showModal();
 }
@@ -4611,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.91 (231b61b3)";
+var APP_VERSION = "v0.4.94 (80b8d2fc)";
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
 var _impl12 = null;
@@ -4861,7 +4817,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
-  "/shipments": () => import("./shipments-FCZAYCDA.js"),
+  "/shipments": () => import("./shipments-T7XTIXTB.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4881,13 +4837,13 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-FVPGQXZO.js"),
+  "/manager/pipeline": () => import("./pipeline-M2JF2LPJ.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
   "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
   "/manager/finance/close-period": () => import("./close-period-NP2WWF4D.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-WD43MMQJ.js"),
-  "/manager/audit": () => import("./audit-U7TFO5DK.js"),
+  "/manager/audit": () => import("./audit-UTZVYHF3.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-UM7YNMAD.js"),
@@ -4925,7 +4881,7 @@ var VIEWS = {
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-NTRFSNTH.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-7XCCZYZC.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-MTG7YBW2.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-AY6YJ6YD.js"),
@@ -6579,7 +6535,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-Y65XPB45.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-X3EAV4HD.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6634,6 +6590,7 @@ function bootApp(user, db) {
   initWmaListener();
   initConflictModal();
   initMergeToast();
+  bindIntentNotices();
   const defaultRoute = homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);
   if (window.__vdg_wasm?.vdg_version) {

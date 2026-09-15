@@ -16,7 +16,10 @@ var GUARD_MESSAGE_KEYS = {
   ALREADY_IN_TARGET_STATE: "guard.already_in_target_state",
   INVALID_TRANSITION: "guard.invalid_transition",
   NOT_FOUND: "guard.not_found",
-  STORAGE: "guard.storage"
+  STORAGE: "guard.storage",
+  // cas-write-path.md §5.4: FsmIngest's write-intent submit refusals.
+  STALE_BASE: "save.error.stale_base",
+  SAVE_TOO_LARGE: "save.error.too_large"
 };
 function guardMessage(envelope) {
   if (envelope.code === "GUARD_VIOLATION") {

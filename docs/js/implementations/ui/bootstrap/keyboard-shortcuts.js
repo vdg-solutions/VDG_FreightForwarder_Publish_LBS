@@ -30,7 +30,7 @@ function _showCheatsheet() {
   d.innerHTML = `
     <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
       <span class="font-semibold text-slate-900">Keyboard Shortcuts</span>
-      <button onclick="this.closest('dialog').close()"
+      <button type="button" data-dialog-close
               class="text-slate-400 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-label="Close cheatsheet">✕</button>
     </div>
@@ -46,6 +46,8 @@ function _showCheatsheet() {
       <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">?</kbd> This cheatsheet</div>
       <div><kbd class="bg-slate-100 px-1.5 py-0.5 rounded">Esc</kbd> Close panel</div>
     </div>`;
+  // CSP's script-src-attr blocks an inline onclick on the deployed build (ADO #124).
+  d.addEventListener('click', (ev) => { if (ev.target.closest?.('[data-dialog-close]')) d.close(); });
   document.body.appendChild(d);
   d.showModal();
 }

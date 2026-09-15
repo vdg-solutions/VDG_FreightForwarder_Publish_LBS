@@ -300,11 +300,13 @@ async function render(root) {
     </div>`;
   const _onWasmError = (e) => {
     console.error("[audit] wasm-error:", e.detail);
-    root.querySelector("#grid-wrap").innerHTML = `
+    const wrap = root.querySelector("#grid-wrap");
+    wrap.innerHTML = `
       <div class="flex flex-col items-center gap-3 py-12 text-slate-400">
         <div class="text-sm">${t("audit.error.generic")}</div>
-        <button class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700" onclick="location.reload()">${t("retry")}</button>
+        <button type="button" data-action="retry" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">${t("retry")}</button>
       </div>`;
+    wrap.querySelector('[data-action="retry"]')?.addEventListener("click", () => location.reload());
   };
   const _onUnhandled = (e) => {
     console.error("[audit] unhandledrejection:", e.reason);

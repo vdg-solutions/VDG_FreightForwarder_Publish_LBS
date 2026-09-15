@@ -197,7 +197,7 @@ export async function render(root, ref) {
         </div>
         <div class="flex items-center gap-3">
           <a href="#/shipments" class="text-xs text-slate-500 hover:underline">← ${t('shipments')}</a>
-          <button onclick="window.print()"
+          <button type="button" data-action="print"
             class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded font-medium hover:bg-blue-700 transition no-print">
             ${t('print')} / PDF
           </button>
@@ -222,6 +222,9 @@ export async function render(root, ref) {
         body { background: white; }
       }
     </style>`;
+
+  // CSP's script-src-attr blocks an inline onclick on the deployed build (ADO #124).
+  root.querySelector('[data-action="print"]')?.addEventListener('click', () => window.print());
 
   const contentEl = root.querySelector('#budget-content');
 

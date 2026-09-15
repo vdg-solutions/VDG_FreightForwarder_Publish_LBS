@@ -35,7 +35,7 @@ export function jumpToUnbalancedEntry(entryId, legs) {
         <div class="font-semibold text-slate-900 text-sm">${t('ledger.entry_details_title')}</div>
         <div class="text-xs text-slate-500 font-mono mt-0.5">${entryId}</div>
       </div>
-      <button class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500" onclick="this.closest('dialog').close()">✕</button>
+      <button type="button" data-dialog-close class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center text-slate-500">✕</button>
     </div>
     <div class="px-6 py-4 text-xs">
       <table class="w-full text-left border-collapse">
@@ -61,6 +61,8 @@ export function jumpToUnbalancedEntry(entryId, legs) {
       </div>
     </div>
   `;
+  // CSP's script-src-attr blocks an inline onclick on the deployed build (ADO #124).
+  dlg.addEventListener('click', (ev) => { if (ev.target.closest?.('[data-dialog-close]')) dlg.close(); });
   document.body.appendChild(dlg);
   dlg.addEventListener('close', () => dlg.remove());
   dlg.showModal();

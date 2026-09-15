@@ -8,6 +8,7 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { CANCELLED_STATE, chooseShipmentAffordance, runShipmentAffordance } from '../../core_abstractions/ports/flows/shipment-void-delete.js';
 import { NEXT_EVENT, TRANSITION_LABEL } from './shipment-lifecycle-map.js';
 import { applyShipmentEvent } from '../../core_abstractions/ports/flows/fsm-ingest.js';
+import { TRANSITION_OUTCOME_EVENT } from './sync-attention-modal.js';
 
 const PANEL_WIDTH_PX     = 480;
 const SLIDE_DURATION_MS  = 250;
@@ -49,16 +50,24 @@ class VdgDetailPanel extends LitElement {
         if (this.activeTab === 'History') this._loadTimeline();
       }
     };
+    // The record's state once the server answered a transition (Rust's verdict, not a guess).
+    this._onTransitionOutcome = (e) => {
+      const { shipment_ref: ref, state } = e.detail || {};
+      if (!this.shipment || ref !== this.shipment.ref || !state) return;
+      this.liveState = state; this.shipment = { ...this.shipment, state }; this.timeline = null;
+    };
   }
 
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener('vdg:wasm-ready', this._onWasmReady);
+    window.addEventListener(TRANSITION_OUTCOME_EVENT, this._onTransitionOutcome);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('vdg:wasm-ready', this._onWasmReady);
+    window.removeEventListener(TRANSITION_OUTCOME_EVENT, this._onTransitionOutcome);
     this._removeEscListener();
   }
 
@@ -121,10 +130,10 @@ class VdgDetailPanel extends LitElement {
     }
   }
 
-  // ADO #120: one call. `applyShipmentEvent` re-reads the record inside FsmIngest, computes the
+  // ADO #120: one call. `applyShipmentEvent` re-reads the record inside FsmIngest and computes the
   // hop off THAT (never off `this.liveState`, which can be stale the moment a second device or
-  // tab already moved the job), writes it, and only then answers — so a refusal here means the
-  // write genuinely did not happen, never a phantom "applied" the record disagrees with.
+  // tab already moved the job). A success is QUEUED, not applied: the server's answer arrives as
+  // `vdg:transition-outcome` (accept-0492 D2), which says applied or hands back the real state.
   async _applyTransition() {
     if (!this.wasmReady) { this.transitionError = t('shipment.detail.wasm_not_available'); return; }
     if (!navigator.onLine) { this.transitionError = t('shipment.detail.offline_no_transition'); return; }
@@ -142,7 +151,7 @@ class VdgDetailPanel extends LitElement {
         return;
       }
       this.liveState = result.state; this.shipment = { ...this.shipment, state: result.state }; this.timeline = null;
-      this._toast(t('shipment.detail.transition_applied', { from: t('shipment.status.' + prevState), to: t('shipment.status.' + result.state) }));
+      this._toast(t('shipment.detail.transition_queued', { from: t('shipment.status.' + prevState), to: t('shipment.status.' + result.state) }));
     } catch (err) {
       if (this._requestId !== myId) return;
       this.transitionError = t('shipment.detail.transition_failed', { error: err.message });

@@ -355,6 +355,11 @@ export class WasmEntityRepo {
      */
     sync_skipped_kinds(): any;
     /**
+     * "Cần xử lý" → dismiss a queued change this device could not read. It was never sent, so
+     * nothing on the server moves; the row is simply gone from the list and the count.
+     */
+    sync_unreadable_intent_discard(intent_id: string): Promise<any>;
+    /**
      * Mount point for `window.__vdg_user_repo` (repo-init-steps.js, deferred init).
      */
     userRepo(): UserRepo;
@@ -1158,8 +1163,14 @@ export function sales_write_side_records(req: any): Promise<any>;
 export function select(sql: string, params_json: string): string;
 
 /**
- * Periodic poll: resolves the `vdg:server-health` detail, or `null` when this tick got no
- * answer. Never rejects.
+ * Periodic poll: resolves the `vdg:server-health` detail. Never rejects.
+ *
+ * ADO #123: rides the SAME tick as the `/health` poll to also refresh `mirror_quarantine_cache`
+ * (`GET /mirrors/quarantine`) and carry its fresh length on `BACKUP_QUARANTINED_PROP` — one
+ * number the chip and the "needs attention" dialog now both trace back to. The detail is never
+ * `null` any more even when `/health` itself answered nothing: the two endpoints fail
+ * independently, and a dead `/health` must not also hide a `/mirrors/quarantine` that answered
+ * fine.
  */
 export function server_health_poll(): Promise<any>;
 
@@ -1251,6 +1262,14 @@ export function store_get_meta(key: string): any;
 
 export function store_get_wma(key: string): any;
 
+export function store_intent_commit(txn: any): void;
+
+export function store_intent_list(): any;
+
+export function store_intent_parked_list(): any;
+
+export function store_intent_pending_pack(): any;
+
 export function store_list(kind: string): any;
 
 export function store_list_notifications(): any;
@@ -1280,6 +1299,16 @@ export function sync_due_soon_mark(req: any): Promise<any>;
 export function sync_due_soon_rows(req: any): Promise<any>;
 
 export function sync_error_capture(req: any): Promise<any>;
+
+/**
+ * "Cần xử lý" → discard: the local store already holds the server's record, nothing else changes.
+ */
+export function sync_intent_discard(req: any): Promise<any>;
+
+/**
+ * "Cần xử lý" → re-apply: a new conditional write on the fresh record, only by explicit click.
+ */
+export function sync_intent_reapply(req: any): Promise<any>;
 
 export function sync_job_event(req: any): any;
 
@@ -1677,6 +1706,10 @@ export interface InitOutput {
     readonly store_get: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly store_get_meta: (a: number, b: number, c: number) => void;
     readonly store_get_wma: (a: number, b: number, c: number) => void;
+    readonly store_intent_commit: (a: number, b: number) => void;
+    readonly store_intent_list: (a: number) => void;
+    readonly store_intent_parked_list: (a: number) => void;
+    readonly store_intent_pending_pack: (a: number) => void;
     readonly store_list: (a: number, b: number, c: number) => void;
     readonly store_list_notifications: (a: number) => void;
     readonly store_put: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
@@ -1692,6 +1725,8 @@ export interface InitOutput {
     readonly sync_due_soon_mark: (a: number) => number;
     readonly sync_due_soon_rows: (a: number) => number;
     readonly sync_error_capture: (a: number) => number;
+    readonly sync_intent_discard: (a: number) => number;
+    readonly sync_intent_reapply: (a: number) => number;
     readonly sync_job_event: (a: number, b: number) => void;
     readonly sync_user_audit_read: (a: number) => number;
     readonly sync_wma_dismiss: (a: number, b: number) => void;
@@ -1785,6 +1820,7 @@ export interface InitOutput {
     readonly wasmentityrepo_sync_server_unreachable: (a: number) => number;
     readonly wasmentityrepo_sync_skipped_count: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_sync_skipped_kinds: (a: number) => number;
+    readonly wasmentityrepo_sync_unreadable_intent_discard: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_ensure_seeded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_users_get: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_users_list: (a: number) => number;
@@ -1794,13 +1830,13 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
-    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
     readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
+    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1811,9 +1847,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_15735: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_15748: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_11722: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_17021: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_17034: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12512: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

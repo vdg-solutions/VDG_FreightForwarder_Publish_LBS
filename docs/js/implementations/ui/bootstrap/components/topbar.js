@@ -59,7 +59,7 @@ class VdgTopbar extends LitElement {
     _syncing:                  { type: Boolean, state: true }, // vdg:sync-started (charter_event_bridge.rs)
     _quarantinedCount:         { type: Number,  state: true }, // outbox.rs's own decided, permanent refusal count
     _storeDurability:          { type: Object,  state: true }, // durability_verdict.rs verdict; null until the store opens
-    _serverQuarantined:        { type: Number,  state: true }, // charterdb's mirror.quarantined_depth (CDB-DUR-09)
+    _backupQuarantined:        { type: Number,  state: true }, // mirror_quarantine_cache::len() (ADO #123) — same cache the attention dialog lists
   };
 
   createRenderRoot() { return this; }
@@ -78,7 +78,7 @@ class VdgTopbar extends LitElement {
     this._serverBacklog = 0; this._mirrorBacklog = null; this._serverProvider = null;
     this._storeDurability = window.__vdg_storeDurability ?? null; // store-client.js keeps the last verdict here
     this._syncing = false;
-    this._quarantinedCount = 0; this._serverQuarantined = 0;
+    this._quarantinedCount = 0; this._backupQuarantined = 0;
 
     this._onNav           = (e) => { this.route = e.detail.route; };
     // Sync-pipeline listeners (vdg:sync-started/complete/error, vdg:delta-synced,
@@ -228,10 +228,11 @@ class VdgTopbar extends LitElement {
     // total-outage-specific fact than `syncFailed`, which also fires on one master kind's
     // bootstrap missing while the rest of the app still works.
     const unreachable = !!window.__vdg_repo?.sync_server_unreachable?.();
-    // Two decided refusals, one fact for the reader: this device's outbox parked a row
-    // (outbox.rs::quarantine_group), or CharterDB parked one on its way to Drive
-    // (mirror.quarantined_depth). Either one means data is stopped and no retry is coming.
-    const quarantinedTotal = this._quarantinedCount + this._serverQuarantined;
+    // Two decided facts, one number for the reader: this device's outbox parked a row
+    // (outbox.rs::quarantine_group, this._quarantinedCount), or CharterDB parked one on its way
+    // to Drive (mirror_quarantine_cache::len(), ADO #123 — the SAME cache the attention dialog
+    // lists rows from, so this can never show a count the dialog disagrees with).
+    const quarantinedTotal = this._quarantinedCount + this._backupQuarantined;
     const state = computeChipState({
       pending: this._outboxCount, syncFailed, unreachable, quarantined: quarantinedTotal > 0,
       backoff429: this._backoff429, offline: !this._online, signedOut: !user,

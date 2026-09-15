@@ -175,7 +175,7 @@ async function render(root, ref) {
         </div>
         <div class="flex items-center gap-3">
           <a href="#/shipments" class="text-xs text-slate-500 hover:underline">\u2190 ${t("shipments")}</a>
-          <button onclick="window.print()"
+          <button type="button" data-action="print"
             class="px-4 py-1.5 bg-blue-600 text-white text-xs rounded font-medium hover:bg-blue-700 transition no-print">
             ${t("print")} / PDF
           </button>
@@ -200,6 +200,7 @@ async function render(root, ref) {
         body { background: white; }
       }
     </style>`;
+  root.querySelector('[data-action="print"]')?.addEventListener("click", () => window.print());
   const contentEl = root.querySelector("#budget-content");
   const [shipment, lines] = await Promise.all([loadShipment(ref), loadLines(ref)]);
   if (!shipment) {

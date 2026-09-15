@@ -77,7 +77,7 @@ export function createSyncHandlers(host) {
         // Same rule, same reason: a probe that never landed makes the last count unknowable, not
         // zero. Holding a stale 1 here would paint "Cần xử lý" through an outage that says nothing
         // about whether anything is actually parked.
-        host._serverQuarantined = 0;
+        host._backupQuarantined = 0;
         // Same rule again for the backup queue's verdict: a poll that never landed makes the last
         // verdict unknowable. Dropping it is what stops a "backup stopped moving" warning from
         // outliving the outage that produced it.
@@ -86,10 +86,12 @@ export function createSyncHandlers(host) {
         return;
       }
       if (e.detail?.backlog_depth !== undefined) host._serverBacklog = Number(e.detail.backlog_depth) || 0;
-      // Guarded on !== undefined, not truthiness: backend.js's HEADER branch dispatches this same
-      // event carrying backlog alone, and must not be read as "the server says zero quarantined".
-      if (e.detail?.server_quarantined_depth !== undefined) {
-        host._serverQuarantined = Number(e.detail.server_quarantined_depth) || 0;
+      // ADO #123: `backup_quarantined_depth` is `mirror_quarantine_cache::len()` — the SAME cache
+      // `sync_attention_items()` lists rows from (`wasm_server_api::server_health_poll` refreshes
+      // both in one tick), so the chip's number and the dialog's list can never disagree. Guarded
+      // on !== undefined, not truthiness, same reason as backlog_depth above.
+      if (e.detail?.backup_quarantined_depth !== undefined) {
+        host._backupQuarantined = Number(e.detail.backup_quarantined_depth) || 0;
       }
       // mirror_backlog_verdict.rs's own verdict on the secondary backup queue, held as-is for the
       // chip to render. The draining/stale/cannot-tell classification already happened in Rust.
