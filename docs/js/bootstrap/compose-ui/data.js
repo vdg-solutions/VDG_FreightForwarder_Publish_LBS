@@ -23,10 +23,10 @@ import { bindSalesData } from './data-sales.js';
 const REASON_PERIOD_LOCKED    = 'period-locked';
 const REASON_LICENSE_READONLY = 'license-readonly';
 
-// cas-write-path.md §5.3: the base a save is conditional on is the token from the READ that filled
-// the form, not whatever the cache holds when Save fires — a fresh token off stale content would
-// 200 over a colleague's edit instead of 412ing. Keyed by ref, opaque: this layer never reads a
-// token's content, only carries it from getShipment to the matching putShipment.
+// cas-write-path.md §5.3: CharterDB is the only thing that knows what version a record is at. Each
+// read hands a token out with the record; this map carries it, unexamined, from getShipment to the
+// matching putShipment. Keyed by ref. Nothing here mints one, and wasm refuses a save that carries
+// none rather than reading one at save time — the v0.4.96 silent lost update.
 const _formBases = new Map();
 
 /// The reason code, in the reader's language. Rust decides; the words are ours.
@@ -68,6 +68,15 @@ function applyPredicate(rows, predicate) {
 }
 
 export function composeData(wasm) {
+  /// Read `ref` and keep the tokens that read handed out. Called after a save too: the token a save
+  /// spends goes with it, and a form left open on the screen has to stand on a base CharterDB just
+  /// issued rather than on nothing.
+  const rememberBases = async (ref) => {
+    const reply = await wasm.data_get_shipment({ shipment_ref: ref });
+    if (reply.ok) _formBases.set(ref, reply.bases || {});
+    return reply;
+  };
+
   const joinLoaded = async (_repo, envelopes) =>
     stampRows(await wasm.data_join_loaded({ envelopes: envelopes || [] }));
 
@@ -91,8 +100,10 @@ export function composeData(wasm) {
         created_by:       opts.createdBy ?? null,
         fresh_ref:        opts.freshRef ?? false,
       }));
-      // This token is spent — a later save on the same ref must read again, not reuse it.
+      // This token is spent with the save. Read again so the screen — which stays on the form —
+      // carries a base for its next Lưu, instead of one this layer worked out for itself.
       _formBases.delete(ref);
+      await rememberBases(ref);
       return { envelope: reply.envelope, revenue: reply.revenue };
     },
     putEnvelope: async (_repo, ref, shipmentLike) => {
@@ -113,11 +124,10 @@ export function composeData(wasm) {
       throwIfRefused(await wasm.data_delete_shipment({ shipment_ref: ref }));
     },
     getShipment: async (_repo, ref) => {
-      const reply = await wasm.data_get_shipment({ shipment_ref: ref });
+      // Remembers the read's base tokens for the save that fills this form — replaces whatever
+      // this ref held before (§5.3: the base is the token of the read the content came from).
+      const reply = await rememberBases(ref);
       if (!reply.ok) throw new Error(reply.error || 'the read failed');
-      // Remember the read's base tokens for the save that fills this form — replaces whatever
-      // this ref held before (§5.3: the base is the token of the read the form content came from).
-      _formBases.set(ref, reply.bases || {});
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
     // Narrow the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a

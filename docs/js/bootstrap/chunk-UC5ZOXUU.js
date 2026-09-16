@@ -20,7 +20,8 @@ var GUARD_MESSAGE_KEYS = {
   // cas-write-path.md §5.4: FsmIngest's write-intent submit refusals.
   STALE_BASE: "save.error.stale_base",
   SAVE_TOO_LARGE: "save.error.too_large",
-  UNCONFIRMED_BASE: "save.error.unconfirmed_base"
+  UNCONFIRMED_BASE: "save.error.unconfirmed_base",
+  BASE_NOT_CARRIED: "save.error.base_not_carried"
 };
 function guardMessage(envelope) {
   if (envelope.code === "GUARD_VIOLATION") {

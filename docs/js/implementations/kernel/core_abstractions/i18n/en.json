@@ -639,6 +639,7 @@
   "save.error.stale_base": "The record was just updated — reopen it and try again",
   "save.error.too_large": "This save is too large (over 100 operations) — split it up",
   "save.error.unconfirmed_base": "This device is still waiting for the server to confirm this record — wait for sync to finish, then save again",
+  "save.error.base_not_carried": "This screen no longer knows which version of the record it is editing — reopen it, then save again",
   "fx.source.sbv": "SBV",
   "fx.source.vcb": "Vietcombank",
   "fx.source.manual": "Manual",
