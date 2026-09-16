@@ -6,8 +6,15 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { resolveSalesRepLabel } from '../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
 import { SHIPMENT_MAIN_PATH, NEXT_ON_PATH } from '../../../kernel/core_abstractions/util/shipment-phases.js';
+import { resolveMode, modeFieldCode, modeLabelKey, MODE_SEA, MODE_AIR, MODE_STATUS_UNSET }
+  from '../../../kernel/core_abstractions/ports/shipment-mode.js';
 
 const KANBAN_STATES           = SHIPMENT_MAIN_PATH;
+const SHIPMENT_MODE_LABEL_PREFIX = 'shipment.mode.';
+// Tone per mode; anything the vocabulary cannot read wears the neutral one rather than borrowing
+// a mode's colour.
+const MODE_BADGE_TONE = { [MODE_SEA]: 'bg-emerald-100 text-emerald-700', [MODE_AIR]: 'bg-blue-100 text-blue-700' };
+const MODE_BADGE_UNREAD_TONE = 'bg-slate-100 text-slate-600';
 const KANBAN_COLUMN_WIDTH_PX  = 280;
 const TOUCH_MODE_BREAKPOINT   = 768; // F-14-16: touch at mobile widths
 const FALLBACK_BORDER_COLOR   = 'border-slate-300';
@@ -192,7 +199,9 @@ class VdgKanbanBoard extends LitElement {
     const currentUser = { email: currentUserEmail() };
     const sales     = resolveSalesRepLabel(s.sales_rep || s.SalesRep || '', currentUser, t);
     const margin    = s.margin_pct   ?? null;
-    const isAir     = s.mode === 'air'; // data compare, not UI text — off-template so detector-blind
+    // ADO #122: the badge used to be a boolean — air, or else SEA — so a road job wore a sea
+    // badge. It says what the record says, and says so when it cannot read it.
+    const modeRes   = resolveMode(s.mode);
     const salesCls  = this._colorMap.get((sales || '').trim().toLowerCase()) || FALLBACK_BORDER_COLOR;
     const pendingCls= this._pending.has(id) ? 'opacity-70 animate-pulse' : '';
     const selCls    = this._selected.has(id) ? 'ring-2 ring-blue-400' : '';
@@ -217,10 +226,9 @@ class VdgKanbanBoard extends LitElement {
             ${t('kanban.card.margin')} ${margin.toFixed(1)}%
           </div>` : ''}
         ${sales ? html`<div class="text-[10px] text-slate-400 mt-0.5">${sales}</div>` : ''}
-        ${this.mode === 'All' && s.mode ? html`
-          <span class="text-[9px] font-bold px-1 rounded mt-1 inline-block ${isAir
-            ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}">
-            ${isAir ? t('shipment.mode.air') : t('shipment.mode.sea')}
+        ${this.mode === 'All' && modeRes.status !== MODE_STATUS_UNSET ? html`
+          <span class="text-[9px] font-bold px-1 rounded mt-1 inline-block ${MODE_BADGE_TONE[modeFieldCode(modeRes)] || MODE_BADGE_UNREAD_TONE}">
+            ${t(modeLabelKey(modeRes, SHIPMENT_MODE_LABEL_PREFIX))}
           </span>` : ''}
         ${this._touchMode && (VALID_NEXT[s.state || s.State] || []).length ? html`
           <button class="mt-2 w-full text-[10px] text-blue-600 bg-blue-50 rounded py-1 text-center"

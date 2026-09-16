@@ -5,9 +5,6 @@ import {
   clearRateCache
 } from "./chunk-DUF7EQWG.js";
 import {
-  isViewSuperseded
-} from "./chunk-2PLULDG2.js";
-import {
   readSettings
 } from "./chunk-IIUQ3SOM.js";
 import {
@@ -21,6 +18,9 @@ import {
   renderMasterLoadRetryStatus,
   safeMasterLoad
 } from "./chunk-V5A2B6CO.js";
+import {
+  isViewSuperseded
+} from "./chunk-2PLULDG2.js";
 import "./chunk-JAZY43GR.js";
 import {
   currentLocale,

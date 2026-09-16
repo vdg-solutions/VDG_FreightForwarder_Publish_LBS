@@ -1,6 +1,7 @@
 // sales-new.js — route entry; thin wrapper over 4-section shipment form (F-15-27)
 
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
+import { guardMessage } from '../../../kernel/core_abstractions/util/guard-messages.js';
 import { navigate } from '../router.js';
 import { currentAccount, currentRoles } from '../../core_abstractions/ports/auth/session-roles.js';
 import { currentUserEmail } from '../../core_abstractions/ports/governance/route-guard.js';
@@ -22,13 +23,16 @@ import {
 import { readSettings, DEFAULT_CURRENCY_FIELD } from '../../core_abstractions/ports/governance/workspace-settings.js';
 import { mountPhaseTimeline, DRAFT_TIMELINE_REF } from './sales-new/phase-timeline-mount.js';
 
-// wasm has no locale, so a use-case that needs the reader's words hands back {key, ...params} as
-// JSON in `error` instead of a baked sentence (F-47-04) — same convention detail-panel.js uses
-// for FSM guard replies. A plain-text error (or anything that isn't that envelope) falls through.
+// wasm has no locale, so a refusal crosses as JSON in `error` and the words are chosen here. TWO
+// envelope dialects reach this one catch and both have to be read: {key, ...params} (F-47-04, the
+// use-cases) and {code, message} (ErrorEnvelope, the write door — guard-messages.js owns its
+// table). Only the first was handled, so a refused save put the raw envelope on screen:
+// `Error: {"code":"STALE_BASE","message":"shipment/EX-…"}`, measured on PROD v0.4.95.
 function saveErrorText(err) {
   try {
     const envelope = JSON.parse(err.message);
     if (envelope && envelope.key) return t(envelope.key, envelope);
+    if (envelope && envelope.code) return guardMessage(envelope);
   } catch { /* not a JSON envelope — fall through to the raw message */ }
   return `Error: ${err.message}`;
 }

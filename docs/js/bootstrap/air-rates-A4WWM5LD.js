@@ -5,9 +5,6 @@ import {
   mountDateHints
 } from "./chunk-OXNK6IJ2.js";
 import {
-  isViewSuperseded
-} from "./chunk-2PLULDG2.js";
-import {
   SECOND_EYES_FIELD,
   readSettings
 } from "./chunk-IIUQ3SOM.js";
@@ -29,6 +26,9 @@ import {
   listMasters,
   saveMaster
 } from "./chunk-XLNZASZM.js";
+import {
+  isViewSuperseded
+} from "./chunk-2PLULDG2.js";
 import "./chunk-JAZY43GR.js";
 import {
   showConfirm

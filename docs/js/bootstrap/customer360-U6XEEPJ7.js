@@ -12,6 +12,10 @@ import {
   customer360Inputs
 } from "./chunk-L63J7S6F.js";
 import {
+  modeFieldCode,
+  resolveMode
+} from "./chunk-VFGXS6HR.js";
+import {
   listShipments
 } from "./chunk-LYWSUR2S.js";
 import {
@@ -248,7 +252,7 @@ function renderMultiModal(content, custShipments) {
     if (!drillMode) return;
     const drillList = content.querySelector("#c360-drill-list");
     if (!drillList) return;
-    const filtered = custShipments.filter((s) => drillMode === "air" ? s.mode === "air" : (s.mode || "sea") !== "air");
+    const filtered = custShipments.filter((s) => modeFieldCode(resolveMode(s.mode)) === drillMode);
     drillList.innerHTML = filtered.map((s) => `<div class="text-xs text-slate-700 py-1 border-b border-slate-100">${s.shipment_ref || s.id} \xB7 ${s.pol || s.airport_origin || "?"}\u2192${s.pod || s.airport_dest || "?"} \xB7 ${s.state || "\u2014"}</div>`).join("") || `<div class="text-xs text-slate-400">${t("c360.no_shipments")}</div>`;
   });
 }

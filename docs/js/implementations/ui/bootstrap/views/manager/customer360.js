@@ -6,6 +6,7 @@ import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { listShipments } from '../../../core_abstractions/ports/data/shipment-repo.js';
 import { customer360Inputs, appendCustomerNote }
   from '../../../core_abstractions/ports/data/report-reads.js';
+import { resolveMode, modeFieldCode } from '../../../../kernel/core_abstractions/ports/shipment-mode.js';
 
 const CUSTOMER360_RE   = /^\/manager\/customers\/([^/]+)$/;
 // vdg:entity-changed topics this screen repaints on — not collections it names to read them.
@@ -253,7 +254,9 @@ function renderMultiModal(content, custShipments) {
     if (!drillMode) return;
     const drillList = content.querySelector('#c360-drill-list');
     if (!drillList) return;
-    const filtered = custShipments.filter((s) => drillMode === 'air' ? s.mode === 'air' : (s.mode || 'sea') !== 'air');
+    // ADO #122: the sea drill was "not air" and swallowed every other mode, including a record
+    // with no mode at all. Each drill holds its own mode.
+    const filtered = custShipments.filter((s) => modeFieldCode(resolveMode(s.mode)) === drillMode);
     drillList.innerHTML = filtered.map((s) => `<div class="text-xs text-slate-700 py-1 border-b border-slate-100">${s.shipment_ref || s.id} · ${(s.pol || s.airport_origin || '?')}→${(s.pod || s.airport_dest || '?')} · ${s.state || '—'}</div>`).join('') || `<div class="text-xs text-slate-400">${t('c360.no_shipments')}</div>`;
   });
 }

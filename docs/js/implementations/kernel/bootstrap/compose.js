@@ -13,9 +13,10 @@ import { bindVisibility } from '../core_abstractions/ports/visibility.js';
 import { bindBase64 } from '../core_abstractions/ports/base64.js';
 import { bindWasmFormat } from '../core_abstractions/ports/wasm-format.js';
 import { bindGrid } from '../core_abstractions/ports/grid.js';
+import { bindShipmentMode } from '../core_abstractions/ports/shipment-mode.js';
 
 import { browserClock, browserTimer, consoleLog, localStorageKv, fetchHttp, windowEvents,
-  documentVisibility, base64Codec, wasmFormatter, agGridHost } from '../implementations/browser-platform.js';
+  documentVisibility, base64Codec, wasmFormatter, agGridHost, wasmShipmentMode } from '../implementations/browser-platform.js';
 
 bindClock(browserClock);
 bindTimer(browserTimer);
@@ -27,3 +28,4 @@ bindVisibility(documentVisibility);
 bindBase64(base64Codec);
 bindWasmFormat(wasmFormatter);
 bindGrid(agGridHost);
+bindShipmentMode(wasmShipmentMode);

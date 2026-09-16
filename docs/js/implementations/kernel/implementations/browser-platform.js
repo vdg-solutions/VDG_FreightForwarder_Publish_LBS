@@ -2,6 +2,7 @@
 // localStorage, fetch and the window event bus. Bound once by kernel/bootstrap/compose.js.
 
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../core_abstractions/util/safe-await.js';
+import { MODE_STATUS_UNREAD } from '../core_abstractions/ports/shipment-mode.js';
 
 export const browserClock = {
   nowMs:    () => Date.now(),
@@ -64,6 +65,21 @@ export const base64Codec = {
 export const wasmFormatter = {
   dateDisplay:     (iso) => (typeof window.fmt_date_display === 'function' ? window.fmt_date_display(iso) : null),
   datePatternHint: ()    => (typeof window.fmt_date_pattern_hint === 'function' ? window.fmt_date_pattern_hint() : null),
+};
+
+// The transport-mode vocabulary Rust owns (js_bridge_sales_form.rs). With the export absent the
+// answer is "cannot read it" carrying the value untouched — the one thing this must never do is
+// hand back a mode nobody stored, which is the whole of ADO #122.
+export const wasmShipmentMode = {
+  resolveMode: (stored) => {
+    const mod = window.__vdg_wasm;
+    if (typeof mod?.shipment_mode_resolve !== 'function') {
+      console.warn('[shipment-mode] wasm export missing — mode left unread'); // DEV
+      return { status: MODE_STATUS_UNREAD, code: stored || '' };
+    }
+    return mod.shipment_mode_resolve(stored || '');
+  },
+  modeCodes: () => window.__vdg_wasm?.shipment_mode_codes?.() || [],
 };
 
 // ag-grid-community 31.x ships as a global script, and 31.x still answers to both the modern

@@ -81,10 +81,17 @@ export function shipmentToDraft(shipment, ce) {
     shipper_address:   s.shipper_address    || '',
     consignee:    s.consignee             || '',
     consignee_address: s.consignee_address  || '',
-    // Air header block — not read at all before this feature (a pre-existing gap: mode,
-    // dim_l/w/h_cm, uld_type, flight_no, chargeable_kg and the airport fields have the same hole
-    // and stay unmapped here). Fixed for exactly the fields this feature adds/renames, since an
-    // edit that dropped them would make the new quantity/weight unit pickers look broken.
+    // ADO #122: the mode WAS the gap this comment used to admit to. An unmapped field is not an
+    // absent one — the form read `mode || 'SEA'`, so every air job opened as a sea booking and
+    // saving it wrote sea onto the record. The rest of the air header block follows it back for
+    // the same reason. dim_l/w/h_cm stay out: buildShipment never persisted them, so there is
+    // nothing on the record to read (a separate gap, not this one).
+    mode:         s.mode                  || '',
+    uld_type:     s.uld_type              || '',
+    flight_no:    s.flight_no             || '',
+    origin_iata:  s.airport_origin        || '',
+    dest_iata:    s.airport_dest          || '',
+    chargeable_kg: s.chargeable_kg        ?? '',
     pieces:       s.pieces                ?? '',
     package_type: s.package_type          || '',
     weight_actual: s.weight_actual        ?? '',

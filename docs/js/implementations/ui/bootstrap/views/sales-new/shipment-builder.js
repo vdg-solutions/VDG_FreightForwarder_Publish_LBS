@@ -94,7 +94,10 @@ export function buildShipment(state, ref, salesRepId, opts = {}) {
     do_released_at:        state.do_released_at        || null,
     cargo_released_at:     state.cargo_released_at     || null,
     billing_paid_at:       state.billing_paid_at       || null,
-    mode:                  (state.mode || '').toLowerCase() || null,
+    // Written back exactly as the picker holds it — the codes ARE the stored vocabulary
+    // (rulesets::shipment_mode), and a value wasm could not read kept its own option, so folding
+    // case here would rewrite a record on its way past (ADO #122).
+    mode:                  state.mode                  || null,
     direction:             deriveDirection(state),
     container_spec:        state.container_spec        || state.volume || null,
     // air fields

@@ -4,6 +4,9 @@ import {
   safeMasterLoad
 } from "./chunk-V5A2B6CO.js";
 import {
+  repaintOnStoreChange
+} from "./chunk-5J6RPASQ.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import {
@@ -20,6 +23,7 @@ import {
 import {
   currentRoles
 } from "./chunk-ZJ7UETTQ.js";
+import "./chunk-2PLULDG2.js";
 import "./chunk-7DW526V3.js";
 import "./chunk-JAZY43GR.js";
 import {
@@ -176,8 +180,7 @@ async function render(root) {
   async function onEdit(entity) {
     openModal(root, entity, async (u) => {
       await saveMaster(KIND, u);
-      items = items.map((i) => i.id === u.id ? u : i);
-      api?.setGridOption("rowData", items);
+      await reload();
     });
   }
   async function onDelete(entity) {
@@ -195,8 +198,7 @@ async function render(root) {
       console.warn("delete refused", err);
       return;
     }
-    items = items.filter((i) => i.id !== entity.id);
-    api?.setGridOption("rowData", items);
+    await reload();
   }
   function buildColumnDefs() {
     const cols = [];
@@ -228,11 +230,7 @@ async function render(root) {
   function handleAdd() {
     openModal(root, null, async (entity) => {
       await saveMaster(KIND, entity);
-      items = [...items, entity];
-      api?.setGridOption("rowData", items);
-      const hdr = root.querySelector("#grid-header");
-      if (hdr) hdr.innerHTML = renderToolbar(items.length);
-      wireToolbar();
+      await reload();
     });
   }
   function wireToolbar() {
@@ -268,6 +266,7 @@ async function render(root) {
     });
   }
   wireToolbar();
+  repaintOnStoreChange(root, KIND, reload);
   await reload();
 }
 export {

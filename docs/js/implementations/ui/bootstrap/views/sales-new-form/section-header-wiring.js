@@ -10,6 +10,8 @@ import { computeChargeableKg } from '../../../core_abstractions/ports/flows/air-
 import { listCustomerMasters, createCustomerDraft } from '../../../core_abstractions/ports/data/sales-reads.js';
 import { customerRepFor } from '../../../core_abstractions/ports/flows/sales-rep-derivation.js';
 import { directionFromProduct } from './section-header.js';
+import { resolveMode, modeFieldCode, MODE_SEA, MODE_AIR }
+  from '../../../../kernel/core_abstractions/ports/shipment-mode.js';
 
 // F-41-07: keep the direction control honest about who decided. A product that names the
 // direction fills it and locks it (submitting through a hidden twin, since a disabled select
@@ -39,14 +41,15 @@ function _applyDirection(root) {
   }
 }
 
-// apply mode: toggle sea-only / air-only field visibility
+// apply mode: each group shows for its own mode and for no other. A mode the vocabulary cannot
+// read shows neither — it is not sea (ADO #122).
 function _applyMode(root, mode) {
-  const isAir = mode === 'AIR';
+  const code = modeFieldCode(resolveMode(mode));
   root.querySelectorAll('[data-sea-only]').forEach((el) => {
-    el.classList.toggle('hidden', isAir);
+    el.classList.toggle('hidden', code !== MODE_SEA);
   });
   root.querySelectorAll('[data-air-only]').forEach((el) => {
-    el.classList.toggle('hidden', !isAir);
+    el.classList.toggle('hidden', code !== MODE_AIR);
   });
 }
 

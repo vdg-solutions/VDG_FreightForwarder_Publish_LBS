@@ -19,7 +19,8 @@ var GUARD_MESSAGE_KEYS = {
   STORAGE: "guard.storage",
   // cas-write-path.md §5.4: FsmIngest's write-intent submit refusals.
   STALE_BASE: "save.error.stale_base",
-  SAVE_TOO_LARGE: "save.error.too_large"
+  SAVE_TOO_LARGE: "save.error.too_large",
+  UNCONFIRMED_BASE: "save.error.unconfirmed_base"
 };
 function guardMessage(envelope) {
   if (envelope.code === "GUARD_VIOLATION") {
@@ -29,21 +30,6 @@ function guardMessage(envelope) {
   return key ? t(key) : t("guard.transition_failed", { message: envelope.message });
 }
 
-// output/web/js.tmp/implementations/ui/core_abstractions/ports/flows/fsm-ingest.js
-var _impl = null;
-function bindFsmIngest(impl) {
-  _impl = impl;
-}
-function _i() {
-  if (!_impl) throw new Error("ui/fsm-ingest: no implementation bound (root bootstrap binds it)");
-  return _impl;
-}
-var applyShipmentEvent = (...a) => _i().applyShipmentEvent(...a);
-var moveShipmentTo = (...a) => _i().moveShipmentTo(...a);
-
 export {
-  guardMessage,
-  bindFsmIngest,
-  applyShipmentEvent,
-  moveShipmentTo
+  guardMessage
 };

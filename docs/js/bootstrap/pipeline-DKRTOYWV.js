@@ -17,15 +17,25 @@ import {
 } from "./chunk-XOCJWCT2.js";
 import "./chunk-YR3VHEVJ.js";
 import {
-  guardMessage,
   moveShipmentTo
-} from "./chunk-4HAITEXH.js";
+} from "./chunk-3RLMMSOJ.js";
+import {
+  guardMessage
+} from "./chunk-4OQ5MA6C.js";
 import {
   shipmentLane
 } from "./chunk-V5UQPUBE.js";
 import {
   pipelineShipments
 } from "./chunk-L63J7S6F.js";
+import {
+  MODE_AIR,
+  MODE_SEA,
+  MODE_STATUS_UNSET,
+  modeFieldCode,
+  modeLabelKey,
+  resolveMode
+} from "./chunk-VFGXS6HR.js";
 import {
   getActiveSalesReps
 } from "./chunk-4H4Y6OOD.js";
@@ -40,6 +50,9 @@ import {
 // output/web/js.tmp/implementations/ui/bootstrap/components/kanban-board.js
 import { LitElement, html } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
 var KANBAN_STATES = SHIPMENT_MAIN_PATH;
+var SHIPMENT_MODE_LABEL_PREFIX = "shipment.mode.";
+var MODE_BADGE_TONE = { [MODE_SEA]: "bg-emerald-100 text-emerald-700", [MODE_AIR]: "bg-blue-100 text-blue-700" };
+var MODE_BADGE_UNREAD_TONE = "bg-slate-100 text-slate-600";
 var KANBAN_COLUMN_WIDTH_PX = 280;
 var TOUCH_MODE_BREAKPOINT = 768;
 var FALLBACK_BORDER_COLOR = "border-slate-300";
@@ -209,7 +222,7 @@ var VdgKanbanBoard = class extends LitElement {
     const currentUser = { email: currentUserEmail() };
     const sales = resolveSalesRepLabel(s.sales_rep || s.SalesRep || "", currentUser, t);
     const margin = s.margin_pct ?? null;
-    const isAir = s.mode === "air";
+    const modeRes = resolveMode(s.mode);
     const salesCls = this._colorMap.get((sales || "").trim().toLowerCase()) || FALLBACK_BORDER_COLOR;
     const pendingCls = this._pending.has(id) ? "opacity-70 animate-pulse" : "";
     const selCls = this._selected.has(id) ? "ring-2 ring-blue-400" : "";
@@ -233,9 +246,9 @@ var VdgKanbanBoard = class extends LitElement {
             ${t("kanban.card.margin")} ${margin.toFixed(1)}%
           </div>` : ""}
         ${sales ? html`<div class="text-[10px] text-slate-400 mt-0.5">${sales}</div>` : ""}
-        ${this.mode === "All" && s.mode ? html`
-          <span class="text-[9px] font-bold px-1 rounded mt-1 inline-block ${isAir ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}">
-            ${isAir ? t("shipment.mode.air") : t("shipment.mode.sea")}
+        ${this.mode === "All" && modeRes.status !== MODE_STATUS_UNSET ? html`
+          <span class="text-[9px] font-bold px-1 rounded mt-1 inline-block ${MODE_BADGE_TONE[modeFieldCode(modeRes)] || MODE_BADGE_UNREAD_TONE}">
+            ${t(modeLabelKey(modeRes, SHIPMENT_MODE_LABEL_PREFIX))}
           </span>` : ""}
         ${this._touchMode && (VALID_NEXT[s.state || s.State] || []).length ? html`
           <button class="mt-2 w-full text-[10px] text-blue-600 bg-blue-50 rounded py-1 text-center"
@@ -338,8 +351,8 @@ function getColumns(mode) {
 }
 function applyPipelineModeFilter(shipments, mode) {
   if (!mode || mode === "All") return shipments;
-  if (mode === "Air") return shipments.filter((s) => s.mode === "air");
-  return shipments.filter((s) => s.mode !== "air");
+  const wanted = mode === "Air" ? MODE_AIR : MODE_SEA;
+  return shipments.filter((s) => modeFieldCode(resolveMode(s.mode)) === wanted);
 }
 function getRepo() {
   return window.__vdg_repo;

@@ -1147,6 +1147,17 @@ export function shipment_action_bar(publish_state: string): any;
 export function shipment_auto_advance(entity_id: string, record_json: string): any;
 
 /**
+ * The transport modes, in picker order. The shell draws this list and keeps none of its own.
+ */
+export function shipment_mode_codes(): any;
+
+/**
+ * What a stored `mode` is. Three answers, never two — an unread mode must not render as a mode
+ * that was read (ADO #122: `mode || 'SEA'` turned an unmapped field into a sea booking).
+ */
+export function shipment_mode_resolve(raw: string): any;
+
+/**
  * The real kanban drag move. Resolves `to_state` to its event against the RECORD's own current
  * state (never a board-held guess), runs the real data-driven guards. No side effects.
  */
@@ -1641,6 +1652,8 @@ export interface InitOutput {
     readonly server_health_probe: () => number;
     readonly shipment_action_bar: (a: number, b: number, c: number) => void;
     readonly shipment_auto_advance: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly shipment_mode_codes: (a: number) => void;
+    readonly shipment_mode_resolve: (a: number, b: number, c: number) => void;
     readonly shipment_move_to: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly shipment_phases: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly shipment_product_for_mode: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1776,9 +1789,9 @@ export interface InitOutput {
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
     readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
-    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
-    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
+    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
+    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1789,9 +1802,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_16644: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_16657: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12205: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16648: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16661: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12206: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

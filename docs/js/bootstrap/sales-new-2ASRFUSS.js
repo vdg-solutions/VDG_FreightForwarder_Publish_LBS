@@ -78,6 +78,9 @@ import {
   ROLE_MANAGER
 } from "./chunk-YR3VHEVJ.js";
 import {
+  guardMessage
+} from "./chunk-4OQ5MA6C.js";
+import {
   navigate
 } from "./chunk-H2H4WJDI.js";
 import {
@@ -97,6 +100,15 @@ import {
   listQuotations,
   listWeightUnitCodes
 } from "./chunk-ZYZ6J7HL.js";
+import {
+  MODE_AIR,
+  MODE_SEA,
+  MODE_STATUS_UNREAD,
+  modeCodes,
+  modeFieldCode,
+  modeLabelKey,
+  resolveMode
+} from "./chunk-VFGXS6HR.js";
 import {
   REVENUE_SEEN,
   getEnvelope,
@@ -239,10 +251,17 @@ function shipmentToDraft(shipment, ce) {
     shipper_address: s.shipper_address || "",
     consignee: s.consignee || "",
     consignee_address: s.consignee_address || "",
-    // Air header block — not read at all before this feature (a pre-existing gap: mode,
-    // dim_l/w/h_cm, uld_type, flight_no, chargeable_kg and the airport fields have the same hole
-    // and stay unmapped here). Fixed for exactly the fields this feature adds/renames, since an
-    // edit that dropped them would make the new quantity/weight unit pickers look broken.
+    // ADO #122: the mode WAS the gap this comment used to admit to. An unmapped field is not an
+    // absent one — the form read `mode || 'SEA'`, so every air job opened as a sea booking and
+    // saving it wrote sea onto the record. The rest of the air header block follows it back for
+    // the same reason. dim_l/w/h_cm stay out: buildShipment never persisted them, so there is
+    // nothing on the record to read (a separate gap, not this one).
+    mode: s.mode || "",
+    uld_type: s.uld_type || "",
+    flight_no: s.flight_no || "",
+    origin_iata: s.airport_origin || "",
+    dest_iata: s.airport_dest || "",
+    chargeable_kg: s.chargeable_kg ?? "",
     pieces: s.pieces ?? "",
     package_type: s.package_type || "",
     weight_actual: s.weight_actual ?? "",
@@ -359,7 +378,10 @@ function buildShipment(state, ref, salesRepId, opts = {}) {
     do_released_at: state.do_released_at || null,
     cargo_released_at: state.cargo_released_at || null,
     billing_paid_at: state.billing_paid_at || null,
-    mode: (state.mode || "").toLowerCase() || null,
+    // Written back exactly as the picker holds it — the codes ARE the stored vocabulary
+    // (rulesets::shipment_mode), and a value wasm could not read kept its own option, so folding
+    // case here would rewrite a record on its way past (ADO #122).
+    mode: state.mode || null,
     direction: deriveDirection(state),
     container_spec: state.container_spec || state.volume || null,
     // air fields
@@ -443,16 +465,25 @@ function buildShipment(state, ref, salesRepId, opts = {}) {
   };
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-header-mode.js
+var MODE_LABEL_PREFIX = "sales_new.mode_selector.";
+function modeSel(res) {
+  const opts = modeCodes().map((c) => `<option value="${c}"${c === res.code ? " selected" : ""}>${t(MODE_LABEL_PREFIX + c)}</option>`).join("");
+  const unread = res.status === MODE_STATUS_UNREAD ? `<option value="${res.code}" selected>${t(modeLabelKey(res, MODE_LABEL_PREFIX)).replace("{v}", res.code)}</option>` : "";
+  return `<select name="mode"
+    class="w-full border rounded px-2 py-1 text-xs ${unread ? "border-amber-400 bg-amber-50" : "border-slate-200"}">
+    <option value="">\u2014</option>${opts}${unread}
+  </select>`;
+}
+
 // output/web/js.tmp/implementations/ui/bootstrap/views/sales-new-form/section-header.js
 var CURRENCY_OPTIONS = ["USD", "VND", "EUR", "SGD", "JPY"];
 var PRODUCT_OPTIONS = ["FCL EXPORT", "IMPORT FCL", "AIR", "LCL"];
-var MODE_OPTIONS = ["SEA", "AIR"];
 var DIRECTION_OPTIONS = ["export", "import"];
 var DIRECTION_LABEL_KEYS = { export: "sales_new.direction_option.export", import: "sales_new.direction_option.import" };
 var NAME_DIRECTION = "direction";
 var NAME_DIRECTION_DISPLAY = "direction_display";
 var PRODUCT_LABEL_KEYS = { "FCL EXPORT": "sales_new.product_option.fcl_export", "IMPORT FCL": "sales_new.product_option.import_fcl", AIR: "sales_new.product_option.air", LCL: "sales_new.product_option.lcl" };
-var MODE_LABEL_KEYS = { SEA: "sales_new.mode_selector.sea", AIR: "sales_new.mode_selector.air" };
 function directionFromProduct(product) {
   return deriveDirection({ product }) || "";
 }
@@ -607,9 +638,10 @@ function renderHistoryDatalists(carriers = [], shipments = []) {
 function sectionAHtml(draft = {}, customers = [], reps = [], opts = {}) {
   const { carriers = [], shipments = [], weightUnits = [] } = opts;
   const d = draft;
-  const mode = (d.mode || "SEA").toUpperCase();
-  const seaHide = mode === "AIR" ? ' class="hidden"' : "";
-  const airHide = mode === "AIR" ? "" : ' class="hidden"';
+  const modeRes = resolveMode(d.mode);
+  const modeCode = modeFieldCode(modeRes);
+  const seaHide = modeCode === MODE_SEA ? "" : ' class="hidden"';
+  const airHide = modeCode === MODE_AIR ? "" : ' class="hidden"';
   return `
     <div id="sec-a-body" class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
@@ -617,10 +649,7 @@ function sectionAHtml(draft = {}, customers = [], reps = [], opts = {}) {
       </div>
       <input type="hidden" name="quote_id" value="${d.quote_id || ""}" />
       <div class="grid grid-cols-3 gap-3">
-        ${fld(
-    t("sales_new.mode_selector.title"),
-    selFld("mode", MODE_OPTIONS, mode, MODE_LABEL_KEYS)
-  )}
+        ${fld(t("sales_new.mode_selector.title"), modeSel(modeRes))}
         ${fld(t("sales_new.field.mbl"), txt("mbl", d.mbl))}
         ${fld(t("sales_new.field.job_no"), `<div class="flex items-center gap-2"><input type="text" name="job_no" value="${d.job_no || ""}" readonly class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" /><label class="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap"><input type="checkbox" name="has_hbl" ${d.has_hbl ? "checked" : ""} class="h-3.5 w-3.5" />${t("sales_new.field.has_hbl")}</label></div>`)}
         ${cfld(t("sales_new.field.hbl_do"), `<input type="text" name="hbl_do_display" value="${d.has_hbl ? d.job_no || "" : ""}" readonly class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" />`, `data-hbl-do-row${d.has_hbl ? "" : ' class="hidden"'}`)}
@@ -731,12 +760,12 @@ function _applyDirection(root) {
   }
 }
 function _applyMode(root, mode) {
-  const isAir = mode === "AIR";
+  const code = modeFieldCode(resolveMode(mode));
   root.querySelectorAll("[data-sea-only]").forEach((el) => {
-    el.classList.toggle("hidden", isAir);
+    el.classList.toggle("hidden", code !== MODE_SEA);
   });
   root.querySelectorAll("[data-air-only]").forEach((el) => {
-    el.classList.toggle("hidden", !isAir);
+    el.classList.toggle("hidden", code !== MODE_AIR);
   });
 }
 var LB_TO_KG = 0.45359237;
@@ -2934,7 +2963,9 @@ function collectFormState(root) {
   const hasHbl = root.querySelector("[name=has_hbl]")?.checked || false;
   return {
     quote_id: g2("quote_id") || null,
-    mode: g2("mode") || "SEA",
+    // ADO #122: no default. `|| 'SEA'` here (and in the markup) is what turned a mode the form had
+    // never read into a sea booking, and then wrote it over the record on the next save.
+    mode: g2("mode"),
     mbl: g2("mbl"),
     // F-32-01 QA rework DEFECT-01: hbl must be derived HERE, not only in buildShipment —
     // validateShipmentForm's save-gate runs on this state before buildShipment ever sees it.
@@ -3306,6 +3337,7 @@ function saveErrorText(err) {
   try {
     const envelope = JSON.parse(err.message);
     if (envelope && envelope.key) return t(envelope.key, envelope);
+    if (envelope && envelope.code) return guardMessage(envelope);
   } catch {
   }
   return `Error: ${err.message}`;

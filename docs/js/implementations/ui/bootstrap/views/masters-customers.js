@@ -11,6 +11,7 @@ import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { openModal } from './masters-customers-modal.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 import { isMountedRoute } from '../util/view-mounted.js';
+import { repaintOnStoreChange } from '../util/store-repaint.js';
 
 const KIND       = 'customers';
 
@@ -90,8 +91,7 @@ export async function render(root) {
   async function onEdit(entity) {
     openModal(root, entity, async (updated) => {
       await saveMaster(KIND, updated);
-      items = items.map((i) => (i.id === updated.id ? updated : i));
-      api?.setGridOption('rowData', items);
+      await reload();
     }, await loadReps());
   }
 
@@ -110,8 +110,7 @@ export async function render(root) {
       console.warn('delete refused', err); // DEV
       return;
     }
-    items = items.filter((i) => i.id !== entity.id);
-    api?.setGridOption('rowData', items);
+    await reload();
   }
 
   function buildColumnDefs() {
@@ -156,11 +155,7 @@ export async function render(root) {
   async function handleAdd() {
     openModal(root, null, async (entity) => {
       await saveMaster(KIND, entity);
-      items = [...items, entity];
-      api?.setGridOption('rowData', items);
-      const hdr = root.querySelector('#grid-header');
-      if (hdr) hdr.innerHTML = renderToolbar(items.length);
-      wireToolbar();
+      await reload();
     }, await loadReps());
   }
 
@@ -200,6 +195,9 @@ export async function render(root) {
   }
 
   wireToolbar();
+  // ADO #121: a delete that reached this machine's store used to sit on screen until a navigation.
+  // The rows are the store's answer now, re-read whenever this kind changes.
+  repaintOnStoreChange(root, KIND, reload);
   await reload();
 }
 

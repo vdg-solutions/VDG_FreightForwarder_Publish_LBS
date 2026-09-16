@@ -13,6 +13,8 @@ import { SHIPMENT_MAIN_PATH } from '../../../../kernel/core_abstractions/util/sh
 import { guardMessage } from '../../../../kernel/core_abstractions/util/guard-messages.js';
 import { applyShipmentTransition } from './pipeline-transition.js';
 import { pipelineShipments } from '../../../core_abstractions/ports/data/report-reads.js';
+import { resolveMode, modeFieldCode, MODE_SEA, MODE_AIR }
+  from '../../../../kernel/core_abstractions/ports/shipment-mode.js';
 
 const SEA_KANBAN_STATES = SHIPMENT_MAIN_PATH;
 const AIR_KANBAN_STATES = ['Created','Tendered','Accepted','Manifested','FlightDeparted','FlightArrived','Cleared','PoD'];
@@ -61,11 +63,12 @@ export function getColumns(mode) {
   return ALL_KANBAN_STATES;
 }
 
-// Mode filter for pipeline shipments
+// Mode filter for pipeline shipments. ADO #122: the sea board used to be "everything that is not
+// air", so a road job landed on it. Each board holds its own mode and nothing else.
 export function applyPipelineModeFilter(shipments, mode) {
   if (!mode || mode === 'All') return shipments;
-  if (mode === 'Air') return shipments.filter((s) => s.mode === 'air');
-  return shipments.filter((s) => s.mode !== 'air');
+  const wanted = mode === 'Air' ? MODE_AIR : MODE_SEA;
+  return shipments.filter((s) => modeFieldCode(resolveMode(s.mode)) === wanted);
 }
 
 function getRepo() { return window.__vdg_repo; }

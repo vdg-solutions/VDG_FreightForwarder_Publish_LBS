@@ -6,11 +6,12 @@ import "./chunk-ETXXTRJC.js";
 import {
   chooseShipmentAffordance,
   runShipmentAffordance
-} from "./chunk-MM2DJXAX.js";
-import "./chunk-4HAITEXH.js";
+} from "./chunk-T4IMLKGP.js";
+import "./chunk-3RLMMSOJ.js";
 import {
   can
 } from "./chunk-GOIBPTZO.js";
+import "./chunk-4OQ5MA6C.js";
 import {
   navigate
 } from "./chunk-H2H4WJDI.js";
@@ -32,11 +33,15 @@ import {
   isMountedRoute
 } from "./chunk-EN6RKDYW.js";
 import {
+  repaintOnStoreChange
+} from "./chunk-5J6RPASQ.js";
+import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";
 import {
   wireGridFilterEmptyState
 } from "./chunk-ZJJVGVDQ.js";
+import "./chunk-2PLULDG2.js";
 import "./chunk-7DW526V3.js";
 import {
   safeAwait
@@ -264,14 +269,11 @@ async function loadRealData() {
   }
   return allShipments;
 }
-var ENTITY_CHANGED_EVENT = "vdg:entity-changed";
 var OWN_ROUTE = "/shipments";
 var KIND_SHIPMENT = "shipment";
 var _onLocale;
-var _onEntityChanged;
 async function render(root) {
   if (_onLocale) window.removeEventListener("vdg:locale-changed", _onLocale);
-  if (_onEntityChanged) window.removeEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
   root.innerHTML = `
     <div class="p-6 max-w-[1600px] mx-auto">
       <div id="grid-header">
@@ -280,17 +282,15 @@ async function render(root) {
       <div id="grid" class="ag-theme-quartz rounded-xl overflow-hidden border border-slate-200" style="height:${GRID_HEIGHT_PX}px;"></div>
     </div>
   `;
-  const rowData = await loadRealData();
-  const loadOutcome = {
-    failed: (window.__vdg_repo?.sync_failed_kinds?.() ?? []).some((k) => k === KIND_SHIPMENT || k === "pnl_line"),
-    skipped: 0
-  };
+  let rows = [];
+  const loadOutcome = { failed: false, skipped: 0 };
   const gridDiv = document.getElementById("grid");
   let api = null;
   if (window.agGrid) {
     api = mountAgGrid(gridDiv, {
-      columnDefs: buildColumnDefs(rowData),
-      rowData,
+      // `null` = no list read yet, so keep the P&L column rather than decide on no evidence.
+      columnDefs: buildColumnDefs(null),
+      rowData: rows,
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowSelection: "single",
       onRowClicked: (e) => {
@@ -300,16 +300,17 @@ async function render(root) {
       headerHeight: 36
     });
   }
-  const headerDiv = document.getElementById("grid-header");
-  if (headerDiv) {
-    headerDiv.innerHTML = toolbar(rowData.length);
+  function wireHeader() {
+    const headerDiv = document.getElementById("grid-header");
+    if (!headerDiv) return;
+    headerDiv.innerHTML = toolbar(rows.length);
     wireGridFilterEmptyState({
       root,
       getApi: () => api,
       searchSelector: "#grid-search",
-      getTotal: () => rowData.length,
+      getTotal: () => rows.length,
       getLoadOutcome: () => loadOutcome,
-      onRetry: () => render(root),
+      onRetry: reload,
       entity: t("shipments.empty.entity"),
       // F-63: omit entirely when the session may not create a shipment.
       onCreate: can("shipment.create") ? () => navigate("/shipments/new") : void 0,
@@ -323,6 +324,13 @@ async function render(root) {
     document.getElementById("new-shipment")?.addEventListener("click", () => {
       navigate("/shipments/new");
     });
+  }
+  async function reload() {
+    rows = await loadRealData();
+    loadOutcome.failed = (window.__vdg_repo?.sync_failed_kinds?.() ?? []).some((k) => k === KIND_SHIPMENT || k === "pnl_line");
+    api?.setGridOption("columnDefs", buildColumnDefs(rows));
+    api?.setGridOption("rowData", rows);
+    wireHeader();
   }
   if (!document.getElementById("detail-panel")) {
     const panel = document.createElement("vdg-detail-panel");
@@ -338,13 +346,8 @@ async function render(root) {
     if (liveRoot) render(liveRoot);
   };
   window.addEventListener("vdg:locale-changed", _onLocale);
-  _onEntityChanged = (e) => {
-    if (e?.detail?.kind && e.detail.kind !== KIND_SHIPMENT) return;
-    if (!isMountedRoute(OWN_ROUTE)) return;
-    const liveRoot = document.getElementById("view-root");
-    if (liveRoot) render(liveRoot);
-  };
-  window.addEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
+  repaintOnStoreChange(root, KIND_SHIPMENT, reload);
+  await reload();
 }
 export {
   buildColumnDefs,

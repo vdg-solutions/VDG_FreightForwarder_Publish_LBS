@@ -37,10 +37,6 @@ import {
   bindUserProvisioning
 } from "./chunk-RIGQBLAR.js";
 import {
-  freshViewRoot,
-  markViewSuperseded
-} from "./chunk-2PLULDG2.js";
-import {
   API_BASE,
   WORKSPACE_NAME,
   activeWorkspaceName
@@ -195,14 +191,15 @@ import {
   bindIntentNotices,
   bindShipmentVoidDelete,
   openSyncAttentionModal
-} from "./chunk-MM2DJXAX.js";
+} from "./chunk-T4IMLKGP.js";
 import {
   bindFsmIngest
-} from "./chunk-4HAITEXH.js";
+} from "./chunk-3RLMMSOJ.js";
 import {
   bindActionGuard,
   can
 } from "./chunk-GOIBPTZO.js";
+import "./chunk-4OQ5MA6C.js";
 import {
   initRouter,
   navigate
@@ -247,6 +244,10 @@ import {
   bindReportReads
 } from "./chunk-L63J7S6F.js";
 import {
+  MODE_STATUS_UNREAD,
+  bindShipmentMode
+} from "./chunk-VFGXS6HR.js";
+import {
   KIND_SHIPMENT,
   REVENUE_SEEN,
   bindShipmentRepo,
@@ -270,6 +271,10 @@ import {
   currentRolesResolved,
   hasRole
 } from "./chunk-ZJ7UETTQ.js";
+import {
+  freshViewRoot,
+  markViewSuperseded
+} from "./chunk-2PLULDG2.js";
 import {
   bindGrid
 } from "./chunk-7DW526V3.js";
@@ -630,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build ac0cbdc6">v0.4.95 (ac0cbdc6)</span>
+        <span class="font-mono whitespace-nowrap" title="build 5ec3905b">v0.4.96 (5ec3905b)</span>
       </div>
     `;
   }
@@ -2370,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.95 (ac0cbdc6)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.96 (5ec3905b)</div>
         </div>
       </div>
     </div>`;
@@ -3019,8 +3024,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=ac0cbdc6", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ac0cbdc6", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=5ec3905b", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=5ec3905b", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4321,6 +4326,17 @@ var wasmFormatter = {
   dateDisplay: (iso) => typeof window.fmt_date_display === "function" ? window.fmt_date_display(iso) : null,
   datePatternHint: () => typeof window.fmt_date_pattern_hint === "function" ? window.fmt_date_pattern_hint() : null
 };
+var wasmShipmentMode = {
+  resolveMode: (stored) => {
+    const mod = window.__vdg_wasm;
+    if (typeof mod?.shipment_mode_resolve !== "function") {
+      console.warn("[shipment-mode] wasm export missing \u2014 mode left unread");
+      return { status: MODE_STATUS_UNREAD, code: stored || "" };
+    }
+    return mod.shipment_mode_resolve(stored || "");
+  },
+  modeCodes: () => window.__vdg_wasm?.shipment_mode_codes?.() || []
+};
 var agGridHost = {
   create: (container, options) => {
     if (typeof window.agGrid?.createGrid === "function") {
@@ -4342,6 +4358,7 @@ bindVisibility(documentVisibility);
 bindBase64(base64Codec);
 bindWasmFormat(wasmFormatter);
 bindGrid(agGridHost);
+bindShipmentMode(wasmShipmentMode);
 
 // output/web/js.tmp/implementations/ui/bootstrap/route-enforcer.js
 var TOAST_EVENT = "vdg:toast";
@@ -4422,7 +4439,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-PY5A445M.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-U6XEEPJ7.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4430,7 +4447,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-JT4FBVUC.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-3LPLJYC7.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4438,14 +4455,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-YQJJHJAZ.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-2ASRFUSS.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-YQJJHJAZ.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-2ASRFUSS.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4550,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.95 (ac0cbdc6)";
+var APP_VERSION = "v0.4.96 (5ec3905b)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4671,7 +4688,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-4SIOQURQ.js"),
-  "/shipments": () => import("./shipments-BQTG3T22.js"),
+  "/shipments": () => import("./shipments-ZQC5JTCB.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4683,15 +4700,15 @@ var VIEWS = {
   "/sales/analytics": () => import("./sales-analytics-SQ7QRD6W.js"),
   "/sales/quote/new": () => import("./sales-quote-new-NPXRNJ4F.js"),
   "/sales/quote": () => import("./sales-quote-list-VCJTCXW6.js"),
-  "/masters/customers": () => import("./masters-customers-H7WYGR5L.js"),
-  "/masters/carriers": () => import("./masters-carriers-KPBFC56B.js"),
-  "/masters/services": () => import("./masters-services-N4BVLNGW.js"),
+  "/masters/customers": () => import("./masters-customers-TFTTJR3R.js"),
+  "/masters/carriers": () => import("./masters-carriers-UJYEKLD4.js"),
+  "/masters/services": () => import("./masters-services-RCLCZNRP.js"),
   "/help": () => import("./help-SUXYXL6K.js"),
   "/pending-access": () => import("./pending-access-ZK6HVXUW.js"),
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-M2JF2LPJ.js"),
+  "/manager/pipeline": () => import("./pipeline-DKRTOYWV.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
   "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
@@ -4709,7 +4726,7 @@ var VIEWS = {
   "/manager/backup": () => import("./backup-PIHICBU4.js"),
   "/manager/users": () => import("./users-NM4HWBMH.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-TXRWGM3H.js"),
+  "/manager/fx-rates": () => import("./fx-rates-2WRHXHXG.js"),
   "/manager/settings": () => import("./settings-A7U2KLTX.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-OHLWBRU3.js"),
@@ -4725,7 +4742,7 @@ var VIEWS = {
   "/masters/uld-types": () => import("./uld-types-6DLCU6JA.js"),
   "/manager/manifest": () => import("./manifest-RCWOWF5I.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-VAWPSOCS.js"),
+  "/masters/air-rates": () => import("./air-rates-A4WWM5LD.js"),
   // E-25 / E-26 — sea-freight local charge masters
   "/masters/units-of-measure": () => import("./units-of-measure-DKR3YGMA.js"),
   "/masters/local-charges": () => import("./local-charges-YV63GTPX.js"),
@@ -4735,7 +4752,7 @@ var VIEWS = {
   // E-16 F-16-09
   "/manager/air-invoice": () => import("./air-invoice-NTRFSNTH.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-MTG7YBW2.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-CFBWH4SL.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
   "/accounting/settings": () => import("./settings-7NGVGHLH.js"),

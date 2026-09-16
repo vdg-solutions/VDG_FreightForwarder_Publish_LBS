@@ -14,6 +14,7 @@ import { statusRenderer, pnlRenderer, budgetLinkRenderer, createActionsRenderer 
 import { maySeeJobTotal } from '../../core_abstractions/ports/data/sales-reads.js';
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 import { isMountedRoute } from '../util/view-mounted.js';
+import { repaintOnStoreChange } from '../util/store-repaint.js';
 
 const PANEL_WIDTH_PX    = 480;
 const SLIDE_DURATION_MS = 250;
@@ -183,18 +184,15 @@ export async function loadRealData() {
   return allShipments;
 }
 
-const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
 /// The route that mounts THIS view (app-views.js). Exact match, never a prefix — the create form
 /// lives at `/shipments/new`, which a `startsWith` test would wrongly call "still here".
 const OWN_ROUTE = '/shipments';
 const KIND_SHIPMENT        = 'shipment';
 
 let _onLocale;        // module-level, mirrors pnl-report.js's teardown-then-attach handle
-let _onEntityChanged; // #27 — same teardown-then-attach discipline, or renders stack up per visit
 
 export async function render(root) {
   if (_onLocale) window.removeEventListener('vdg:locale-changed', _onLocale);
-  if (_onEntityChanged) window.removeEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
 
   root.innerHTML = `
     <div class="p-6 max-w-[1600px] mx-auto">
@@ -205,26 +203,24 @@ export async function render(root) {
     </div>
   `;
 
-  const rowData = await loadRealData();
+  let rows = [];
   // Rust's own session registry (sync_health.rs) — a bootstrap failure on either source kind
   // never touches loadRealData's own Promise.all (each source degrades to [] independently,
   // see _bounded's own doc comment above), so an empty grid here can mean "genuinely no
   // shipments yet" OR "the read failed and returned zero rows" with no other signal to tell
-  // them apart. Checked fresh on every render, not cached — see wireGridFilterEmptyState below.
+  // them apart. Re-read on every load, not cached — see wireGridFilterEmptyState below.
   // A LoadOutcome (empty-state.js), not a bare boolean: `skipped` is 0 here because
   // sync_failed_kinds() only knows whole-kind bootstrap failure, not a per-record skip count —
   // the type has room for that count once the read-side partial-load fix lands.
-  const loadOutcome = {
-    failed: (window.__vdg_repo?.sync_failed_kinds?.() ?? []).some((k) => k === KIND_SHIPMENT || k === 'pnl_line'),
-    skipped: 0,
-  };
+  const loadOutcome = { failed: false, skipped: 0 };
 
   const gridDiv = document.getElementById('grid');
   let api = null;
   if (window.agGrid) {
     api = mountAgGrid(gridDiv, {
-      columnDefs: buildColumnDefs(rowData),
-      rowData,
+      // `null` = no list read yet, so keep the P&L column rather than decide on no evidence.
+      columnDefs: buildColumnDefs(null),
+      rowData: rows,
       defaultColDef: { sortable: true, resizable: true, filter: true },
       rowSelection: 'single',
       onRowClicked: (e) => { document.getElementById('detail-panel')?.open(e.data); },
@@ -233,17 +229,18 @@ export async function render(root) {
     });
   }
 
-  const headerDiv = document.getElementById('grid-header');
-  if (headerDiv) {
-    headerDiv.innerHTML = toolbar(rowData.length);
+  function wireHeader() {
+    const headerDiv = document.getElementById('grid-header');
+    if (!headerDiv) return;
+    headerDiv.innerHTML = toolbar(rows.length);
 
     wireGridFilterEmptyState({
       root,
       getApi: () => api,
       searchSelector: '#grid-search',
-      getTotal: () => rowData.length,
+      getTotal: () => rows.length,
       getLoadOutcome: () => loadOutcome,
-      onRetry: () => render(root),
+      onRetry: reload,
       entity: t('shipments.empty.entity'),
       // F-63: omit entirely when the session may not create a shipment.
       onCreate: can('shipment.create') ? () => navigate('/shipments/new') : undefined,
@@ -259,6 +256,18 @@ export async function render(root) {
     document.getElementById('new-shipment')?.addEventListener('click', () => {
       navigate('/shipments/new');
     });
+  }
+
+  // ADO #119's family: a change used to re-run render(), which mounts a grid. Two of those in
+  // flight at once — a delta tick raises one event PER RECORD — each mounted another grid into
+  // the same #grid node, and the list drew twice. A change repaints the ROWS; only a mount mounts.
+  async function reload() {
+    rows = await loadRealData();
+    loadOutcome.failed = (window.__vdg_repo?.sync_failed_kinds?.() ?? [])
+      .some((k) => k === KIND_SHIPMENT || k === 'pnl_line');
+    api?.setGridOption('columnDefs', buildColumnDefs(rows));
+    api?.setGridOption('rowData', rows);
+    wireHeader();
   }
 
   if (!document.getElementById('detail-panel')) {
@@ -281,11 +290,7 @@ export async function render(root) {
 
   // #27: a status transition (closing a file) writes through the repo and announces
   // vdg:entity-changed. Without this the list kept the old status until a manual reload.
-  _onEntityChanged = (e) => {
-    if (e?.detail?.kind && e.detail.kind !== KIND_SHIPMENT) return;
-    if (!isMountedRoute(OWN_ROUTE)) return; // never repaint over the view the user is actually working in
-    const liveRoot = document.getElementById('view-root');
-    if (liveRoot) render(liveRoot);
-  };
-  window.addEventListener(ENTITY_CHANGED_EVENT, _onEntityChanged);
+  repaintOnStoreChange(root, KIND_SHIPMENT, reload);
+
+  await reload();
 }

@@ -168,7 +168,9 @@ export function collectFormState(root) {
   const hasHbl = root.querySelector('[name=has_hbl]')?.checked || false;
   return {
     quote_id:         g('quote_id') || null,
-    mode:             g('mode') || 'SEA',
+    // ADO #122: no default. `|| 'SEA'` here (and in the markup) is what turned a mode the form had
+    // never read into a sea booking, and then wrote it over the record on the next save.
+    mode:             g('mode'),
     mbl:              g('mbl'),
     // F-32-01 QA rework DEFECT-01: hbl must be derived HERE, not only in buildShipment —
     // validateShipmentForm's save-gate runs on this state before buildShipment ever sees it.

@@ -4,13 +4,15 @@ import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/inde
 import { resolveSalesRepLabel } from '../../../../kernel/core_abstractions/util/sales-rep-i18n.js';
 import { getCurrentUser } from '../../../../storage/core_abstractions/identity.js';
 import { deriveDirection } from '../sales-new/shipment-builder.js';
+import { modeSel } from './section-header-mode.js';
+import { resolveMode, modeFieldCode, MODE_SEA, MODE_AIR }
+  from '../../../../kernel/core_abstractions/ports/shipment-mode.js';
 // the header fallback literal lives in ONE place; three copies is what the cross-side guards police
 import { DEFAULT_HEADER_CURRENCY } from './pnl-line-fx.js';
 
 const CURRENCY_OPTIONS = ['USD', 'VND', 'EUR', 'SGD', 'JPY'];
 // contract values (VALID_PRODUCTS in pnl_combined_row_mapper/shipment.rs) — value= stays raw, only the label translates
 const PRODUCT_OPTIONS  = ['FCL EXPORT', 'IMPORT FCL', 'AIR', 'LCL'];
-const MODE_OPTIONS     = ['SEA', 'AIR'];
 // F-41-07: direction is a FIELD of the shipment, not a fact about the product. FCL EXPORT and
 // IMPORT FCL happen to name it, AIR and LCL do not — and the customs check reads `direction`, so
 // an air job left it Unknown forever and could never leave Arrived. Collect it here: pre-filled
@@ -22,7 +24,6 @@ const DIRECTION_LABEL_KEYS = { export: 'sales_new.direction_option.export', impo
 const NAME_DIRECTION         = 'direction';
 const NAME_DIRECTION_DISPLAY = 'direction_display';
 const PRODUCT_LABEL_KEYS = { 'FCL EXPORT': 'sales_new.product_option.fcl_export', 'IMPORT FCL': 'sales_new.product_option.import_fcl', AIR: 'sales_new.product_option.air', LCL: 'sales_new.product_option.lcl' };
-const MODE_LABEL_KEYS    = { SEA: 'sales_new.mode_selector.sea', AIR: 'sales_new.mode_selector.air' };
 
 /** The direction the product itself settles, or '' when the user must say. */
 export function directionFromProduct(product) {
@@ -244,9 +245,12 @@ export function renderHistoryDatalists(carriers = [], shipments = []) {
 export function sectionAHtml(draft = {}, customers = [], reps = [], opts = {}) {
   const { carriers = [], shipments = [], weightUnits = [] } = opts;
   const d    = draft;
-  const mode = (d.mode || 'SEA').toUpperCase();
-  const seaHide = mode === 'AIR' ? ' class="hidden"' : '';
-  const airHide = mode === 'AIR' ? '' : ' class="hidden"';
+  // Field groups follow the mode the RECORD says, and an unread or uncollected mode shows
+  // neither — picking one in the select reveals its own (section-header-wiring._applyMode).
+  const modeRes  = resolveMode(d.mode);
+  const modeCode = modeFieldCode(modeRes);
+  const seaHide = modeCode === MODE_SEA ? '' : ' class="hidden"';
+  const airHide = modeCode === MODE_AIR ? '' : ' class="hidden"';
   return `
     <div id="sec-a-body" class="rounded-xl border border-slate-200 bg-white p-4">
       <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-3">
@@ -254,8 +258,7 @@ export function sectionAHtml(draft = {}, customers = [], reps = [], opts = {}) {
       </div>
       <input type="hidden" name="quote_id" value="${d.quote_id || ''}" />
       <div class="grid grid-cols-3 gap-3">
-        ${fld(t('sales_new.mode_selector.title'),
-          selFld('mode', MODE_OPTIONS, mode, MODE_LABEL_KEYS))}
+        ${fld(t('sales_new.mode_selector.title'), modeSel(modeRes))}
         ${fld(t('sales_new.field.mbl'),      txt('mbl', d.mbl))}
         ${fld(t('sales_new.field.job_no'), `<div class="flex items-center gap-2"><input type="text" name="job_no" value="${d.job_no || ''}" readonly class="flex-1 border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" /><label class="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap"><input type="checkbox" name="has_hbl" ${d.has_hbl ? 'checked' : ''} class="h-3.5 w-3.5" />${t('sales_new.field.has_hbl')}</label></div>`)}
         ${cfld(t('sales_new.field.hbl_do'), `<input type="text" name="hbl_do_display" value="${d.has_hbl ? (d.job_no || '') : ''}" readonly class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-slate-50 font-mono" />`, `data-hbl-do-row${d.has_hbl ? '' : ' class="hidden"'}`)}
