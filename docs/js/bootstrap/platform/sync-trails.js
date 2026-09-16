@@ -20,9 +20,13 @@ const ERROR_KIND_SYNC      = 'sync_error';
 const wasm = () => window.__vdg_wasm;
 
 /**
- * The shared/revenue audit trail. `append` and `appendRevenue` do NOT return a promise — callers
- * must not be able to make a shipment save wait on its own history — so anything that has to
- * observe the trail (a verifier, a clean shutdown) awaits `flush()`.
+ * The shared/revenue audit trail. `append` does NOT return a promise — a governance action must
+ * not be able to wait on its own history — so anything that has to observe the trail (a verifier,
+ * a clean shutdown) awaits `flush()`.
+ *
+ * A SHIPMENT change no longer comes through here (cas-write-path.md D27): its trail rows are ops
+ * in the same intent as the change they describe, so they cannot be written on their own and
+ * cannot outlive a refusal. What is left on the write side is the governance trail.
  */
 export function createAuditLog({ getUser }) {
   let queue = Promise.resolve();
@@ -61,10 +65,6 @@ export function createAuditLog({ getUser }) {
   return {
     append: (kind, entityId, op, body, changes = null) =>
       enqueue(AUDIT_STORE_SHARED, kind, entityId, op, body, changes, 'append'),
-    /// The same entry in the rep's own revenue trail. Reached only from the shipment-audit use-case, which
-    /// is the only caller holding a change list already sorted by Rust.
-    appendRevenue: (kind, entityId, op, body, changes = null) =>
-      enqueue(AUDIT_STORE_REVENUE, kind, entityId, op, body, changes, 'revenue append'),
     flush: () => queue,
     readAll: () => read(AUDIT_STORE_SHARED),
     /// A reader the policy grants no revenue rows gets [] — that is the CS answer and it is correct.

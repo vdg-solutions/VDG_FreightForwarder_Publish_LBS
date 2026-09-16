@@ -27,6 +27,8 @@ var REASON_CODE_TO_KEY = {
   record_changed: "topbar.sync.attention.reason.record_changed",
   state_moved: "topbar.sync.attention.reason.state_moved",
   create_collided: "topbar.sync.attention.reason.create_collided",
+  unsent_before_upgrade: "topbar.sync.attention.reason.unsent_before_upgrade",
+  unsent_before_upgrade_unchecked: "topbar.sync.attention.reason.unsent_before_upgrade_unchecked",
   other: "topbar.sync.attention.reason.other",
   // ADO #123 — `backup_quarantined` rows (outbox/attention.rs::classify_backup_reason):
   // backup-copy problems, never a write refusal, so each gets its own sentence rather than
@@ -65,7 +67,7 @@ function changeLines(item) {
   const lines = changes.map((c) => `
     <div class="text-[11px] text-slate-600"><span class="font-mono">${c.field}</span>:
       ${t("attention.change.yours")} <b>${shown(c.yours)}</b> \xB7
-      ${t("attention.change.from")} ${shown(c.from)} \xB7
+      ${c.from === void 0 ? "" : `${t("attention.change.from")} ${shown(c.from)} \xB7 `}
       ${t("attention.change.now")} ${shown(c.now)}</div>`);
   if (item.dependents) lines.push(`<div class="text-[11px] text-slate-400">${t("attention.dependents", { n: fmtNumber(item.dependents) })}</div>`);
   return lines.join("");

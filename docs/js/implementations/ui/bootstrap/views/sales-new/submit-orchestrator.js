@@ -7,9 +7,9 @@
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 
 import { buildShipment, deriveDirection } from './shipment-builder.js';
-import { putShipment, rollbackShipmentCreate, getEnvelope } from '../../../core_abstractions/ports/data/shipment-repo.js';
+import { putShipment, getEnvelope } from '../../../core_abstractions/ports/data/shipment-repo.js';
 import {
-  mintShipmentRef, resolveJobNo, healJobNoCollision, nextLedgerVersion, submissionErrorKeys, writeSideRecords, resolvePublishState } from '../../../core_abstractions/ports/data/shipment-submit.js';
+  mintShipmentRef, resolveJobNo, healJobNoCollision, nextLedgerVersion, submissionErrorKeys, resolvePublishState } from '../../../core_abstractions/ports/data/shipment-submit.js';
 import { ensureShipmentStateAliases } from '../../../core_abstractions/ports/flows/shipment-state-aliases.js';
 import { autoAdvanceShipment } from '../../../core_abstractions/ports/flows/fsm-auto-advance.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
@@ -60,32 +60,15 @@ export function highlightErrors(root, errors) {
   }
 }
 
-// The rows that hang off a saved shipment — its commission entries and its P&L lines — in ONE
-// call for the whole of both sets. A partial write is raised, never warned about and passed over:
-// the create path compensates on it, and on an amendment the rep would otherwise be told the save
-// landed while what they are owed was not written.
-async function _writeSideRecords(ref, shipment, salesRepId, version, freshRef) {
-  const written = await writeSideRecords({
-    shipmentRef:     ref,
-    commissionLines: shipment.commission_lines || [],
-    pnlLines:        shipment.pnl_lines || [],
-    ledgerVersion:   version,
-    occurredAt:      todayLocal(),
-    createdBy:       salesRepId || null,
-    freshRef,
-  });
-  if (!written.ok) throw new Error(`side records incomplete: ${(written.skipped || []).join(', ')}`);
-}
-
 // F-18-11: seed-if-unseeded + load once per call — resolver input for buildShipment's state
 // constraint (DEFECT-1: shared seed-on-first-read helper, idempotent).
 async function _loadStateAliasRows(repo) {
   return ensureShipmentStateAliases(repo);
 }
 
-// validate → buildShipment → putShipment → side records → post ledger → return
-// { ref, warnings } | throws. F-23-03: ledger-post failure rolls back every write this call made
-// (compensating delete, not a real transaction — pm-decisions.md Q3).
+// validate → buildShipment → putShipment (shipment + commission/pnl rows, one intent, cas-write-
+// path.md §5.4) → publish → return { ref, warnings } | throws. A create no longer has a half-
+// written state to compensate: the batch is atomic, so a refusal leaves nothing behind to roll back.
 export async function submitForm(state, repo, salesRepId, opts = {}) {
   if (!repo) throw new Error('Repo not available');
 
@@ -93,13 +76,7 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
 
   // The direction the job runs decides the ref's prefix — an import job must not mint under EX
   // just because the form carries no explicit direction field (F-41-03).
-  //
-  // `opts.ref` is a RETRY of a submission whose rollback could not finish. Minting again there is
-  // how one job became two: the first attempt's envelope had already landed, the compensating
-  // delete failed (it only ever warned to the console), the user pressed Save again, and a fresh
-  // ref made a second shipment beside the orphan instead of overwriting it. Re-using the ref makes
-  // the retry idempotent — the second write lands on the same row.
-  const ref = opts.ref || await mintShipmentRef(repo, deriveDirection(state), salesRepId);
+  const ref = await mintShipmentRef(repo, deriveDirection(state), salesRepId);
 
   const stateAliasRows = await _loadStateAliasRows(repo);
   const jobNo = await resolveJobNo({ formJobNo: state.job_no, salesRepId });
@@ -108,7 +85,16 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
   shipment._ledger_version = version;
   // E-37: two records, split in Rust. The envelope goes to _shared/shipments where CS and the rep
   // both work; the sell side goes under the rep's account, which the policy does not let CS read.
-  await putShipment(repo, shipment);
+  // cas-write-path.md §5.4: shipment + commission/pnl rows + audit all land in the SAME intent, so
+  // a refusal here leaves nothing half-written to compensate.
+  await putShipment(repo, shipment, {
+    commissionLines: shipment.commission_lines || [],
+    pnlLines:        shipment.pnl_lines || [],
+    ledgerVersion:   version,
+    occurredAt:      todayLocal(),
+    createdBy:       salesRepId || null,
+    freshRef:        true,
+  });
   // F-41-04: the pre-check is check-then-write, so look again now the write has landed. A record
   // that lost the arbitration comes back re-minted and already re-saved — carry on with THAT one,
   // the publish snapshot below reads the Job No off it.
@@ -119,29 +105,11 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
     warnings.push(WARN_PNL_LINES_MISSING);
   }
 
-  try {
-    await _writeSideRecords(ref, shipment, salesRepId, version, true);
-
-    // F-37-05: publish is what CREATES the record Accounting reads. A publish_state flag on the
-    // envelope cannot make "kế toán chỉ thấy sau khi publish" true - Accounting is not in the
-    // reader set of _shared/shipments at all, so it sees nothing there whatever the flag says.
-    if (publish) await _handOverToAccounting(repo, shipment);
-    // Draft or Publish Pending: persist only. Accounting logic is now handled asynchronously by WASM.
-  } catch (err) {
-    // ONE call, and `err` rethrown whatever it answers. Which records the compensation removes, in
-    // what order, and that a failing step never cancels the ones after it, are decisions — they
-    // live in shipment_create_rollback.rs (owner law 2026-09-01), not here. What JS keeps is the
-    // part that is genuinely UI: preserving the error the user needs to read, and saying out loud
-    // when the cleanup left something behind instead of letting an orphan go unmentioned.
-    const undo = await rollbackShipmentCreate(repo, ref).catch((e) => ({ ok: false, skipped: [e?.message || String(e)] }));
-    if (!undo?.ok) {
-      console.warn('[VDG] rollback left records behind:', undo?.skipped); // DEV
-      // Name the survivor on the error so a retry can land on it. Without this the orphan is
-      // unreachable and the next attempt mints a twin — the duplicate-shipment report.
-      err.orphanRef = ref;
-    }
-    throw err;
-  }
+  // F-37-05: publish is what CREATES the record Accounting reads. A publish_state flag on the
+  // envelope cannot make "kế toán chỉ thấy sau khi publish" true - Accounting is not in the
+  // reader set of _shared/shipments at all, so it sees nothing there whatever the flag says.
+  if (publish) await _handOverToAccounting(repo, shipment);
+  // Draft or Publish Pending: persist only. Accounting logic is now handled asynchronously by WASM.
 
   // E-40: data-driven advance — booking entered on the very first save moves the job itself
   const advancedTo = await autoAdvanceShipment(repo, shipment);
@@ -149,13 +117,12 @@ export async function submitForm(state, repo, salesRepId, opts = {}) {
   return { ref, warnings, publishState: shipment.publish_state, advancedTo };
 }
 
-// AC-04..AC-06: update in-place — overwrite shipment record + both side-record sets for ref.
-// commission_lines are embedded in the shipment payload (ground truth for UI).
-// F-23-03: `_ledger_version` bumps on every save so a re-post produces new entry_ids
-// instead of matching the already-posted dedup key from the prior version (pm-decisions.md
-// Q3). A failure here still propagates to the caller's catch — unlike submitForm there is no
-// safe compensating delete for an in-place edit of a pre-existing record (it would destroy the
-// customer's prior data, not just this call's writes).
+// AC-04..AC-06: update in-place — overwrite shipment record + both side-record sets for ref, one
+// intent (cas-write-path.md §5.4). commission_lines are embedded in the shipment payload (ground
+// truth for UI). F-23-03: `_ledger_version` bumps on every save so a re-post produces new entry_ids
+// instead of matching the already-posted dedup key from the prior version (pm-decisions.md Q3). A
+// failure here propagates to the caller's catch — the write is conditional on the form's own read
+// (§5.3), so a refusal changes nothing.
 export async function updateForm(state, repo, salesRepId, ref, opts = {}) {
   if (!repo) throw new Error('Repo not available');
 
@@ -174,13 +141,18 @@ export async function updateForm(state, repo, salesRepId, ref, opts = {}) {
   let shipment = buildShipment(stateInput, ref, salesRepId, { publishState: resolvePublishState(prior?.publish_state ?? null, publish), stateAliasRows, jobNo });
   const version = nextLedgerVersion(prior?._ledger_version ?? NO_PRIOR_VERSION);
   shipment._ledger_version = version;
-  await putShipment(repo, shipment);
+  // Both sets replaced together with the envelope, in the SAME intent (§5.4) — the row sets can no
+  // longer disagree with the record, and the write is conditional on the base `getEnvelope`/the
+  // form's own read left behind (§5.3).
+  await putShipment(repo, shipment, {
+    commissionLines: shipment.commission_lines || [],
+    pnlLines:        shipment.pnl_lines || [],
+    ledgerVersion:   version,
+    occurredAt:      todayLocal(),
+    createdBy:       salesRepId || null,
+    freshRef:        false,
+  });
   shipment = await healJobNoCollision(shipment, salesRepId);
-
-  // Both sets replaced together, before the publish. Nothing in the snapshot reads the pnl_line
-  // entities — it is built from the shipment payload — so this only means the two row sets can no
-  // longer disagree with the record that was already written above.
-  await _writeSideRecords(ref, shipment, salesRepId, version, false);
 
   // F-37-05: an amendment publishes a NEW REVISION. Never an overwrite - Accounting may already
   // have raised an invoice from the previous one, and changing the figures under it is exactly

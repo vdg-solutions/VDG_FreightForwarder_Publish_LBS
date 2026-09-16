@@ -11,7 +11,7 @@ import {
 } from "./chunk-FJ72A4AS.js";
 import {
   listShipments
-} from "./chunk-CDRBIG2D.js";
+} from "./chunk-LYWSUR2S.js";
 import {
   EMPTY_STATE_VARIANT,
   bindEmptyStateActions,

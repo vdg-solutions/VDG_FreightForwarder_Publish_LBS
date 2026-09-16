@@ -93,16 +93,5 @@ export function bindSalesData({ wasm }) {
       return reply.publish_state;
     },
     submissionErrorKeys: (state) => wasm.sales_validate_submission({ state: state || {} }).error_keys,
-    writeSideRecords: async ({
-      shipmentRef, commissionLines = [], pnlLines = [], ledgerVersion, occurredAt, createdBy = null, freshRef = false,
-    }) => await wasm.sales_write_side_records({
-      shipment_ref: shipmentRef,
-      commission_lines: commissionLines,
-      pnl_lines: pnlLines,
-      ledger_version: ledgerVersion,
-      occurred_at: occurredAt,
-      created_by: createdBy,
-      fresh_ref: freshRef,
-    }),
   });
 }

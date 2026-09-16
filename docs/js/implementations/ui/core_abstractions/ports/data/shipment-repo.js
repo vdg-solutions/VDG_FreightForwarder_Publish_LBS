@@ -28,7 +28,6 @@ export const REVENUE_SEEN = '_revenue_seen';
 let _impl = null;
 
 /// Root bootstrap binds { putShipment, putEnvelope, getEnvelope, listEnvelopes, deleteShipment,
-/// rollbackShipmentCreate,
 /// getShipment, listShipments, joinLoaded, anyRevenueVisible } once.
 export function bindShipmentRepo(impl) { _impl = impl; }
 
@@ -37,7 +36,10 @@ function _i() {
   return _impl;
 }
 
-/// (repo, shipment) -> { envelope, revenue }; throws PeriodLockedError / LicenseReadOnlyError.
+/// (repo, shipment, { commissionLines, pnlLines, ledgerVersion, occurredAt, createdBy, freshRef }) ->
+/// { envelope, revenue }; throws PeriodLockedError / LicenseReadOnlyError. cas-write-path.md §5.4:
+/// one intent carries the shipment and its side rows, conditional on the base the matching
+/// getShipment read (§5.3) — a save is one atomic batch now, not a create plus a compensating undo.
 export const putShipment = (...a) => _i().putShipment(...a);
 /// (repo, ref, shipmentLike) -> envelope. The operational half only; never period-gated.
 export const putEnvelope = (...a) => _i().putEnvelope(...a);
@@ -47,12 +49,6 @@ export const getEnvelope = (...a) => _i().getEnvelope(...a);
 export const listEnvelopes = (...a) => _i().listEnvelopes(...a);
 /// (repo, ref) -> void; throws PeriodLockedError / LicenseReadOnlyError.
 export const deleteShipment = (...a) => _i().deleteShipment(...a);
-/// (repo, ref) -> void. Undo a create that failed part-way — gated on `shipment.create`, the
-/// authority that wrote the record, not on the manager-only Void/Delete affordance.
-export const rollbackShipmentCreate = (...a) => _i().rollbackShipmentCreate(...a);
-/// (repo, {shipment_ref, lines, ledger_version, occurred_at, created_by}) -> {ok, skipped}.
-/// Replaces the whole commission-entry set; the id scheme and record shape are wasm's.
-export const overwriteCommissionEntries = (...a) => _i().overwriteCommissionEntries(...a);
 /// (repo, ref) -> the shipment rejoined with whatever revenue this reader can see, or null.
 export const getShipment = (...a) => _i().getShipment(...a);
 /// (repo) -> joined shipments, everything this reader can see.

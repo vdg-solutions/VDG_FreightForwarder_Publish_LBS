@@ -19,7 +19,7 @@ import {
 import {
   KIND_SHIPMENT,
   listShipments
-} from "./chunk-CDRBIG2D.js";
+} from "./chunk-LYWSUR2S.js";
 import {
   mountAgGrid
 } from "./chunk-4WAHI6XV.js";

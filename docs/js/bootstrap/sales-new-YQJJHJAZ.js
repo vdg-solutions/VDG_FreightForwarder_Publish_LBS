@@ -44,9 +44,8 @@ import {
   predict,
   resolveJobNo,
   resolvePublishState,
-  saveKindWmaState,
-  writeSideRecords
-} from "./chunk-WXAFWACR.js";
+  saveKindWmaState
+} from "./chunk-ZROLQ6T5.js";
 import {
   computeChargeableKg
 } from "./chunk-WKFYYEZM.js";
@@ -103,9 +102,8 @@ import {
   getEnvelope,
   getShipment,
   listEnvelopes,
-  putShipment,
-  rollbackShipmentCreate
-} from "./chunk-CDRBIG2D.js";
+  putShipment
+} from "./chunk-LYWSUR2S.js";
 import {
   getActiveSalesReps,
   getExcludedNonSalesAccounts
@@ -3095,47 +3093,32 @@ function highlightErrors(root, errors) {
     el.classList.toggle("hidden", errors.length === 0);
   }
 }
-async function _writeSideRecords(ref, shipment, salesRepId, version, freshRef) {
-  const written = await writeSideRecords({
-    shipmentRef: ref,
-    commissionLines: shipment.commission_lines || [],
-    pnlLines: shipment.pnl_lines || [],
-    ledgerVersion: version,
-    occurredAt: todayLocal(),
-    createdBy: salesRepId || null,
-    freshRef
-  });
-  if (!written.ok) throw new Error(`side records incomplete: ${(written.skipped || []).join(", ")}`);
-}
 async function _loadStateAliasRows(repo) {
   return ensureShipmentStateAliases(repo);
 }
 async function submitForm(state, repo, salesRepId, opts = {}) {
   if (!repo) throw new Error("Repo not available");
   const publish = opts.publish !== false;
-  const ref = opts.ref || await mintShipmentRef(repo, deriveDirection(state), salesRepId);
+  const ref = await mintShipmentRef(repo, deriveDirection(state), salesRepId);
   const stateAliasRows = await _loadStateAliasRows(repo);
   const jobNo = await resolveJobNo({ formJobNo: state.job_no, salesRepId });
   let shipment = buildShipment(state, ref, salesRepId, { publishState: resolvePublishState(null, publish), stateAliasRows, jobNo });
   const version = nextLedgerVersion(NO_PRIOR_VERSION);
   shipment._ledger_version = version;
-  await putShipment(repo, shipment);
+  await putShipment(repo, shipment, {
+    commissionLines: shipment.commission_lines || [],
+    pnlLines: shipment.pnl_lines || [],
+    ledgerVersion: version,
+    occurredAt: todayLocal(),
+    createdBy: salesRepId || null,
+    freshRef: true
+  });
   shipment = await healJobNoCollision(shipment, salesRepId);
   const warnings = [];
   if (!shipment.pnl_lines || shipment.pnl_lines.length === 0) {
     warnings.push(WARN_PNL_LINES_MISSING);
   }
-  try {
-    await _writeSideRecords(ref, shipment, salesRepId, version, true);
-    if (publish) await _handOverToAccounting(repo, shipment);
-  } catch (err) {
-    const undo = await rollbackShipmentCreate(repo, ref).catch((e) => ({ ok: false, skipped: [e?.message || String(e)] }));
-    if (!undo?.ok) {
-      console.warn("[VDG] rollback left records behind:", undo?.skipped);
-      err.orphanRef = ref;
-    }
-    throw err;
-  }
+  if (publish) await _handOverToAccounting(repo, shipment);
   const advancedTo = await autoAdvanceShipment(repo, shipment);
   return { ref, warnings, publishState: shipment.publish_state, advancedTo };
 }
@@ -3154,9 +3137,15 @@ async function updateForm(state, repo, salesRepId, ref, opts = {}) {
   let shipment = buildShipment(stateInput, ref, salesRepId, { publishState: resolvePublishState(prior?.publish_state ?? null, publish), stateAliasRows, jobNo });
   const version = nextLedgerVersion(prior?._ledger_version ?? NO_PRIOR_VERSION);
   shipment._ledger_version = version;
-  await putShipment(repo, shipment);
+  await putShipment(repo, shipment, {
+    commissionLines: shipment.commission_lines || [],
+    pnlLines: shipment.pnl_lines || [],
+    ledgerVersion: version,
+    occurredAt: todayLocal(),
+    createdBy: salesRepId || null,
+    freshRef: false
+  });
   shipment = await healJobNoCollision(shipment, salesRepId);
-  await _writeSideRecords(ref, shipment, salesRepId, version, false);
   if (publish) await _handOverToAccounting(repo, shipment);
   const advancedTo = await autoAdvanceShipment(repo, shipment);
   return { publishState: shipment.publish_state, advancedTo };
@@ -3516,7 +3505,6 @@ async function render(root, opts = {}) {
     });
   }
   const guardedSubmit = createSubmitGuard();
-  let orphanRef = null;
   root.querySelector("#shipment-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const intent = e.submitter?.dataset?.intent === "save" ? "save" : "publish";
@@ -3552,8 +3540,7 @@ async function render(root, opts = {}) {
             navigate("/sales/edit/" + editRef);
           }
         } else {
-          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish, ref: orphanRef });
-          orphanRef = null;
+          const { ref, advancedTo } = await submitForm(state, repo, repFinal, { publish });
           _dispatchCommitted(formMount, repFinal);
           await clearDraft();
           const key = publish ? "sales_new.publish_pending_toast" : "sales_new.saved_draft_toast";
@@ -3562,7 +3549,6 @@ async function render(root, opts = {}) {
           navigate("/sales/edit/" + ref);
         }
       } catch (err) {
-        if (err?.orphanRef) orphanRef = err.orphanRef;
         showToast(saveErrorText(err), "error");
       }
     });

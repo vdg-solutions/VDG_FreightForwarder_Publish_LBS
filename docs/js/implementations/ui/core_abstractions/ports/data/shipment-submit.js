@@ -34,6 +34,3 @@ export const nextLedgerVersion = (...a) => _i().nextLedgerVersion(...a);
 export const resolvePublishState = (...a) => _i().resolvePublishState(...a);
 /// (state) -> i18n keys of every rule this submission breaks; empty = it may be saved.
 export const submissionErrorKeys = (...a) => _i().submissionErrorKeys(...a);
-/// ({ shipmentRef, commissionLines, pnlLines, ledgerVersion, occurredAt, createdBy, freshRef })
-/// -> { ok, skipped }. ONE call for both whole row sets — never one call per row.
-export const writeSideRecords = (...a) => _i().writeSideRecords(...a);

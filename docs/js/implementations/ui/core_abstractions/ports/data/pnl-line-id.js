@@ -7,7 +7,7 @@
 
 let _impl = null;
 
-/// Root bootstrap binds { pnlLineId, deletePnlLinesFor } once.
+/// Root bootstrap binds { pnlLineId } once.
 export function bindPnlLineId(impl) { _impl = impl; }
 
 function _i() {
@@ -17,5 +17,3 @@ function _i() {
 
 /// (ref, index) -> the canonical id. Synchronous: the form builder mints ids while rendering.
 export const pnlLineId = (...a) => _i().pnlLineId(...a);
-/// (repo, ref) -> rows deleted. Reaches both id schemes.
-export const deletePnlLinesFor = (...a) => _i().deletePnlLinesFor(...a);

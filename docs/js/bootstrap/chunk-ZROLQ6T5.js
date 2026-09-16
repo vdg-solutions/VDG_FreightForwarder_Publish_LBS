@@ -92,7 +92,6 @@ var resolveJobNo = (...a) => _i6().resolveJobNo(...a);
 var healJobNoCollision = (...a) => _i6().healJobNoCollision(...a);
 var nextLedgerVersion = (...a) => _i6().nextLedgerVersion(...a);
 var resolvePublishState = (...a) => _i6().resolvePublishState(...a);
-var writeSideRecords = (...a) => _i6().writeSideRecords(...a);
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/flows/fsm-auto-advance.js
 var _impl7 = null;
@@ -139,7 +138,6 @@ export {
   healJobNoCollision,
   nextLedgerVersion,
   resolvePublishState,
-  writeSideRecords,
   bindFsmAutoAdvance,
   autoAdvanceShipment,
   bindRepCodeRegistry,

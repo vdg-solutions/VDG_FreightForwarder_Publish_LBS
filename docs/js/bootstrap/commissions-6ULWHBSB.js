@@ -27,7 +27,7 @@ import {
 import {
   KIND_SHIPMENT,
   listShipments
-} from "./chunk-CDRBIG2D.js";
+} from "./chunk-LYWSUR2S.js";
 import {
   safeMasterLoad
 } from "./chunk-V5A2B6CO.js";

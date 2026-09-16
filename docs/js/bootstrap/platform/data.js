@@ -12,18 +12,7 @@
 
 // The two audit trails, by kind. They are named here rather than imported because this is the
 // adapter that talks to the browser's audit log object; the routing decision is Rust's.
-const AUDIT_STORE_REVENUE = 'revenue_audit_log';
-
 export const dataPlatform = {
   /// The licence claim the boot gate stamped; null when it has not run.
   data_license_status: async () => window.__vdg_license_status ?? null,
-
-  /// Append one shipment change list to the trail its readers already hold.
-  data_audit_append: async (store, kind, entityId, op, body, changes) => {
-    const log = window.__vdg_audit_log;
-    if (!log) return false;
-    if (store === AUDIT_STORE_REVENUE) log.appendRevenue(kind, entityId, op, body, changes);
-    else log.append(kind, entityId, op, body, changes);
-    return true;
-  },
 };

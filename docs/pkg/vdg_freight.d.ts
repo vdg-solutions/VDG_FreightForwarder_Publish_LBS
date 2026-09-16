@@ -157,7 +157,6 @@ export class WasmEntityRepo {
      */
     awb_list_all(): Promise<any>;
     awb_list_by_month(ym: string): Promise<any>;
-    delete(kind: string, id: string): Promise<any>;
     drain_outbox(): Promise<any>;
     /**
      * A CLOSED period outside the eager set (period_window.rs) -- a screen reaching back before
@@ -258,6 +257,13 @@ export class WasmEntityRepo {
     lgr_replace_leg(year: number, acc_code: string, leg_json: string): Promise<any>;
     lgr_set_chart(chart_json: string): void;
     list(kind: string, owner?: string | null): Promise<any>;
+    /**
+     * ADO #126: `list` without the bootstrap. `list` answers from the local store either way —
+     * the pass it arms hydrates every summary with its own GET (CDB-Q-06) and lands after this
+     * call has already returned — so a reader that only needs the rows this device holds (the
+     * audit chain tip at drain time) takes this door and the whole collection is left alone.
+     */
+    list_cached(kind: string, owner?: string | null): Promise<any>;
     mint_quote_ref(salt: string): Promise<any>;
     mint_shipment_ref(direction: string, salt: string): Promise<any>;
     constructor(io: any);
@@ -276,33 +282,6 @@ export class WasmEntityRepo {
     pref_seed_if_empty(ref_name: string, records_json: string): Promise<any>;
     pref_write_pending(ref_name: string, dto_json: string): Promise<any>;
     pref_write_state(ref_name: string, dto_json: string): Promise<any>;
-    put(kind: string, id: string, body: any): Promise<any>;
-    /**
-     * CDB-DM-15: same as `put`, plus labels -- the ONE extra capability a period-bound kind
-     * needs (freight_app's `Records::put_labeled`, e.g. `ShipmentRepo` stamping `period` at
-     * create). `labels` only matters when this call is a CREATE (`EntityStoreOperator::put`'s own
-     * rule); an edit of an existing record drops them silently, same as `put` always has.
-     */
-    put_labeled(kind: string, id: string, body: any, labels: any): Promise<any>;
-    /**
-     * CDB-DM-04: `put`, plus WHOSE row it is.
-     *
-     * `put` leaves the owner undeclared and the bridge falls back to the session, which is right
-     * only while the writer and the owner are the same person. They are not when a Manager enters
-     * a rep's revenue: archives/account-folder-retirement.md §2 calls that default "silently makes a
-     * Manager's entry steal the rep's job". This is the seam `storage_bridge.rs` already promised
-     * -- "a future caller that DOES know its own owner is honored without a second, competing
-     * derivation".
-     */
-    put_owned(kind: string, id: string, body: any, owner: string): Promise<any>;
-    /**
-     * CDB-DM-04 + CDB-DM-15 together: whose row it is AND which period it belongs to.
-     *
-     * `PutRequest` has always carried both; no entry point passed both, so a caller needing the
-     * pair had to choose which fact to lose. `ShipmentRepo` is that caller, and the fact it lost
-     * was the owner.
-     */
-    put_owned_labeled(kind: string, id: string, body: any, owner: string, labels: any): Promise<any>;
     /**
      * CDB-DM-07: hand a record to somebody else. Owner changes; content does not.
      *
@@ -577,8 +556,6 @@ export function data_delete_commission_rule(req: any): Promise<any>;
  */
 export function data_delete_master(req: any): Promise<any>;
 
-export function data_delete_pnl_lines(req: any): Promise<any>;
-
 export function data_delete_shipment(req: any): Promise<any>;
 
 export function data_exception_caseload(req: any): Promise<any>;
@@ -601,12 +578,6 @@ export function data_manifest_filings(req: any): Promise<any>;
 
 export function data_mark_receivable_followed_up(req: any): Promise<any>;
 
-/**
- * Replace a shipment's whole commission-entry set — the delete-then-write procedure, its id
- * scheme and its record shape, all decided in `CommissionEntries` rather than in a view file.
- */
-export function data_overwrite_commission_entries(req: any): Promise<any>;
-
 export function data_pending_approvals(req: any): Promise<any>;
 
 export function data_period_close_record(req: any): Promise<any>;
@@ -627,21 +598,7 @@ export function data_put_envelope(req: any): Promise<any>;
 
 export function data_put_shipment(req: any): Promise<any>;
 
-/**
- * The merge toast's "use mine" — see `MergeResolve::reapply_my_values` for why the collection in
- * the request is checked rather than taken.
- */
-export function data_reapply_my_values(req: any): Promise<any>;
-
 export function data_receivables_ledger(req: any): Promise<any>;
-
-export function data_resolve_conflict(req: any): Promise<any>;
-
-/**
- * The compensating half of a create that failed part-way — see `ShipmentRepo::rollback_create`
- * for why this is not `data_delete_shipment` with a different name.
- */
-export function data_rollback_shipment_create(req: any): Promise<any>;
 
 export function data_sales_profiles(req: any): Promise<any>;
 
@@ -1152,11 +1109,6 @@ export function sales_validate_submission(req: any): any;
 export function sales_weight_unit_codes(req: any): Promise<any>;
 
 /**
- * Both row sets a shipment carries, replaced in ONE call — not one call per row.
- */
-export function sales_write_side_records(req: any): Promise<any>;
-
-/**
  * Generic select export — kept for the one remaining ad-hoc caller path; returns a JSON array of
  * row objects. Business queries go through `sqlite_store`, not this.
  */
@@ -1447,7 +1399,6 @@ export interface InitOutput {
     readonly data_customer360_inputs: (a: number) => number;
     readonly data_delete_commission_rule: (a: number) => number;
     readonly data_delete_master: (a: number) => number;
-    readonly data_delete_pnl_lines: (a: number) => number;
     readonly data_delete_shipment: (a: number) => number;
     readonly data_exception_caseload: (a: number) => number;
     readonly data_get_envelope: (a: number) => number;
@@ -1459,7 +1410,6 @@ export interface InitOutput {
     readonly data_list_where: (a: number) => number;
     readonly data_manifest_filings: (a: number) => number;
     readonly data_mark_receivable_followed_up: (a: number) => number;
-    readonly data_overwrite_commission_entries: (a: number) => number;
     readonly data_pending_approvals: (a: number) => number;
     readonly data_period_close_record: (a: number) => number;
     readonly data_pipeline_shipments: (a: number) => number;
@@ -1470,10 +1420,7 @@ export interface InitOutput {
     readonly data_published_for: (a: number) => number;
     readonly data_put_envelope: (a: number) => number;
     readonly data_put_shipment: (a: number) => number;
-    readonly data_reapply_my_values: (a: number) => number;
     readonly data_receivables_ledger: (a: number) => number;
-    readonly data_resolve_conflict: (a: number) => number;
-    readonly data_rollback_shipment_create: (a: number) => number;
     readonly data_sales_profiles: (a: number) => number;
     readonly data_save_commission_rule: (a: number) => number;
     readonly data_save_master: (a: number) => number;
@@ -1689,7 +1636,6 @@ export interface InitOutput {
     readonly sales_shipment_month: (a: number, b: number) => void;
     readonly sales_validate_submission: (a: number, b: number) => void;
     readonly sales_weight_unit_codes: (a: number) => number;
-    readonly sales_write_side_records: (a: number) => number;
     readonly select: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly server_health_poll: () => number;
     readonly server_health_probe: () => number;
@@ -1764,7 +1710,6 @@ export interface InitOutput {
     readonly wasmentityrepo_awb_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_awb_list_all: (a: number) => number;
     readonly wasmentityrepo_awb_list_by_month: (a: number, b: number, c: number) => number;
-    readonly wasmentityrepo_delete: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_drain_outbox: (a: number) => number;
     readonly wasmentityrepo_ensure_period_loaded: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_flows_cas_put: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
@@ -1797,6 +1742,7 @@ export interface InitOutput {
     readonly wasmentityrepo_lgr_replace_leg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly wasmentityrepo_lgr_set_chart: (a: number, b: number, c: number, d: number) => void;
     readonly wasmentityrepo_list: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly wasmentityrepo_list_cached: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_mint_quote_ref: (a: number, b: number, c: number) => number;
     readonly wasmentityrepo_mint_shipment_ref: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_new: (a: number) => number;
@@ -1808,10 +1754,6 @@ export interface InitOutput {
     readonly wasmentityrepo_pref_seed_if_empty: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_pref_write_pending: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly wasmentityrepo_pref_write_state: (a: number, b: number, c: number, d: number, e: number) => number;
-    readonly wasmentityrepo_put: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
-    readonly wasmentityrepo_put_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
-    readonly wasmentityrepo_put_owned: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
-    readonly wasmentityrepo_put_owned_labeled: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
     readonly wasmentityrepo_reassign: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly wasmentityrepo_sync_attention_items: (a: number) => number;
     readonly wasmentityrepo_sync_delta: (a: number) => number;
@@ -1830,13 +1772,13 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
-    readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
-    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
+    readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
+    readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1847,9 +1789,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_17021: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_17034: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12512: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16644: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16657: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12205: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

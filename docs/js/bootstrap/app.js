@@ -145,7 +145,7 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-WXAFWACR.js";
+} from "./chunk-ZROLQ6T5.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
@@ -195,7 +195,7 @@ import {
   bindIntentNotices,
   bindShipmentVoidDelete,
   openSyncAttentionModal
-} from "./chunk-IU46KE2S.js";
+} from "./chunk-MM2DJXAX.js";
 import {
   bindFsmIngest
 } from "./chunk-4HAITEXH.js";
@@ -253,7 +253,7 @@ import {
   deleteShipment,
   putEnvelope,
   putShipment
-} from "./chunk-CDRBIG2D.js";
+} from "./chunk-LYWSUR2S.js";
 import {
   bindSalesRegistry
 } from "./chunk-4H4Y6OOD.js";
@@ -630,7 +630,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 80b8d2fc">v0.4.94 (80b8d2fc)</span>
+        <span class="font-mono whitespace-nowrap" title="build ac0cbdc6">v0.4.95 (ac0cbdc6)</span>
       </div>
     `;
   }
@@ -2370,7 +2370,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.94 (80b8d2fc)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.95 (ac0cbdc6)</div>
         </div>
       </div>
     </div>`;
@@ -2587,18 +2587,9 @@ var cachePlatform = {
 };
 
 // output/web/js.tmp/bootstrap/platform/data.js
-var AUDIT_STORE_REVENUE = "revenue_audit_log";
 var dataPlatform = {
   /// The licence claim the boot gate stamped; null when it has not run.
-  data_license_status: async () => window.__vdg_license_status ?? null,
-  /// Append one shipment change list to the trail its readers already hold.
-  data_audit_append: async (store, kind, entityId, op2, body, changes) => {
-    const log = window.__vdg_audit_log;
-    if (!log) return false;
-    if (store === AUDIT_STORE_REVENUE) log.appendRevenue(kind, entityId, op2, body, changes);
-    else log.append(kind, entityId, op2, body, changes);
-    return true;
-  }
+  data_license_status: async () => window.__vdg_license_status ?? null
 };
 
 // output/web/js.tmp/bootstrap/platform/sync.js
@@ -2793,24 +2784,16 @@ function createPlatform({ repo: repo3 }) {
   const base = {
     records_get: (kind, id) => repo3.get(kind, id),
     records_list: (kind) => repo3.list(kind),
-    records_put: (kind, id, body) => repo3.put(kind, id, body),
-    // CDB-DM-04: whose row it is, when that is not the person typing. Carried, never decided
-    // here -- the shell hands the value across, wasm chose it.
-    records_put_owned: (kind, id, body, owner) => repo3.put_owned(kind, id, body, owner),
-    // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
-    // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
-    records_put_labeled: (kind, id, body, labels) => repo3.put_labeled(kind, id, body, labels),
-    // Both facts at once. A shipment needs its owner AND its period at create, and having to pick
-    // meant the owner was the one dropped -- so every job CustomerService opened was owned by CS.
-    // Carried, never decided here: wasm chose both values.
-    records_put_owned_labeled: (kind, id, body, owner, labels) => repo3.put_owned_labeled(kind, id, body, owner, labels),
+    // ADO #126: the same rows without arming the collection bootstrap `list` fires behind it.
+    records_list_cached: (kind) => repo3.list_cached(kind),
+    // No records_put* / records_delete: every write is a WriteIntent inside wasm now
+    // (cas-write-path.md D28), so the shell has nothing to carry across for one.
     // CDB-DM-07: hand the record to somebody else. Its own action, its own permit — carried, never
     // decided here.
     records_reassign: (kind, id, newOwner) => repo3.reassign(kind, id, newOwner),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
     records_invalidate_period_cache: (kind, period) => repo3.invalidate_period_cache(kind, period),
-    records_delete: (kind, id) => repo3.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     // B-24-04-01: these two answered `null` while `__vdg_io` was still being installed, and the
     // wasm side calls `.then` on whatever comes back -- so the first render of every view after a
@@ -3036,8 +3019,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=80b8d2fc", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=80b8d2fc", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=ac0cbdc6", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ac0cbdc6", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4439,7 +4422,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-PY2C4OYD.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-PY5A445M.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4447,7 +4430,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-CKBDZTIR.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-JT4FBVUC.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4455,14 +4438,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-ZMN4ZCLP.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-YQJJHJAZ.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-ZMN4ZCLP.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-YQJJHJAZ.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4567,26 +4550,12 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.94 (80b8d2fc)";
-
-// output/web/js.tmp/implementations/ui/core_abstractions/ports/data/merge-resolve.js
-var _impl12 = null;
-function bindMergeResolve(impl) {
-  _impl12 = impl;
-}
-function _i11() {
-  if (!_impl12) throw new Error("ui/merge-resolve: no implementation bound (root bootstrap binds it)");
-  return _impl12;
-}
-var reapplyMyValues = (...a) => _i11().reapplyMyValues(...a);
-var resolveConflict = (...a) => _i11().resolveConflict(...a);
+var APP_VERSION = "v0.4.95 (ac0cbdc6)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
 var BREAKPOINT_TABLET_PX = 768;
 var PREFS_META_KEY = "preferences";
-var CHOICE_MINE = "mine";
-var CHOICE_THEIRS = "theirs";
 var STORE_LOCKED_COPY = {
   "genuine-conflict": ["store_locked.title", "store_locked.body"],
   unresponsive: ["store_unresponsive.title", "store_unresponsive.body"]
@@ -4611,121 +4580,6 @@ function initStoreLockedScreen() {
     el.querySelector("#store-locked-retry").onclick = () => location.reload();
     document.body.appendChild(el);
   }, { once: true });
-}
-var CONFLICT_VAL_MAX_CHARS = 60;
-function _fieldValText(v) {
-  const s = typeof v === "object" && v !== null ? JSON.stringify(v) : String(v ?? "");
-  return s.slice(0, CONFLICT_VAL_MAX_CHARS);
-}
-function _showRefusal(dlg, message) {
-  let line = dlg.querySelector("#resolve-error");
-  if (!line) {
-    line = document.createElement("div");
-    line.id = "resolve-error";
-    line.className = "px-6 pb-4 text-xs text-red-600";
-    dlg.appendChild(line);
-  }
-  line.textContent = message || t("merge.resolve_failed");
-}
-function _settle(dlg, reply) {
-  if (!reply?.ok) {
-    _showRefusal(dlg, reply?.error);
-    return;
-  }
-  dlg.close();
-  dlg.remove();
-}
-function _fieldDiffRows(fields, extra = () => "") {
-  return fields.map((c) => `
-    <div class="mb-2">
-      <div class="text-slate-500 mb-1">${t("conflict_field", { field: c.field })}${extra(c)}</div>
-      <div class="flex gap-4">
-        <div class="flex-1 bg-blue-50 rounded p-2">
-          <div class="font-medium text-blue-700 mb-1">${t("your_value")}</div>
-          <div class="font-mono break-all">${_fieldValText(c.local_val)}</div>
-        </div>
-        <div class="flex-1 bg-amber-50 rounded p-2">
-          <div class="font-medium text-amber-700 mb-1">${t("their_value")}</div>
-          <div class="font-mono break-all">${_fieldValText(c.remote_val)}</div>
-        </div>
-      </div>
-    </div>`).join("");
-}
-function initConflictModal() {
-  window.addEventListener("vdg:conflict-detected", (e) => {
-    const { kind, id, local, remote, merged, conflicts } = e.detail || {};
-    const dlg = document.createElement("dialog");
-    dlg.className = "rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40";
-    const rows = _fieldDiffRows(conflicts?.length ? conflicts : [{ field: "(unknown)", local_val: "", remote_val: "" }]);
-    dlg.innerHTML = `
-      <div class="px-6 py-4 border-b border-slate-200">
-        <div class="font-semibold text-slate-900 text-sm">${t("conflict_title")} \xB7 ${kind}:${id}</div>
-        <div class="text-xs text-slate-500 mt-1">${t("conflict.money_note")}</div>
-      </div>
-      <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${rows}</div>
-      <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
-        <button id="keep-mine" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("keep_mine")}</button>
-        <button id="use-theirs" class="px-4 py-2 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700">${t("use_theirs")}</button>
-      </div>`;
-    document.body.appendChild(dlg);
-    dlg.showModal();
-    const resolveWith = (choice) => async () => {
-      _settle(dlg, await resolveConflict({ kind, id, choice, merged, local, remote, conflicts: conflicts || [] }));
-    };
-    dlg.querySelector("#keep-mine").addEventListener("click", resolveWith(CHOICE_MINE));
-    dlg.querySelector("#use-theirs").addEventListener("click", resolveWith(CHOICE_THEIRS));
-  });
-}
-var MERGE_TOAST_DISMISS_MS = 12e3;
-function initMergeToast() {
-  window.addEventListener("vdg:merge-autoresolved", (e) => {
-    const { kind, id, fields } = e.detail || {};
-    if (!fields?.length) return;
-    const card = document.createElement("div");
-    card.className = "fixed bottom-4 right-4 z-[9999] bg-amber-500 text-white rounded-lg shadow-lg px-4 py-3 text-xs max-w-sm";
-    card.innerHTML = `
-      <div class="font-semibold mb-1">${t("merge.auto_title")}</div>
-      <div class="mb-2">${t("merge.auto_body", { id, n: fields.length })}</div>
-      <div class="flex justify-end gap-2">
-        <button id="merge-view" class="px-3 py-1 bg-white/20 rounded hover:bg-white/30">${t("merge.view")}</button>
-        <button id="merge-dismiss" class="px-3 py-1 bg-white/20 rounded hover:bg-white/30">${t("merge.close")}</button>
-      </div>`;
-    document.body.appendChild(card);
-    const timer = setTimeout(() => card.remove(), MERGE_TOAST_DISMISS_MS);
-    card.querySelector("#merge-dismiss").onclick = () => {
-      clearTimeout(timer);
-      card.remove();
-    };
-    card.querySelector("#merge-view").onclick = () => {
-      clearTimeout(timer);
-      card.remove();
-      const dlg = document.createElement("dialog");
-      dlg.className = "rounded-xl shadow-2xl p-0 w-[480px] max-w-[95vw] bg-white backdrop:bg-black/40";
-      const winnerLabel = (c) => ` \xB7 <span class="text-slate-400">${t(c.winner === "local" ? "merge.winner.local" : "merge.winner.remote")}</span>`;
-      dlg.innerHTML = `
-        <div class="px-6 py-4 border-b border-slate-200">
-          <div class="font-semibold text-slate-900 text-sm">${t("merge.auto_title")} \xB7 ${kind}:${id}</div>
-        </div>
-        <div class="px-6 py-4 text-xs max-h-[50vh] overflow-y-auto">${_fieldDiffRows(fields, winnerLabel)}</div>
-        <div class="px-6 py-3 border-t border-slate-100 flex justify-end gap-2">
-          <button id="merge-undo" class="px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">${t("merge.use_mine")}</button>
-          <button id="merge-ok" class="px-4 py-2 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300">${t("merge.close")}</button>
-        </div>`;
-      document.body.appendChild(dlg);
-      dlg.showModal();
-      dlg.querySelector("#merge-ok").onclick = () => {
-        dlg.close();
-        dlg.remove();
-      };
-      dlg.querySelector("#merge-undo").onclick = async () => {
-        _settle(dlg, await reapplyMyValues({
-          kind,
-          id,
-          fields: fields.map((c) => ({ field: c.field, value: c.local_val }))
-        }));
-      };
-    };
-  });
 }
 async function checkVersionBanner(store) {
   if (!store) return;
@@ -4816,8 +4670,8 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-A3TMI4ET.js"),
-  "/shipments": () => import("./shipments-T7XTIXTB.js"),
+  "/dashboard": () => import("./dashboard-4SIOQURQ.js"),
+  "/shipments": () => import("./shipments-BQTG3T22.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4825,8 +4679,8 @@ var VIEWS = {
   "/finance/demdet": () => import("./demdet-BSC4VQ26.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-JWH5NPBY.js"),
-  "/sales/analytics": () => import("./sales-analytics-LNR27FBP.js"),
+  "/sales/me": () => import("./sales-me-Y7DNIDDA.js"),
+  "/sales/analytics": () => import("./sales-analytics-SQ7QRD6W.js"),
   "/sales/quote/new": () => import("./sales-quote-new-NPXRNJ4F.js"),
   "/sales/quote": () => import("./sales-quote-list-VCJTCXW6.js"),
   "/masters/customers": () => import("./masters-customers-H7WYGR5L.js"),
@@ -4846,8 +4700,8 @@ var VIEWS = {
   "/manager/audit": () => import("./audit-UTZVYHF3.js"),
   "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-UM7YNMAD.js"),
-  "/manager/finance/commissions": () => import("./commissions-POJGFCI3.js"),
+  "/manager/sales": () => import("./sales-C6DMYS2I.js"),
+  "/manager/finance/commissions": () => import("./commissions-6ULWHBSB.js"),
   "/manager/commission-rules": () => import("./commission-rules-TKSNVF5A.js"),
   "/manager/exceptions": () => import("./exceptions-5XKVRTLH.js"),
   // E-15
@@ -4884,7 +4738,7 @@ var VIEWS = {
   "/accounting/ledger": () => import("./ledger-viewer-MTG7YBW2.js"),
   // E-23 F-23-05
   "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-AY6YJ6YD.js"),
+  "/accounting/settings": () => import("./settings-7NGVGHLH.js"),
   // E-24 F-24-04
   "/admin/users": () => import("./users-view-EK3OHL36.js"),
   // E-24 F-24-06
@@ -4892,9 +4746,9 @@ var VIEWS = {
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
-var _impl13 = null;
+var _impl12 = null;
 function bindRoutePrefetch(impl) {
-  _impl13 = impl;
+  _impl12 = impl;
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/cache.js
@@ -4936,9 +4790,9 @@ var LicenseReadOnlyError = class extends Error {
     this.graceDaysLeft = graceDaysLeft;
   }
 };
-var _impl14 = null;
+var _impl13 = null;
 function bindWriteGate(impl) {
-  _impl14 = impl;
+  _impl13 = impl;
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/data-masters.js
@@ -5045,15 +4899,6 @@ function bindReportReads2(wasm4) {
   });
 }
 
-// output/web/js.tmp/bootstrap/compose-ui/data-guard.js
-function bindGuardData(deps) {
-  const wasm4 = deps?.wasm ?? deps;
-  bindMergeResolve({
-    reapplyMyValues: async (req) => await wasm4.data_reapply_my_values(req),
-    resolveConflict: async (req) => await wasm4.data_resolve_conflict(req)
-  });
-}
-
 // output/web/js.tmp/bootstrap/compose-ui/data-sales.js
 function bindSalesData({ wasm: wasm4 }) {
   const rows = (reply) => {
@@ -5132,30 +4977,14 @@ function bindSalesData({ wasm: wasm4 }) {
       if (!reply.ok) throw new Error(reply.error || "the publish state was refused");
       return reply.publish_state;
     },
-    submissionErrorKeys: (state) => wasm4.sales_validate_submission({ state: state || {} }).error_keys,
-    writeSideRecords: async ({
-      shipmentRef,
-      commissionLines = [],
-      pnlLines = [],
-      ledgerVersion,
-      occurredAt,
-      createdBy = null,
-      freshRef = false
-    }) => await wasm4.sales_write_side_records({
-      shipment_ref: shipmentRef,
-      commission_lines: commissionLines,
-      pnl_lines: pnlLines,
-      ledger_version: ledgerVersion,
-      occurred_at: occurredAt,
-      created_by: createdBy,
-      fresh_ref: freshRef
-    })
+    submissionErrorKeys: (state) => wasm4.sales_validate_submission({ state: state || {} }).error_keys
   });
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/data.js
 var REASON_PERIOD_LOCKED = "period-locked";
 var REASON_LICENSE_READONLY = "license-readonly";
+var _formBases = /* @__PURE__ */ new Map();
 function gateError(gate) {
   if (!gate || gate.allowed) return null;
   if (gate.reason === REASON_LICENSE_READONLY) {
@@ -5188,8 +5017,26 @@ function applyPredicate(rows, predicate) {
 function composeData(wasm4) {
   const joinLoaded = async (_repo, envelopes) => stampRows(await wasm4.data_join_loaded({ envelopes: envelopes || [] }));
   bindShipmentRepo({
-    putShipment: async (_repo, shipment) => {
-      const reply = throwIfRefused(await wasm4.data_put_shipment({ shipment }));
+    // opts: { commissionLines, pnlLines, ledgerVersion, occurredAt, createdBy, freshRef } —
+    // cas-write-path.md §5.4: one intent carries the shipment plus its side rows, so a create or
+    // amend is one atomic batch, not a save followed by a separate side-record write that can land
+    // half-done.
+    putShipment: async (_repo, shipment, opts = {}) => {
+      const ref = shipment.shipment_ref;
+      const bases = _formBases.get(ref) || {};
+      const reply = throwIfRefused(await wasm4.data_put_shipment({
+        shipment,
+        bases,
+        commission_lines: opts.commissionLines ?? shipment.commission_lines ?? [],
+        pnl_lines: opts.pnlLines ?? shipment.pnl_lines ?? [],
+        // Absent, not null: the wasm request types these as a number and a string, and a null
+        // crossing the bridge is a decode failure, not a default.
+        ledger_version: opts.ledgerVersion ?? shipment._ledger_version ?? 0,
+        occurred_at: opts.occurredAt ?? "",
+        created_by: opts.createdBy ?? null,
+        fresh_ref: opts.freshRef ?? false
+      }));
+      _formBases.delete(ref);
       return { envelope: reply.envelope, revenue: reply.revenue };
     },
     putEnvelope: async (_repo, ref, shipmentLike) => {
@@ -5209,14 +5056,10 @@ function composeData(wasm4) {
     deleteShipment: async (_repo, ref) => {
       throwIfRefused(await wasm4.data_delete_shipment({ shipment_ref: ref }));
     },
-    // NOT throwIfRefused: a rollback that could only undo part of a failed create is an ANSWER,
-    // and the caller is already holding the error that matters. Throwing here would replace it —
-    // the exact failure this whole path was built to stop.
-    rollbackShipmentCreate: async (_repo, ref) => await wasm4.data_rollback_shipment_create({ shipment_ref: ref }),
-    overwriteCommissionEntries: async (_repo, req) => await wasm4.data_overwrite_commission_entries(req),
     getShipment: async (_repo, ref) => {
       const reply = await wasm4.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || "the read failed");
+      _formBases.set(ref, reply.bases || {});
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
     // Narrow the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
@@ -5256,7 +5099,6 @@ function composeData(wasm4) {
   });
   bindMastersData(wasm4);
   bindReportReads2(wasm4);
-  bindGuardData(wasm4);
   bindSalesData({ wasm: wasm4 });
   bindRepoQuery({
     listWhere: async (_repo, kind, predicate = null) => {
@@ -5266,12 +5108,7 @@ function composeData(wasm4) {
     }
   });
   bindPnlLineId({
-    pnlLineId: (ref, index) => wasm4.data_pnl_line_id({ shipment_ref: ref, index }).id,
-    deletePnlLinesFor: async (_repo, ref) => {
-      const reply = await wasm4.data_delete_pnl_lines({ shipment_ref: ref });
-      if (!reply.ok) throw new Error(reply.error || "the cleanup failed");
-      return reply.deleted;
-    }
+    pnlLineId: (ref, index) => wasm4.data_pnl_line_id({ shipment_ref: ref, index }).id
   });
 }
 
@@ -5671,21 +5508,21 @@ var LICENSE_STATE_INVALID = "invalid";
 var LICENSE_STATE_NETWORK = "network";
 var LICENSE_STATE_GRACE = "grace";
 var LICENSE_STATE_BLOCKED = "blocked";
-var _impl15 = null;
+var _impl14 = null;
 function bindLicenseGate(impl) {
-  _impl15 = impl;
+  _impl14 = impl;
 }
-function _i12() {
-  if (!_impl15) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
-  return _impl15;
+function _i11() {
+  if (!_impl14) throw new Error("ui/license: no implementation bound (root bootstrap binds it)");
+  return _impl14;
 }
-var resolveLicenseState = (...a) => _i12().resolveLicenseState(...a);
-var errorKindMessage = (...a) => _i12().errorKindMessage(...a);
+var resolveLicenseState = (...a) => _i11().resolveLicenseState(...a);
+var errorKindMessage = (...a) => _i11().errorKindMessage(...a);
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/flows/pnl-commit-orchestrator.js
-var _impl16 = null;
+var _impl15 = null;
 function bindPnlCommit(impl) {
-  _impl16 = impl;
+  _impl15 = impl;
 }
 
 // output/web/js.tmp/bootstrap/compose-ui/flows-admin.js
@@ -6246,7 +6083,7 @@ async function _deferredInit(user, db, repo3) {
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-X7ASFFE4.js");
+    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-I3ENGJFQ.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.()
     });
@@ -6519,7 +6356,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-OCO4ZQWA.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-B4IOALBT.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6527,7 +6364,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-53VC3EDN.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-F3FDXZTB.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6535,7 +6372,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-X3EAV4HD.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-HYRDHAX2.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6588,8 +6425,6 @@ function bootApp(user, db) {
   initKeyboardShortcuts();
   checkVersionBanner(window.__vdg_store);
   initWmaListener();
-  initConflictModal();
-  initMergeToast();
   bindIntentNotices();
   const defaultRoute = homeRouteForRole(currentUserRoles().length ? currentUserRoles() : [normalizeRole(currentUserRole())]);
   initRouter(defaultRoute);

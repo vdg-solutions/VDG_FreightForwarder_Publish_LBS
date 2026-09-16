@@ -20,6 +20,8 @@ const REASON_CODE_TO_KEY = {
   record_changed:      'topbar.sync.attention.reason.record_changed',
   state_moved:         'topbar.sync.attention.reason.state_moved',
   create_collided:     'topbar.sync.attention.reason.create_collided',
+  unsent_before_upgrade: 'topbar.sync.attention.reason.unsent_before_upgrade',
+  unsent_before_upgrade_unchecked: 'topbar.sync.attention.reason.unsent_before_upgrade_unchecked',
   other:               'topbar.sync.attention.reason.other',
   // ADO #123 — `backup_quarantined` rows (outbox/attention.rs::classify_backup_reason):
   // backup-copy problems, never a write refusal, so each gets its own sentence rather than
@@ -63,10 +65,12 @@ const shown = (v) => (v === null || v === undefined || v === '' ? '—' : (typeo
 
 export function changeLines(item) {
   const changes = item.changes || [];
+  // No `from` on the change means Rust never read one (AttentionChangeDto::from), so the segment
+  // is left out rather than drawn as "—", which would read as "the server holds nothing there".
   const lines = changes.map((c) => `
     <div class="text-[11px] text-slate-600"><span class="font-mono">${c.field}</span>:
       ${t('attention.change.yours')} <b>${shown(c.yours)}</b> ·
-      ${t('attention.change.from')} ${shown(c.from)} ·
+      ${c.from === undefined ? '' : `${t('attention.change.from')} ${shown(c.from)} · `}
       ${t('attention.change.now')} ${shown(c.now)}</div>`);
   if (item.dependents) lines.push(`<div class="text-[11px] text-slate-400">${t('attention.dependents', { n: fmtNumber(item.dependents) })}</div>`);
   return lines.join('');

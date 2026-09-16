@@ -17,25 +17,16 @@ export function createPlatform({ repo }) {
   const base = {
     records_get:      (kind, id)        => repo.get(kind, id),
     records_list:     (kind)            => repo.list(kind),
-    records_put:      (kind, id, body)  => repo.put(kind, id, body),
-    // CDB-DM-04: whose row it is, when that is not the person typing. Carried, never decided
-    // here -- the shell hands the value across, wasm chose it.
-    records_put_owned: (kind, id, body, owner) => repo.put_owned(kind, id, body, owner),
-    // CDB-DM-15: labels to stamp -- only meaningful on a brand-new record (EntityStoreOperator::
-    // put's own rule); `WasmEntityRepo::put_labeled` (wasm_repo.rs) is the CREATE-time path.
-    records_put_labeled: (kind, id, body, labels) => repo.put_labeled(kind, id, body, labels),
-    // Both facts at once. A shipment needs its owner AND its period at create, and having to pick
-    // meant the owner was the one dropped -- so every job CustomerService opened was owned by CS.
-    // Carried, never decided here: wasm chose both values.
-    records_put_owned_labeled: (kind, id, body, owner, labels) =>
-        repo.put_owned_labeled(kind, id, body, owner, labels),
+    // ADO #126: the same rows without arming the collection bootstrap `list` fires behind it.
+    records_list_cached: (kind)         => repo.list_cached(kind),
+    // No records_put* / records_delete: every write is a WriteIntent inside wasm now
+    // (cas-write-path.md D28), so the shell has nothing to carry across for one.
     // CDB-DM-07: hand the record to somebody else. Its own action, its own permit — carried, never
     // decided here.
     records_reassign: (kind, id, newOwner) => repo.reassign(kind, id, newOwner),
     // A reopened period invalidates the store module's own "fully cached" marker for it
     // (tick.rs::invalidate_period_cache) -- same-session only, see that fn's own doc comment.
     records_invalidate_period_cache: (kind, period) => repo.invalidate_period_cache(kind, period),
-    records_delete:   (kind, id)        => repo.delete(kind, id),
     // meta lives in the same SQLite store the repo's io port uses (window.__vdg_io, set at boot)
     // B-24-04-01: these two answered `null` while `__vdg_io` was still being installed, and the
     // wasm side calls `.then` on whatever comes back -- so the first render of every view after a

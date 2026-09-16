@@ -18,11 +18,16 @@ import { bindPnlLineId } from '../../implementations/ui/core_abstractions/ports/
 // the shipment record this file otherwise composes.
 import { bindMastersData } from './data-masters.js';
 import { bindReportReads } from './data-reports.js';
-import { bindGuardData } from './data-guard.js';
 import { bindSalesData } from './data-sales.js';
 
 const REASON_PERIOD_LOCKED    = 'period-locked';
 const REASON_LICENSE_READONLY = 'license-readonly';
+
+// cas-write-path.md §5.3: the base a save is conditional on is the token from the READ that filled
+// the form, not whatever the cache holds when Save fires — a fresh token off stale content would
+// 200 over a colleague's edit instead of 412ing. Keyed by ref, opaque: this layer never reads a
+// token's content, only carries it from getShipment to the matching putShipment.
+const _formBases = new Map();
 
 /// The reason code, in the reader's language. Rust decides; the words are ours.
 function gateError(gate) {
@@ -67,8 +72,27 @@ export function composeData(wasm) {
     stampRows(await wasm.data_join_loaded({ envelopes: envelopes || [] }));
 
   bindShipmentRepo({
-    putShipment: async (_repo, shipment) => {
-      const reply = throwIfRefused(await wasm.data_put_shipment({ shipment }));
+    // opts: { commissionLines, pnlLines, ledgerVersion, occurredAt, createdBy, freshRef } —
+    // cas-write-path.md §5.4: one intent carries the shipment plus its side rows, so a create or
+    // amend is one atomic batch, not a save followed by a separate side-record write that can land
+    // half-done.
+    putShipment: async (_repo, shipment, opts = {}) => {
+      const ref = shipment.shipment_ref;
+      const bases = _formBases.get(ref) || {};
+      const reply = throwIfRefused(await wasm.data_put_shipment({
+        shipment,
+        bases,
+        commission_lines: opts.commissionLines ?? shipment.commission_lines ?? [],
+        pnl_lines:        opts.pnlLines ?? shipment.pnl_lines ?? [],
+        // Absent, not null: the wasm request types these as a number and a string, and a null
+        // crossing the bridge is a decode failure, not a default.
+        ledger_version:   opts.ledgerVersion ?? shipment._ledger_version ?? 0,
+        occurred_at:      opts.occurredAt ?? '',
+        created_by:       opts.createdBy ?? null,
+        fresh_ref:        opts.freshRef ?? false,
+      }));
+      // This token is spent — a later save on the same ref must read again, not reuse it.
+      _formBases.delete(ref);
       return { envelope: reply.envelope, revenue: reply.revenue };
     },
     putEnvelope: async (_repo, ref, shipmentLike) => {
@@ -88,16 +112,12 @@ export function composeData(wasm) {
     deleteShipment: async (_repo, ref) => {
       throwIfRefused(await wasm.data_delete_shipment({ shipment_ref: ref }));
     },
-    // NOT throwIfRefused: a rollback that could only undo part of a failed create is an ANSWER,
-    // and the caller is already holding the error that matters. Throwing here would replace it —
-    // the exact failure this whole path was built to stop.
-    rollbackShipmentCreate: async (_repo, ref) =>
-      await wasm.data_rollback_shipment_create({ shipment_ref: ref }),
-    overwriteCommissionEntries: async (_repo, req) =>
-      await wasm.data_overwrite_commission_entries(req),
     getShipment: async (_repo, ref) => {
       const reply = await wasm.data_get_shipment({ shipment_ref: ref });
       if (!reply.ok) throw new Error(reply.error || 'the read failed');
+      // Remember the read's base tokens for the save that fills this form — replaces whatever
+      // this ref held before (§5.3: the base is the token of the read the form content came from).
+      _formBases.set(ref, reply.bases || {});
       return reply.record ? stamp(reply.record, reply.revenue_seen) : null;
     },
     // Narrow the ENVELOPES, then join: a screen that wants one rep's jobs should not pay a
@@ -138,7 +158,6 @@ export function composeData(wasm) {
 
   bindMastersData(wasm);
   bindReportReads(wasm);
-  bindGuardData(wasm);
   bindSalesData({ wasm });
 
   bindRepoQuery({
@@ -151,10 +170,5 @@ export function composeData(wasm) {
 
   bindPnlLineId({
     pnlLineId: (ref, index) => wasm.data_pnl_line_id({ shipment_ref: ref, index }).id,
-    deletePnlLinesFor: async (_repo, ref) => {
-      const reply = await wasm.data_delete_pnl_lines({ shipment_ref: ref });
-      if (!reply.ok) throw new Error(reply.error || 'the cleanup failed');
-      return reply.deleted;
-    },
   });
 }
