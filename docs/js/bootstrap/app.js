@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build ea5ffbbd">v0.4.100 (ea5ffbbd)</span>
+        <span class="font-mono whitespace-nowrap" title="build c6c66c0a">v0.4.101 (c6c66c0a)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.100 (ea5ffbbd)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.101 (c6c66c0a)</div>
         </div>
       </div>
     </div>`;
@@ -2437,6 +2437,68 @@ function workspaceAuthority() {
   return _adapter;
 }
 
+// output/web/js.tmp/implementations/storage/implementations/local/tab-ownership.js
+var TAB_OWNER_LOCK = "vdg.app.tab-owner";
+var LOCK_HANDOFF_GRACE_MS = 3e3;
+var HAS_WEB_LOCKS = typeof navigator !== "undefined" && typeof navigator.locks?.request === "function";
+var _claim = null;
+var _held = false;
+function _holdForever() {
+  _held = true;
+  return new Promise(() => {
+  });
+}
+function _yieldToNewOwner() {
+  _held = false;
+  location.reload();
+}
+function _requestOwnership() {
+  if (!HAS_WEB_LOCKS) return Promise.resolve(true);
+  const abort = new AbortController();
+  let settle;
+  const decided = new Promise((resolve) => {
+    settle = resolve;
+  });
+  navigator.locks.request(TAB_OWNER_LOCK, { signal: abort.signal }, _holdForever).catch((err) => {
+    if (_held) {
+      _yieldToNewOwner();
+      return;
+    }
+    settle(err?.name !== "AbortError");
+  });
+  const timer = setTimeout(() => {
+    if (!_held) {
+      abort.abort();
+      settle(false);
+    }
+  }, LOCK_HANDOFF_GRACE_MS);
+  return decided.finally(() => clearTimeout(timer));
+}
+function claimTabOwnership() {
+  if (!_claim) _claim = _requestOwnership();
+  return _claim;
+}
+function holdsTabOwnership() {
+  return _held;
+}
+async function takeTabOwnership() {
+  if (!HAS_WEB_LOCKS) {
+    _held = true;
+    _claim = Promise.resolve(true);
+    return true;
+  }
+  await new Promise((granted) => {
+    navigator.locks.request(TAB_OWNER_LOCK, { steal: true }, () => {
+      granted(true);
+      return _holdForever();
+    }).catch(() => {
+      if (_held) _yieldToNewOwner();
+    });
+  });
+  _claim = Promise.resolve(true);
+  return true;
+}
+
 // output/web/js.tmp/bootstrap/platform/auth.js
 var AUTH_PROBE_TIMEOUT_MS = 2e4;
 var ROLES_RESOLVED_EVENT2 = "vdg:roles-resolved";
@@ -2463,6 +2525,10 @@ function _readCache() {
   }
 }
 var authPlatform = {
+  // The single-tab rule's one platform fact (owner 2026-09-17). Asked once, when the gate asks —
+  // not eagerly at module load, which would only start the handoff grace EARLIER and give a
+  // reload's outgoing document less of it. Rust decides what the answer MEANS; this only reports.
+  auth_holds_tab_ownership: async () => claimTabOwnership(),
   auth_current_user: async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
   auth_revive_session: async () => await rebuildSessionFromStoredToken() ?? null,
@@ -3024,8 +3090,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=ea5ffbbd", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ea5ffbbd", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=c6c66c0a", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=c6c66c0a", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3137,9 +3203,28 @@ async function renderBootFailure(err, { onRetryRepoInit = () => location.reload(
   handleUnrecognizedBootError(err, mount);
 }
 
+// output/web/js.tmp/implementations/ui/bootstrap/views/tab-blocked.js
+var USE_THIS_TAB_BTN_ID = "tab-blocked-use-this";
+function renderTabBlockedScreen(container, { onUseThisTab } = {}) {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+      <div class="text-3xl">\u{1F5C2}\uFE0F</div>
+      <div class="text-xl font-semibold text-slate-700">${t("tab_blocked.title")}</div>
+      <div class="text-sm text-slate-500 max-w-md leading-relaxed">${t("tab_blocked.body")}</div>
+      <button id="${USE_THIS_TAB_BTN_ID}"
+              class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+        ${t("tab_blocked.use_this_tab")}
+      </button>
+    </div>`;
+  container.querySelector(`#${USE_THIS_TAB_BTN_ID}`)?.addEventListener("click", () => onUseThisTab?.());
+}
+
 // output/web/js.tmp/bootstrap/compose-ui/auth.js
 var OUTCOME_SIGNED_IN = "signed-in";
 var OUTCOME_DEGRADED = "degraded";
+var OUTCOME_TAB_BLOCKED = "tab-blocked";
+var APP_ROOT_ID2 = "app";
 var NEEDS_RECONNECT_EVENT = "vdg:auth-needs-reconnect";
 var SIGNIN_REQUEST_EVENT = "vdg:auth-signin-request";
 var _signinListenerWired = false;
@@ -3177,8 +3262,18 @@ function composeAuth(wasm4) {
   const signIn = (onSignedIn) => mountLoginScreen((user) => {
     finishSignIn(onSignedIn, user);
   });
+  const useThisTab = async (onSignedIn) => {
+    await takeTabOwnership();
+    await requireAuth2(onSignedIn);
+  };
   const requireAuth2 = async (onSignedIn) => {
     const verdict = await wasm4.auth_require_auth({});
+    if (verdict.outcome === OUTCOME_TAB_BLOCKED) {
+      renderTabBlockedScreen(document.getElementById(APP_ROOT_ID2), {
+        onUseThisTab: () => useThisTab(onSignedIn)
+      });
+      return;
+    }
     if (verdict.outcome === OUTCOME_SIGNED_IN) {
       await detectOrThrow(verdict.user, "auth-gate:requireAuth");
       await onSignedIn(verdict.user);
@@ -4033,9 +4128,6 @@ function _announceLockedIf(errMsg) {
   _lockedAnnounced = true;
   window.dispatchEvent(new CustomEvent("vdg:store-locked", { detail: { kind: "genuine-conflict", reason: String(errMsg) } }));
 }
-var BUS_NAME = "vdg-sqlite-bus";
-var LEADER_LOCK = "vdg-sqlite-leader";
-var RID_SEP = "|";
 var _scope = null;
 function setStoreScope2(email) {
   const key = storeScopeKey(email);
@@ -4045,12 +4137,6 @@ function setStoreScope2(email) {
   }
   _scope = key;
 }
-var LEADER_STEAL_AFTER_TIMEOUTS = 2;
-var _followerTimeouts = 0;
-var _stealAttempted = false;
-var _bus = null;
-var _tabId = null;
-var _isLeader = false;
 var _engine = null;
 var _ready = null;
 var _seq2 = 0;
@@ -4062,7 +4148,6 @@ function _deliver(payload) {
   if (!p) return;
   _pending.delete(rid);
   clearTimeout(p.timer);
-  _followerTimeouts = 0;
   if (ok) p.resolve(result);
   else {
     _announceLockedIf(err);
@@ -4090,13 +4175,7 @@ function _spawnEngine() {
       _ready = null;
       return;
     }
-    const { rid, ok, result, err } = ev.data || {};
-    const sep = String(rid).indexOf(RID_SEP);
-    const tab = String(rid).slice(0, sep);
-    const orig = Number(String(rid).slice(sep + 1));
-    const payload = { rid: orig, ok, result, err };
-    if (tab === _tabId) _deliver(payload);
-    else _bus.postMessage({ t: "res", tab, m: payload });
+    _deliver(ev.data || {});
   };
   _engine.onerror = (e) => {
     console.error("[store-client worker onerror]", e);
@@ -4110,27 +4189,9 @@ function _spawnEngine() {
     _ready = null;
   };
 }
-function _forwardToEngine(tab, msg) {
+function _sendToEngine(msg) {
   if (!_engine) _spawnEngine();
-  _engine.postMessage({ ...msg, rid: `${tab}${RID_SEP}${msg.rid}` });
-}
-function _dispatch(msg) {
-  if (_isLeader) _forwardToEngine(_tabId, msg);
-  else _bus.postMessage({ t: "req", tab: _tabId, m: msg });
-}
-function _resendPending() {
-  for (const [, p] of _pending) _dispatch(p.msg);
-}
-function _lockName() {
-  return `${LEADER_LOCK}:${_scope}`;
-}
-var HAS_LOCKS_API = typeof navigator !== "undefined" && typeof navigator.locks?.request === "function";
-function _becomeLeader() {
-  _isLeader = true;
-  _resendPending();
-  _bus.postMessage({ t: "leader" });
-  return new Promise(() => {
-  });
+  _engine.postMessage(msg);
 }
 function _releaseEngine() {
   if (!_engine) return;
@@ -4144,51 +4205,20 @@ function _releaseEngine() {
 if (typeof window !== "undefined" && window.addEventListener) {
   window.addEventListener("pagehide", _releaseEngine);
 }
-function ensureTransport() {
-  if (_bus) return;
+function ensureScope() {
   if (!_scope) throw new SqliteUnavailableError("store scope not set \u2014 the local database is per-account");
-  _tabId = "t" + Math.random().toString(36).slice(2, 10);
-  _bus = new BroadcastChannel(`${BUS_NAME}:${_scope}`);
-  _bus.onmessage = (ev) => {
-    const m = ev.data || {};
-    if (m.t === "req" && _isLeader) _forwardToEngine(m.tab, m.m);
-    else if (m.t === "res" && m.tab === _tabId) _deliver(m.m);
-    else if (m.t === "leader" && !_isLeader) _resendPending();
-  };
-  if (navigator.locks?.request) {
-    navigator.locks.request(_lockName(), _becomeLeader).catch((err) => {
-      if (err?.name === "AbortError") {
-        _isLeader = false;
-        _releaseEngine();
-        return;
-      }
-      _isLeader = true;
-    });
-  } else {
-    _isLeader = true;
-  }
-}
-function _onOpTimeout() {
-  if (_isLeader || _stealAttempted) return;
-  if (++_followerTimeouts < LEADER_STEAL_AFTER_TIMEOUTS) return;
-  _stealAttempted = true;
-  if (!navigator.locks?.request) return;
-  navigator.locks.request(_lockName(), { steal: true }, _becomeLeader).catch((err) => {
-    _announceLockedIf(err?.message);
-  });
 }
 function send(op2, extra, timeoutMs) {
-  ensureTransport();
+  ensureScope();
   const rid = ++_seq2;
-  const msg = { rid, op: op2, ...extra, scope: _scope, hasLockExclusivity: HAS_LOCKS_API };
+  const msg = { rid, op: op2, ...extra, scope: _scope, hasLockExclusivity: holdsTabOwnership() };
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       _pending.delete(rid);
-      _onOpTimeout();
       reject(new SqliteUnavailableError(op2 + " timed out \u2014 sqlite worker unresponsive"));
     }, timeoutMs);
-    _pending.set(rid, { resolve, reject, timer, msg });
-    _dispatch(msg);
+    _pending.set(rid, { resolve, reject, timer });
+    _sendToEngine(msg);
   });
 }
 var STORE_DURABILITY_EVENT = "vdg:store-durability";
@@ -4198,7 +4228,7 @@ function _announceDurability(verdict) {
   window.dispatchEvent(new CustomEvent(STORE_DURABILITY_EVENT, { detail: verdict }));
 }
 function ensureReady() {
-  ensureTransport();
+  ensureScope();
   if (!_ready) {
     _ready = send("init", {}, INIT_TIMEOUT_MS).then((verdict) => {
       _announceDurability(verdict);
@@ -4567,7 +4597,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.100 (ea5ffbbd)";
+var APP_VERSION = "v0.4.101 (c6c66c0a)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -6076,7 +6106,7 @@ async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDbOpen) {
   stepRef.value = STEP_BUILD_REPO;
   setStoreScope(user.email);
   const ioPort = createIoPort(user.email);
-  const warmResult = await safeAwait(ioPort.cache_get_meta("__warm"), CACHE_OP_TIMEOUT_MS, null, "repo-init:sqlite-warm");
+  const warmResult = await safeAwait(ioPort.cache_get_meta("__warm"), INIT_TIMEOUT_MS, null, "repo-init:sqlite-warm");
   if (!warmResult.ok) return _storeUnresponsive("repo-init:sqlite-warm");
   const repo3 = new wasmMod.WasmEntityRepo(ioPort);
   window.__vdg_repo = repo3;

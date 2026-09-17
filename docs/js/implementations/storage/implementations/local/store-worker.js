@@ -6,9 +6,9 @@
 // Protocol (from store-client.js): { id, op, kind, id, key, body } — op names map 1:1 to Rust store
 // fns. Rust returns plain JS values (objects/arrays/null via the browser's JSON), relayed verbatim.
 
-// Cache-busted at build time: ea5ffbbd is replaced by build_dist.ps1 with the git commit hash.
+// Cache-busted at build time: c6c66c0a is replaced by build_dist.ps1 with the git commit hash.
 // Dynamic import bypasses SW stale cache — static import with ?v= query is not valid ESM.
-const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=ea5ffbbd', import.meta.url).href;
+const WASM_URL = new URL('../../../../../pkg/vdg_freight.js?v=c6c66c0a', import.meta.url).href;
 
 // durability_verdict.rs contract — verdict kinds sqlite_init returns. Named here only to relay
 // and log; the classification itself happened in Rust.
@@ -18,8 +18,8 @@ const DURABILITY_REBUILT  = 'rebuilt';
 // #18: every message carries the account scope; the sahpool VFS + its OPFS directory are opened
 // under it, so two accounts in one browser never share a database. No scope = no open.
 // hasLockExclusivity is store-client.js's ONE fact about tab liveness (did Web Locks grant this
-// tab sole leadership?) — Rust uses it to classify a stale self-lock vs a genuine second tab
-// (sahpool_lock_policy.rs); this worker never guesses that itself.
+// document the app-ownership lock?) — Rust uses it to classify a stale self-lock vs a genuine
+// second tab (sahpool_lock_policy.rs); this worker never guesses that itself.
 let _ready = null;
 let _mod   = null;
 // Rust's durability verdict ({kind, mode, cause?} — durability_verdict.rs), captured at init and

@@ -10,6 +10,7 @@ import { roleCacheKey } from '../../implementations/storage/core_abstractions/id
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { workspaceAuthority } from '../../implementations/storage/core_abstractions/workspace-authority.js';
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
+import { claimTabOwnership } from '../../implementations/storage/implementations/local/tab-ownership.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 
 const AUTH_PROBE_TIMEOUT_MS = 20000;           // F-15-19 AC-4: surface a banner if the probe hangs
@@ -55,6 +56,10 @@ export function readCachedIdentityNow() {
 }
 
 export const authPlatform = {
+  // The single-tab rule's one platform fact (owner 2026-09-17). Asked once, when the gate asks —
+  // not eagerly at module load, which would only start the handoff grace EARLIER and give a
+  // reload's outgoing document less of it. Rust decides what the answer MEANS; this only reports.
+  auth_holds_tab_ownership:     async () => claimTabOwnership(),
   auth_current_user:            async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
   auth_revive_session:          async () => (await rebuildSessionFromStoredToken()) ?? null,
