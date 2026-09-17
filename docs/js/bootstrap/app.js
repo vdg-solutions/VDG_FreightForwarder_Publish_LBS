@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 38f4a1ea">v0.4.104 (38f4a1ea)</span>
+        <span class="font-mono whitespace-nowrap" title="build a891dacb">v0.4.105 (a891dacb)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.104 (38f4a1ea)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.105 (a891dacb)</div>
         </div>
       </div>
     </div>`;
@@ -2565,9 +2565,29 @@ var authPlatform = {
   auth_holds_session_credential: async () => hasSessionCredential(),
   auth_current_user: async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
-  auth_revive_session: async () => await rebuildSessionFromStoredToken() ?? null,
+  // Bounded, and by the SAME ceiling the other door to /me already carries. Both reach
+  // `me_http::fetch_me`: the role probe through compose-ui's detectOrThrow (SAFE_AWAIT_DEFAULT_MS),
+  // this one through serverSessionIdentity() — and this one had no ceiling at all, so
+  // require_auth awaited a request that could simply never answer. That is the v0.4.101 shape on
+  // a different call, and it is where PROD v0.4.103's ~97s boot sat. A timeout reads as a dead
+  // token, which is already this method's contract for "cannot revive".
+  auth_revive_session: async () => {
+    const revived = await safeAwait(
+      rebuildSessionFromStoredToken(),
+      SAFE_AWAIT_DEFAULT_MS,
+      null,
+      "auth-gate:reviveSession"
+    );
+    return revived.ok ? revived.value ?? null : null;
+  },
+  // Fired, never awaited. The gate asks for a defensive local clear, and signOut() performs that
+  // SYNCHRONOUSLY before the promise it returns exists; the rest of that promise is DELETE
+  // /session, whose answer nothing on this path reads (`let _ = self.auth.sign_out().await`).
+  // Awaiting it stood an unbounded round trip — to the very server that just refused this
+  // session — between the person and the sign-in screen the gate had already decided on.
   auth_sign_out: async () => {
-    await signOut();
+    Promise.resolve(signOut()).catch(() => {
+    });
   },
   auth_set_store_scope: async (email) => {
     setStoreScope(email);
@@ -3124,8 +3144,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=38f4a1ea", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=38f4a1ea", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=a891dacb", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=a891dacb", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4637,7 +4657,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.104 (38f4a1ea)";
+var APP_VERSION = "v0.4.105 (a891dacb)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;

@@ -92,8 +92,30 @@ export const authPlatform = {
 
   auth_current_user:            async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
-  auth_revive_session:          async () => (await rebuildSessionFromStoredToken()) ?? null,
-  auth_sign_out:                async () => { await signOut(); },
+
+  // Bounded, and by the SAME ceiling the other door to /me already carries. Both reach
+  // `me_http::fetch_me`: the role probe through compose-ui's detectOrThrow (SAFE_AWAIT_DEFAULT_MS),
+  // this one through serverSessionIdentity() — and this one had no ceiling at all, so
+  // require_auth awaited a request that could simply never answer. That is the v0.4.101 shape on
+  // a different call, and it is where PROD v0.4.103's ~97s boot sat. A timeout reads as a dead
+  // token, which is already this method's contract for "cannot revive".
+  auth_revive_session: async () => {
+    const revived = await safeAwait(
+      rebuildSessionFromStoredToken(), SAFE_AWAIT_DEFAULT_MS, null, 'auth-gate:reviveSession',
+    );
+    return revived.ok ? (revived.value ?? null) : null;
+  },
+
+  // Fired, never awaited. The gate asks for a defensive local clear, and signOut() performs that
+  // SYNCHRONOUSLY before the promise it returns exists; the rest of that promise is DELETE
+  // /session, whose answer nothing on this path reads (`let _ = self.auth.sign_out().await`).
+  // Awaiting it stood an unbounded round trip — to the very server that just refused this
+  // session — between the person and the sign-in screen the gate had already decided on.
+  auth_sign_out: async () => {
+    // signOut() logs its own server outage and clears the token either way; boot has moved on.
+    Promise.resolve(signOut()).catch(() => { /* handled inside signOut — never blocks the screen */ });
+  },
+
   auth_set_store_scope:         async (email) => { setStoreScope(email); },
   auth_active_workspace_name:   async () => activeWorkspaceName() || null,
 

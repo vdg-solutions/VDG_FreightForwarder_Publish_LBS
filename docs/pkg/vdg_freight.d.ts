@@ -1788,9 +1788,9 @@ export interface InitOutput {
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
     readonly wasmentityrepo_userRepo: (a: number) => number;
+    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
-    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
@@ -1802,9 +1802,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_16800: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_16813: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12309: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16799: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16812: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12308: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
