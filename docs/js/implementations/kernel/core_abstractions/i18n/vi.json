@@ -59,6 +59,7 @@
   "store_locked.retry": "Thử lại",
   "tab_blocked.title": "Ứng dụng đang mở ở một thẻ khác",
   "tab_blocked.body": "Ứng dụng chỉ chạy trên một thẻ tại một thời điểm, để dữ liệu trên máy không bị mở hai lần cùng lúc. Anh/chị quay lại thẻ đang mở, hoặc chuyển sang dùng thẻ này — khi đó thẻ kia sẽ hiện màn hình này.",
+  "tab_blocked.sign_in_again": "Thẻ này chưa đăng nhập, nên khi chuyển sang dùng thẻ này anh/chị sẽ phải đăng nhập lại.",
   "tab_blocked.use_this_tab": "Dùng thẻ này",
   "store_unresponsive.title": "Dữ liệu trên máy phản hồi quá chậm",
   "store_unresponsive.body": "Không thể mở dữ liệu cục bộ lúc này. Bấm Thử lại để tải lại trang.",

@@ -59,6 +59,7 @@
   "store_locked.retry": "Retry",
   "tab_blocked.title": "This app is already open in another tab",
   "tab_blocked.body": "The app runs in one tab at a time, so the data on this machine is never opened twice at once. Switch back to the tab you already have open, or use this one instead — the other tab will then show this screen.",
+  "tab_blocked.sign_in_again": "This tab is not signed in, so using it instead will ask you to sign in again.",
   "tab_blocked.use_this_tab": "Use this tab instead",
   "store_unresponsive.title": "Local data is responding too slowly",
   "store_unresponsive.body": "The local database can't be reached right now. Press Retry to reload the page.",

@@ -85,6 +85,9 @@ export function composeAuth(wasm) {
     if (verdict.outcome === OUTCOME_TAB_BLOCKED) {
       renderTabBlockedScreen(document.getElementById(APP_ROOT_ID), {
         onUseThisTab: () => useThisTab(onSignedIn),
+        // Rust's answer, not the shell's guess: a tab holding no session credential of its own
+        // lands on sign-in when the button is pressed, and is told so before pressing it.
+        needsSignIn: !!verdict.needs_sign_in,
       });
       return;
     }

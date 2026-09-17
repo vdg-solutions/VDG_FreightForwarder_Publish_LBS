@@ -84,5 +84,16 @@ function rememberSessionToken(token) {
   }
 }
 
+/// Does THIS document hold a session token? Per-DOCUMENT by construction (sessionStorage), which
+/// is the whole point: a tab opened without going through sign-in has none, and no other carrier
+/// exists — there is no cookie, and Rust reads this same slot for the X-Vdg-Session header. The
+/// gate decides what an absent one MEANS (auth_gate.rs::require_auth); this only reports.
+function hasSessionCredential() {
+  try { return !!sessionStorage.getItem(sessionTokenKey()); }
+  catch { return false; } // storage-less context — nothing to authenticate with either way
+}
+
 /// What the storage bootstrap binds behind the backend port.
-export const backend = { detectBackend, rememberSessionToken, adoptSessionToken, _resetBackend };
+export const backend = {
+  detectBackend, rememberSessionToken, adoptSessionToken, hasSessionCredential, _resetBackend,
+};

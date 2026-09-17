@@ -17,13 +17,20 @@ const USE_THIS_TAB_BTN_ID = 'tab-blocked-use-this';
 /// Replaces whatever the container held — index.html's pre-rendered "Đang tải…" placeholder
 /// included. A silent await that resolves to a stuck loading string is banned, and this is the
 /// resolution: a real view with real words.
-export function renderTabBlockedScreen(container, { onUseThisTab } = {}) {
+export function renderTabBlockedScreen(container, { onUseThisTab, needsSignIn = false } = {}) {
   if (!container) return;
+  // Only when it is true. This tab was opened without signing in, so it carries no session of its
+  // own and the button below lands on the login screen — said here rather than discovered after
+  // the click, which is how a person ended up on an app that looked live and could not save.
+  const note = needsSignIn
+    ? `<div class="text-sm text-amber-700 max-w-md">${t('tab_blocked.sign_in_again')}</div>`
+    : '';
   container.innerHTML = `
     <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-3xl">🗂️</div>
       <div class="text-xl font-semibold text-slate-700">${t('tab_blocked.title')}</div>
       <div class="text-sm text-slate-500 max-w-md leading-relaxed">${t('tab_blocked.body')}</div>
+      ${note}
       <button id="${USE_THIS_TAB_BTN_ID}"
               class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
         ${t('tab_blocked.use_this_tab')}

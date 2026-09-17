@@ -8,6 +8,7 @@ import { getCurrentUser, signOut, wasPreviouslySignedIn, rebuildSessionFromStore
   from '../../implementations/storage/core_abstractions/identity.js';
 import { roleCacheKey } from '../../implementations/storage/core_abstractions/identity-cache-keys.js';
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
+import { hasSessionCredential } from '../../implementations/storage/core_abstractions/backend.js';
 import { workspaceAuthority } from '../../implementations/storage/core_abstractions/workspace-authority.js';
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
 import { claimTabOwnership } from '../../implementations/storage/implementations/local/tab-ownership.js';
@@ -83,6 +84,12 @@ export const authPlatform = {
   // already rules that a boot rather than a refusal. Two open tabs is a nuisance; a blank page
   // is a stopped business.
   auth_holds_tab_ownership:     () => answerTabOwnership(),
+
+  // The single-tab rule's SECOND platform fact: does this document hold the server credential?
+  // Unbounded on purpose — it is a synchronous sessionStorage read, not a lock or a request, so
+  // there is nothing here that could fail to settle.
+  auth_holds_session_credential: async () => hasSessionCredential(),
+
   auth_current_user:            async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
   auth_revive_session:          async () => (await rebuildSessionFromStoredToken()) ?? null,

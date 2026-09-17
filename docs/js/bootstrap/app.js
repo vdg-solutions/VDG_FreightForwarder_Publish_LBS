@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 23bbf0d5">v0.4.103 (23bbf0d5)</span>
+        <span class="font-mono whitespace-nowrap" title="build 38f4a1ea">v0.4.104 (38f4a1ea)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.103 (23bbf0d5)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.104 (38f4a1ea)</div>
         </div>
       </div>
     </div>`;
@@ -2426,6 +2426,19 @@ function sqlCountEntities() {
 function localStore() {
   return _s();
 }
+
+// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
+var _impl3 = null;
+function bindBackend(impl) {
+  _impl3 = impl;
+}
+function _i3() {
+  if (!_impl3) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
+  return _impl3;
+}
+var rememberSessionToken = (...a) => _i3().rememberSessionToken(...a);
+var adoptSessionToken = (...a) => _i3().adoptSessionToken(...a);
+var hasSessionCredential = (...a) => _i3().hasSessionCredential(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/workspace-authority.js
 var _adapter = null;
@@ -2546,6 +2559,10 @@ var authPlatform = {
   // already rules that a boot rather than a refusal. Two open tabs is a nuisance; a blank page
   // is a stopped business.
   auth_holds_tab_ownership: () => answerTabOwnership(),
+  // The single-tab rule's SECOND platform fact: does this document hold the server credential?
+  // Unbounded on purpose — it is a synchronous sessionStorage read, not a lock or a request, so
+  // there is nothing here that could fail to settle.
+  auth_holds_session_credential: async () => hasSessionCredential(),
   auth_current_user: async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
   auth_revive_session: async () => await rebuildSessionFromStoredToken() ?? null,
@@ -3107,8 +3124,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=23bbf0d5", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=23bbf0d5", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=38f4a1ea", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=38f4a1ea", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3222,13 +3239,15 @@ async function renderBootFailure(err, { onRetryRepoInit = () => location.reload(
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/tab-blocked.js
 var USE_THIS_TAB_BTN_ID = "tab-blocked-use-this";
-function renderTabBlockedScreen(container, { onUseThisTab } = {}) {
+function renderTabBlockedScreen(container, { onUseThisTab, needsSignIn = false } = {}) {
   if (!container) return;
+  const note = needsSignIn ? `<div class="text-sm text-amber-700 max-w-md">${t("tab_blocked.sign_in_again")}</div>` : "";
   container.innerHTML = `
     <div class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
       <div class="text-3xl">\u{1F5C2}\uFE0F</div>
       <div class="text-xl font-semibold text-slate-700">${t("tab_blocked.title")}</div>
       <div class="text-sm text-slate-500 max-w-md leading-relaxed">${t("tab_blocked.body")}</div>
+      ${note}
       <button id="${USE_THIS_TAB_BTN_ID}"
               class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
         ${t("tab_blocked.use_this_tab")}
@@ -3287,7 +3306,10 @@ function composeAuth(wasm4) {
     const verdict = await wasm4.auth_require_auth({});
     if (verdict.outcome === OUTCOME_TAB_BLOCKED) {
       renderTabBlockedScreen(document.getElementById(APP_ROOT_ID2), {
-        onUseThisTab: () => useThisTab(onSignedIn)
+        onUseThisTab: () => useThisTab(onSignedIn),
+        // Rust's answer, not the shell's guess: a tab holding no session credential of its own
+        // lands on sign-in when the button is pressed, and is told so before pressing it.
+        needsSignIn: !!verdict.needs_sign_in
       });
       return;
     }
@@ -3309,18 +3331,6 @@ function composeAuth(wasm4) {
     window.addEventListener(SIGNIN_REQUEST_EVENT, () => signIn(() => location.reload()));
   }
 }
-
-// output/web/js.tmp/implementations/storage/core_abstractions/backend.js
-var _impl3 = null;
-function bindBackend(impl) {
-  _impl3 = impl;
-}
-function _i3() {
-  if (!_impl3) throw new Error("storage/backend: no adapter bound (the storage bootstrap binds it)");
-  return _impl3;
-}
-var rememberSessionToken = (...a) => _i3().rememberSessionToken(...a);
-var adoptSessionToken = (...a) => _i3().adoptSessionToken(...a);
 
 // output/web/js.tmp/implementations/storage/core_abstractions/server-session.js
 var SERVER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
@@ -3527,7 +3537,20 @@ function rememberSessionToken2(token) {
   } catch {
   }
 }
-var backend = { detectBackend, rememberSessionToken: rememberSessionToken2, adoptSessionToken: adoptSessionToken2, _resetBackend };
+function hasSessionCredential2() {
+  try {
+    return !!sessionStorage.getItem(sessionTokenKey());
+  } catch {
+    return false;
+  }
+}
+var backend = {
+  detectBackend,
+  rememberSessionToken: rememberSessionToken2,
+  adoptSessionToken: adoptSessionToken2,
+  hasSessionCredential: hasSessionCredential2,
+  _resetBackend
+};
 
 // output/web/js.tmp/implementations/storage/implementations/server/server-role.js
 function wasm2() {
@@ -4614,7 +4637,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.103 (23bbf0d5)";
+var APP_VERSION = "v0.4.104 (38f4a1ea)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
