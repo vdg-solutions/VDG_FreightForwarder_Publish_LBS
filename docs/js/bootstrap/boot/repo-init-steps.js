@@ -15,10 +15,7 @@ import { loadWasmOrThrow } from './wasm-loader.js';
 import { createBootFsm, BootEvent } from './boot-fsm.js';
 import { renderBootPhase } from './boot-fsm-view.js';
 import { DEV_SEAMS_ENABLED } from '../platform/dev-seams.js';
-import { INIT_TIMEOUT_MS as STORE_COLD_OPEN_TIMEOUT_MS } from '../../implementations/storage/implementations/local/store-client.js';
 
-// A WARM store op: the engine is up, so every call is a local SQL statement in Rust and a slow one
-// really is a dead worker. The FIRST op is a different question entirely — see the canary below.
 const CACHE_OP_TIMEOUT_MS = 8000;
 const PREFS_META_KEY     = 'preferences';
 const REPO_HANG_SEAM_KEY = 'vdg.test.repoHangMs';
@@ -68,17 +65,7 @@ export async function runRepoInitBounded(user, stepRef, bootFn, existingDb, onDb
   // built on a store that can't answer. A timeout here is NOT evidence of a lock (that classified
   // signal comes only from store-client.js's real sahpool-genuine-conflict error) — it just means
   // the boot must stop instead of silently rendering on top of it (no silent-await to a stuck view).
-  //
-  // Bounded by the store's OWN cold-open budget, imported, not re-typed. This is the first store
-  // op of the session, so it pays for fetching store-worker.js, compiling the wasm and installing
-  // the OPFS SAH pool (with its own retry budget on top). It used to be wrapped in
-  // CACHE_OP_TIMEOUT_MS — 8s, less than the 20s store-client.js allows the very same call — so the
-  // inner budget could never be reached: the smaller bound always won and a boot that was merely
-  // downloading was reported to the user as an unresponsive store. QA hit exactly that on PROD
-  // v0.4.100 on the UPGRADE reload, which is the worst case for it by construction: ignoreCache
-  // re-fetches both the worker module and ~4MB of wasm. Same false alarm, same cause, as the 8s
-  // REPO_INIT_TIMEOUT_MS that repo-bootstrap.js already had to raise for its own reasons.
-  const warmResult = await safeAwait(ioPort.cache_get_meta('__warm'), STORE_COLD_OPEN_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
+  const warmResult = await safeAwait(ioPort.cache_get_meta('__warm'), CACHE_OP_TIMEOUT_MS, null, 'repo-init:sqlite-warm');
   if (!warmResult.ok) return _storeUnresponsive('repo-init:sqlite-warm');
 
   const repo = new wasmMod.WasmEntityRepo(ioPort);

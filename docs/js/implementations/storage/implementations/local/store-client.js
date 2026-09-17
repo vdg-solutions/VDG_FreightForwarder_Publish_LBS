@@ -8,19 +8,13 @@
 // (SharedWorker routing is not an option — Chromium's SharedWorkerGlobalScope has no nested
 // Worker, CDP-proven "Worker is not defined".)
 //
-// Tabs used to SHARE one engine by leader election: the tab holding a 'vdg-sqlite-leader' Web
-// Lock spawned the engine worker and every other tab relayed its ops to it over a
-// BroadcastChannel. That arrangement is gone (2026-09-17). The owner's rule is that the app may be
-// open in exactly ONE tab, so there is no follower to relay for — and the election could never
-// have enforced it anyway: it was per-account-scope and claimed lazily on the first store op, long
-// after a second tab had already rendered an app it could not save from. Ownership is decided once
-// at boot now, before anything here is reachable (tab-ownership.js takes the lock, auth_gate.rs
-// decides on it), so this document owns the engine by the time any op arrives.
-//
-// This module stays a thin async client: correlate requests by rid, bound each op so a dead engine
-// rejects instead of hanging, and expose the store surface the Rust IO port (StoreIoPort) +
-// window.__vdg_store consumers call. There is NO SQL here — every query lives in Rust
-// (store/implementations/sqlite/store.rs). The worker's single message loop serializes every
+// So tabs share ONE engine by leader election: the tab holding the 'vdg-sqlite-leader' Web Lock
+// spawns the engine worker; every other tab relays its ops to the leader over a BroadcastChannel.
+// The lock releases when the leader tab closes and the next waiter takes over (sahpool handles are
+// freed with the dead tab, so the new leader's install succeeds). This module stays a thin async
+// client: correlate requests by rid, bound each op so a dead engine rejects instead of hanging,
+// and expose the store surface the Rust IO port (StoreIoPort) + window.__vdg_store consumers call. There is NO SQL here — every
+// query lives in Rust (store/implementations/sqlite/store.rs). The worker's single message loop serializes every
 // statement → the IndexedDB concurrent-transaction wedge class is gone by construction.
 //
 // CharterDB (vdg-server) stays the source of truth; SQLite is the local materialized cache + query
@@ -30,13 +24,8 @@
 // op is a local SQL call in Rust — milliseconds — so a short backstop is a dead-worker detector.
 
 import { storeScopeKey } from './store-scope.js';
-import { holdsTabOwnership } from './tab-ownership.js';
 
-// Exported because the boot canary has to bound the SAME op and must not re-type this number. It
-// wrapped the first store op in 8s while this budgeted 20s for it, so the 20s was unreachable and
-// a cold open that was merely downloading got reported as an unresponsive store (the upgrade
-// path's "Dữ liệu trên máy phản hồi quá chậm" modal — repo-init-steps.js).
-export const INIT_TIMEOUT_MS = 20_000;
+const INIT_TIMEOUT_MS = 20_000;
 const OP_TIMEOUT_MS    = 5_000;
 
 export class SqliteUnavailableError extends Error {
@@ -56,10 +45,13 @@ function _announceLockedIf(errMsg) {
   window.dispatchEvent(new CustomEvent('vdg:store-locked', { detail: { kind: 'genuine-conflict', reason: String(errMsg) } }));
 }
 
-// #18: the database is per-account. It used to be origin-wide, so two accounts open in one
-// browser shared ONE engine over ONE database — account B read account A's cached rows. The
-// single-tab rule makes two accounts open at once impossible in the first place, but the scope
-// stays: it is what keeps one browser's two accounts in two databases across a sign-out.
+const BUS_NAME    = 'vdg-sqlite-bus';
+const LEADER_LOCK = 'vdg-sqlite-leader';
+const RID_SEP     = '|'; // engine rid = `${tabId}|${localRid}` so concurrent tabs never collide
+
+// #18: the bus, the leader lock and the database are all per-account. They used to be origin-wide,
+// so two accounts open in one browser shared ONE engine over ONE database — account B read account
+// A's cached rows, and B's ops were relayed to a leader tab signed in as A.
 let _scope = null;
 
 
@@ -75,7 +67,19 @@ function setStoreScope(email) {
   _scope = key;
 }
 
-let _engine   = null;              // this document's engine worker
+// #19: a leader tab that Chrome froze or discarded still HOLDS the Web Lock and never drains the
+// BroadcastChannel, so followers starve on pure timeouts with no error text — LOCKED_ERR_RE can't
+// classify silence, and boot degrades into the timeout storm QC hit. After a couple of unanswered
+// ops, steal the lock: either this tab heals the store, or its sahpool install fails with a real
+// NoModificationAllowedError that DOES classify.
+const LEADER_STEAL_AFTER_TIMEOUTS = 2;
+let _followerTimeouts = 0;
+let _stealAttempted   = false;
+
+let _bus      = null;              // BroadcastChannel to the other tabs; null until first op
+let _tabId    = null;
+let _isLeader = false;             // this tab holds the Web Lock and owns the engine worker
+let _engine   = null;              // dedicated engine worker (leader only)
 let _ready    = null;              // open handshake promise; null until first ensureReady()
 let _seq      = 0;
 const _pending = new Map();        // local rid -> { resolve, reject, timer, msg }
@@ -90,6 +94,7 @@ function _deliver(payload) {
   if (!p) return;
   _pending.delete(rid);
   clearTimeout(p.timer);
+  _followerTimeouts = 0; // the leader is answering
   if (ok) p.resolve(result);
   else {
     _announceLockedIf(err);
@@ -116,11 +121,17 @@ function _spawnEngine() {
       _ready  = null;
       return;
     }
-    // rid is this document's own correlation id. It used to be namespaced `${tabId}|${rid}` so two
-    // tabs' requests could share one engine — the sharing that no longer happens.
-    _deliver(ev.data || {});
+    const { rid, ok, result, err } = ev.data || {};
+    const sep  = String(rid).indexOf(RID_SEP);
+    const tab  = String(rid).slice(0, sep);
+    const orig = Number(String(rid).slice(sep + 1));
+    const payload = { rid: orig, ok, result, err };
+    if (tab === _tabId) _deliver(payload);
+    else _bus.postMessage({ t: 'res', tab, m: payload });
   };
-  // An engine crash must fail every in-flight op and drop the handle so the next call respawns.
+  // An engine crash must fail every local in-flight op and drop the handle so the next call
+  // respawns (leadership is kept — the lock is still held). Remote tabs' in-flight ops settle
+  // via their own client-side timers.
   _engine.onerror = (e) => {
     console.error('[store-client worker onerror]', e);
     const dead = new SqliteUnavailableError('sqlite worker crashed: ' + (e?.message || 'unknown'));
@@ -131,16 +142,44 @@ function _spawnEngine() {
   };
 }
 
-function _sendToEngine(msg) {
+function _forwardToEngine(tab, msg) {
   if (!_engine) _spawnEngine();
-  _engine.postMessage(msg);
+  _engine.postMessage({ ...msg, rid: `${tab}${RID_SEP}${msg.rid}` });
+}
+
+function _dispatch(msg) {
+  if (_isLeader) _forwardToEngine(_tabId, msg);
+  else _bus.postMessage({ t: 'req', tab: _tabId, m: msg });
+}
+
+// Ops sent before any leader existed were dropped on the bus — re-dispatch everything still
+// in flight once a leader (this tab or another) announces. Double delivery is safe: puts are
+// idempotent upserts, reads are pure.
+function _resendPending() {
+  for (const [, p] of _pending) _dispatch(p.msg);
+}
+
+function _lockName() { return `${LEADER_LOCK}:${_scope}`; }
+
+// The one fact Rust needs but cannot observe itself: did Web Locks grant this tab sole
+// leadership? When it did, Web Locks guarantees no OTHER live document holds the same lock, so a
+// sahpool install failure after Rust's retry budget is exhausted is a dead context's handles,
+// never a live tab (sahpool_lock_policy.rs::next_sahpool_step). Computed once — the API's presence
+// doesn't change mid-session.
+const HAS_LOCKS_API = typeof navigator !== 'undefined' && typeof navigator.locks?.request === 'function';
+
+function _becomeLeader() {
+  _isLeader = true;
+  _resendPending();                      // flush ops queued before the election settled
+  _bus.postMessage({ t: 'leader' });
+  return new Promise(() => { /* hold leadership until the tab dies */ });
 }
 
 // Ask a healthy engine to release its OPFS handles (sqlite_release) and close itself, instead of
 // a hard engine.terminate() that would leave those handles for the browser's own worker-teardown
 // GC — the actual defect behind an ordinary reload bricking the app (store-worker.js's 'release'
-// handler). Fires on pagehide (below), which covers a reload, a close, and a tab standing down
-// after another one took ownership (tab-ownership.js reloads it).
+// handler). Used both when this tab loses a lock steal (the new leader gets the handles promptly
+// instead of racing our GC) and on pagehide (below).
 function _releaseEngine() {
   if (!_engine) return;
   try { _engine.postMessage({ op: 'release' }); } catch { /* already gone */ }
@@ -156,28 +195,55 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('pagehide', _releaseEngine);
 }
 
-function ensureScope() {
+function ensureTransport() {
+  if (_bus) return;
   if (!_scope) throw new SqliteUnavailableError('store scope not set — the local database is per-account');
+  _tabId = 't' + Math.random().toString(36).slice(2, 10);
+  _bus = new BroadcastChannel(`${BUS_NAME}:${_scope}`);
+  _bus.onmessage = (ev) => {
+    const m = ev.data || {};
+    if (m.t === 'req' && _isLeader)            _forwardToEngine(m.tab, m.m);
+    else if (m.t === 'res' && m.tab === _tabId) _deliver(m.m);
+    else if (m.t === 'leader' && !_isLeader)    _resendPending();
+  };
+  if (navigator.locks?.request) {
+    // Held for the tab's whole life; on tab close the next waiter is granted and takes over
+    // (the dead tab's sahpool handles are freed with it, so the new leader's install succeeds).
+    navigator.locks.request(_lockName(), _becomeLeader).catch((err) => {
+      // AbortError = another tab's liveness failover stole it (#19). Stay a follower and release
+      // the engine so its sahpool handles are freed for the new leader; anything else is a
+      // genuine Web Locks failure, where a per-tab engine is the only way to stay usable.
+      if (err?.name === 'AbortError') { _isLeader = false; _releaseEngine(); return; }
+      _isLeader = true;
+    });
+  } else {
+    _isLeader = true; // no Web Locks API — single-engine guarantee unavailable, per-tab engine
+  }
+}
+
+function _onOpTimeout() {
+  if (_isLeader || _stealAttempted) return; // our own engine failing is covered by _engine.onerror
+  if (++_followerTimeouts < LEADER_STEAL_AFTER_TIMEOUTS) return;
+  _stealAttempted = true;
+  if (!navigator.locks?.request) return;
+  navigator.locks.request(_lockName(), { steal: true }, _becomeLeader)
+    .catch((err) => { _announceLockedIf(err?.message); });
 }
 
 function send(op, extra, timeoutMs) {
-  ensureScope();
+  ensureTransport();
   const rid = ++_seq;
   // rid first, then op/extra: extra may carry an entity `id` — it must never overwrite `rid`.
   // scope/hasLockExclusivity last so no payload key can shadow either.
-  //
-  // hasLockExclusivity used to be `typeof navigator.locks?.request === 'function'` — the PRESENCE
-  // of the API, not a grant. sahpool_lock_policy.rs reads it as "Web Locks confirmed this document
-  // is the only live one", which that value never established: a follower tab sent true too. It is
-  // the real grant now, which is exactly the claim Rust is making on it.
-  const msg = { rid, op, ...extra, scope: _scope, hasLockExclusivity: holdsTabOwnership() };
+  const msg = { rid, op, ...extra, scope: _scope, hasLockExclusivity: HAS_LOCKS_API };
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       _pending.delete(rid);
+      _onOpTimeout();
       reject(new SqliteUnavailableError(op + ' timed out — sqlite worker unresponsive'));
     }, timeoutMs);
-    _pending.set(rid, { resolve, reject, timer });
-    _sendToEngine(msg);
+    _pending.set(rid, { resolve, reject, timer, msg });
+    _dispatch(msg);
   });
 }
 
@@ -194,7 +260,7 @@ function _announceDurability(verdict) {
 
 // One open handshake, shared by every caller. A failed open clears the memo so a later op retries.
 function ensureReady() {
-  ensureScope();
+  ensureTransport();
   if (!_ready) {
     _ready = send('init', {}, INIT_TIMEOUT_MS)
       .then((verdict) => { _announceDurability(verdict); return verdict; })
@@ -234,8 +300,8 @@ function sqlCountEntities() {
   return _injected ? _injected.count_entities() : op('countEntities', {});
 }
 
-// Drop the engine + memo so the next call respawns (mirrors resetVdgDbMemo). Tab ownership is
-// untouched — only the engine worker restarts.
+// Drop the engine + memo so the next call respawns (mirrors resetVdgDbMemo). Leadership (the Web
+// Lock) is kept — only the engine worker restarts.
 export function resetVdgSqliteMemo() {
   if (_engine) { try { _engine.terminate(); } catch { /* already gone */ } }
   _engine = null;

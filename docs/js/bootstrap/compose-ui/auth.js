@@ -7,13 +7,9 @@ import { bindSessionRoles } from '../../implementations/ui/core_abstractions/por
 import { mountLoginScreen, takeAuthError } from '../platform/auth.js';
 import { renderBootFailure } from '../boot/boot-failure-screen.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
-import { renderTabBlockedScreen } from '../../implementations/ui/bootstrap/views/tab-blocked.js';
-import { takeTabOwnership } from '../../implementations/storage/implementations/local/tab-ownership.js';
 
 const OUTCOME_SIGNED_IN = 'signed-in';
 const OUTCOME_DEGRADED  = 'degraded';
-const OUTCOME_TAB_BLOCKED = 'tab-blocked';
-const APP_ROOT_ID = 'app';
 const NEEDS_RECONNECT_EVENT = 'vdg:auth-needs-reconnect';
 const SIGNIN_REQUEST_EVENT  = 'vdg:auth-signin-request';
 
@@ -68,26 +64,8 @@ export function composeAuth(wasm) {
 
   const signIn = (onSignedIn) => mountLoginScreen((user) => { finishSignIn(onSignedIn, user); });
 
-  // "Use this tab instead": take the workspace lock, then ask the SAME gate again — which now
-  // answers about an owning tab and boots normally. The other tab loses the lock and stands itself
-  // down (tab-ownership.js); nothing is negotiated between them beyond the lock.
-  const useThisTab = async (onSignedIn) => {
-    await takeTabOwnership();
-    await requireAuth(onSignedIn);
-  };
-
   const requireAuth = async (onSignedIn) => {
     const verdict = await wasm.auth_require_auth({});
-    // Owner rule 2026-09-17: one tab. This branch RETURNS — onSignedIn is repo-init, and repo-init
-    // is where the store is bound and the delta tick, the outbox drain and the health poll start
-    // (repo-init-steps.js). Not calling it is the whole of "nothing that can write initialises in
-    // a non-owning tab"; there is no second switch to remember.
-    if (verdict.outcome === OUTCOME_TAB_BLOCKED) {
-      renderTabBlockedScreen(document.getElementById(APP_ROOT_ID), {
-        onUseThisTab: () => useThisTab(onSignedIn),
-      });
-      return;
-    }
     if (verdict.outcome === OUTCOME_SIGNED_IN) {
       await detectOrThrow(verdict.user, 'auth-gate:requireAuth');
       await onSignedIn(verdict.user);

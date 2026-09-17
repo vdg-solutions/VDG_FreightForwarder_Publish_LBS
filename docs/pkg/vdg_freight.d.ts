@@ -1182,7 +1182,7 @@ export function shipment_product_for_mode(mode: string, current_product: string)
  * One-time init: install the OPFS sahpool VFS (as default), open the db, run the schema.
  * `scope` partitions the pool per account — an empty scope is refused rather than silently
  * falling back to a shared database. `has_lock_exclusivity` is the one fact only JS can supply:
- * did the Web Locks API grant this document the app-ownership lock? It decides how an
+ * did the Web Locks API grant this tab sole leadership of the sqlite engine? It decides how an
  * exhausted retry budget is classified (sahpool_lock_policy::next_sahpool_step) — never guessed
  * here from a raw browser error string.
  *
@@ -1785,9 +1785,9 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
@@ -1802,9 +1802,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_16792: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_16805: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12301: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16788: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16801: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12297: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
