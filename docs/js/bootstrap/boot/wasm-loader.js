@@ -62,8 +62,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL('pkg/vdg_freight.js?v=98da13ec', document.baseURI).href);
-      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=98da13ec', document.baseURI).href;
+      const mod = await import(new URL('pkg/vdg_freight.js?v=23bbf0d5', document.baseURI).href);
+      const wasmUrl = new URL('pkg/vdg_freight_bg.wasm?v=23bbf0d5', document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
