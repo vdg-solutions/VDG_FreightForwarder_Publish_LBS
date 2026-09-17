@@ -24,6 +24,7 @@ const GUARD_MESSAGE_KEYS = {
   SAVE_TOO_LARGE:           'save.error.too_large',
   UNCONFIRMED_BASE:         'save.error.unconfirmed_base',
   BASE_NOT_CARRIED:         'save.error.base_not_carried',
+  BASELINE_NOT_CARRIED:     'save.error.baseline_not_carried',
 };
 
 export function guardMessage(envelope) {

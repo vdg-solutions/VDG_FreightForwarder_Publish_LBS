@@ -21,7 +21,8 @@ var GUARD_MESSAGE_KEYS = {
   STALE_BASE: "save.error.stale_base",
   SAVE_TOO_LARGE: "save.error.too_large",
   UNCONFIRMED_BASE: "save.error.unconfirmed_base",
-  BASE_NOT_CARRIED: "save.error.base_not_carried"
+  BASE_NOT_CARRIED: "save.error.base_not_carried",
+  BASELINE_NOT_CARRIED: "save.error.baseline_not_carried"
 };
 function guardMessage(envelope) {
   if (envelope.code === "GUARD_VIOLATION") {

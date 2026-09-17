@@ -640,6 +640,7 @@
   "save.error.too_large": "Lần lưu này quá lớn (vượt 100 thao tác) — hãy chia nhỏ",
   "save.error.unconfirmed_base": "Máy chủ chưa xác nhận hồ sơ này — đợi đồng bộ xong rồi lưu lại",
   "save.error.base_not_carried": "Màn hình không còn biết đang sửa phiên bản nào của hồ sơ — mở lại rồi lưu",
+  "save.error.baseline_not_carried": "Màn hình không còn nhớ nội dung ban đầu để so sánh thay đổi — mở lại rồi lưu",
   "fx.source.sbv": "SBV",
   "fx.source.vcb": "Vietcombank",
   "fx.source.manual": "Thủ công",

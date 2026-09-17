@@ -191,7 +191,7 @@ import {
   bindIntentNotices,
   bindShipmentVoidDelete,
   openSyncAttentionModal
-} from "./chunk-6WWW5HVR.js";
+} from "./chunk-4ZGBYZOY.js";
 import {
   bindFsmIngest
 } from "./chunk-3RLMMSOJ.js";
@@ -199,7 +199,7 @@ import {
   bindActionGuard,
   can
 } from "./chunk-GOIBPTZO.js";
-import "./chunk-UC5ZOXUU.js";
+import "./chunk-Z6M7JOKQ.js";
 import {
   initRouter,
   navigate
@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build f5f30e0c">v0.4.97 (f5f30e0c)</span>
+        <span class="font-mono whitespace-nowrap" title="build 95ce7d4a">v0.4.98 (95ce7d4a)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.97 (f5f30e0c)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.98 (95ce7d4a)</div>
         </div>
       </div>
     </div>`;
@@ -3024,8 +3024,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=f5f30e0c", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=f5f30e0c", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=95ce7d4a", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=95ce7d4a", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4455,14 +4455,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-BDOI3AU3.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-COALNP2G.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-BDOI3AU3.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-COALNP2G.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4567,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.97 (f5f30e0c)";
+var APP_VERSION = "v0.4.98 (95ce7d4a)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4688,7 +4688,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-4SIOQURQ.js"),
-  "/shipments": () => import("./shipments-KFFESVXG.js"),
+  "/shipments": () => import("./shipments-GR3OYWGT.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -4708,7 +4708,7 @@ var VIEWS = {
   "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-IVJC6UXA.js"),
+  "/manager/pipeline": () => import("./pipeline-4QBC7JSQ.js"),
   "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
   "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
@@ -5034,7 +5034,15 @@ function applyPredicate(rows, predicate) {
 function composeData(wasm4) {
   const rememberBases = async (ref) => {
     const reply = await wasm4.data_get_shipment({ shipment_ref: ref });
-    if (reply.ok) _formBases.set(ref, reply.bases || {});
+    if (reply.ok) {
+      _formBases.set(ref, {
+        bases: reply.bases || {},
+        // Cloned immediately: `stamp()` (below, right after this call returns) mutates
+        // `reply.record` in place, and a screen may go on to edit it in place too — a baseline
+        // that moved with either would never show anything as changed.
+        baseline: reply.record != null ? structuredClone(reply.record) : null
+      });
+    }
     return reply;
   };
   const joinLoaded = async (_repo, envelopes) => stampRows(await wasm4.data_join_loaded({ envelopes: envelopes || [] }));
@@ -5045,10 +5053,11 @@ function composeData(wasm4) {
     // half-done.
     putShipment: async (_repo, shipment, opts = {}) => {
       const ref = shipment.shipment_ref;
-      const bases = _formBases.get(ref) || {};
+      const { bases = {}, baseline = null } = _formBases.get(ref) || {};
       const reply = throwIfRefused(await wasm4.data_put_shipment({
         shipment,
         bases,
+        baseline,
         commission_lines: opts.commissionLines ?? shipment.commission_lines ?? [],
         pnl_lines: opts.pnlLines ?? shipment.pnl_lines ?? [],
         // Absent, not null: the wasm request types these as a number and a string, and a null

@@ -27,6 +27,11 @@ const REASON_LICENSE_READONLY = 'license-readonly';
 // read hands a token out with the record; this map carries it, unexamined, from getShipment to the
 // matching putShipment. Keyed by ref. Nothing here mints one, and wasm refuses a save that carries
 // none rather than reading one at save time — the v0.4.96 silent lost update.
+//
+// `baseline` rides alongside for the same reason: it is the CONTENT that same read returned, kept
+// so wasm can measure "what did this person change" against it instead of the store at save time —
+// the gap that let another client's field ride out under this person's own edit in the re-apply
+// batch. This layer inspects neither value; it only carries them.
 const _formBases = new Map();
 
 /// The reason code, in the reader's language. Rust decides; the words are ours.
@@ -68,12 +73,20 @@ function applyPredicate(rows, predicate) {
 }
 
 export function composeData(wasm) {
-  /// Read `ref` and keep the tokens that read handed out. Called after a save too: the token a save
-  /// spends goes with it, and a form left open on the screen has to stand on a base CharterDB just
-  /// issued rather than on nothing.
+  /// Read `ref` and keep the tokens AND the content that read handed out. Called after a save too:
+  /// the token a save spends goes with it, and a form left open on the screen has to stand on a
+  /// base (and a baseline) CharterDB just issued rather than on nothing.
   const rememberBases = async (ref) => {
     const reply = await wasm.data_get_shipment({ shipment_ref: ref });
-    if (reply.ok) _formBases.set(ref, reply.bases || {});
+    if (reply.ok) {
+      _formBases.set(ref, {
+        bases: reply.bases || {},
+        // Cloned immediately: `stamp()` (below, right after this call returns) mutates
+        // `reply.record` in place, and a screen may go on to edit it in place too — a baseline
+        // that moved with either would never show anything as changed.
+        baseline: reply.record != null ? structuredClone(reply.record) : null,
+      });
+    }
     return reply;
   };
 
@@ -87,10 +100,11 @@ export function composeData(wasm) {
     // half-done.
     putShipment: async (_repo, shipment, opts = {}) => {
       const ref = shipment.shipment_ref;
-      const bases = _formBases.get(ref) || {};
+      const { bases = {}, baseline = null } = _formBases.get(ref) || {};
       const reply = throwIfRefused(await wasm.data_put_shipment({
         shipment,
         bases,
+        baseline,
         commission_lines: opts.commissionLines ?? shipment.commission_lines ?? [],
         pnl_lines:        opts.pnlLines ?? shipment.pnl_lines ?? [],
         // Absent, not null: the wasm request types these as a number and a string, and a null
