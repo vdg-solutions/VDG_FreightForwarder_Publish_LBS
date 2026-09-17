@@ -65,7 +65,14 @@ export const base64Codec = {
 export const wasmFormatter = {
   dateDisplay:     (iso) => (typeof window.fmt_date_display === 'function' ? window.fmt_date_display(iso) : null),
   datePatternHint: ()    => (typeof window.fmt_date_pattern_hint === 'function' ? window.fmt_date_pattern_hint() : null),
+  stampDisplay:    (iso) => (typeof window.fmt_stamp_display === 'function' ? window.fmt_stamp_display(iso, tzOffsetMin()) : null),
 };
+
+// Minutes EAST of UTC — getTimezoneOffset() counts the other way. Read at CALL time and from the
+// current instant, the same expression compose-ui/manager.js hands every manager request: the
+// filter and the stamp column must be told the same offset or they land on different days, which
+// is the whole point of the rule they share.
+const tzOffsetMin = () => -new Date().getTimezoneOffset();
 
 // The transport-mode vocabulary Rust owns (js_bridge_sales_form.rs). With the export absent the
 // answer is "cannot read it" carrying the value untouched — the one thing this must never do is

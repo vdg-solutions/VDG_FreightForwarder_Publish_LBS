@@ -1,7 +1,7 @@
 import {
   bindNoteLines
 } from "./chunk-SZYDA4BO.js";
-import "./chunk-2X6PKTEY.js";
+import "./chunk-3OMP36VA.js";
 import {
   bindAirInvoiceComposer
 } from "./chunk-IIJV2425.js";
@@ -100,7 +100,7 @@ import {
 } from "./chunk-REGXU2BV.js";
 import {
   statusBadgeLabel
-} from "./chunk-VRYVVURA.js";
+} from "./chunk-UQHQOCDT.js";
 import {
   bindSalesAnalyticsCompute
 } from "./chunk-7472JIPV.js";
@@ -160,7 +160,7 @@ import {
 import {
   toLocalDateStr,
   todayLocal
-} from "./chunk-7INC2TTZ.js";
+} from "./chunk-QSZOMCXZ.js";
 import {
   bindQuoteOrchestrator,
   bindSalesRepDerivation
@@ -191,7 +191,7 @@ import {
   bindIntentNotices,
   bindShipmentVoidDelete,
   openSyncAttentionModal
-} from "./chunk-25L5PRXG.js";
+} from "./chunk-PWKVJFBC.js";
 import {
   bindFsmIngest
 } from "./chunk-3RLMMSOJ.js";
@@ -199,7 +199,7 @@ import {
   bindActionGuard,
   can
 } from "./chunk-GOIBPTZO.js";
-import "./chunk-Z6M7JOKQ.js";
+import "./chunk-OWHBD4QO.js";
 import {
   initRouter,
   navigate
@@ -287,7 +287,7 @@ import {
   startInterval,
   stopInterval
 } from "./chunk-JAZY43GR.js";
-import "./chunk-HKNQBDY4.js";
+import "./chunk-LIDU36UT.js";
 import {
   bindAppEvents,
   bindClock,
@@ -298,7 +298,7 @@ import {
   loadLocale,
   nowMs,
   t
-} from "./chunk-5L442NSS.js";
+} from "./chunk-G2RKYR7P.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/components/sidebar.js
 import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm";
@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 5822921e">v0.4.106 (5822921e)</span>
+        <span class="font-mono whitespace-nowrap" title="build 369c90bf">v0.4.107 (369c90bf)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.106 (5822921e)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.107 (369c90bf)</div>
         </div>
       </div>
     </div>`;
@@ -3129,8 +3129,10 @@ var BRIDGE_EXPORTS = [
   "priced_ref_resolve_on_date",
   "compute_due_soon",
   // F-48-01: payment-due-soon 4-tier ladder shared compute
-  "fmt_date_display"
+  "fmt_date_display",
   // F4-d: the one date-display convention, decided in Rust
+  "fmt_stamp_display"
+  // the audit trail's stamp on the reader's clock, decided in Rust
 ];
 function globalizeBridgeExports(mod) {
   cached = mod;
@@ -3144,8 +3146,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=5822921e", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=5822921e", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=369c90bf", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=369c90bf", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3238,7 +3240,7 @@ function bootFallbackMount() {
 async function renderBootFailure(err, { onRetryRepoInit = () => location.reload() } = {}) {
   const mount = bootFallbackMount();
   if (err?.name === ROLE_PROBE_TIMEOUT) {
-    const { renderLoadingBanner } = await import("./auth-fallback-views-A5FEVVSV.js");
+    const { renderLoadingBanner } = await import("./auth-fallback-views-L7A7QFTF.js");
     renderLoadingBanner(document.getElementById(APP_ROOT_ID));
     return;
   }
@@ -4414,8 +4416,10 @@ var base64Codec = {
 };
 var wasmFormatter = {
   dateDisplay: (iso) => typeof window.fmt_date_display === "function" ? window.fmt_date_display(iso) : null,
-  datePatternHint: () => typeof window.fmt_date_pattern_hint === "function" ? window.fmt_date_pattern_hint() : null
+  datePatternHint: () => typeof window.fmt_date_pattern_hint === "function" ? window.fmt_date_pattern_hint() : null,
+  stampDisplay: (iso) => typeof window.fmt_stamp_display === "function" ? window.fmt_stamp_display(iso, tzOffsetMin()) : null
 };
+var tzOffsetMin = () => -(/* @__PURE__ */ new Date()).getTimezoneOffset();
 var wasmShipmentMode = {
   resolveMode: (stored) => {
     const mod = window.__vdg_wasm;
@@ -4529,7 +4533,7 @@ async function tryParamRoute(route) {
   const c360Match = CUSTOMER360_RE.exec(basePath);
   if (c360Match) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./customer360-U6XEEPJ7.js"), root, basePath);
+    const mod = await loadView(() => import("./customer360-J6274JYG.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { id: c360Match[1], route: basePath }), root, basePath);
     return true;
@@ -4537,7 +4541,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-3LPLJYC7.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-3KZIN6WZ.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4545,14 +4549,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-COALNP2G.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-MZLNLXOR.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-COALNP2G.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-MZLNLXOR.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4657,7 +4661,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.106 (5822921e)";
+var APP_VERSION = "v0.4.107 (369c90bf)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4744,6 +4748,13 @@ function initWmaListener() {
     }
   });
 }
+function initDocumentLang() {
+  const apply = () => {
+    document.documentElement.lang = currentLocale();
+  };
+  window.addEventListener("vdg:locale-changed", apply);
+  apply();
+}
 function initBreakpointListener() {
   const mql = window.matchMedia(`(max-width: ${BREAKPOINT_TABLET_PX - 1}px)`);
   const onChange = (e) => {
@@ -4777,79 +4788,79 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-4SIOQURQ.js"),
-  "/shipments": () => import("./shipments-NLHMJMAH.js"),
-  "/upload": () => import("./upload-46S7RRXO.js"),
-  "/documents": () => import("./documents-EZXFHRCF.js"),
-  "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
-  "/finance/credit": () => import("./credit-dashboard-Z43BZ656.js"),
-  "/finance/demdet": () => import("./demdet-BSC4VQ26.js"),
+  "/dashboard": () => import("./dashboard-CU6Z425P.js"),
+  "/shipments": () => import("./shipments-3O5WQYEY.js"),
+  "/upload": () => import("./upload-UUP3KK46.js"),
+  "/documents": () => import("./documents-NRLILJ7O.js"),
+  "/finance": () => import("./finance-dashboard-E6O6EGCC.js"),
+  "/finance/credit": () => import("./credit-dashboard-DJTNOD4Q.js"),
+  "/finance/demdet": () => import("./demdet-EB2RJXD4.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-Y7DNIDDA.js"),
-  "/sales/analytics": () => import("./sales-analytics-SQ7QRD6W.js"),
-  "/sales/quote/new": () => import("./sales-quote-new-NPXRNJ4F.js"),
-  "/sales/quote": () => import("./sales-quote-list-VCJTCXW6.js"),
-  "/masters/customers": () => import("./masters-customers-TFTTJR3R.js"),
-  "/masters/carriers": () => import("./masters-carriers-UJYEKLD4.js"),
-  "/masters/services": () => import("./masters-services-RCLCZNRP.js"),
-  "/help": () => import("./help-SUXYXL6K.js"),
-  "/pending-access": () => import("./pending-access-ZK6HVXUW.js"),
-  "/background-jobs": () => import("./background-jobs-NY2OVBLZ.js"),
+  "/sales/me": () => import("./sales-me-6NC4T2RW.js"),
+  "/sales/analytics": () => import("./sales-analytics-ZX6A2YGO.js"),
+  "/sales/quote/new": () => import("./sales-quote-new-Z6BE3U3S.js"),
+  "/sales/quote": () => import("./sales-quote-list-SA7E6LXE.js"),
+  "/masters/customers": () => import("./masters-customers-SA5IZHZF.js"),
+  "/masters/carriers": () => import("./masters-carriers-P7NKRLJL.js"),
+  "/masters/services": () => import("./masters-services-V65FFZZA.js"),
+  "/help": () => import("./help-4XPTOIUS.js"),
+  "/pending-access": () => import("./pending-access-OJ5LJEFG.js"),
+  "/background-jobs": () => import("./background-jobs-QUBGBQQL.js"),
   // Manager Workspace — E-14
-  "/manager/dashboard": () => import("./dashboard-5REWW3RG.js"),
-  "/manager/pipeline": () => import("./pipeline-4QBC7JSQ.js"),
-  "/manager/approvals": () => import("./approvals-JCBX4C5L.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-NBWSJ3ZV.js"),
-  "/manager/finance/cash-flow": () => import("./cash-flow-ZNA53I4J.js"),
-  "/manager/finance/close-period": () => import("./close-period-NP2WWF4D.js"),
-  "/manager/finance/self-approved-review": () => import("./self-approved-review-WD43MMQJ.js"),
-  "/manager/audit": () => import("./audit-UTZVYHF3.js"),
-  "/manager/notifications": () => import("./notifications-CU3GZP63.js"),
+  "/manager/dashboard": () => import("./dashboard-ZOW7SHEX.js"),
+  "/manager/pipeline": () => import("./pipeline-L3M3H6BQ.js"),
+  "/manager/approvals": () => import("./approvals-52XYZUN6.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-NUK7TWEG.js"),
+  "/manager/finance/cash-flow": () => import("./cash-flow-UZZXZXOX.js"),
+  "/manager/finance/close-period": () => import("./close-period-RORJQT55.js"),
+  "/manager/finance/self-approved-review": () => import("./self-approved-review-FR5SOQF6.js"),
+  "/manager/audit": () => import("./audit-JVWCERMQ.js"),
+  "/manager/notifications": () => import("./notifications-OL3LCTPY.js"),
   // E-14 batch-02
-  "/manager/sales": () => import("./sales-C6DMYS2I.js"),
-  "/manager/finance/commissions": () => import("./commissions-6ULWHBSB.js"),
-  "/manager/commission-rules": () => import("./commission-rules-TKSNVF5A.js"),
-  "/manager/exceptions": () => import("./exceptions-5XKVRTLH.js"),
+  "/manager/sales": () => import("./sales-7JQI45WX.js"),
+  "/manager/finance/commissions": () => import("./commissions-S4L77MSX.js"),
+  "/manager/commission-rules": () => import("./commission-rules-JU3TCV4W.js"),
+  "/manager/exceptions": () => import("./exceptions-CMMGHVPR.js"),
   // E-15
-  "/manager/errors": () => import("./errors-DZ5DKXRP.js"),
-  "/manager/backup": () => import("./backup-PIHICBU4.js"),
-  "/manager/users": () => import("./users-NM4HWBMH.js"),
+  "/manager/errors": () => import("./errors-A4SZ2L36.js"),
+  "/manager/backup": () => import("./backup-OAUOAZQA.js"),
+  "/manager/users": () => import("./users-PUNDYFL5.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-2WRHXHXG.js"),
-  "/manager/settings": () => import("./settings-A7U2KLTX.js"),
+  "/manager/fx-rates": () => import("./fx-rates-PIMNWB4R.js"),
+  "/manager/settings": () => import("./settings-GJ22OYFY.js"),
   // E-16 F-16-02
-  "/manager/awb": () => import("./awb-OHLWBRU3.js"),
+  "/manager/awb": () => import("./awb-LGAIKTIS.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-UGSDDU43.js"),
-  "/masters/flights": () => import("./flights-66PPOTOC.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-ZZ4AIRHU.js"),
+  "/masters/airports": () => import("./airports-A45SVQQZ.js"),
+  "/masters/flights": () => import("./flights-2VZOE6GH.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-ESQCHZFD.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-LZ6LIIYB.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-AULMGZWH.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-LKBPS3LM.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-M5GQSRKF.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-NV2YQ7IO.js"),
-  "/manager/manifest": () => import("./manifest-RCWOWF5I.js"),
+  "/masters/uld-types": () => import("./uld-types-COF2BFGQ.js"),
+  "/manager/manifest": () => import("./manifest-CPGQAZC4.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-IBB4XIKO.js"),
+  "/masters/air-rates": () => import("./air-rates-ZSDTUETB.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-SRK534Y3.js"),
-  "/masters/local-charges": () => import("./local-charges-M54MRTQC.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-MYXMF6CR.js"),
+  "/masters/local-charges": () => import("./local-charges-5SB6DSO2.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-FYFD6YDG.js"),
-  "/quotes/air-calc": () => import("./air-calc-FKUEZJ5U.js"),
+  "/masters/shipment-states": () => import("./shipment-states-5LAJZURL.js"),
+  "/quotes/air-calc": () => import("./air-calc-QGDIPS4P.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-NTRFSNTH.js"),
+  "/manager/air-invoice": () => import("./air-invoice-BFK4X2EL.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-CFBWH4SL.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-34DK2PQK.js"),
   // E-23 F-23-05
-  "/accounting/reports": () => import("./reports-WDEUTGW7.js"),
-  "/accounting/settings": () => import("./settings-7NGVGHLH.js"),
+  "/accounting/reports": () => import("./reports-EUNHFHFE.js"),
+  "/accounting/settings": () => import("./settings-TNYDQ7AS.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-EK3OHL36.js"),
+  "/admin/users": () => import("./users-view-4RWDFC3Y.js"),
   // E-24 F-24-06
-  "/admin/users/audit-log": () => import("./user-audit-log-view-2BVILWHD.js")
+  "/admin/users/audit-log": () => import("./user-audit-log-view-AQOHWPTO.js")
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
@@ -5511,7 +5522,9 @@ function composeManager(wasm4) {
     computeTimeBased: (shipments, today) => wasm4.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
   });
   bindUserAuditLogComposer({
-    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm4.manager_audit_log_range({ records: records || [], from, to }).records,
+    // from/to come off a date picker, so they are LOCAL days — the stamps are UTC, and tz is what
+    // lets Rust read both on one calendar (the same offset the stamp column is rendered with).
+    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm4.manager_audit_log_range({ records: records || [], from, to, tz_offset_min: tz() }).records,
     sortByTimestampDesc: (records) => wasm4.manager_audit_log_sort({ records: records || [] }).records,
     buildAuditLogCsv: (records) => wasm4.manager_audit_log_csv({ records: records || [] }).csv
   });
@@ -6481,7 +6494,7 @@ async function renderView(route) {
   const printMatch = PRINT_ROUTE_RE.exec(route);
   if (printMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./document-print-B4IOALBT.js"), root2, route);
+    const mod2 = await loadView(() => import("./document-print-3TNXKLN4.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, printMatch[1]), root2, route);
     return;
@@ -6489,7 +6502,7 @@ async function renderView(route) {
   const noteMatch = NOTE_ROUTE_RE.exec(route);
   if (noteMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./note-print-F3FDXZTB.js"), root2, route);
+    const mod2 = await loadView(() => import("./note-print-YMBSR4FY.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, noteMatch[1], noteMatch[2]), root2, route);
     return;
@@ -6497,7 +6510,7 @@ async function renderView(route) {
   const budgetMatch = BUDGET_ROUTE_RE.exec(route);
   if (budgetMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./shipment-budget-print-HYRDHAX2.js"), root2, route);
+    const mod2 = await loadView(() => import("./shipment-budget-print-K7VZYXY7.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, budgetMatch[1]), root2, route);
     return;
@@ -6505,7 +6518,7 @@ async function renderView(route) {
   const quoteEditMatch = QUOTE_EDIT_RE.exec(route);
   if (quoteEditMatch) {
     const root2 = _viewRoot();
-    const mod2 = await loadView(() => import("./sales-quote-new-NPXRNJ4F.js"), root2, route);
+    const mod2 = await loadView(() => import("./sales-quote-new-Z6BE3U3S.js"), root2, route);
     if (!mod2) return;
     await mountView(() => mod2.render(root2, quoteEditMatch[1]), root2, route);
     return;
@@ -6581,6 +6594,7 @@ async function main() {
       await detectRoleViaServer(user, { force: true });
     }
   });
+  initDocumentLang();
   try {
     await loadLocale("vi");
   } catch (err) {

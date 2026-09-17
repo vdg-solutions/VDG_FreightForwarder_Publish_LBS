@@ -266,8 +266,10 @@ export function composeManager(wasm) {
   });
 
   bindUserAuditLogComposer({
+    // from/to come off a date picker, so they are LOCAL days — the stamps are UTC, and tz is what
+    // lets Rust read both on one calendar (the same offset the stamp column is rendered with).
     filterByDateRange: (records, { from = '', to = '' } = {}) =>
-      wasm.manager_audit_log_range({ records: records || [], from, to }).records,
+      wasm.manager_audit_log_range({ records: records || [], from, to, tz_offset_min: tz() }).records,
     sortByTimestampDesc: (records) => wasm.manager_audit_log_sort({ records: records || [] }).records,
     buildAuditLogCsv: (records) => wasm.manager_audit_log_csv({ records: records || [] }).csv,
   });

@@ -2,7 +2,7 @@
 // admin/user-audit-log.jsonl with date-range filter + CSV export. Wired to UserAuditLog (F-24-06
 // sync/user-audit-log.js), same DI-off-window convention as users-view.js.
 
-import { t, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale, fmtStamp } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountDateHints } from '../../util/date-input-hint.js';
 import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
@@ -44,7 +44,7 @@ function renderTable(container, rows) {
 
     return `
     <tr class="border-t border-slate-100 text-xs align-top">
-      <td class="px-3 py-2 whitespace-nowrap">${(r.ts || '').replace('T', ' ').slice(0, 19)}</td>
+      <td class="px-3 py-2 whitespace-nowrap">${fmtStamp(r.ts)}</td>
       <td class="px-3 py-2">${r.actor_email || ''}</td>
       <td class="px-3 py-2">${displayAction}</td>
       <td class="px-3 py-2">${r.target_email || ''}</td>

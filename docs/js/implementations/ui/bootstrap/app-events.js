@@ -1,7 +1,7 @@
 // app-events.js — global event listeners wired at bootstrap
 
 import { APP_VERSION } from '../../kernel/core_abstractions/version.js';
-import { t } from '../../kernel/core_abstractions/i18n/index.js';
+import { t, currentLocale } from '../../kernel/core_abstractions/i18n/index.js';
 import { onEvent } from '../core_abstractions/ports/sync/wma-engine.js';
 import { loadKindWmaState, saveKindWmaState } from '../core_abstractions/ports/sync/wma-store.js';
 
@@ -121,6 +121,18 @@ export function initWmaListener() {
       }
     }
   });
+}
+
+// `<html lang>` is what the browser answers with when it renders a control ITSELF rather than from
+// our markup — `<input type="date">` picks its mm/dd/yyyy-vs-dd/mm/yyyy order from it, so a
+// Vietnamese page declared `lang="en"` put a US placeholder directly beside the app's own
+// `(dd/mm/yyyy)` hint on the audit-log filters. index.html now ships the default locale, and this
+// keeps the attribute following the VI/EN toggle; every other reader of `lang` (spell-check,
+// hyphenation, assistive tech) gets the truth for the same edit.
+export function initDocumentLang() {
+  const apply = () => { document.documentElement.lang = currentLocale(); };
+  window.addEventListener('vdg:locale-changed', apply);
+  apply();
 }
 
 // F-14-16: mobile breakpoint

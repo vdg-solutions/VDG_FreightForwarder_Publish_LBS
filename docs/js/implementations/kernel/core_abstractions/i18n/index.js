@@ -3,7 +3,7 @@
 import { fetchJson } from '../ports/http.js';
 import { dispatchAppEvent } from '../ports/app-events.js';
 import { dateFrom } from '../ports/clock.js';
-import { dateDisplay, datePatternHint } from '../ports/wasm-format.js';
+import { dateDisplay, datePatternHint, stampDisplay } from '../ports/wasm-format.js';
 
 const SUPPORTED_LOCALES = ['vi', 'en'];
 const DEFAULT_LOCALE    = 'vi';
@@ -60,6 +60,15 @@ export function fmtDatePattern() {
   // Bootstrap-order/test fallback only — mirrors fmtDate's own fallback above, never the app's
   // real decision (that stays in Rust).
   return 'dd/mm/yyyy';
+}
+
+// A stored UTC instant on the reader's clock — `18/09/2026 01:34:34 GMT+07:00`. Unlike fmtDate
+// this carries NO JS fallback on purpose: the only screen that shows a stored instant is the audit
+// trail, whose filter, order and CSV are all wasm calls, so it cannot render at all before wasm is
+// up. A fallback here would be a SECOND answer to "which day did this happen on" — and the display
+// and the range filter disagreeing about that is the exact defect this function closes.
+export function fmtStamp(iso) {
+  return stampDisplay(String(iso ?? '')) ?? '';
 }
 
 export function fmtNumber(n) {

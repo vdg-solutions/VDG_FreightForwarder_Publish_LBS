@@ -735,24 +735,29 @@ export function flows_void_apply(req: any): Promise<any>;
 export function flows_void_plan(req: any): any;
 
 /**
- * F4-d: the ONE date-display convention for the whole app, decided here rather than left to the
- * browser's `Intl` -- that is what drifted in the first place: `Intl.DateTimeFormat('vi', ...)`
- * picks a DIFFERENT separator for a day/month-only request than for a day/month/year one (proven
- * live: the exceptions trend axis showed `12-07`, the ledger's own date display showed
- * `12/07/2026`, same locale, same intent). A JS caller formatting a date is rendering; deciding
- * the convention is a rule, so it lives here -- JS only inserts the string this returns.
- * Accepts a bare `YYYY-MM-DD` (an `<input type="date">`'s `.value`, always this shape regardless
- * of the browser's display locale) or a full ISO timestamp; returns `""` for anything else.
+ * F4-d: the ONE date-display convention for the whole app. A JS caller formatting a date is
+ * rendering; deciding the convention is a rule, so the rule itself sits in CoreAbstractions
+ * (`manager_rules::display_day`, which explains why `Intl` could not be trusted with it) and this
+ * is only the door JS reaches it through -- JS inserts the string this returns, nothing more.
  */
 export function fmt_date_display(iso: string): string;
 
 /**
  * H4-c: the literal-format explainer shown beside a date input that has no value yet
  * (date-input-hint.js) -- day/month/year, same order and separator `fmt_date_display` formats a
- * real value with. Declared right beside it on purpose: a future change to that `format!()`
- * call is the one place a reviewer would also see this literal needs the same edit.
+ * real value with. Declared right beside it on purpose: a future change to that convention is the
+ * one place a reviewer would also see this literal needs the same edit.
  */
 export function fmt_date_pattern_hint(): string;
+
+/**
+ * The audit trail's stamp column: a stored UTC instant rendered on the READER's clock, day in the
+ * same order `fmt_date_display` uses and the zone named outright. `tz_offset_min` is minutes east
+ * of UTC (`-new Date().getTimezoneOffset()`), the same number every manager request already
+ * carries -- wasm has no timezone of its own, so the browser states it. i32 rather than i64
+ * because an i64 parameter crosses as a BigInt and no caller has anything like that range.
+ */
+export function fmt_stamp_display(iso: string, tz_offset_min: number): string;
 
 /**
  * Installed once by js/bootstrap (after the wasm module is ready and the repo exists).
@@ -1497,6 +1502,7 @@ export interface InitOutput {
     readonly flows_void_plan: (a: number, b: number) => void;
     readonly fmt_date_display: (a: number, b: number, c: number) => void;
     readonly fmt_date_pattern_hint: (a: number) => void;
+    readonly fmt_stamp_display: (a: number, b: number, c: number, d: number) => void;
     readonly freight_app_init: (a: number) => void;
     readonly fx_rate_validate_spread: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly fx_rate_validate_value: (a: number, b: number, c: number) => void;
@@ -1790,10 +1796,10 @@ export interface InitOutput {
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
     readonly wasmentityrepo_userRepo: (a: number) => number;
-    readonly __wbg_userrepo_free: (a: number, b: number) => void;
-    readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
+    readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
+    readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1804,9 +1810,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_16804: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_16817: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12313: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16809: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16822: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12318: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;
