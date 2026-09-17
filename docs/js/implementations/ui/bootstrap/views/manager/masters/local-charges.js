@@ -10,6 +10,7 @@ import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/p
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { openModal, statusLabels } from './local-charges-modal.js';
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
+import { repaintOnStoreChange } from '../../../util/store-repaint.js';
 import { t, currentLocale } from '../../../../../kernel/core_abstractions/i18n/index.js';
 
 const LOAD_COL_SPAN    = 6;
@@ -173,6 +174,10 @@ export async function render(root) {
   root.querySelector('#lc-dir').addEventListener('change', apply);
   root.querySelector('#lc-search').addEventListener('input', apply);
 
+  // ADO #121: a delete that reached this machine's store used to sit on screen until a navigation.
+  // The rows are the store's answer now, re-read whenever this kind changes.
+  repaintOnStoreChange(root, KIND, async () => { await loadAndRender(); apply(); });
+
   // F-28-12: maintainer diff+Approve/Reject or the proposer's own-pending banner (AC-01/02/03).
   const pendingEl = root.querySelector('#lc-pending');
   async function refreshPending() {
@@ -209,8 +214,6 @@ export async function render(root) {
         title: t('local_charges.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
-      charges = charges.filter((i) => i.id !== delBtn.dataset.id);
-      body.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       // A row whose key field is empty cannot be addressed, and `deleteMaster` throws on it.
       // Unhandled, that throw left the row on screen with nothing said -- the exact
       // "delete does nothing" the operator reported. A refusal is an ANSWER; it gets shown.
@@ -221,6 +224,8 @@ export async function render(root) {
         console.warn('delete refused', err); // DEV
         return;
       }
+      await loadAndRender();
+      apply();
     }
   });
 }

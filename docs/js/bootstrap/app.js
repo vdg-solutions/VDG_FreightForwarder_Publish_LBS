@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 95ce7d4a">v0.4.98 (95ce7d4a)</span>
+        <span class="font-mono whitespace-nowrap" title="build 5410bd22">v0.4.99 (5410bd22)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.98 (95ce7d4a)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.99 (5410bd22)</div>
         </div>
       </div>
     </div>`;
@@ -3024,8 +3024,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=95ce7d4a", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=95ce7d4a", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=5410bd22", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=5410bd22", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4567,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.98 (95ce7d4a)";
+var APP_VERSION = "v0.4.99 (5410bd22)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4731,21 +4731,21 @@ var VIEWS = {
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-OHLWBRU3.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-26XDZMG6.js"),
-  "/masters/flights": () => import("./flights-XK3FL5WU.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-H2WUMCQC.js"),
+  "/masters/airports": () => import("./airports-UGSDDU43.js"),
+  "/masters/flights": () => import("./flights-66PPOTOC.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-ZZ4AIRHU.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-BRU2SJVN.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-LZ6LIIYB.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-YQTFNNR3.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-LKBPS3LM.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-6DLCU6JA.js"),
+  "/masters/uld-types": () => import("./uld-types-NV2YQ7IO.js"),
   "/manager/manifest": () => import("./manifest-RCWOWF5I.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-A4WWM5LD.js"),
+  "/masters/air-rates": () => import("./air-rates-IBB4XIKO.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-DKR3YGMA.js"),
-  "/masters/local-charges": () => import("./local-charges-YV63GTPX.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-SRK534Y3.js"),
+  "/masters/local-charges": () => import("./local-charges-M54MRTQC.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
   "/masters/shipment-states": () => import("./shipment-states-FYFD6YDG.js"),
   "/quotes/air-calc": () => import("./air-calc-FKUEZJ5U.js"),

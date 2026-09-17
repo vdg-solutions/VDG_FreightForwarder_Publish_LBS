@@ -15,6 +15,9 @@ import {
   safeMasterLoad
 } from "./chunk-V5A2B6CO.js";
 import {
+  repaintOnStoreChange
+} from "./chunk-5J6RPASQ.js";
+import {
   canWriteMaster
 } from "./chunk-T2XEYG3A.js";
 import {
@@ -22,6 +25,7 @@ import {
   listMasters,
   saveMaster
 } from "./chunk-XLNZASZM.js";
+import "./chunk-2PLULDG2.js";
 import "./chunk-JAZY43GR.js";
 import {
   showConfirm
@@ -352,6 +356,10 @@ async function render(root) {
   root.querySelector("#lc-line").addEventListener("change", apply);
   root.querySelector("#lc-dir").addEventListener("change", apply);
   root.querySelector("#lc-search").addEventListener("input", apply);
+  repaintOnStoreChange(root, KIND, async () => {
+    await loadAndRender();
+    apply();
+  });
   const pendingEl = root.querySelector("#lc-pending");
   async function refreshPending() {
     await loadAndRender();
@@ -383,8 +391,6 @@ async function render(root) {
         destructive: true
       });
       if (!ok) return;
-      charges = charges.filter((i) => i.id !== delBtn.dataset.id);
-      body.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       try {
         await deleteMaster(KIND, delBtn.dataset.id);
       } catch (err) {
@@ -392,6 +398,8 @@ async function render(root) {
         console.warn("delete refused", err);
         return;
       }
+      await loadAndRender();
+      apply();
     }
   });
 }

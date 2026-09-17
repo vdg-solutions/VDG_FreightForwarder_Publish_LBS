@@ -7,6 +7,7 @@ import { canWriteMaster } from '../../../../core_abstractions/ports/cache/master
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { safeMasterLoad, renderMasterLoadRetryRow } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { listMasters, saveMaster, deleteMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
+import { repaintOnStoreChange } from '../../../util/store-repaint.js';
 import { t } from '../../../../../kernel/core_abstractions/i18n/index.js';
 
 const KIND = 'units-of-measure';
@@ -226,6 +227,9 @@ export async function render(root) {
     body.innerHTML = units.length ? units.map((u) => rowHtml(u, isEditor)).join('') : `<tr><td colspan="${colSpan}" class="p-4 text-slate-400 text-center text-xs">${t('uom.empty')}</td></tr>`;
   }
 
+  // ADO #121: a delete that reached this machine's store used to sit on screen until a navigation.
+  // The rows are the store's answer now, re-read whenever this kind changes.
+  repaintOnStoreChange(root, KIND, loadAndRender);
   await loadAndRender();
 
   root.querySelector('#uom-search').addEventListener('input', (e) => {
@@ -251,8 +255,6 @@ export async function render(root) {
         title: t('uom.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
-      units = units.filter((i) => i.id !== delBtn.dataset.id);
-      body.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       // A row whose key field is empty cannot be addressed, and `deleteMaster` throws on it.
       // Unhandled, that throw left the row on screen with nothing said -- the exact
       // "delete does nothing" the operator reported. A refusal is an ANSWER; it gets shown.
@@ -263,6 +265,7 @@ export async function render(root) {
         console.warn('delete refused', err); // DEV
         return;
       }
+      await loadAndRender();
     }
   });
 }

@@ -10,6 +10,7 @@ import { currentUserRole, currentUserRoles } from '../../../../core_abstractions
 import { createPricedGovernancePanel } from './priced-governance-panel.js';
 import { readSettings, SECOND_EYES_FIELD } from '../../../../core_abstractions/ports/governance/workspace-settings.js';
 import { isViewSuperseded } from '../../../util/view-root.js';
+import { repaintOnStoreChange } from '../../../util/store-repaint.js';
 import { mountDateHints } from '../../../util/date-input-hint.js';
 
 const KIND       = 'air-rates';
@@ -204,6 +205,9 @@ export async function render(root) {
     if (statusEl) statusEl.textContent = '';
   }
 
+  // ADO #121: a delete that reached this machine's store used to sit on screen until a navigation.
+  // The rows are the store's answer now, re-read whenever this kind changes.
+  repaintOnStoreChange(root, KIND, reload);
   await reload();
 
   // F-28-12: maintainer diff+Approve/Reject or the proposer's own-pending banner (AC-02/03).
@@ -243,8 +247,6 @@ export async function render(root) {
         title: t('air_rate.delete_confirm'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
-      items = items.filter((i) => i.id !== delBtn.dataset.id);
-      root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       // A row whose key field is empty cannot be addressed, and `deleteMaster` throws on it.
       // Unhandled, that throw left the row on screen with nothing said -- the exact
       // "delete does nothing" the operator reported. A refusal is an ANSWER; it gets shown.
@@ -255,6 +257,7 @@ export async function render(root) {
         console.warn('delete refused', err); // DEV
         return;
       }
+      await reload();
     }
   });
 }

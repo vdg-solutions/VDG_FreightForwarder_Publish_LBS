@@ -7,6 +7,7 @@ import { t }                            from '../../../../../kernel/core_abstrac
 import { showConfirm } from '../../../helpers/show-confirm.js';
 import { safeMasterLoad, foldSyncFailure, renderMasterLoadRetryStatus } from '../../../../../kernel/core_abstractions/util/master-load.js';
 import { listMasters, saveMaster, deleteMaster } from '../../../../core_abstractions/ports/data/master-repo.js';
+import { repaintOnStoreChange } from '../../../util/store-repaint.js';
 
 const KIND        = 'uld-types';
 const KIND_PREFIX = 'ULD';
@@ -197,6 +198,9 @@ export async function render(root) {
     if (statusEl) statusEl.textContent = '';
   }
 
+  // ADO #121: a delete that reached this machine's store used to sit on screen until a navigation.
+  // The rows are the store's answer now, re-read whenever this kind changes.
+  repaintOnStoreChange(root, KIND, reload);
   await reload();
 
   root.querySelector('#btn-add')?.addEventListener('click', () => {
@@ -215,8 +219,6 @@ export async function render(root) {
         title: t('uld_types.confirm_delete'), confirmLabel: t('common.action.delete'), cancelLabel: t('common.action.cancel'), destructive: true,
       });
       if (!ok) return;
-      items = items.filter((i) => i.id !== delBtn.dataset.id);
-      root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       // A row whose key field is empty cannot be addressed, and `deleteMaster` throws on it.
       // Unhandled, that throw left the row on screen with nothing said -- the exact
       // "delete does nothing" the operator reported. A refusal is an ANSWER; it gets shown.
@@ -227,6 +229,7 @@ export async function render(root) {
         console.warn('delete refused', err); // DEV
         return;
       }
+      await reload();
     }
   });
 }

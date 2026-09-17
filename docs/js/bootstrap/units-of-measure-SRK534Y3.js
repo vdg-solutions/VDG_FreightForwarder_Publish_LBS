@@ -3,6 +3,9 @@ import {
   safeMasterLoad
 } from "./chunk-V5A2B6CO.js";
 import {
+  repaintOnStoreChange
+} from "./chunk-5J6RPASQ.js";
+import {
   canWriteMaster
 } from "./chunk-T2XEYG3A.js";
 import {
@@ -13,6 +16,7 @@ import {
 import {
   currentRoles
 } from "./chunk-ZJ7UETTQ.js";
+import "./chunk-2PLULDG2.js";
 import "./chunk-JAZY43GR.js";
 import {
   showConfirm
@@ -219,6 +223,7 @@ async function render(root) {
     units.sort((a, b) => (a.category || "").localeCompare(b.category || "") || (a.label_vi || "").localeCompare(b.label_vi || ""));
     body.innerHTML = units.length ? units.map((u) => rowHtml(u, isEditor)).join("") : `<tr><td colspan="${colSpan}" class="p-4 text-slate-400 text-center text-xs">${t("uom.empty")}</td></tr>`;
   }
+  repaintOnStoreChange(root, KIND, loadAndRender);
   await loadAndRender();
   root.querySelector("#uom-search").addEventListener("input", (e) => {
     const q = norm(e.target.value);
@@ -250,8 +255,6 @@ async function render(root) {
         destructive: true
       });
       if (!ok) return;
-      units = units.filter((i) => i.id !== delBtn.dataset.id);
-      body.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       try {
         await deleteMaster(KIND, delBtn.dataset.id);
       } catch (err) {
@@ -259,6 +262,7 @@ async function render(root) {
         console.warn("delete refused", err);
         return;
       }
+      await loadAndRender();
     }
   });
 }

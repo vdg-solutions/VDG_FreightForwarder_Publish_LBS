@@ -4,6 +4,9 @@ import {
   safeMasterLoad
 } from "./chunk-V5A2B6CO.js";
 import {
+  repaintOnStoreChange
+} from "./chunk-5J6RPASQ.js";
+import {
   canWriteMaster
 } from "./chunk-T2XEYG3A.js";
 import {
@@ -14,6 +17,7 @@ import {
 import {
   currentRoles
 } from "./chunk-ZJ7UETTQ.js";
+import "./chunk-2PLULDG2.js";
 import "./chunk-JAZY43GR.js";
 import {
   showConfirm
@@ -214,6 +218,7 @@ async function render(root) {
     if (emptyEl) emptyEl.classList.toggle("hidden", items.length > 0);
     if (statusEl) statusEl.textContent = "";
   }
+  repaintOnStoreChange(root, KIND, reload);
   await reload();
   root.querySelector("#btn-add")?.addEventListener("click", () => {
     openModal(root, null, items, async (entity) => {
@@ -239,8 +244,6 @@ async function render(root) {
         destructive: true
       });
       if (!ok) return;
-      items = items.filter((i) => i.id !== delBtn.dataset.id);
-      root.querySelector(`tr[data-id="${delBtn.dataset.id}"]`)?.remove();
       try {
         await deleteMaster(KIND, delBtn.dataset.id);
       } catch (err) {
@@ -248,6 +251,7 @@ async function render(root) {
         console.warn("delete refused", err);
         return;
       }
+      await reload();
     }
   });
 }
