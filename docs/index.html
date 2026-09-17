@@ -114,8 +114,11 @@
         <!-- entry-loader.js reveals this on a static-import-graph load failure (app.js itself,
              or a chunk it statically imports, 503/404ing — e.g. a GitHub Pages deploy-window
              race). Pre-rendered here, not built at runtime: see entry-loader.js for why. Wording
-             hand-mirrored from view_mount_failed_network / view_mount_reload in vi.json. -->
-        <div id="entry-load-failed" hidden class="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+             hand-mirrored from view_mount_failed_network / view_mount_reload in vi.json.
+             Hidden by the Tailwind CLASS, not the `hidden` attribute: preflight's [hidden] rule
+             and .flex are both (0,1,0) and .flex is emitted later, so the attribute alone left
+             this panel on screen under every boot. .hidden is emitted after .flex and wins. -->
+        <div id="entry-load-failed" class="hidden flex flex-col items-center justify-center h-full gap-4 text-center p-8">
           <div class="text-lg font-semibold text-slate-700">Không mở được ứng dụng</div>
           <div class="text-sm text-slate-500">Không tải được dữ liệu — có thể bản cập nhật mới đang được phát hành. Bấm Tải lại trang để lấy bản mới nhất.</div>
           <button id="entry-reload-btn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Tải lại trang</button>

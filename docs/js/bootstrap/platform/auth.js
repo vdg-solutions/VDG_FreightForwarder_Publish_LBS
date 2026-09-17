@@ -10,9 +10,16 @@ import { roleCacheKey } from '../../implementations/storage/core_abstractions/id
 import { activeWorkspaceName } from '../../implementations/storage/core_abstractions/workspace-registry.js';
 import { workspaceAuthority } from '../../implementations/storage/core_abstractions/workspace-authority.js';
 import { sqlCountEntities, setStoreScope } from '../../implementations/storage/core_abstractions/local-store.js';
+import { claimTabOwnership } from '../../implementations/storage/implementations/local/tab-ownership.js';
 import { safeAwait, SAFE_AWAIT_DEFAULT_MS } from '../../implementations/kernel/core_abstractions/util/safe-await.js';
 
 const AUTH_PROBE_TIMEOUT_MS = 20000;           // F-15-19 AC-4: surface a banner if the probe hangs
+// Longest a boot will wait for the single-tab fact before ruling it unobtainable. Deliberately
+// ABOVE tab-ownership.js's LOCK_HANDOFF_GRACE_MS (3s): a refused tab has to keep the room to say
+// no honestly, and a deadline under that grace would boot every second tab and delete the rule.
+// Above it, nothing legitimate is still running, so reaching this is always a bug or a browser
+// that stopped answering — never a normal wait.
+const TAB_OWNERSHIP_ANSWER_DEADLINE_MS = 5000;
 const ROLES_RESOLVED_EVENT   = 'vdg:roles-resolved';
 const LOGIN_ROOT_ID          = 'login-root';
 const LOGIN_OVERLAY_STYLE    = 'position:fixed;inset:0;z-index:50;background:#f8fafc;';
@@ -54,7 +61,28 @@ export function readCachedIdentityNow() {
     : null;
 }
 
+/// The single-tab fact, bounded. `claim` is defaulted, not passed, so it is still asked exactly
+/// once and only when the gate asks — and so a test can hand this the one input it must survive:
+/// a promise that never settles. A test that stubbed the wrapper instead of the fact would be
+/// measuring its own copy of this logic, which is how v0.4.101 got through a green gate.
+export async function answerTabOwnership(claim = claimTabOwnership()) {
+  const answered = await safeAwait(claim, TAB_OWNERSHIP_ANSWER_DEADLINE_MS, null, 'auth-gate:tabOwnership');
+  if (!answered.ok) throw answered.error;   // told us nothing — require_auth rules that a boot
+  return answered.value;
+}
+
 export const authPlatform = {
+  // The single-tab rule's one platform fact (owner 2026-09-17). Asked once, when the gate asks —
+  // not eagerly at module load, which would only start the handoff grace EARLIER and give a
+  // reload's outgoing document less of it. Rust decides what the answer MEANS; this only reports.
+  //
+  // Bounded, because v0.4.101 shipped a claim that could not settle and the boot parked on it
+  // forever with no screen at all — a blank page, which is the one failure a person cannot work
+  // around. The timer lives here (this file owns the timeouts; no timer leaks inward) and the
+  // VERDICT stays in Rust: a rejection says the platform told us nothing, and require_auth
+  // already rules that a boot rather than a refusal. Two open tabs is a nuisance; a blank page
+  // is a stopped business.
+  auth_holds_tab_ownership:     () => answerTabOwnership(),
   auth_current_user:            async () => getCurrentUser() ?? null,
   auth_was_previously_signed_in: async () => !!wasPreviouslySignedIn(),
   auth_revive_session:          async () => (await rebuildSessionFromStoredToken()) ?? null,

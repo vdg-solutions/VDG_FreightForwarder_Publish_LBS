@@ -16,6 +16,7 @@
 
 const RELOAD_GUARD_KEY = 'vdg.entry.reload.once';
 const RETRY_DELAY_MS   = 1200; // mirrors view-loader.js's VIEW_LOAD_RETRY_DELAY_MS
+const CACHE_BUST_PARAM = 'vdg-reload';
 
 // The actionable text lives as plain, pre-rendered Vietnamese markup in index.html itself
 // (#entry-load-failed), NOT as a string built here — two reasons: (1) this recovery layer must
@@ -30,14 +31,35 @@ function bootMount(doc) {
   return doc.getElementById('entry-load-failed');
 }
 
+/// A URL the HTTP cache cannot answer. One param, SET not appended, so clicking the button ten
+/// times produces ten distinct URLs and never a longer one.
+export function cacheBustedHref(href, stamp) {
+  const url = new URL(href);
+  url.searchParams.set(CACHE_BUST_PARAM, String(stamp));
+  return url.href;
+}
+
 // Deliberately NOT imported from view-fallback.js's healOrReloadViaServiceWorker — that file is
 // part of app.js's own graph, i.e. exactly the thing that may have just failed to load. This
 // recovery layer must not be able to fail for the same reason it exists, so the same few lines
 // are reproduced here rather than shared.
-async function healOrReload() {
+//
+// The navigation is cache-busted, not `location.reload()`. Pages serves index.html with
+// max-age=600, so a soft reload re-serves the very document this panel exists to escape — a
+// half-deployed or just-rolled-back build — and the one button we offer could not fix the one
+// situation it is offered in. A fresh URL misses the HTTP cache and the SW's cache alike.
+// `replace`, so the busted URLs do not pile up in history behind the back button.
+//
+// Nothing here touches RELOAD_GUARD_KEY: this is a person clicking, not an automatic retry, and
+// the guard below is what keeps the automatic one one-shot.
+export async function healOrReload(
+  navigate = (href) => location.replace(href),
+  here     = () => location.href,
+  now      = () => Date.now(),
+) {
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
-  if (reg?.waiting) window.dispatchEvent(new CustomEvent('vdg:sw-update-accept'));
-  else location.reload();
+  if (reg?.waiting) { window.dispatchEvent(new CustomEvent('vdg:sw-update-accept')); return; }
+  navigate(cacheBustedHref(here(), now()));
 }
 
 function renderEntryLoadFailed(doc) {
@@ -45,22 +67,26 @@ function renderEntryLoadFailed(doc) {
   if (loading) loading.hidden = true;
   const banner = bootMount(doc);
   if (!banner) return;
-  banner.hidden = false;
-  banner.querySelector('#entry-reload-btn')?.addEventListener('click', healOrReload);
+  // The Tailwind class, not the `hidden` attribute — index.html says why.
+  banner.classList.remove('hidden');
+  banner.querySelector('#entry-reload-btn')?.addEventListener('click', () => healOrReload());
 }
 
 /**
  * @param {{getItem,setItem,removeItem}}   storage        — sessionStorage in prod, a fake in tests
  * @param {Document}                       doc            — document in prod, a fake in tests
  * @param {(ms:number, fn:()=>void)=>void} scheduleReload — injectable timer (unit-test seam)
- * @param {() => void}                     doReload       — injectable reload trigger (unit-test seam)
+ * @param {() => void}                     doReload       — injectable reload trigger (unit-test seam).
+ *   Cache-busted for the same reason the button is, and it matters more: this one fires FIRST, on
+ *   a failure the person never sees, so a soft reload would spend the single automatic retry
+ *   re-fetching the same cached index.html that just failed.
  * @param {(doc) => void}                  onGiveUp       — injectable renderer (unit-test seam)
  */
 export function handleEntryLoadError(
   storage,
   doc            = document,
   scheduleReload = (ms, fn) => setTimeout(fn, ms),
-  doReload       = () => location.reload(),
+  doReload       = () => location.replace(cacheBustedHref(location.href, Date.now())),
   onGiveUp       = renderEntryLoadFailed,
 ) {
   if (storage.getItem(RELOAD_GUARD_KEY)) {
