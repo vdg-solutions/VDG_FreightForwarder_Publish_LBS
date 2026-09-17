@@ -5,6 +5,7 @@
 // click to `sync_intent_reapply` / `sync_intent_discard`. It decides nothing.
 
 import { t, currentLocale, fmtNumber } from '../../../kernel/core_abstractions/i18n/index.js';
+import { navigate } from '../router.js';
 
 // reason_code (Rust-minted, vdg_freight::outbox::attention::REASON_CODE_* and
 // attention_intent_rules::CODE_*) -> i18n key. Computed lookup, not a literal t() call — mirrors
@@ -51,6 +52,10 @@ const ACTION_DISCARD_UNREADABLE = 'discard_unreadable';
 const OPEN_ROUTE = { shipment: (id) => `#/sales/edit/${encodeURIComponent(id)}` };
 const OUTCOME_STALE = 'stale';
 const ACTION_ATTR = 'data-intent-action';
+/// The records a resolution moved (`IntentResolutionReply::touched`). bootstrap/compose-ui/data.js
+/// listens and drops the base token it carries for each — a screen whose base names the intent this
+/// action just ended has nothing left to stand on (cas-write-path.md §5.3).
+export const INTENT_RESOLVED_EVENT = 'vdg:intent-resolved';
 
 export function reasonText(reasonCode) {
   return t(REASON_CODE_TO_KEY[reasonCode] ?? REASON_FALLBACK_KEY);
@@ -102,6 +107,40 @@ function toast(type, message) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message } }));
 }
 
+/// What a resolution did to the screens: wasm NAMES the records whose footing it moved, the ports
+/// layer drops the base it carries for each, and a form open on one of them re-reads through the
+/// ordinary route. Nothing here works out which records those are — that is CharterDB's answer,
+/// carried, which is the whole of cas-write-path.md §5.3.
+function announceResolved(touched) {
+  if (!touched.length) return;
+  window.dispatchEvent(new CustomEvent(INTENT_RESOLVED_EVENT, { detail: { touched } }));
+  // The record the form is open on now holds different content AND a different version. Re-dispatch
+  // the SAME route so the view reads again (navigate re-renders even on an unchanged hash) — until
+  // this, "Áp dụng lại" succeeded and the form went on showing the value it had just replaced.
+  const here = window.location.hash;
+  if (touched.some((rec) => OPEN_ROUTE[rec.collection]?.(rec.id) === here)) navigate(here.slice(1));
+}
+
+/// What is LEFT to handle, and only if there is any.
+///
+/// This replaces an unconditional `openSyncAttentionModal()`. Resolving the last item re-opened the
+/// dialog on "Hiện không có mục nào cần xử lý" — and `showModal()` puts a <dialog> in the TOP LAYER
+/// and makes the rest of the document INERT, so the form behind it took no clicks and no typing,
+/// and any toast painted under its ::backdrop. On PROD v0.4.98 that is what made a refused save
+/// look like nothing at all had happened: no request, no message, no error.
+async function reopenIfAnyLeft() {
+  let left = [];
+  try {
+    left = await readAttentionItems();
+  } catch {
+    // The action itself already reported. Failing to re-read the queue must not be the thing that
+    // leaves a modal <dialog> open over an inert app — the chip still shows the count, and the
+    // panel is one click away.
+    return;
+  }
+  if (left.length) await openSyncAttentionModal();
+}
+
 async function onAction(dlg, button, items) {
   const action = button.getAttribute(ACTION_ATTR);
   const intentId = button.getAttribute('data-intent-id');
@@ -112,6 +151,7 @@ async function onAction(dlg, button, items) {
     return;
   }
   const wasm = window.__vdg_wasm;
+  let moved = [];
   try {
     if (action === ACTION_DISCARD_UNREADABLE) {
       // Rejects with the store's error; the catch below shows it.
@@ -121,12 +161,21 @@ async function onAction(dlg, button, items) {
       const reply = await call({ intent_id: intentId });
       if (!reply?.ok) toast('error', t('attention.action.failed', { error: reply?.error ?? '' }));
       else if (reply.outcome === OUTCOME_STALE) toast('info', t('save.error.stale_base'));
+      else moved = reply.touched || [];
     }
   } catch (e) {
     toast('error', t('attention.action.failed', { error: e?.message ?? String(e) }));
   }
   dlg.close();
-  openSyncAttentionModal();
+  announceResolved(moved);
+  await reopenIfAnyLeft();
+}
+
+/// The queue as the panel shows it. The two callers answer a failure differently — opening says so
+/// out loud, re-opening after an action stays shut rather than stranding a modal — so it raises and
+/// neither is given a default that hides one.
+async function readAttentionItems() {
+  return (await window.__vdg_repo?.sync_attention_items?.()) || [];
 }
 
 // AC: clicking the quarantined chip opens this list (topbar-sync-chip.js::decideChipAction ->
@@ -134,7 +183,7 @@ async function onAction(dlg, button, items) {
 export async function openSyncAttentionModal() {
   let items = [];
   try {
-    items = (await window.__vdg_repo?.sync_attention_items?.()) || [];
+    items = await readAttentionItems();
   } catch (e) {
     toast('error', t('topbar.sync.attention.load_failed'));
     return;

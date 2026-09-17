@@ -22,6 +22,9 @@ import { bindSalesData } from './data-sales.js';
 
 const REASON_PERIOD_LOCKED    = 'period-locked';
 const REASON_LICENSE_READONLY = 'license-readonly';
+/// components/sync-attention-modal.js fires it once a refused save is resolved, carrying the
+/// records wasm says the resolution moved (`IntentResolutionReply::touched`).
+const INTENT_RESOLVED_EVENT   = 'vdg:intent-resolved';
 
 // cas-write-path.md §5.3: CharterDB is the only thing that knows what version a record is at. Each
 // read hands a token out with the record; this map carries it, unexamined, from getShipment to the
@@ -35,6 +38,12 @@ const REASON_LICENSE_READONLY = 'license-readonly';
 const _formBases = new Map();
 
 /// The reason code, in the reader's language. Rust decides; the words are ours.
+///
+/// A reason this table has no words for is still a REFUSAL. Answering `null` for one turned a
+/// closed gate into an open one: `assertWritable` below throws only what this returns, so an
+/// unrecognised reason threw nothing and the write went ahead — a silent ALLOW on a permission
+/// gate, reached by Rust doing nothing worse than adding a code. The fallback carries the code
+/// itself rather than inventing a sentence for it.
 function gateError(gate) {
   if (!gate || gate.allowed) return null;
   if (gate.reason === REASON_LICENSE_READONLY) {
@@ -44,7 +53,8 @@ function gateError(gate) {
   if (gate.reason === REASON_PERIOD_LOCKED) {
     return new PeriodLockedError(gate.period, t('period.locked_error', { k: gate.period }));
   }
-  return null;
+  // The `{key, ...params}` envelope dialect the screens' own catch already renders (F-47-04).
+  return new Error(JSON.stringify({ key: 'write_gate.refused', reason: gate.reason ?? '' }));
 }
 
 function throwIfRefused(reply) {
@@ -89,6 +99,20 @@ export function composeData(wasm) {
     }
     return reply;
   };
+
+  // §5.3: a read taken while a save of the same record is still QUEUED hands out a base that NAMES
+  // that intent (`OpBase::AfterIntent`), and `rememberBases` above takes exactly such a read after
+  // every accepted save. That is safe while the intent lives — an accepted one leaves an ack
+  // receipt to resolve against — but resolving a REFUSED one ends it, and the base then resolves
+  // to nothing for ever: on PROD v0.4.98 one tab went permanently unsaveable after "Áp dụng lại",
+  // every Lưu refused STALE_BASE before anything was queued.
+  //
+  // So the ticket is DROPPED for every record wasm names, and the screen reads again. Never
+  // refreshed in place: a base CharterDB issued just now, held against the content the form was
+  // filled from minutes ago, is the v0.4.96 lost update wearing a fresh etag.
+  window.addEventListener(INTENT_RESOLVED_EVENT, (event) => {
+    for (const record of event.detail?.touched || []) _formBases.delete(record.id);
+  });
 
   const joinLoaded = async (_repo, envelopes) =>
     stampRows(await wasm.data_join_loaded({ envelopes: envelopes || [] }));

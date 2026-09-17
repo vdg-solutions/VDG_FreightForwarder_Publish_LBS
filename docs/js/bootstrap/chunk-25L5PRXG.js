@@ -8,6 +8,9 @@ import {
   guardMessage
 } from "./chunk-Z6M7JOKQ.js";
 import {
+  navigate
+} from "./chunk-H2H4WJDI.js";
+import {
   listCommissionEntriesFor
 } from "./chunk-ZYZ6J7HL.js";
 import {
@@ -56,6 +59,7 @@ var ACTION_DISCARD_UNREADABLE = "discard_unreadable";
 var OPEN_ROUTE = { shipment: (id) => `#/sales/edit/${encodeURIComponent(id)}` };
 var OUTCOME_STALE = "stale";
 var ACTION_ATTR = "data-intent-action";
+var INTENT_RESOLVED_EVENT = "vdg:intent-resolved";
 function reasonText(reasonCode) {
   return t(REASON_CODE_TO_KEY[reasonCode] ?? REASON_FALLBACK_KEY);
 }
@@ -97,6 +101,21 @@ function itemRow(item) {
 function toast(type, message) {
   window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type, message } }));
 }
+function announceResolved(touched) {
+  if (!touched.length) return;
+  window.dispatchEvent(new CustomEvent(INTENT_RESOLVED_EVENT, { detail: { touched } }));
+  const here = window.location.hash;
+  if (touched.some((rec) => OPEN_ROUTE[rec.collection]?.(rec.id) === here)) navigate(here.slice(1));
+}
+async function reopenIfAnyLeft() {
+  let left = [];
+  try {
+    left = await readAttentionItems();
+  } catch {
+    return;
+  }
+  if (left.length) await openSyncAttentionModal();
+}
 async function onAction(dlg, button, items) {
   const action = button.getAttribute(ACTION_ATTR);
   const intentId = button.getAttribute("data-intent-id");
@@ -107,6 +126,7 @@ async function onAction(dlg, button, items) {
     return;
   }
   const wasm = window.__vdg_wasm;
+  let moved = [];
   try {
     if (action === ACTION_DISCARD_UNREADABLE) {
       await window.__vdg_repo.sync_unreadable_intent_discard(intentId);
@@ -115,17 +135,22 @@ async function onAction(dlg, button, items) {
       const reply = await call({ intent_id: intentId });
       if (!reply?.ok) toast("error", t("attention.action.failed", { error: reply?.error ?? "" }));
       else if (reply.outcome === OUTCOME_STALE) toast("info", t("save.error.stale_base"));
+      else moved = reply.touched || [];
     }
   } catch (e) {
     toast("error", t("attention.action.failed", { error: e?.message ?? String(e) }));
   }
   dlg.close();
-  openSyncAttentionModal();
+  announceResolved(moved);
+  await reopenIfAnyLeft();
+}
+async function readAttentionItems() {
+  return await window.__vdg_repo?.sync_attention_items?.() || [];
 }
 async function openSyncAttentionModal() {
   let items = [];
   try {
-    items = await window.__vdg_repo?.sync_attention_items?.() || [];
+    items = await readAttentionItems();
   } catch (e) {
     toast("error", t("topbar.sync.attention.load_failed"));
     return;

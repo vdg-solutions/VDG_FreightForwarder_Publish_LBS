@@ -1187,6 +1187,7 @@
   "license.grace.toast": "License expired — read-only mode, {d} grace days left. Contact the app owner to renew.",
   "license.readonly_error": "License expired (read-only) — writing is disabled. {d} grace days left.",
   "period.locked_error": "Period {k} is locked — shipments in it cannot be added, edited or deleted.",
+  "write_gate.refused": "The workspace refused this change (reason: {reason}). Reload the app, and tell a manager if it keeps happening.",
   "topbar.import.processing": "Processing data, please wait...",
   "topbar.import.progress": "Imported {count}/{total} shipments...",
   "topbar.import.success": "Imported {count} shipments successfully.",

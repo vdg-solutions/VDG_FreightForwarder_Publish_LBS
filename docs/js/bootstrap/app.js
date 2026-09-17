@@ -191,7 +191,7 @@ import {
   bindIntentNotices,
   bindShipmentVoidDelete,
   openSyncAttentionModal
-} from "./chunk-4ZGBYZOY.js";
+} from "./chunk-25L5PRXG.js";
 import {
   bindFsmIngest
 } from "./chunk-3RLMMSOJ.js";
@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 5410bd22">v0.4.99 (5410bd22)</span>
+        <span class="font-mono whitespace-nowrap" title="build ea5ffbbd">v0.4.100 (ea5ffbbd)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.99 (5410bd22)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.100 (ea5ffbbd)</div>
         </div>
       </div>
     </div>`;
@@ -3024,8 +3024,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=5410bd22", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=5410bd22", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=ea5ffbbd", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=ea5ffbbd", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4567,7 +4567,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.99 (5410bd22)";
+var APP_VERSION = "v0.4.100 (ea5ffbbd)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4688,7 +4688,7 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 // output/web/js.tmp/bootstrap/app-views.js
 var VIEWS = {
   "/dashboard": () => import("./dashboard-4SIOQURQ.js"),
-  "/shipments": () => import("./shipments-GR3OYWGT.js"),
+  "/shipments": () => import("./shipments-NLHMJMAH.js"),
   "/upload": () => import("./upload-46S7RRXO.js"),
   "/documents": () => import("./documents-EZXFHRCF.js"),
   "/finance": () => import("./finance-dashboard-VF33QMWM.js"),
@@ -5001,6 +5001,7 @@ function bindSalesData({ wasm: wasm4 }) {
 // output/web/js.tmp/bootstrap/compose-ui/data.js
 var REASON_PERIOD_LOCKED = "period-locked";
 var REASON_LICENSE_READONLY = "license-readonly";
+var INTENT_RESOLVED_EVENT = "vdg:intent-resolved";
 var _formBases = /* @__PURE__ */ new Map();
 function gateError(gate) {
   if (!gate || gate.allowed) return null;
@@ -5011,7 +5012,7 @@ function gateError(gate) {
   if (gate.reason === REASON_PERIOD_LOCKED) {
     return new PeriodLockedError(gate.period, t("period.locked_error", { k: gate.period }));
   }
-  return null;
+  return new Error(JSON.stringify({ key: "write_gate.refused", reason: gate.reason ?? "" }));
 }
 function throwIfRefused(reply) {
   if (reply.ok) return reply;
@@ -5045,6 +5046,9 @@ function composeData(wasm4) {
     }
     return reply;
   };
+  window.addEventListener(INTENT_RESOLVED_EVENT, (event) => {
+    for (const record of event.detail?.touched || []) _formBases.delete(record.id);
+  });
   const joinLoaded = async (_repo, envelopes) => stampRows(await wasm4.data_join_loaded({ envelopes: envelopes || [] }));
   bindShipmentRepo({
     // opts: { commissionLines, pnlLines, ledgerVersion, occurredAt, createdBy, freshRef } —

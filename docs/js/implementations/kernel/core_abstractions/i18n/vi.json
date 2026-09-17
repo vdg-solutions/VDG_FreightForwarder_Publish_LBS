@@ -1187,6 +1187,7 @@
   "license.grace.toast": "License đã hết hạn — chế độ chỉ đọc, còn {d} ngày ân hạn. Liên hệ chủ ứng dụng để gia hạn.",
   "license.readonly_error": "License hết hạn (chỉ đọc) — không thể ghi. Còn {d} ngày ân hạn.",
   "period.locked_error": "Kỳ {k} đã khoá — không thể thêm, sửa hay xoá lô hàng trong kỳ này.",
+  "write_gate.refused": "Hệ thống từ chối thay đổi này (lý do: {reason}). Hãy tải lại ứng dụng, nếu vẫn vậy thì báo quản lý.",
   "topbar.import.processing": "Đang xử lý dữ liệu, vui lòng chờ...",
   "topbar.import.progress": "Đã nhập {count}/{total} lô hàng...",
   "topbar.import.success": "Đã nhập thành công {count} lô hàng.",
