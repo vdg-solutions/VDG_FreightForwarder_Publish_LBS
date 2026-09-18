@@ -1058,6 +1058,7 @@
   "nav.access.unreachable": "Could not load navigation — connection to the server lost, retrying.",
   "admin.users.audit_log.link_text": "View change log",
   "admin.users.audit_log.title": "User Change Log",
+  "admin.users.audit_log.read_failed": "Could not read the change log",
   "admin.users.audit_log.export_button": "Export CSV",
   "admin.users.audit_log.column.timestamp": "Timestamp",
   "admin.users.audit_log.column.actor": "Actor",

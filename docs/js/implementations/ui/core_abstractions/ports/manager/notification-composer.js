@@ -19,7 +19,8 @@ function _i() {
   return _impl;
 }
 
-/// ({ kind, id }, entities) -> a Notification or null
+/// ({ kind, id }) -> a Notification or null. The event names what moved; the record it names is
+/// read behind the boundary, not looked up here and passed in.
 export const computeFromEvent = (...a) => _i().computeFromEvent(...a);
-/// (shipments, today) -> the period-close and cutoff warnings
+/// (today) -> the period-close and cutoff warnings, read off the job collection
 export const computeTimeBased = (...a) => _i().computeTimeBased(...a);

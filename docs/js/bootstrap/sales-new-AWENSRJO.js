@@ -54,7 +54,7 @@ import {
 } from "./chunk-Z6T6WECV.js";
 import {
   ROLE_LABEL_KEYS
-} from "./chunk-CSY7BXV6.js";
+} from "./chunk-LEPKBQ3P.js";
 import {
   DEFAULT_CURRENCY_FIELD,
   readSettings

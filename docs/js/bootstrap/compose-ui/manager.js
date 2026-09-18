@@ -254,31 +254,34 @@ export function composeManager(wasm) {
   });
 
   bindNotificationComposer({
-    computeFromEvent: ({ kind = '', id = '' } = {}, entities) => {
-      const reply = wasm.manager_notification_from_event({
-        kind, id, entity: entities?.get?.(`${kind}::${id}`) ?? null, manager_label: managerLabel(),
-      });
+    // The event names WHAT moved; wasm reads the record it names. The shell used to look the row up
+    // in its own cache and pass it in, so a manager was told whatever that cache happened to hold.
+    computeFromEvent: async ({ kind = '', id = '' } = {}) => {
+      const reply = await wasm.manager_notification_from_event({ kind, id, manager_label: managerLabel() });
       return reply.notification ? stampNotification(reply.notification) : null;
     },
-    computeTimeBased: (shipments, today) =>
-      wasm.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() })
-        .notifications.map(stampNotification),
+    computeTimeBased: async (today) => {
+      const reply = await wasm.manager_notifications_time_based({ now_ms: msOf(today), tz_offset_min: tz() });
+      return reply.notifications.map(stampNotification);
+    },
   });
 
   bindUserAuditLogComposer({
     // from/to come off a date picker, so they are LOCAL days — the stamps are UTC, and tz is what
-    // lets Rust read both on one calendar (the same offset the stamp column is rendered with).
-    filterByDateRange: (records, { from = '', to = '' } = {}) =>
-      wasm.manager_audit_log_range({ records: records || [], from, to, tz_offset_min: tz() }).records,
-    sortByTimestampDesc: (records) => wasm.manager_audit_log_sort({ records: records || [] }).records,
-    buildAuditLogCsv: (records) => wasm.manager_audit_log_csv({ records: records || [] }).csv,
+    // lets Rust read both on one calendar (the same offset the stamp column is rendered with). No
+    // rows go in: wasm lists the trail, narrows it and orders it in one read.
+    auditLogRows: ({ from = '', to = '' } = {}) =>
+      wasm.manager_audit_log_rows({ from, to, tz_offset_min: tz() }),
+    auditLogCsv: ({ from = '', to = '' } = {}) =>
+      wasm.manager_audit_log_csv({ from, to, tz_offset_min: tz() }),
   });
 
   bindUsersViewComposer({
     isValidEmail: (email) => wasm.manager_email_valid({ email: email || '' }).valid,
-    filterUsers: (users, { search = '', role = '', activeFilter = '' } = {}) =>
-      wasm.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
-    sortUsersByEmail: (users) => wasm.manager_users_sort({ users: users || [] }).users,
+    // `refresh` is the screen saying its copy is stale (mount, or after a write); a keystroke
+    // filters the snapshot wasm already holds and costs no request.
+    listUsersFiltered: ({ search = '', role = '', activeFilter = '', refresh = false } = {}) =>
+      wasm.manager_users_filter({ search, role, active_filter: activeFilter, refresh }),
   });
 }
 

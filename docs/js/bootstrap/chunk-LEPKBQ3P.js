@@ -49,8 +49,7 @@ function _i() {
   return _impl;
 }
 var isValidEmail = (...a) => _i().isValidEmail(...a);
-var filterUsers = (...a) => _i().filterUsers(...a);
-var sortUsersByEmail = (...a) => _i().sortUsersByEmail(...a);
+var listUsersFiltered = (...a) => _i().listUsersFiltered(...a);
 
 export {
   ROLE_VALUES,
@@ -59,6 +58,5 @@ export {
   roleCheckboxesHtml,
   bindUsersViewComposer,
   isValidEmail,
-  filterUsers,
-  sortUsersByEmail
+  listUsersFiltered
 };

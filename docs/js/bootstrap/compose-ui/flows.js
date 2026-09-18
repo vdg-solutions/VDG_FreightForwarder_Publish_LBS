@@ -21,8 +21,6 @@ import { bindQuoteVoidDelete } from '../../implementations/ui/core_abstractions/
 import { bindApprovalOrchestrator } from '../../implementations/ui/core_abstractions/ports/flows/approval-orchestrator.js';
 import { composeFlowsAdmin } from './flows-admin.js';
 import { t } from '../../implementations/kernel/core_abstractions/i18n/index.js';
-import { listUsers } from '../../implementations/storage/core_abstractions/user-directory.js';
-import { ROLE_SALES_REP } from '../../implementations/kernel/core_abstractions/roles.js';
 
 const ENTITY_CHANGED_EVENT = 'vdg:entity-changed';
 const KIND_USER            = 'user';
@@ -128,21 +126,17 @@ export function composeFlows(wasm) {
 
   bindSalesRegistry({
     // F-46-03: the picker's rows come from the server's safe projection, not the local "user"
-    // entity cache (nothing ever wrote that kind — the empty-picker bug). The wasm side still
-    // owns shaping, colour-hashing and the 5-minute cache.
-    // B-47-07-04, as its own call. Widening getActiveSalesReps' return from an array to an
+    // entity cache (nothing ever wrote that kind — the empty-picker bug). wasm READS that
+    // projection now; this file used to fetch it twice per screen and pass both answers back in.
+    // B-47-07-04 stays its own call. Widening getActiveSalesReps' return from an array to an
     // object would have silently broken seven callers that iterate it — the shape a function
     // returns is part of its contract, and this list is a different question anyway: not "who
     // can be picked" but "who was left out, and why".
-    getExcludedNonSalesAccounts: async () => {
-      const users = await listUsers().catch(() => []);
-      return (await wasm.flows_active_sales_reps({ rows: users || [], force: false })).excluded_no_sales_role || [];
-    },
-    getActiveSalesReps: async () => {
-      const { users } = await listUsers({ role: ROLE_SALES_REP });
-      return (await wasm.flows_active_sales_reps({ rows: users || [], force: false })).reps;
-    },
-    getSalesRepByAccount: (reps, account) => wasm.flows_sales_rep_by_account({ reps: reps || [], account: account ?? null }).rep,
+    getExcludedNonSalesAccounts: async () =>
+      (await wasm.flows_active_sales_reps({ force: false })).excluded_no_sales_role || [],
+    getActiveSalesReps: async () => (await wasm.flows_active_sales_reps({ force: false })).reps,
+    getSalesRepByAccount: async (account) =>
+      (await wasm.flows_sales_rep_by_account({ account: account ?? null })).rep,
     clearRegistryCache: () => wasm.flows_clear_sales_registry(EMPTY),
   });
   // The registry is a five-minute cache of the user master; a user record changing is the one

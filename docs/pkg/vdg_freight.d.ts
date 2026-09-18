@@ -718,7 +718,7 @@ export function flows_sales_analytics(req: any): any;
 
 export function flows_sales_commission(req: any): Promise<any>;
 
-export function flows_sales_rep_by_account(req: any): any;
+export function flows_sales_rep_by_account(req: any): Promise<any>;
 
 export function flows_save_quote_draft(req: any): Promise<any>;
 
@@ -868,11 +868,12 @@ export function manager_ar_aging(req: any): any;
 
 export function manager_ar_timeline(req: any): any;
 
-export function manager_audit_log_csv(req: any): any;
+export function manager_audit_log_csv(req: any): Promise<any>;
 
-export function manager_audit_log_range(req: any): any;
-
-export function manager_audit_log_sort(req: any): any;
+/**
+ * The admin trail for a day range, newest first — one bulk read of the trail itself.
+ */
+export function manager_audit_log_rows(req: any): Promise<any>;
 
 export function manager_commission_rules(req: any): Promise<any>;
 
@@ -954,9 +955,9 @@ export function manager_manifest_overview(req: any): any;
  */
 export function manager_margin_pct(margin: number, revenue: number): number;
 
-export function manager_notification_from_event(req: any): any;
+export function manager_notification_from_event(req: any): Promise<any>;
 
-export function manager_notifications_time_based(req: any): any;
+export function manager_notifications_time_based(req: any): Promise<any>;
 
 export function manager_period_key(req: any): any;
 
@@ -968,9 +969,11 @@ export function manager_pnl_pivot(req: any): any;
 
 export function manager_self_approved_review(req: any): any;
 
-export function manager_users_filter(req: any): any;
-
-export function manager_users_sort(req: any): any;
+/**
+ * The staff table, filtered and alphabetical. The shell names the filter; it no longer fetches the
+ * table, holds it, or hands it back in.
+ */
+export function manager_users_filter(req: any): Promise<any>;
 
 export function permission_can_merge(role: string, ref_name: string): boolean;
 
@@ -1282,8 +1285,6 @@ export function sync_intent_reapply(req: any): Promise<any>;
 
 export function sync_job_event(req: any): any;
 
-export function sync_user_audit_read(req: any): Promise<any>;
-
 export function sync_wma_dismiss(req: any): any;
 
 export function sync_wma_load(req: any): Promise<any>;
@@ -1492,7 +1493,7 @@ export interface InitOutput {
     readonly flows_repo_max_seq: (a: number) => number;
     readonly flows_sales_analytics: (a: number, b: number) => void;
     readonly flows_sales_commission: (a: number) => number;
-    readonly flows_sales_rep_by_account: (a: number, b: number) => void;
+    readonly flows_sales_rep_by_account: (a: number) => number;
     readonly flows_save_quote_draft: (a: number) => number;
     readonly flows_self_rep_candidate: (a: number, b: number) => void;
     readonly flows_send_quote: (a: number) => number;
@@ -1573,9 +1574,8 @@ export interface InitOutput {
     readonly manager_approval_arrival: (a: number, b: number) => void;
     readonly manager_ar_aging: (a: number, b: number) => void;
     readonly manager_ar_timeline: (a: number, b: number) => void;
-    readonly manager_audit_log_csv: (a: number, b: number) => void;
-    readonly manager_audit_log_range: (a: number, b: number) => void;
-    readonly manager_audit_log_sort: (a: number, b: number) => void;
+    readonly manager_audit_log_csv: (a: number) => number;
+    readonly manager_audit_log_rows: (a: number) => number;
     readonly manager_commission_rules: (a: number) => number;
     readonly manager_commission_sparkline: (a: number, b: number) => void;
     readonly manager_commissions: (a: number, b: number) => void;
@@ -1607,15 +1607,14 @@ export interface InitOutput {
     readonly manager_ledger_trial_balance: (a: number, b: number) => void;
     readonly manager_manifest_overview: (a: number, b: number) => void;
     readonly manager_margin_pct: (a: number, b: number) => number;
-    readonly manager_notification_from_event: (a: number, b: number) => void;
-    readonly manager_notifications_time_based: (a: number, b: number) => void;
+    readonly manager_notification_from_event: (a: number) => number;
+    readonly manager_notifications_time_based: (a: number) => number;
     readonly manager_period_key: (a: number, b: number) => void;
     readonly manager_pnl_buy_sell: (a: number, b: number) => void;
     readonly manager_pnl_drill: (a: number, b: number) => void;
     readonly manager_pnl_pivot: (a: number, b: number) => void;
     readonly manager_self_approved_review: (a: number, b: number) => void;
-    readonly manager_users_filter: (a: number, b: number) => void;
-    readonly manager_users_sort: (a: number, b: number) => void;
+    readonly manager_users_filter: (a: number) => number;
     readonly permission_can_merge: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly pnl_currency_exponent: (a: number, b: number) => number;
     readonly pnl_line_fx_lock: (a: number, b: number, c: number, d: number, e: number) => void;
@@ -1695,7 +1694,6 @@ export interface InitOutput {
     readonly sync_intent_discard: (a: number) => number;
     readonly sync_intent_reapply: (a: number) => number;
     readonly sync_job_event: (a: number, b: number) => void;
-    readonly sync_user_audit_read: (a: number) => number;
     readonly sync_wma_dismiss: (a: number, b: number) => void;
     readonly sync_wma_load: (a: number) => number;
     readonly sync_wma_on_event: (a: number, b: number) => void;
@@ -1793,13 +1791,13 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly __wbg_userrepo_free: (a: number, b: number) => void;
+    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
     readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
-    readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
     readonly rust_sqlite_wasm_assert_fail: (a: number, b: number, c: number, d: number) => void;
     readonly rust_sqlite_wasm_calloc: (a: number, b: number) => number;
@@ -1810,9 +1808,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_16827: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_16840: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12336: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16866: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16879: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12373: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

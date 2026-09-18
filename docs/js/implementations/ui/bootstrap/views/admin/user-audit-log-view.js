@@ -1,16 +1,18 @@
-// Admin User Audit Log view — F-24-06. Manager-only /admin/users/audit-log: read-only table of
-// admin/user-audit-log.jsonl with date-range filter + CSV export. Wired to UserAuditLog (F-24-06
-// sync/user-audit-log.js), same DI-off-window convention as users-view.js.
+// Admin User Audit Log view — F-24-06. Manager-only /admin/users/audit-log: read-only table of the
+// user/role compliance trail, with a date-range filter + CSV export.
+//
+// The view holds NO rows. It names a range; wasm reads the trail, narrows it, orders it and answers
+// with the slice plus the trail's own size. It used to hold the whole trail in `_allRecords` and
+// hand it back in for the filter, the order and the export.
 
 import { t, currentLocale, fmtStamp } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountDateHints } from '../../util/date-input-hint.js';
-import { filterByDateRange, sortByTimestampDesc, buildAuditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
+import { auditLogRows, auditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
 
-function getUserAuditLog() { return window.__vdg_user_audit_log; }
+const REVOKE_URL_MS = 5_000;
 
-let _allRecords = [];
-let _range      = { from: '', to: '' };
+let _range = { from: '', to: '' };
 
 function shellHtml() {
   return `
@@ -69,23 +71,29 @@ function renderTable(container, rows) {
     </table>`;
 }
 
-function applyAndRender(root) {
-  const rows = sortByTimestampDesc(filterByDateRange(_allRecords, _range));
+async function applyAndRender(root) {
+  const reply = await auditLogRows(_range);
+  const rows  = reply.ok ? reply.records : [];
   renderTable(root.querySelector('#aud-table-wrap'), rows);
   const countEl = root.querySelector('#aud-count');
-  if (countEl) countEl.textContent = `${rows.length} / ${_allRecords.length}`;
+  // An unreadable trail says so. Rendering it as `0 / 0` reads as "nobody has touched an account",
+  // which is the one answer a compliance screen must never give when it did not run.
+  if (countEl) countEl.textContent = reply.ok ? `${rows.length} / ${reply.total}` : t('admin.users.audit_log.read_failed');
 }
 
-function handleExportCsv() {
-  const rows = sortByTimestampDesc(filterByDateRange(_allRecords, _range));
-  const csv  = buildAuditLogCsv(rows);
-  const blob = new Blob([csv], { type: 'text/csv' });
+async function handleExportCsv() {
+  const reply = await auditLogCsv(_range);
+  if (!reply.ok) {
+    window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type: 'error', message: t('admin.users.audit_log.read_failed') } }));
+    return;
+  }
+  const blob = new Blob([reply.csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
   a.download = `vdg-user-audit-log-${todayLocal()}.csv`;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5_000);
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_URL_MS);
 }
 
 export async function render(root) {
@@ -93,9 +101,7 @@ export async function render(root) {
   root.innerHTML = shellHtml();
   mountDateHints(root);
 
-  const log = getUserAuditLog();
-  _allRecords = log ? await log.readAll().catch(() => []) : [];
-  applyAndRender(root);
+  await applyAndRender(root);
 
   root.querySelector('#aud-from')?.addEventListener('change', (e) => {
     _range.from = e.target.value;

@@ -4,18 +4,22 @@
 // gone with it.
 //
 // E-37: a deactivated account keeps its grant row forever (soft-deactivate, never a hard delete —
-// a user who ever touched a record must stay resolvable), so this screen fetches BOTH active and
-// deactivated rows (`includeInactive: true`) and lets the status filter narrow the view — the
-// server refuses that fetch to anyone but a Manager/owner, same gate as the writes below.
+// a user who ever touched a record must stay resolvable), so BOTH active and deactivated rows are
+// read and the status filter narrows the view — the server refuses that read to anyone but a
+// Manager/owner, same gate as the writes below.
+//
+// The view holds NO rows. It names a filter and gets back the matching users plus the table's own
+// size; `refresh: true` is this screen saying its copy is stale. It used to fetch the staff table
+// itself into `_allUsers` and hand it back in for every keystroke.
 
 import { navigate }  from '../../router.js';
 import { t }         from '../../../../kernel/core_abstractions/i18n/index.js';
-import { filterUsers, sortUsersByEmail } from '../../../core_abstractions/ports/manager/users-view-composer.js';
+import { listUsersFiltered } from '../../../core_abstractions/ports/manager/users-view-composer.js';
 import { filterBarHtml, renderUsersTable, renderUsersSkeleton, bindRowActions } from './users-list.js';
 import { openAddUserModal }  from './user-add-modal.js';
 import { openEditUserModal } from './user-edit-modal.js';
 import { showConfirm }       from '../../helpers/show-confirm.js';
-import { listUsers, patchUser } from '../../../../storage/core_abstractions/user-directory.js';
+import { patchUser } from '../../../../storage/core_abstractions/user-directory.js';
 import { usersErrorMessage } from './users-error-message.js';
 // Affordance only — the server (default_policy.cedar) is the authority and 403s regardless;
 // this just keeps a Manager without the HumanResources hat from staring at buttons that always
@@ -26,8 +30,7 @@ import { can } from '../../../core_abstractions/ports/governance/action-guard.js
 const TOAST_MS = 4_000;
 const DEFAULT_ACTIVE_FILTER = '';
 
-let _allUsers = [];
-let _filter   = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
+let _filter = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
 
 function toast(type, message) {
   window.dispatchEvent(new CustomEvent('vdg:toast', { detail: { type, message, duration: TOAST_MS } }));
@@ -54,9 +57,13 @@ function shellHtml() {
     </div>`;
 }
 
-function _applyAndRender(root) {
-  const rows = filterUsers(_allUsers, _filter);
-  const wrap = root.querySelector('#usr-table-wrap');
+async function _applyAndRender(root, refresh = false) {
+  const reply = await listUsersFiltered({ ..._filter, refresh });
+  const wrap  = root.querySelector('#usr-table-wrap');
+  if (!reply.ok) {
+    toast('error', reply.error);
+  }
+  const rows = reply.ok ? reply.users : [];
   renderUsersTable(wrap, rows);
   bindRowActions(wrap, rows, {
     onEdit:       (user) => openEditUserModal(user, { onSaved: () => _reload(root) }),
@@ -64,19 +71,13 @@ function _applyAndRender(root) {
     onReactivate: (user) => openEditUserModal(user, { reactivate: true, onSaved: () => _reload(root) }),
   });
   const countEl = root.querySelector('#usr-count');
-  if (countEl) countEl.textContent = `${rows.length} / ${_allUsers.length}`;
+  if (countEl) countEl.textContent = reply.ok ? `${rows.length} / ${reply.total}` : '';
 }
 
+/// A write happened, or the screen just mounted: the snapshot behind the filter is stale.
 async function _reload(root) {
   renderUsersSkeleton(root.querySelector('#usr-table-wrap'));
-  try {
-    const { users } = await listUsers({ includeInactive: true });
-    _allUsers = sortUsersByEmail(users || []);
-  } catch (err) {
-    toast('error', err.message);
-    _allUsers = [];
-  }
-  _applyAndRender(root);
+  await _applyAndRender(root, true);
 }
 
 /// AC-04/AC-05: custom branded dialog replaces window.confirm(); confirm -> PATCH active:false.
@@ -102,6 +103,7 @@ async function _onDeactivate(root, user) {
 }
 
 function bindFilterBar(root) {
+  // No `refresh`: filtering re-asks the snapshot wasm already holds, so a keystroke is not a fetch.
   root.querySelector('#usr-search')?.addEventListener('input', (e) => {
     _filter.search = e.target.value;
     _applyAndRender(root);

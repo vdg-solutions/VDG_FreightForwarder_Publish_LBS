@@ -51,8 +51,7 @@ export function roleCheckboxesHtml(current = [], labelFor = (r) => r) {
 
 let _impl = null;
 
-/// Root bootstrap binds { isValidEmail, filterUsers,
-/// sortUsersByEmail } once.
+/// Root bootstrap binds { isValidEmail, listUsersFiltered } once.
 export function bindUsersViewComposer(impl) { _impl = impl; }
 
 function _i() {
@@ -62,7 +61,7 @@ function _i() {
 
 /// (email) -> well-formed enough to submit (Google OAuth is the real identity check)
 export const isValidEmail = (...a) => _i().isValidEmail(...a);
-/// (users, { search, role, activeFilter }) -> the matching users
-export const filterUsers = (...a) => _i().filterUsers(...a);
-/// (users) -> alphabetical by address
-export const sortUsersByEmail = (...a) => _i().sortUsersByEmail(...a);
+/// ({ search, role, activeFilter, refresh }) -> { ok, users, total, error }
+/// The view names the filter; the staff table is read behind the boundary, never fetched here and
+/// handed back in. `refresh: true` says this screen's copy is stale (mount, or after a write).
+export const listUsersFiltered = (...a) => _i().listUsersFiltered(...a);

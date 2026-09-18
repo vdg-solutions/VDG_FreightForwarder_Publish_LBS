@@ -19,6 +19,7 @@ export const getActiveSalesReps = (...a) => _i().getActiveSalesReps(...a);
 /// () -> accounts the registry left out for having no Sales role. Excluding them is right;
 /// saying nothing is what made a short list read as "that account does not exist".
 export const getExcludedNonSalesAccounts = (...a) => _i().getExcludedNonSalesAccounts(...a);
-/// (reps, account) -> the rep, or null
+/// (account) -> the rep, or null. Resolved against the registry's own cached read, so a lookup and
+/// the picker it is a lookup into cannot disagree.
 export const getSalesRepByAccount = (...a) => _i().getSalesRepByAccount(...a);
 export const clearRegistryCache = (...a) => _i().clearRegistryCache(...a);

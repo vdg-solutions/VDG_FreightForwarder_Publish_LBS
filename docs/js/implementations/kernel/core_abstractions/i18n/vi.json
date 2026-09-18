@@ -1058,6 +1058,7 @@
   "nav.access.unreachable": "Không tải được điều hướng — mất kết nối máy chủ, đang thử kết nối lại.",
   "admin.users.audit_log.link_text": "Xem nhật ký thay đổi",
   "admin.users.audit_log.title": "Nhật ký thay đổi người dùng",
+  "admin.users.audit_log.read_failed": "Không đọc được nhật ký thay đổi",
   "admin.users.audit_log.export_button": "Xuất CSV",
   "admin.users.audit_log.column.timestamp": "Thời gian",
   "admin.users.audit_log.column.actor": "Người thực hiện",

@@ -73,20 +73,10 @@ export function createAuditLog({ getUser }) {
   };
 }
 
-/**
- * The user/role compliance trail — read side only. Writing is the user repo's own business (it is
- * the only writer, and it owns the ordering the trail requires), so it happens in wasm now
- * (bootstrap/js_repo_user.rs); this is what the admin view reads back.
- */
-export function createUserAuditLog() {
-  return {
-    async readAll() {
-      const w = wasm();
-      if (!w?.sync_user_audit_read) return [];
-      return (await w.sync_user_audit_read({})).rows;
-    },
-  };
-}
+// No user/role compliance trail reader here. It existed to hand the trail to the admin screen,
+// which handed it straight back in to be filtered, ordered and exported; `manager_audit_log_rows`
+// reads the trail where it lives. Writing was already the user repo's own business
+// (bootstrap/js_repo_user.rs).
 
 /**
  * Error log. The browser hooks live here because that is what they are; the two bounds that make

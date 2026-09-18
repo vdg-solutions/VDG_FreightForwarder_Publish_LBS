@@ -46,15 +46,6 @@ function createAuditLog({ getUser }) {
     readFiltered: (email) => read(AUDIT_STORE_SHARED, email)
   };
 }
-function createUserAuditLog() {
-  return {
-    async readAll() {
-      const w = wasm();
-      if (!w?.sync_user_audit_read) return [];
-      return (await w.sync_user_audit_read({})).rows;
-    }
-  };
-}
 function installErrorLog({ getUser, getVersion }) {
   let authDead = false;
   let sessionCount = 0;
@@ -102,6 +93,5 @@ function installErrorLog({ getUser, getVersion }) {
 }
 export {
   createAuditLog,
-  createUserAuditLog,
   installErrorLog
 };

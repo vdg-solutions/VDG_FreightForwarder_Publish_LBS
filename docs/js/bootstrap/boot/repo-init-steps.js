@@ -152,7 +152,7 @@ async function _deferredInit(user, db, repo) {
     startOutboxDrain({ getRepo: () => repo });
     startHealthPoll();
 
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import('../platform/sync-trails.js');
+    const { createAuditLog, installErrorLog } = await import('../platform/sync-trails.js');
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.(),
     });
@@ -161,8 +161,6 @@ async function _deferredInit(user, db, repo) {
 
     const { startDueSoonChecker } = await import('../platform/sync-due-soon.js');
     startDueSoonChecker({ getSalesId: () => currentAccount() });
-
-    window.__vdg_user_audit_log = createUserAuditLog();
 
     // The staff-table record is the final word on this session's principal, and it lands AFTER
     // the ACL-probe snapshot auth_set_resolved_roles already wrote (it can disagree, and it wins).

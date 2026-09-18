@@ -7,13 +7,11 @@ function _i() {
   if (!_impl) throw new Error("ui/user-audit-log-composer: no implementation bound (root bootstrap binds it)");
   return _impl;
 }
-var filterByDateRange = (...a) => _i().filterByDateRange(...a);
-var sortByTimestampDesc = (...a) => _i().sortByTimestampDesc(...a);
-var buildAuditLogCsv = (...a) => _i().buildAuditLogCsv(...a);
+var auditLogRows = (...a) => _i().auditLogRows(...a);
+var auditLogCsv = (...a) => _i().auditLogCsv(...a);
 
 export {
   bindUserAuditLogComposer,
-  filterByDateRange,
-  sortByTimestampDesc,
-  buildAuditLogCsv
+  auditLogRows,
+  auditLogCsv
 };

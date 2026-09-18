@@ -20,7 +20,7 @@ import {
 } from "./chunk-CHLQ7LZW.js";
 import {
   bindUserAuditLogComposer
-} from "./chunk-GRBWOHUK.js";
+} from "./chunk-RQP62HXL.js";
 import {
   jobTracker
 } from "./chunk-JX5PJORQ.js";
@@ -111,9 +111,8 @@ import {
   bindMasterDeduper
 } from "./chunk-ENSWK7L6.js";
 import {
-  bindUserDirectory,
-  listUsers
-} from "./chunk-XVWG4BTC.js";
+  bindUserDirectory
+} from "./chunk-TLLJ5BKR.js";
 import {
   bindCommissionCalculator
 } from "./chunk-JAYYO7NZ.js";
@@ -150,7 +149,7 @@ import {
 } from "./chunk-Z6T6WECV.js";
 import {
   bindUsersViewComposer
-} from "./chunk-CSY7BXV6.js";
+} from "./chunk-LEPKBQ3P.js";
 import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
@@ -635,7 +634,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build bd325f3e">v0.4.108 (bd325f3e)</span>
+        <span class="font-mono whitespace-nowrap" title="build 32921e4e">v0.4.109 (32921e4e)</span>
       </div>
     `;
   }
@@ -2375,7 +2374,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.108 (bd325f3e)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.109 (32921e4e)</div>
         </div>
       </div>
     </div>`;
@@ -3146,8 +3145,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=bd325f3e", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=bd325f3e", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=32921e4e", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=32921e4e", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -3598,7 +3597,7 @@ function wasmApi() {
   if (!m?.users_directory_list) throw new Error("WASM module not loaded");
   return m;
 }
-async function listUsers2({ role, includeInactive } = {}) {
+async function listUsers({ role, includeInactive } = {}) {
   return wasmApi().users_directory_list(role || "", !!includeInactive);
 }
 async function createUser({ email, display_name, roles }) {
@@ -4339,7 +4338,7 @@ bindOAuthProvider(oauthProvider);
 bindIdentityProvider(identityProvider);
 bindLocalStore(localStoreClient);
 bindEventBus({ dispatchAppEvent: (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail })) });
-bindUserDirectory({ listUsers: listUsers2, createUser, patchUser });
+bindUserDirectory({ listUsers, createUser, patchUser });
 async function composeStorage() {
   const backendKind = await backend.detectBackend();
   bindWorkspaceAuthority(serverWorkspaceAuthority);
@@ -4541,7 +4540,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-3KZIN6WZ.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-D6JX7URL.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4549,14 +4548,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-MZLNLXOR.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-AWENSRJO.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-MZLNLXOR.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-AWENSRJO.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4661,7 +4660,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.108 (bd325f3e)";
+var APP_VERSION = "v0.4.109 (32921e4e)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4858,9 +4857,9 @@ var VIEWS = {
   "/accounting/reports": () => import("./reports-EUNHFHFE.js"),
   "/accounting/settings": () => import("./settings-TNYDQ7AS.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-4RWDFC3Y.js"),
+  "/admin/users": () => import("./users-view-Y2SSCWSN.js"),
   // E-24 F-24-06
-  "/admin/users/audit-log": () => import("./user-audit-log-view-AQOHWPTO.js")
+  "/admin/users/audit-log": () => import("./user-audit-log-view-Q3QS72JA.js")
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
@@ -5516,28 +5515,29 @@ function composeManager(wasm4) {
     purgeOrphans: (_ledgerRepo, plan, year) => wasm4.manager_ledger_purge_orphans({ plan, year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() })
   });
   bindNotificationComposer({
-    computeFromEvent: ({ kind = "", id = "" } = {}, entities) => {
-      const reply = wasm4.manager_notification_from_event({
-        kind,
-        id,
-        entity: entities?.get?.(`${kind}::${id}`) ?? null,
-        manager_label: managerLabel()
-      });
+    // The event names WHAT moved; wasm reads the record it names. The shell used to look the row up
+    // in its own cache and pass it in, so a manager was told whatever that cache happened to hold.
+    computeFromEvent: async ({ kind = "", id = "" } = {}) => {
+      const reply = await wasm4.manager_notification_from_event({ kind, id, manager_label: managerLabel() });
       return reply.notification ? stampNotification(reply.notification) : null;
     },
-    computeTimeBased: (shipments, today) => wasm4.manager_notifications_time_based({ shipments: shipments || [], now_ms: msOf(today), tz_offset_min: tz() }).notifications.map(stampNotification)
+    computeTimeBased: async (today) => {
+      const reply = await wasm4.manager_notifications_time_based({ now_ms: msOf(today), tz_offset_min: tz() });
+      return reply.notifications.map(stampNotification);
+    }
   });
   bindUserAuditLogComposer({
     // from/to come off a date picker, so they are LOCAL days — the stamps are UTC, and tz is what
-    // lets Rust read both on one calendar (the same offset the stamp column is rendered with).
-    filterByDateRange: (records, { from = "", to = "" } = {}) => wasm4.manager_audit_log_range({ records: records || [], from, to, tz_offset_min: tz() }).records,
-    sortByTimestampDesc: (records) => wasm4.manager_audit_log_sort({ records: records || [] }).records,
-    buildAuditLogCsv: (records) => wasm4.manager_audit_log_csv({ records: records || [] }).csv
+    // lets Rust read both on one calendar (the same offset the stamp column is rendered with). No
+    // rows go in: wasm lists the trail, narrows it and orders it in one read.
+    auditLogRows: ({ from = "", to = "" } = {}) => wasm4.manager_audit_log_rows({ from, to, tz_offset_min: tz() }),
+    auditLogCsv: ({ from = "", to = "" } = {}) => wasm4.manager_audit_log_csv({ from, to, tz_offset_min: tz() })
   });
   bindUsersViewComposer({
     isValidEmail: (email) => wasm4.manager_email_valid({ email: email || "" }).valid,
-    filterUsers: (users, { search = "", role = "", activeFilter = "" } = {}) => wasm4.manager_users_filter({ users: users || [], search, role, active_filter: activeFilter }).users,
-    sortUsersByEmail: (users) => wasm4.manager_users_sort({ users: users || [] }).users
+    // `refresh` is the screen saying its copy is stale (mount, or after a write); a keystroke
+    // filters the snapshot wasm already holds and costs no request.
+    listUsersFiltered: ({ search = "", role = "", activeFilter = "", refresh = false } = {}) => wasm4.manager_users_filter({ search, role, active_filter: activeFilter, refresh })
   });
 }
 function stampNotification(draft) {
@@ -5835,21 +5835,15 @@ function composeFlows(wasm4) {
   });
   bindSalesRegistry({
     // F-46-03: the picker's rows come from the server's safe projection, not the local "user"
-    // entity cache (nothing ever wrote that kind — the empty-picker bug). The wasm side still
-    // owns shaping, colour-hashing and the 5-minute cache.
-    // B-47-07-04, as its own call. Widening getActiveSalesReps' return from an array to an
+    // entity cache (nothing ever wrote that kind — the empty-picker bug). wasm READS that
+    // projection now; this file used to fetch it twice per screen and pass both answers back in.
+    // B-47-07-04 stays its own call. Widening getActiveSalesReps' return from an array to an
     // object would have silently broken seven callers that iterate it — the shape a function
     // returns is part of its contract, and this list is a different question anyway: not "who
     // can be picked" but "who was left out, and why".
-    getExcludedNonSalesAccounts: async () => {
-      const users = await listUsers().catch(() => []);
-      return (await wasm4.flows_active_sales_reps({ rows: users || [], force: false })).excluded_no_sales_role || [];
-    },
-    getActiveSalesReps: async () => {
-      const { users } = await listUsers({ role: ROLE_SALES_REP });
-      return (await wasm4.flows_active_sales_reps({ rows: users || [], force: false })).reps;
-    },
-    getSalesRepByAccount: (reps, account) => wasm4.flows_sales_rep_by_account({ reps: reps || [], account: account ?? null }).rep,
+    getExcludedNonSalesAccounts: async () => (await wasm4.flows_active_sales_reps({ force: false })).excluded_no_sales_role || [],
+    getActiveSalesReps: async () => (await wasm4.flows_active_sales_reps({ force: false })).reps,
+    getSalesRepByAccount: async (account) => (await wasm4.flows_sales_rep_by_account({ account: account ?? null })).rep,
     clearRegistryCache: () => wasm4.flows_clear_sales_registry(EMPTY2)
   });
   window.addEventListener(ENTITY_CHANGED_EVENT, (e) => {
@@ -6227,14 +6221,13 @@ async function _deferredInit(user, db, repo3) {
     startDeltaTick({ getRepo: () => repo3 });
     startOutboxDrain({ getRepo: () => repo3 });
     startHealthPoll();
-    const { createAuditLog, createUserAuditLog, installErrorLog } = await import("./sync-trails-I3ENGJFQ.js");
+    const { createAuditLog, installErrorLog } = await import("./sync-trails-GTH3ZE34.js");
     window.__vdg_audit_log = createAuditLog({
       getUser: () => window.__vdg_auth?.getCurrentUser?.()
     });
     installErrorLog({ getUser: () => window.__vdg_auth?.getCurrentUser?.(), getVersion: () => APP_VERSION });
     const { startDueSoonChecker } = await import("./sync-due-soon-J6SPOPTI.js");
     startDueSoonChecker({ getSalesId: () => currentAccount() });
-    window.__vdg_user_audit_log = createUserAuditLog();
     const retryPrincipalOnReconnect = () => {
       if (currentRolesResolved()) {
         window.removeEventListener("vdg:server-health", retryPrincipalOnReconnect);

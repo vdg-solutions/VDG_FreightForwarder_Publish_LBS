@@ -2,10 +2,9 @@ import {
   mountDateHints
 } from "./chunk-H7AL5STO.js";
 import {
-  buildAuditLogCsv,
-  filterByDateRange,
-  sortByTimestampDesc
-} from "./chunk-GRBWOHUK.js";
+  auditLogCsv,
+  auditLogRows
+} from "./chunk-RQP62HXL.js";
 import {
   todayLocal
 } from "./chunk-QSZOMCXZ.js";
@@ -16,10 +15,7 @@ import {
 } from "./chunk-G2RKYR7P.js";
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/admin/user-audit-log-view.js
-function getUserAuditLog() {
-  return window.__vdg_user_audit_log;
-}
-var _allRecords = [];
+var REVOKE_URL_MS = 5e3;
 var _range = { from: "", to: "" };
 function shellHtml() {
   return `
@@ -72,30 +68,32 @@ function renderTable(container, rows) {
       <tbody>${trs}</tbody>
     </table>`;
 }
-function applyAndRender(root) {
-  const rows = sortByTimestampDesc(filterByDateRange(_allRecords, _range));
+async function applyAndRender(root) {
+  const reply = await auditLogRows(_range);
+  const rows = reply.ok ? reply.records : [];
   renderTable(root.querySelector("#aud-table-wrap"), rows);
   const countEl = root.querySelector("#aud-count");
-  if (countEl) countEl.textContent = `${rows.length} / ${_allRecords.length}`;
+  if (countEl) countEl.textContent = reply.ok ? `${rows.length} / ${reply.total}` : t("admin.users.audit_log.read_failed");
 }
-function handleExportCsv() {
-  const rows = sortByTimestampDesc(filterByDateRange(_allRecords, _range));
-  const csv = buildAuditLogCsv(rows);
-  const blob = new Blob([csv], { type: "text/csv" });
+async function handleExportCsv() {
+  const reply = await auditLogCsv(_range);
+  if (!reply.ok) {
+    window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type: "error", message: t("admin.users.audit_log.read_failed") } }));
+    return;
+  }
+  const blob = new Blob([reply.csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = `vdg-user-audit-log-${todayLocal()}.csv`;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5e3);
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_URL_MS);
 }
 async function render(root) {
   _range = { from: "", to: "" };
   root.innerHTML = shellHtml();
   mountDateHints(root);
-  const log = getUserAuditLog();
-  _allRecords = log ? await log.readAll().catch(() => []) : [];
-  applyAndRender(root);
+  await applyAndRender(root);
   root.querySelector("#aud-from")?.addEventListener("change", (e) => {
     _range.from = e.target.value;
     applyAndRender(root);

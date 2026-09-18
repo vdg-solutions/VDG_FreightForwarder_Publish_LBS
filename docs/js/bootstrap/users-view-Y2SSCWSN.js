@@ -3,18 +3,16 @@ import {
 } from "./chunk-AX6BHX2J.js";
 import {
   createUser,
-  listUsers,
   patchUser
-} from "./chunk-XVWG4BTC.js";
+} from "./chunk-TLLJ5BKR.js";
 import {
   ROLE_LABEL_KEYS,
   ROLE_VALUES,
-  filterUsers,
   isValidEmail,
+  listUsersFiltered,
   roleCheckboxesHtml,
-  rolesFromForm,
-  sortUsersByEmail
-} from "./chunk-CSY7BXV6.js";
+  rolesFromForm
+} from "./chunk-LEPKBQ3P.js";
 import "./chunk-YR3VHEVJ.js";
 import {
   can
@@ -258,7 +256,6 @@ async function _onSubmit2(overlay, user, onSaved, reactivate) {
 // output/web/js.tmp/implementations/ui/bootstrap/views/admin/users-view.js
 var TOAST_MS = 4e3;
 var DEFAULT_ACTIVE_FILTER = "";
-var _allUsers = [];
 var _filter = { search: "", role: "", activeFilter: DEFAULT_ACTIVE_FILTER };
 function toast(type, message) {
   window.dispatchEvent(new CustomEvent("vdg:toast", { detail: { type, message, duration: TOAST_MS } }));
@@ -283,9 +280,13 @@ function shellHtml() {
       <div id="usr-table-wrap"></div>
     </div>`;
 }
-function _applyAndRender(root) {
-  const rows = filterUsers(_allUsers, _filter);
+async function _applyAndRender(root, refresh = false) {
+  const reply = await listUsersFiltered({ ..._filter, refresh });
   const wrap = root.querySelector("#usr-table-wrap");
+  if (!reply.ok) {
+    toast("error", reply.error);
+  }
+  const rows = reply.ok ? reply.users : [];
   renderUsersTable(wrap, rows);
   bindRowActions(wrap, rows, {
     onEdit: (user) => openEditUserModal(user, { onSaved: () => _reload(root) }),
@@ -293,18 +294,11 @@ function _applyAndRender(root) {
     onReactivate: (user) => openEditUserModal(user, { reactivate: true, onSaved: () => _reload(root) })
   });
   const countEl = root.querySelector("#usr-count");
-  if (countEl) countEl.textContent = `${rows.length} / ${_allUsers.length}`;
+  if (countEl) countEl.textContent = reply.ok ? `${rows.length} / ${reply.total}` : "";
 }
 async function _reload(root) {
   renderUsersSkeleton(root.querySelector("#usr-table-wrap"));
-  try {
-    const { users } = await listUsers({ includeInactive: true });
-    _allUsers = sortUsersByEmail(users || []);
-  } catch (err) {
-    toast("error", err.message);
-    _allUsers = [];
-  }
-  _applyAndRender(root);
+  await _applyAndRender(root, true);
 }
 async function _onDeactivate(root, user) {
   const ok = await showConfirm({
