@@ -53,16 +53,18 @@ const CHAIN_BROKEN_CLASS = 'text-xs text-rose-700 font-medium';
 /**
  * Say out loud whether the trail still hangs together.
  *
- * Everyone who can write a shipment can write this folder — Drive grants a folder, not an
+ * Everyone who can write a shipment can write this folder — the storage grants a folder, not an
  * operation — so "nobody tampered with it" is a claim, and a claim has to be checked to be worth
  * anything. A failure to CHECK is reported as its own state: unknown is not clean.
+ *
+ * `store` is a name, not rows. wasm reads and verifies; this function only draws the verdict.
  */
-export async function renderChainStatus(el, rows) {
+export async function renderChainStatus(el, store) {
   if (!el) return;
   el.className = CHAIN_OK_CLASS;
   let problems;
   try {
-    problems = await verifyAuditChain(rows);
+    problems = await verifyAuditChain(store);
   } catch (err) {
     console.error('[audit] chain check failed:', err); // DEV
     el.textContent = t('audit.chain.unknown');

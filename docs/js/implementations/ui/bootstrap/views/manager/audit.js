@@ -8,6 +8,7 @@ import { changeLines, changesCell, renderChainStatus } from './audit-changes.js'
 import { emptyStateHtml, EMPTY_STATE_VARIANT, bindEmptyStateActions } from '../../components/empty-state.js';
 import { relTime } from '../../../../kernel/core_abstractions/util/rel-time.js';
 import { auditTrail } from '../../../core_abstractions/ports/data/report-reads.js';
+import { AUDIT_TRAIL } from '../../../core_abstractions/ports/sync/audit-log.js';
 export { buildFeedHtml } from './audit-feed.js';
 
 const AUDIT_LOG_L2_MAX       = 500;
@@ -19,8 +20,7 @@ const AUDIT_LOG_KIND         = 'audit_log';
 function csvHeaders() {
   return [
     t('audit.col.when'), t('audit.col.who'), t('audit.csv.entity_kind'), t('audit.csv.entity_id'),
-    t('audit.col.from'), t('audit.col.to'), t('audit.col.event'), t('audit.col.changes'),
-    t('audit.col.emitted'),
+    t('audit.col.event'), t('audit.col.changes'),
   ];
 }
 
@@ -40,13 +40,12 @@ async function loadRows() {
 function applyFilter(rows) {
   const { kind, entityId, actor, event, dateFrom, dateTo } = _filter;
   return rows.filter((r) => {
-    if (kind     && (r.entity_kind || r.kind || '').toLowerCase() !== kind.toLowerCase())   return false;
-    if (entityId && !(r.entity_id  || '').includes(entityId))                               return false;
-    if (actor    && !(r.actor_email || r.actor || '').includes(actor))                      return false;
-    if (event    && !(r.event || r.op || '').toLowerCase().includes(event.toLowerCase()))   return false;
-    const ts = r.created_at || r.ts;
-    if (dateFrom && ts && ts < dateFrom) return false;
-    if (dateTo   && ts && ts > dateTo)   return false;
+    if (kind     && (r.kind || '').toLowerCase() !== kind.toLowerCase())                return false;
+    if (entityId && !(r.entity_id || '').includes(entityId))                            return false;
+    if (actor    && !(r.actor_email || '').includes(actor))                             return false;
+    if (event    && !(r.op || '').toLowerCase().includes(event.toLowerCase()))          return false;
+    if (dateFrom && r.ts && r.ts < dateFrom) return false;
+    if (dateTo   && r.ts && r.ts > dateTo)   return false;
     return true;
   });
 }
@@ -56,7 +55,7 @@ function applyFilter(rows) {
 function _colDefs() {
   return [
     {
-      headerName: t('audit.col.when'), field: 'created_at', width: 140,
+      headerName: t('audit.col.when'), field: 'ts', width: 140,
       cellRenderer: ({ value }) => {
         const span = document.createElement('span');
         span.textContent = relTime(value);
@@ -70,24 +69,23 @@ function _colDefs() {
       cellRenderer: ({ data }) => {
         const btn = document.createElement('button');
         btn.className   = 'text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 text-xs';
-        btn.textContent = `${data.entity_kind || data.kind || '?'} · ${data.entity_id || data.id || '?'}`;
-        btn.setAttribute('aria-label', t('audit.aria.open_detail', { entity: data.entity_kind || 'entity' }));
+        btn.textContent = `${data.kind || '?'} · ${data.entity_id || '?'}`;
+        btn.setAttribute('aria-label', t('audit.aria.open_detail', { entity: data.kind || 'entity' }));
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           window.dispatchEvent(new CustomEvent('vdg:open-detail', {
-            detail: { kind: data.entity_kind || data.kind, id: data.entity_id || data.id },
+            detail: { kind: data.kind, id: data.entity_id },
           }));
         });
         return btn;
       },
     },
-    { headerName: t('audit.col.from'),    field: 'from_state',  width: 120 },
-    { headerName: t('audit.col.to'),      field: 'to_state',    width: 120 },
-    { headerName: t('audit.col.event'),   field: 'event',       width: 140 },
+    // No Từ/Đến column: a state hop is a `state` field change and rides `changes` like every other
+    // edit. There has never been a `from_state`/`to_state`/`emitted_at` on an audit row.
+    { headerName: t('audit.col.event'),   field: 'op',          width: 140 },
     // F-37-02: a hash can only say that something moved. Sell figures are NOT here — they are in
     // the rep's own revenue trail, the one whose readers already hold the record it describes.
     { headerName: t('audit.col.changes'), flex: 1, cellRenderer: changesCell },
-    { headerName: t('audit.col.emitted'), field: 'emitted_at',  width: 100 },
   ];
 }
 
@@ -110,7 +108,7 @@ function initGrid(container, rows) {
     onGridReady: (p) => { api = p.api; },
     onRowClicked: (ev) => {
       window.dispatchEvent(new CustomEvent('vdg:open-detail', {
-        detail: { kind: ev.data.entity_kind || ev.data.kind, id: ev.data.entity_id || ev.data.id },
+        detail: { kind: ev.data.kind, id: ev.data.entity_id },
       }));
     },
     onBodyScroll: async (ev) => {
@@ -138,17 +136,14 @@ function handleExportCsv() {
   const lines = [
     csvHeaders().join(','),
     ...rows.map((r) => [
-      `"${r.created_at || r.ts || ''}"`,
-      `"${r.actor_email || r.actor || ''}"`,
-      `"${r.entity_kind || r.kind || ''}"`,
-      `"${r.entity_id   || r.id  || ''}"`,
-      `"${r.from_state  || ''}"`,
-      `"${r.to_state    || ''}"`,
-      `"${r.event       || r.op || ''}"`,
+      `"${r.ts         || ''}"`,
+      `"${r.actor_email || ''}"`,
+      `"${r.kind       || ''}"`,
+      `"${r.entity_id  || ''}"`,
+      `"${r.op         || ''}"`,
       // Semicolons, not newlines: one entry stays one CSV row. Quotes are doubled because a
       // changed value can contain one and would otherwise end the field early.
       `"${changeLines(r).join('; ').replace(/"/g, '""')}"`,
-      `"${r.emitted_at  || ''}"`,
     ].join(',')),
   ];
 
@@ -217,7 +212,7 @@ export async function render(root) {
   try { _allRows = await loadRows(); }
   catch (err) { console.error('[audit] load failed:', err); } // DEV
 
-  renderChainStatus(root.querySelector('#chain-status'), _allRows);
+  renderChainStatus(root.querySelector('#chain-status'), AUDIT_TRAIL.SHARED);
 
   const gridWrap = root.querySelector('#grid-wrap');
   gridWrap.innerHTML = '';

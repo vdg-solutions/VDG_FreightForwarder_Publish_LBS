@@ -49,7 +49,7 @@ import {
 } from "./chunk-TBGPODD6.js";
 import {
   bindAuditLog
-} from "./chunk-VHCRHQI5.js";
+} from "./chunk-FR43OT2M.js";
 import {
   bindNotificationComposer
 } from "./chunk-NJVBPCWY.js";
@@ -635,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 369c90bf">v0.4.107 (369c90bf)</span>
+        <span class="font-mono whitespace-nowrap" title="build bd325f3e">v0.4.108 (bd325f3e)</span>
       </div>
     `;
   }
@@ -2375,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.107 (369c90bf)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.108 (bd325f3e)</div>
         </div>
       </div>
     </div>`;
@@ -3146,8 +3146,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=369c90bf", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=369c90bf", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=bd325f3e", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=bd325f3e", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4661,7 +4661,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.107 (369c90bf)";
+var APP_VERSION = "v0.4.108 (bd325f3e)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4815,7 +4815,7 @@ var VIEWS = {
   "/manager/finance/cash-flow": () => import("./cash-flow-UZZXZXOX.js"),
   "/manager/finance/close-period": () => import("./close-period-RORJQT55.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-FR5SOQF6.js"),
-  "/manager/audit": () => import("./audit-JVWCERMQ.js"),
+  "/manager/audit": () => import("./audit-PEXXGNN4.js"),
   "/manager/notifications": () => import("./notifications-OL3LCTPY.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-7JQI45WX.js"),
@@ -5260,7 +5260,13 @@ function _rowIdx(value) {
 }
 function composeSync(wasm4) {
   bindAuditLog({
-    verifyAuditChain: async (rows) => (await wasm4.sync_audit_verify_chain({ rows: rows || [] })).problems
+    // A store name goes in, a verdict comes out. JS never carries the rows: wasm reads the trail
+    // it is verifying, so the verdict is about the record and not about a copy JS was holding.
+    verifyAuditChain: async (trail) => {
+      const reply = await wasm4.sync_audit_verify_chain({ trail });
+      if (!reply.ok) throw new Error(reply.error || "the trail could not be read");
+      return reply.problems;
+    }
   });
   bindDueSoon({
     computeDueSoonRows: async (salesId) => (await wasm4.sync_due_soon_rows({ sales_id: salesId ?? null })).rows

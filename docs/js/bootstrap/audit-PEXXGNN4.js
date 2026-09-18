@@ -2,8 +2,9 @@ import {
   mountDateHints
 } from "./chunk-H7AL5STO.js";
 import {
+  AUDIT_TRAIL,
   verifyAuditChain
-} from "./chunk-VHCRHQI5.js";
+} from "./chunk-FR43OT2M.js";
 import {
   todayLocal
 } from "./chunk-QSZOMCXZ.js";
@@ -52,12 +53,12 @@ function changeSummary(entry) {
 }
 var CHAIN_OK_CLASS = "text-xs text-slate-400";
 var CHAIN_BROKEN_CLASS = "text-xs text-rose-700 font-medium";
-async function renderChainStatus(el, rows) {
+async function renderChainStatus(el, store) {
   if (!el) return;
   el.className = CHAIN_OK_CLASS;
   let problems;
   try {
-    problems = await verifyAuditChain(rows);
+    problems = await verifyAuditChain(store);
   } catch (err) {
     console.error("[audit] chain check failed:", err);
     el.textContent = t("audit.chain.unknown");
@@ -92,11 +93,12 @@ function relTime(iso) {
 
 // output/web/js.tmp/implementations/ui/bootstrap/views/manager/audit-feed.js
 var ACTIVITY_FEED_MAX = 20;
+var GROUP_KEY_SEP = "::";
 function buildFeedHtml(entries) {
   if (!entries.length) return `<li class="py-2 text-xs text-slate-400">${t("dashboard.activity.none")}</li>`;
   const groups = /* @__PURE__ */ new Map();
   for (const e of entries) {
-    const key = `${e.entity_kind || e.kind}::${e.entity_id || e.id}`;
+    const key = [e.kind, e.entity_id].join(GROUP_KEY_SEP);
     (groups.get(key) || (() => {
       const a = [];
       groups.set(key, a);
@@ -106,17 +108,17 @@ function buildFeedHtml(entries) {
   const items = [...groups.values()].slice(0, ACTIVITY_FEED_MAX);
   return items.map((group) => {
     const first = group[0];
-    const label = `${first.entity_kind || first.kind || "?"} ${first.entity_id || first.id || "?"}`;
+    const label = `${first.kind || "?"} ${first.entity_id || "?"}`;
     if (group.length === 1) {
       return `<li class="py-1.5 text-xs text-slate-600 border-b border-slate-50">
-        ${relTime(first.created_at || first.ts)} \u2014 ${label} \xB7 ${first.event || first.op || "?"}
+        ${relTime(first.ts)} \u2014 ${label} \xB7 ${first.op || "?"}
       </li>`;
     }
     return `<li class="py-1.5 text-xs border-b border-slate-50">
       <details>
-        <summary class="cursor-pointer text-slate-600">${relTime(first.created_at || first.ts)} \u2014 ${label} \xB7 ${first.event || first.op || "?"}</summary>
+        <summary class="cursor-pointer text-slate-600">${relTime(first.ts)} \u2014 ${label} \xB7 ${first.op || "?"}</summary>
         <ul class="pl-4 mt-1 space-y-0.5">
-          ${group.slice(1).map((e) => `<li class="text-slate-500">${relTime(e.created_at || e.ts)} \u2014 ${e.event || e.op || "?"}</li>`).join("")}
+          ${group.slice(1).map((e) => `<li class="text-slate-500">${relTime(e.ts)} \u2014 ${e.op || "?"}</li>`).join("")}
           <li class="text-blue-500 text-[11px] cursor-pointer">${t("audit.feed.show_more", { n: group.length - 1 })}</li>
         </ul>
       </details>
@@ -135,11 +137,8 @@ function csvHeaders() {
     t("audit.col.who"),
     t("audit.csv.entity_kind"),
     t("audit.csv.entity_id"),
-    t("audit.col.from"),
-    t("audit.col.to"),
     t("audit.col.event"),
-    t("audit.col.changes"),
-    t("audit.col.emitted")
+    t("audit.col.changes")
   ];
 }
 var _filter = { kind: "", entityId: "", actor: "", event: "", dateFrom: "", dateTo: "" };
@@ -152,13 +151,12 @@ async function loadRows() {
 function applyFilter(rows) {
   const { kind, entityId, actor, event, dateFrom: dateFrom2, dateTo } = _filter;
   return rows.filter((r) => {
-    if (kind && (r.entity_kind || r.kind || "").toLowerCase() !== kind.toLowerCase()) return false;
+    if (kind && (r.kind || "").toLowerCase() !== kind.toLowerCase()) return false;
     if (entityId && !(r.entity_id || "").includes(entityId)) return false;
-    if (actor && !(r.actor_email || r.actor || "").includes(actor)) return false;
-    if (event && !(r.event || r.op || "").toLowerCase().includes(event.toLowerCase())) return false;
-    const ts = r.created_at || r.ts;
-    if (dateFrom2 && ts && ts < dateFrom2) return false;
-    if (dateTo && ts && ts > dateTo) return false;
+    if (actor && !(r.actor_email || "").includes(actor)) return false;
+    if (event && !(r.op || "").toLowerCase().includes(event.toLowerCase())) return false;
+    if (dateFrom2 && r.ts && r.ts < dateFrom2) return false;
+    if (dateTo && r.ts && r.ts > dateTo) return false;
     return true;
   });
 }
@@ -166,7 +164,7 @@ function _colDefs() {
   return [
     {
       headerName: t("audit.col.when"),
-      field: "created_at",
+      field: "ts",
       width: 140,
       cellRenderer: ({ value }) => {
         const span = document.createElement("span");
@@ -182,24 +180,23 @@ function _colDefs() {
       cellRenderer: ({ data }) => {
         const btn = document.createElement("button");
         btn.className = "text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 text-xs";
-        btn.textContent = `${data.entity_kind || data.kind || "?"} \xB7 ${data.entity_id || data.id || "?"}`;
-        btn.setAttribute("aria-label", t("audit.aria.open_detail", { entity: data.entity_kind || "entity" }));
+        btn.textContent = `${data.kind || "?"} \xB7 ${data.entity_id || "?"}`;
+        btn.setAttribute("aria-label", t("audit.aria.open_detail", { entity: data.kind || "entity" }));
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           window.dispatchEvent(new CustomEvent("vdg:open-detail", {
-            detail: { kind: data.entity_kind || data.kind, id: data.entity_id || data.id }
+            detail: { kind: data.kind, id: data.entity_id }
           }));
         });
         return btn;
       }
     },
-    { headerName: t("audit.col.from"), field: "from_state", width: 120 },
-    { headerName: t("audit.col.to"), field: "to_state", width: 120 },
-    { headerName: t("audit.col.event"), field: "event", width: 140 },
+    // No Từ/Đến column: a state hop is a `state` field change and rides `changes` like every other
+    // edit. There has never been a `from_state`/`to_state`/`emitted_at` on an audit row.
+    { headerName: t("audit.col.event"), field: "op", width: 140 },
     // F-37-02: a hash can only say that something moved. Sell figures are NOT here — they are in
     // the rep's own revenue trail, the one whose readers already hold the record it describes.
-    { headerName: t("audit.col.changes"), flex: 1, cellRenderer: changesCell },
-    { headerName: t("audit.col.emitted"), field: "emitted_at", width: 100 }
+    { headerName: t("audit.col.changes"), flex: 1, cellRenderer: changesCell }
   ];
 }
 function initGrid(container, rows) {
@@ -222,7 +219,7 @@ function initGrid(container, rows) {
     },
     onRowClicked: (ev) => {
       window.dispatchEvent(new CustomEvent("vdg:open-detail", {
-        detail: { kind: ev.data.entity_kind || ev.data.kind, id: ev.data.entity_id || ev.data.id }
+        detail: { kind: ev.data.kind, id: ev.data.entity_id }
       }));
     },
     onBodyScroll: async (ev) => {
@@ -245,17 +242,14 @@ function handleExportCsv() {
   const lines = [
     csvHeaders().join(","),
     ...rows.map((r) => [
-      `"${r.created_at || r.ts || ""}"`,
-      `"${r.actor_email || r.actor || ""}"`,
-      `"${r.entity_kind || r.kind || ""}"`,
-      `"${r.entity_id || r.id || ""}"`,
-      `"${r.from_state || ""}"`,
-      `"${r.to_state || ""}"`,
-      `"${r.event || r.op || ""}"`,
+      `"${r.ts || ""}"`,
+      `"${r.actor_email || ""}"`,
+      `"${r.kind || ""}"`,
+      `"${r.entity_id || ""}"`,
+      `"${r.op || ""}"`,
       // Semicolons, not newlines: one entry stays one CSV row. Quotes are doubled because a
       // changed value can contain one and would otherwise end the field early.
-      `"${changeLines(r).join("; ").replace(/"/g, '""')}"`,
-      `"${r.emitted_at || ""}"`
+      `"${changeLines(r).join("; ").replace(/"/g, '""')}"`
     ].join(","))
   ];
   const blob = new Blob([lines.join("\n")], { type: "text/csv" });
@@ -319,7 +313,7 @@ async function render(root) {
   } catch (err) {
     console.error("[audit] load failed:", err);
   }
-  renderChainStatus(root.querySelector("#chain-status"), _allRows);
+  renderChainStatus(root.querySelector("#chain-status"), AUDIT_TRAIL.SHARED);
   const gridWrap = root.querySelector("#grid-wrap");
   gridWrap.innerHTML = "";
   _gridApi = initGrid(gridWrap, _allRows);

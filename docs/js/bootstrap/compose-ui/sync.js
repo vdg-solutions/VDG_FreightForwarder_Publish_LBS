@@ -23,7 +23,13 @@ function _rowIdx(value) {
 
 export function composeSync(wasm) {
   bindAuditLog({
-    verifyAuditChain: async (rows) => (await wasm.sync_audit_verify_chain({ rows: rows || [] })).problems,
+    // A store name goes in, a verdict comes out. JS never carries the rows: wasm reads the trail
+    // it is verifying, so the verdict is about the record and not about a copy JS was holding.
+    verifyAuditChain: async (trail) => {
+      const reply = await wasm.sync_audit_verify_chain({ trail });
+      if (!reply.ok) throw new Error(reply.error || 'the trail could not be read');
+      return reply.problems;
+    },
   });
 
   bindDueSoon({
