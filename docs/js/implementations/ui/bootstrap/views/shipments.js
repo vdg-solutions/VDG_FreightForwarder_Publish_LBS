@@ -15,6 +15,7 @@ import { maySeeJobTotal } from '../../core_abstractions/ports/data/sales-reads.j
 import { wireGridFilterEmptyState } from '../components/empty-state.js';
 import { isMountedRoute } from '../util/view-mounted.js';
 import { repaintOnStoreChange } from '../util/store-repaint.js';
+import { trackOverlay } from '../helpers/mount-overlay.js';
 
 const PANEL_WIDTH_PX    = 480;
 const SLIDE_DURATION_MS = 250;
@@ -270,12 +271,17 @@ export async function render(root) {
     wireHeader();
   }
 
+  // The drawer hangs off <body>, not off `root` — it must clear the topbar and slide over the
+  // grid — so the view-root swap cannot reach it. trackOverlay hands its lifetime to the route
+  // seam (mount-overlay.js); without that it stayed painted over every later screen, still
+  // offering "confirm booking" and "cancel" on routes that never had a shipment selected.
   if (!document.getElementById('detail-panel')) {
     const panel = document.createElement('vdg-detail-panel');
     panel.id = 'detail-panel';
-    panel.setAttribute('hidden', '');
-    panel.className = 'fixed right-0 bg-white shadow-xl flex flex-col translate-x-full';
+    panel.className = 'fixed right-0 bg-white shadow-xl flex-col translate-x-full';
     panel.style.cssText = `top:${NAV_HEIGHT_REM}rem;height:calc(100vh - ${NAV_HEIGHT_REM}rem);z-index:${Z_PANEL};width:${PANEL_WIDTH_PX}px;max-width:100%;transition:transform ${SLIDE_DURATION_MS}ms ease-out`;
+    panel.setAttribute('hidden', '');
+    trackOverlay(panel);
     document.body.appendChild(panel);
   }
 

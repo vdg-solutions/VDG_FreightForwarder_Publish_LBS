@@ -82,20 +82,14 @@ async function recompose() {
     ? _allShipments.filter((s) => s.mode !== 'air')
     : _allShipments;
 
-  const activeDims = _mode === MODE_ALL
-    ? ['mode', ..._dims]
-    : _dims;
-
+  // Group by exactly the two dimensions the selectors show and the table has columns for. "Tất
+  // cả" used to prepend a third, `mode`, which no column ever drew: sea and air rows that agreed
+  // on (period, sales rep) then collided in the renderer and all but one was dropped, while the
+  // total kept summing every one of them. `mode` is not in DIM_OPTIONS either — the user cannot
+  // ask for it — so All means all modes under the chosen grouping, not a hidden extra split.
   const { rows, grandTotals, groupedShipments } = compose({
-    shipments: seaShipments, pnlLines: _allPnlLines, period: _period, dims: activeDims,
+    shipments: seaShipments, pnlLines: _allPnlLines, period: _period, dims: _dims,
   });
-
-  // inject mode label for All view
-  if (_mode === MODE_ALL) {
-    for (const row of rows) {
-      if (!row.dims.mode) row.dims.mode = '—';
-    }
-  }
 
   _pivotRows   = rows;
   _grandTotals = grandTotals;
@@ -256,7 +250,8 @@ export async function render(root) {
     pivotContainer.innerHTML = '';
     const pt = document.createElement('vdg-pivot-table');
     pt.rows           = _pivotRows;
-    pt.dims           = _dims;
+    pt.dims           = _mode === MODE_AIR ? _airDims : _dims;
+    pt.grandTotals    = _grandTotals;
     pt.showComparison = _showComparison;
     pt.loadFailed     = _loadOutcome.failed;
     pt.skippedCount   = _loadOutcome.skipped;

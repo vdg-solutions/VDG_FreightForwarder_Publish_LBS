@@ -1,6 +1,8 @@
 // vdg-confirm-dialog.js — branded confirm modal, replaces window.confirm()/alert() (F-24-10).
 // Vanilla DOM overlay, same pattern as views/admin/user-edit-modal.js — no Lit dep in this repo.
 
+import { trackOverlay } from '../helpers/mount-overlay.js';
+
 const BTN_BASE_CLASS    = 'px-4 py-2 text-xs rounded-lg';
 const BTN_CANCEL_CLASS  = `btn-cancel ${BTN_BASE_CLASS} bg-slate-100 text-slate-700 hover:bg-slate-200`;
 const BTN_PRIMARY_CLASS = `btn-primary ${BTN_BASE_CLASS} bg-blue-600 text-white hover:bg-blue-700`;
@@ -43,9 +45,15 @@ export function mountConfirmDialog(options, onResolve, doc = document) {
   overlay.className = 'vdg-confirm-dialog fixed inset-0 z-[60] bg-black/40 flex items-center justify-center';
   overlay.innerHTML = buildConfirmDialogHtml(options);
 
+  // Assigned right after `close` is defined; a route change resolves the awaited promise as a
+  // CANCEL, because navigating away is not a confirmation — and an unsettled one would leave the
+  // caller's `await showConfirm(...)` hanging forever with its overlay already gone.
+  let untrackOverlay = () => {};
+
   const close = (confirmed) => {
     const reasonEl = options.reasonField ? overlay.querySelector('#vdg-confirm-reason') : null;
     const result = options.reasonField ? { confirmed, reason: confirmed ? (reasonEl?.value ?? '') : '' } : confirmed;
+    untrackOverlay();
     overlay.remove();
     doc.removeEventListener('keydown', onKeydown);
     onResolve(result);
@@ -61,6 +69,7 @@ export function mountConfirmDialog(options, onResolve, doc = document) {
   doc.addEventListener('keydown', onKeydown);
 
   doc.body.appendChild(overlay);
+  untrackOverlay = trackOverlay(overlay, () => close(false));
   overlay.querySelector('#vdg-confirm-ok').focus?.();
   return overlay;
 }

@@ -11,7 +11,7 @@ import {
   bindLedgerReconciler,
   bindLedgerRepost,
   bindPeriodOpeningBalance
-} from "./chunk-BRDPRF6R.js";
+} from "./chunk-7BA35YPV.js";
 import {
   bindLedgerAggregator
 } from "./chunk-FZUKIDAT.js";
@@ -126,6 +126,7 @@ import {
   bindFsmAutoAdvance,
   bindIdentityProvider,
   bindJobNoGen,
+  bindMarginPct,
   bindPnlLineId,
   bindQuoteTotals,
   bindRepCodeRegistry,
@@ -140,7 +141,7 @@ import {
   saveKindWmaState,
   signOut,
   wasPreviouslySignedIn
-} from "./chunk-ZROLQ6T5.js";
+} from "./chunk-KAJSWBAB.js";
 import {
   bindAirRateCalculator
 } from "./chunk-WKFYYEZM.js";
@@ -153,9 +154,6 @@ import {
 import {
   bindWorkspaceSettings
 } from "./chunk-IIUQ3SOM.js";
-import {
-  bindMarginPct
-} from "./chunk-GZ7LN4BC.js";
 import {
   toLocalDateStr,
   todayLocal
@@ -190,7 +188,7 @@ import {
   bindIntentNotices,
   bindShipmentVoidDelete,
   openSyncAttentionModal
-} from "./chunk-PWKVJFBC.js";
+} from "./chunk-IHOQ32MX.js";
 import {
   bindFsmIngest
 } from "./chunk-3RLMMSOJ.js";
@@ -273,7 +271,7 @@ import {
 import {
   freshViewRoot,
   markViewSuperseded
-} from "./chunk-2PLULDG2.js";
+} from "./chunk-6KREJQWP.js";
 import {
   bindGrid
 } from "./chunk-7DW526V3.js";
@@ -286,7 +284,10 @@ import {
   startInterval,
   stopInterval
 } from "./chunk-JAZY43GR.js";
-import "./chunk-LIDU36UT.js";
+import "./chunk-37E2XNRM.js";
+import {
+  trackOverlay
+} from "./chunk-PVBCNCFR.js";
 import {
   bindAppEvents,
   bindClock,
@@ -634,7 +635,7 @@ var VdgSidebar = class extends LitElement {
       </nav>
       <div class="mt-auto px-4 py-3 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
         <span>VDG FreightForwarder</span>
-        <span class="font-mono whitespace-nowrap" title="build 32921e4e">v0.4.109 (32921e4e)</span>
+        <span class="font-mono whitespace-nowrap" title="build 03a2d5a8">v0.4.110 (03a2d5a8)</span>
       </div>
     `;
   }
@@ -2374,7 +2375,7 @@ function loginHtml() {
         <!-- Footer -->
         <div class="text-[10px] text-slate-300 text-center">
           ${t("login.footer")}
-          <div class="mt-1 font-mono text-slate-400">v0.4.109 (32921e4e)</div>
+          <div class="mt-1 font-mono text-slate-400">v0.4.110 (03a2d5a8)</div>
         </div>
       </div>
     </div>`;
@@ -2766,6 +2767,8 @@ var managerPlatform = {
   ledger_posting_rules: () => ledgerRepo().postingRules(),
   ledger_existing_account_codes: (year) => ledgerRepo().listAccountCodes(year),
   ledger_list_legs: (year, acc_code) => ledgerRepo().listLegs(year, acc_code, null, null),
+  ledger_entry_legs: (entry_id) => ledgerRepo().listAllLegsInEntry(entry_id),
+  ledger_balance_at: (acc_code, as_of) => ledgerRepo().getBalance(acc_code, as_of),
   ledger_replace_leg: (year, acc_code, leg) => ledgerRepo().replaceLeg(year, acc_code, leg),
   ledger_remove_entry: (year, entry_id) => ledgerRepo().removeEntry(year, entry_id),
   ledger_append_reconciliation: (record) => ledgerRepo().appendReconciliationRecord(record),
@@ -3145,8 +3148,8 @@ function loadOnce() {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = (async () => {
-      const mod = await import(new URL("pkg/vdg_freight.js?v=32921e4e", document.baseURI).href);
-      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=32921e4e", document.baseURI).href;
+      const mod = await import(new URL("pkg/vdg_freight.js?v=03a2d5a8", document.baseURI).href);
+      const wasmUrl = new URL("pkg/vdg_freight_bg.wasm?v=03a2d5a8", document.baseURI).href;
       await mod.default({ module_or_path: wasmUrl });
       cached = mod;
       window.__vdg_wasm = mod;
@@ -4540,7 +4543,7 @@ async function tryParamRoute(route) {
   const mastersMatch = MASTERS_RE.exec(basePath);
   if (mastersMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./masters-D6JX7URL.js"), root, basePath);
+    const mod = await loadView(() => import("./masters-6EK7YWEK.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { kind: mastersMatch[1], route: basePath }), root, basePath);
     return true;
@@ -4548,14 +4551,14 @@ async function tryParamRoute(route) {
   const salesEditMatch = SALES_EDIT_RE.exec(basePath);
   if (salesEditMatch) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-AWENSRJO.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-WATE465S.js"), root, basePath);
     if (!mod) return true;
     await mountView(() => mod.render(root, { editRef: salesEditMatch[1], mode: "edit" }), root, basePath);
     return true;
   }
   if (SHIPMENT_NEW_RE.test(basePath)) {
     const root = freshViewRoot();
-    const mod = await loadView(() => import("./sales-new-AWENSRJO.js"), root, basePath);
+    const mod = await loadView(() => import("./sales-new-WATE465S.js"), root, basePath);
     if (!mod) return true;
     const qs = new URLSearchParams(route.split("?")[1] || "");
     const quoteId = qs.get("quote_id");
@@ -4619,6 +4622,7 @@ function _showCheatsheet() {
   d.addEventListener("click", (ev) => {
     if (ev.target.closest?.("[data-dialog-close]")) d.close();
   });
+  trackOverlay(d);
   document.body.appendChild(d);
   d.showModal();
 }
@@ -4660,7 +4664,7 @@ function initKeyboardShortcuts() {
 }
 
 // output/web/js.tmp/implementations/kernel/core_abstractions/version.js
-var APP_VERSION = "v0.4.109 (32921e4e)";
+var APP_VERSION = "v0.4.110 (03a2d5a8)";
 
 // output/web/js.tmp/implementations/ui/bootstrap/app-events.js
 var NEW_FEATURE_BANNER_DAYS = 7;
@@ -4786,80 +4790,85 @@ function initAccessTokenRefresh({ onReconnected = null } = {}) {
 }
 
 // output/web/js.tmp/bootstrap/app-views.js
+var ROUTE_ALIASES = {
+  // The user-administration screens live under /admin, the audit trail under /manager. Reaching
+  // for /admin/audit is the obvious mistake and it silently drew a plausible wrong screen.
+  "/admin/audit": "/manager/audit"
+};
 var VIEWS = {
-  "/dashboard": () => import("./dashboard-CU6Z425P.js"),
-  "/shipments": () => import("./shipments-3O5WQYEY.js"),
+  "/dashboard": () => import("./dashboard-DFXCVO35.js"),
+  "/shipments": () => import("./shipments-TXOJ5BZE.js"),
   "/upload": () => import("./upload-UUP3KK46.js"),
-  "/documents": () => import("./documents-NRLILJ7O.js"),
+  "/documents": () => import("./documents-PF4AD2RW.js"),
   "/finance": () => import("./finance-dashboard-E6O6EGCC.js"),
   "/finance/credit": () => import("./credit-dashboard-DJTNOD4Q.js"),
-  "/finance/demdet": () => import("./demdet-EB2RJXD4.js"),
+  "/finance/demdet": () => import("./demdet-F7QSO6TY.js"),
   // '/shipments/new' — create a shipment, handled by tryParamRoute (app-router-ext.js) because it
   // reads ?sales= and ?quote_id= prefills; the static table here has no query hook.
-  "/sales/me": () => import("./sales-me-6NC4T2RW.js"),
+  "/sales/me": () => import("./sales-me-APODRVZQ.js"),
   "/sales/analytics": () => import("./sales-analytics-ZX6A2YGO.js"),
   "/sales/quote/new": () => import("./sales-quote-new-Z6BE3U3S.js"),
-  "/sales/quote": () => import("./sales-quote-list-SA7E6LXE.js"),
-  "/masters/customers": () => import("./masters-customers-SA5IZHZF.js"),
-  "/masters/carriers": () => import("./masters-carriers-P7NKRLJL.js"),
-  "/masters/services": () => import("./masters-services-V65FFZZA.js"),
+  "/sales/quote": () => import("./sales-quote-list-ESF5USNW.js"),
+  "/masters/customers": () => import("./masters-customers-YD6LSFF3.js"),
+  "/masters/carriers": () => import("./masters-carriers-O5LRHRTW.js"),
+  "/masters/services": () => import("./masters-services-PGER22MW.js"),
   "/help": () => import("./help-4XPTOIUS.js"),
   "/pending-access": () => import("./pending-access-OJ5LJEFG.js"),
   "/background-jobs": () => import("./background-jobs-QUBGBQQL.js"),
   // Manager Workspace — E-14
   "/manager/dashboard": () => import("./dashboard-ZOW7SHEX.js"),
   "/manager/pipeline": () => import("./pipeline-L3M3H6BQ.js"),
-  "/manager/approvals": () => import("./approvals-52XYZUN6.js"),
-  "/manager/reports/pnl": () => import("./pnl-report-NUK7TWEG.js"),
+  "/manager/approvals": () => import("./approvals-EWMJCOCK.js"),
+  "/manager/reports/pnl": () => import("./pnl-report-5D3GFTIJ.js"),
   "/manager/finance/cash-flow": () => import("./cash-flow-UZZXZXOX.js"),
-  "/manager/finance/close-period": () => import("./close-period-RORJQT55.js"),
+  "/manager/finance/close-period": () => import("./close-period-XNDFVTMD.js"),
   "/manager/finance/self-approved-review": () => import("./self-approved-review-FR5SOQF6.js"),
-  "/manager/audit": () => import("./audit-PEXXGNN4.js"),
+  "/manager/audit": () => import("./audit-MDA22Q7P.js"),
   "/manager/notifications": () => import("./notifications-OL3LCTPY.js"),
   // E-14 batch-02
   "/manager/sales": () => import("./sales-7JQI45WX.js"),
-  "/manager/finance/commissions": () => import("./commissions-S4L77MSX.js"),
-  "/manager/commission-rules": () => import("./commission-rules-JU3TCV4W.js"),
-  "/manager/exceptions": () => import("./exceptions-CMMGHVPR.js"),
+  "/manager/finance/commissions": () => import("./commissions-YXLW6526.js"),
+  "/manager/commission-rules": () => import("./commission-rules-WAP5FEUD.js"),
+  "/manager/exceptions": () => import("./exceptions-KIDINOM6.js"),
   // E-15
-  "/manager/errors": () => import("./errors-A4SZ2L36.js"),
+  "/manager/errors": () => import("./errors-JCZ3OFHL.js"),
   "/manager/backup": () => import("./backup-OAUOAZQA.js"),
-  "/manager/users": () => import("./users-PUNDYFL5.js"),
+  "/manager/users": () => import("./users-PMNZXZDD.js"),
   // E-15 F-15-36
-  "/manager/fx-rates": () => import("./fx-rates-PIMNWB4R.js"),
+  "/manager/fx-rates": () => import("./fx-rates-KC27JOCB.js"),
   "/manager/settings": () => import("./settings-GJ22OYFY.js"),
   // E-16 F-16-02
   "/manager/awb": () => import("./awb-LGAIKTIS.js"),
   // E-16 F-16-03
-  "/masters/airports": () => import("./airports-A45SVQQZ.js"),
-  "/masters/flights": () => import("./flights-2VZOE6GH.js"),
-  "/masters/airline-carriers": () => import("./airline-carriers-ESQCHZFD.js"),
+  "/masters/airports": () => import("./airports-RLFA7OIN.js"),
+  "/masters/flights": () => import("./flights-I75XQBWS.js"),
+  "/masters/airline-carriers": () => import("./airline-carriers-RPAXL4UM.js"),
   // E-26 F-26-04
-  "/masters/ocean-carriers": () => import("./ocean-carriers-AULMGZWH.js"),
+  "/masters/ocean-carriers": () => import("./ocean-carriers-YCSAVVMS.js"),
   // E-20 F-28-15
-  "/masters/ocean-tariff": () => import("./ocean-tariff-M5GQSRKF.js"),
+  "/masters/ocean-tariff": () => import("./ocean-tariff-P2PZZ3OH.js"),
   // E-16 F-16-04
-  "/masters/uld-types": () => import("./uld-types-COF2BFGQ.js"),
-  "/manager/manifest": () => import("./manifest-CPGQAZC4.js"),
+  "/masters/uld-types": () => import("./uld-types-D4CDHZZ2.js"),
+  "/manager/manifest": () => import("./manifest-JZ2IL5FV.js"),
   // E-16 F-16-05
-  "/masters/air-rates": () => import("./air-rates-ZSDTUETB.js"),
+  "/masters/air-rates": () => import("./air-rates-45EYQQVH.js"),
   // E-25 / E-26 — sea-freight local charge masters
-  "/masters/units-of-measure": () => import("./units-of-measure-MYXMF6CR.js"),
-  "/masters/local-charges": () => import("./local-charges-5SB6DSO2.js"),
+  "/masters/units-of-measure": () => import("./units-of-measure-J6LO6BXE.js"),
+  "/masters/local-charges": () => import("./local-charges-IF7XOGKN.js"),
   // E-20 F-18-11 — shipment lifecycle-state alias registry, manager-only
-  "/masters/shipment-states": () => import("./shipment-states-5LAJZURL.js"),
+  "/masters/shipment-states": () => import("./shipment-states-GKXUJT45.js"),
   "/quotes/air-calc": () => import("./air-calc-QGDIPS4P.js"),
   // E-16 F-16-09
-  "/manager/air-invoice": () => import("./air-invoice-BFK4X2EL.js"),
+  "/manager/air-invoice": () => import("./air-invoice-GQB6M7XF.js"),
   // E-23 F-23-04
-  "/accounting/ledger": () => import("./ledger-viewer-34DK2PQK.js"),
+  "/accounting/ledger": () => import("./ledger-viewer-WTLDIKL3.js"),
   // E-23 F-23-05
-  "/accounting/reports": () => import("./reports-EUNHFHFE.js"),
+  "/accounting/reports": () => import("./reports-WZYMELY3.js"),
   "/accounting/settings": () => import("./settings-TNYDQ7AS.js"),
   // E-24 F-24-04
-  "/admin/users": () => import("./users-view-Y2SSCWSN.js"),
+  "/admin/users": () => import("./users-view-OCFV6J53.js"),
   // E-24 F-24-06
-  "/admin/users/audit-log": () => import("./user-audit-log-view-Q3QS72JA.js")
+  "/admin/users/audit-log": () => import("./user-audit-log-view-5SRDGN7C.js")
 };
 
 // output/web/js.tmp/implementations/ui/core_abstractions/ports/cache/route-prefetch.js
@@ -5476,29 +5485,23 @@ function composeManager(wasm4) {
     overview: (manifests) => wasm4.manager_manifest_overview({ manifests: manifests || [], now_ms: Date.now(), tz_offset_min: tz() })
   });
   bindLedgerAggregator({
-    trialBalance: (chart, legsByAccount, asOfDate) => wasm4.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
-    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm4.manager_ledger_pnl({
-      chart: chart || [],
-      legs_by_account: legsByAccount || {},
-      date_from: dateFrom || "",
-      date_to: dateTo || ""
-    }),
-    pnlMonthlyBreakdown: (chart, legsByAccount, year) => wasm4.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
-    balanceSheet: (chart, legsByAccount, asOfDate) => wasm4.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || "" }),
-    entryTotals: (legs) => wasm4.manager_ledger_entry_totals({ legs: legs || [] })
+    trialBalance: (asOfDate, refresh = false) => wasm4.manager_ledger_trial_balance({ as_of_date: asOfDate || "", refresh }),
+    pnl: (year, refresh = false) => wasm4.manager_ledger_pnl({ year: Number(year) || 0, refresh }),
+    pnlMonthlyBreakdown: (year, refresh = false) => wasm4.manager_ledger_pnl_monthly({ year: Number(year) || 0, refresh }),
+    balanceSheet: (asOfDate, refresh = false) => wasm4.manager_ledger_balance_sheet({ as_of_date: asOfDate || "", refresh }),
+    entryTotals: (entryId) => wasm4.manager_ledger_entry_totals({ entry_id: entryId || "" })
   });
   bindLedgerComposer({
-    groupChartByType: (accounts) => wasm4.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
-    filterLegs: (legs, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "" } = {}) => wasm4.manager_ledger_filter_legs({
-      legs: legs || [],
+    groupChartByType: () => wasm4.manager_ledger_chart_groups({}),
+    ledgerLegs: (accCode, { dateFrom = "", dateTo = "", minAmount = null, maxAmount = null, search = "", refresh = false } = {}) => wasm4.manager_ledger_legs({
+      acc_code: accCode || "",
       date_from: dateFrom || "",
       date_to: dateTo || "",
       min_amount: minAmount === "" || minAmount == null ? null : Number(minAmount),
       max_amount: maxAmount === "" || maxAmount == null ? null : Number(maxAmount),
-      search: search || ""
-    }).legs,
-    computeRunningBalances: (legs, balanceSide, opening = 0) => wasm4.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || "", opening: Number(opening) || 0 }).legs,
-    buildLedgerCSV: (rows) => wasm4.manager_ledger_csv({ rows: rows || [] }).csv
+      search: search || "",
+      refresh
+    })
   });
   bindLedgerReconciler({
     runAndRecord: (_ledgerRepo, year) => wasm4.manager_ledger_reconcile({ year: Number(year) || (/* @__PURE__ */ new Date()).getFullYear() }),
@@ -6524,11 +6527,23 @@ async function renderView(route) {
   }
   if (await tryParamRoute(route)) return;
   const basePath = route.split("?")[0];
-  const path = VIEWS[basePath] ? basePath : homeRouteForRole(effectiveRole);
+  const alias = ROUTE_ALIASES[basePath];
+  if (alias) {
+    navigate(alias);
+    return;
+  }
+  if (!VIEWS[basePath]) {
+    const root2 = _viewRoot();
+    const mod2 = await loadView(() => import("./not-found-6BCX3MR2.js"), root2, basePath);
+    if (!mod2) return;
+    console.warn(`[router] kh\xF4ng c\xF3 m\xE0n h\xECnh cho ${basePath}`);
+    await mountView(() => mod2.render(root2, basePath), root2, basePath);
+    return;
+  }
   const root = _viewRoot();
-  const mod = await loadView(VIEWS[path], root, path);
+  const mod = await loadView(VIEWS[basePath], root, basePath);
   if (!mod) return;
-  await mountView(() => mod.render(root), root, path);
+  await mountView(() => mod.render(root), root, basePath);
 }
 window.addEventListener("vdg:navigate", (e) => renderView(e.detail.route));
 window.addEventListener("vdg:sync-error", (e) => {

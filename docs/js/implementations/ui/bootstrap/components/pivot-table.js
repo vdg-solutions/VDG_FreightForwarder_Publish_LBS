@@ -4,7 +4,7 @@ import { LitElement, html } from 'https://cdn.jsdelivr.net/npm/lit@3.1.4/+esm';
 import { DIM_OPTIONS } from '../../core_abstractions/ports/manager/pnl-composer.js';
 import { t } from '../../../kernel/core_abstractions/i18n/index.js';
 import { dimLabel } from '../../../kernel/core_abstractions/util/pnl-dim-i18n.js';
-import { marginPct } from '../../core_abstractions/ports/manager/margin-pct.js';
+import { groupRowsForDisplay } from './pivot-row-groups.js';
 
 const DEFAULT_DIMS = ['period', 'sales_rep'];
 
@@ -32,6 +32,9 @@ class VdgPivotTable extends LitElement {
   static properties = {
     rows:           { type: Array   },
     dims:           { type: Array   },
+    // The composer's own totals for exactly `rows` (pnl_pivot.rs / air_pnl.rs). Passed in rather
+    // than re-derived so the total row and the body can never describe two different sets.
+    grandTotals:    { type: Object  },
     showComparison: { type: Boolean },
     // sync_health.rs's own verdict for this pivot's source kinds (shipment/pnl_line) — an empty
     // `rows` array must render this, never `pivot.no_data`, when the load itself failed.
@@ -51,6 +54,7 @@ class VdgPivotTable extends LitElement {
     super();
     this.rows           = [];
     this.dims           = DEFAULT_DIMS;
+    this.grandTotals    = {};
     this.showComparison = false;
     this.loadFailed     = false;
     this.skippedCount   = 0;
@@ -84,14 +88,7 @@ class VdgPivotTable extends LitElement {
   }
 
   _grouped() {
-    const groups = new Map();
-    for (const row of this.rows) {
-      const k0 = row.dims[this._dim0] || '—';
-      const k1 = row.dims[this._dim1] || '—';
-      if (!groups.has(k0)) groups.set(k0, new Map());
-      groups.get(k0).set(k1, row);
-    }
-    return groups;
+    return groupRowsForDisplay(this.rows, this._dim0, this._dim1);
   }
 
   _renderDimSelectors() {
@@ -137,16 +134,16 @@ class VdgPivotTable extends LitElement {
 
   _renderGroupRows(groups) {
     const trs = [];
-    for (const [g0, subMap] of groups) {
+    for (const [g0, entries] of groups) {
       let first = true;
-      for (const [g1, row] of subMap) {
+      for (const { label: g1, row } of entries) {
         const marginCls     = row.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
         const shipmentCount = row.shipment_count;
         trs.push(html`
           <tr class="border-t border-slate-100 hover:bg-blue-50 transition text-xs">
             ${first ? html`
               <td class="px-3 py-2 font-semibold text-slate-800 sticky left-0 bg-white"
-                  rowspan="${subMap.size}">${g0}</td>` : ''}
+                  rowspan="${entries.length}">${g0}</td>` : ''}
             <td class="px-3 py-2 text-slate-600">${g1}</td>
             <td class="px-3 py-2 text-right font-mono cursor-pointer"
                 @click="${() => this._cellClick(row, 'revenue_vnd')}">${fmtVnd(row.revenue_vnd)}</td>
@@ -170,20 +167,14 @@ class VdgPivotTable extends LitElement {
     return trs;
   }
 
+  // The totals are wasm's own (pnl_pivot.rs sums them over the SAME `rows` it returns), not a
+  // second addition performed here. Re-summing in JS was a mirror of Rust logic, and while the
+  // grouping above was silently dropping rows it was the only reason the two could disagree at
+  // all: this row counted every row, the table drew a subset. One producer, one set.
   _renderGrandTotal() {
     if (!this.rows.length) return html``;
-    const totals = this.rows.reduce(
-      (acc, r) => {
-        acc.revenue_vnd    += r.revenue_vnd;
-        acc.cost_vnd       += r.cost_vnd;
-        acc.margin_vnd     += r.margin_vnd;
-        acc.shipment_count += r.shipment_count;
-        return acc;
-      },
-      { revenue_vnd: 0, cost_vnd: 0, margin_vnd: 0, shipment_count: 0 },
-    );
-    // The convention lives in wasm (manager_rules::margin_pct); this row used to restate it.
-    const pct           = marginPct(totals.margin_vnd, totals.revenue_vnd);
+    const totals        = this.grandTotals || {};
+    const pct           = totals.margin_pct ?? 0;
     const cls           = totals.margin_vnd >= 0 ? 'text-emerald-600' : 'text-red-500';
     const shipmentTotal = totals.shipment_count;
     return html`

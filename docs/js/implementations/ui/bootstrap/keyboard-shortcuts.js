@@ -1,6 +1,7 @@
 // Global keyboard shortcuts — F-14-13 · mounted by app.js
 
 import { navigate } from './router.js';
+import { trackOverlay } from './helpers/mount-overlay.js';
 
 const CHORD_TIMEOUT_MS = 800;
 const CHORD_MAP        = {
@@ -48,6 +49,9 @@ function _showCheatsheet() {
     </div>`;
   // CSP's script-src-attr blocks an inline onclick on the deployed build (ADO #124).
   d.addEventListener('click', (ev) => { if (ev.target.closest?.('[data-dialog-close]')) d.close(); });
+  // Never removed on close by design (the `existing` branch above re-toggles it), so without a
+  // route hook an open cheatsheet held `inert` over every screen the user navigated to next.
+  trackOverlay(d);
   document.body.appendChild(d);
   d.showModal();
 }

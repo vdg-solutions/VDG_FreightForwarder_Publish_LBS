@@ -1,15 +1,17 @@
 // ledger-viewer-unbalanced.js — F-19-75: reconciliation unbalanced-entry list + drill-through.
 // Extracted from ledger-viewer.js for the 350-line cap (mirrors ledger-unbalanced-modal.js /
 // ledger-repost-panel.js). Synchronous render straight off unbalanced_ids — no per-id leg
-// pre-fetch. The cross-account listAllLegsInEntry scan (O(accounts) file reads per id) is
-// bounded and deferred to the button click handler, off the render path entirely (AC-06).
+// pre-fetch. The cross-account entry scan (O(accounts) file reads per id) is bounded and deferred
+// to the button click handler, off the render path entirely (AC-06); it now happens behind the
+// wasm boundary, which also totals what it read.
 
 import { safeMasterLoad } from '../../../../kernel/core_abstractions/util/master-load.js';
+import { entryTotals } from '../../../core_abstractions/ports/manager/ledger-aggregator.js';
 import { jumpToUnbalancedEntry } from './ledger-unbalanced-modal.js';
 
 const ENTRY_LEGS_TAG = 'ledger:entry-legs';
 
-export function renderUnbalancedList(root, repo, ids) {
+export function renderUnbalancedList(root, ids) {
   const list = root.querySelector('#reconcile-unbalanced-list');
   if (!list) return;
   if (!ids.length) { list.innerHTML = ''; return; }
@@ -27,9 +29,9 @@ export function renderUnbalancedList(root, repo, ids) {
   list.querySelectorAll('[data-unbalanced-entry]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const entryId = btn.dataset.unbalancedEntry;
-      if (!repo) return;
-      const res = await safeMasterLoad(() => repo.listAllLegsInEntry(entryId), ENTRY_LEGS_TAG);
-      if (res.ok) jumpToUnbalancedEntry(entryId, res.value);
+      // The entry names itself; wasm scans the year's account files for its legs and totals them.
+      const res = await safeMasterLoad(() => entryTotals(entryId), ENTRY_LEGS_TAG);
+      if (res.ok && res.value.ok) jumpToUnbalancedEntry(entryId, res.value);
     });
   });
 }

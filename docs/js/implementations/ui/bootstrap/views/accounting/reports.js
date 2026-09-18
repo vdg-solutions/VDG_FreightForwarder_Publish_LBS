@@ -1,9 +1,15 @@
 // Financial Reports — Trial Balance + P&L + Balance Sheet (F-23-05)
 // 3-tab accountant view: same data-tab pattern as manager/cash-flow.js.
+//
+// The view holds NO books. It used to fetch the chart into `_chart` and every account's legs into
+// `_legsByYear`, then hand the same rows into all four statements — so each statement was about
+// this file's copy of the ledger. It now names a bound or a year; `refresh: true` on mount is the
+// only read, and the account names travel on the rows.
 
 import { t, fmtNumber, currentLocale } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountDateHints } from '../../util/date-input-hint.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
+import { renderMasterLoadRetryStatus } from '../../../../kernel/core_abstractions/util/master-load.js';
 import {
   trialBalance, pnl, pnlMonthlyBreakdown, balanceSheet,
 } from '../../../core_abstractions/ports/manager/ledger-aggregator.js';
@@ -20,32 +26,30 @@ const TABS    = [
 function today() { return todayLocal(); }
 
 let _tab              = TAB_TB;
-let _chart             = [];
-let _legsByYear        = new Map(); // year -> { [acc_code]: Leg[] }
-let _asOfDateTB        = today();
-let _asOfDateBS        = today();
-let _pnlYear           = new Date().getFullYear();
-let _comparePrevMonth  = false;
-
-function getLedgerRepo() { return window.__vdg_ledger_repo; }
-
-/// Fetch every chart account's legs for `year` in one shot, cached per year.
-async function loadYearLegs(year) {
-  if (_legsByYear.has(year)) return _legsByYear.get(year);
-  const repo = getLedgerRepo();
-  if (!repo) return {};
-  const entries = await Promise.all(
-    _chart.map(async (a) => [a.code, await repo.listLegs(year, a.code, null, null)]),
-  );
-  const legsByAccount = Object.fromEntries(entries);
-  _legsByYear.set(year, legsByAccount);
-  return legsByAccount;
-}
+let _asOfDateTB       = today();
+let _asOfDateBS       = today();
+let _pnlYear          = new Date().getFullYear();
+let _comparePrevMonth = false;
+/// The mount's read. Every tab switch and date change after it rides the same snapshot.
+let _refresh          = true;
 
 function fmtAmt(n) { return fmtNumber(n ?? 0); }
 
-// AC-04: chart-of-accounts carries name_en/name_vi at parity — pick the field for the active locale.
-function accountName(a) { return (currentLocale() === 'en' ? a?.name_en : a?.name_vi) ?? ''; }
+// AC-04: every reply row carries name_en/name_vi at parity — picking the locale is the drawing.
+function accountName(row) { return (currentLocale() === 'en' ? row?.name_en : row?.name_vi) ?? ''; }
+
+/// An unreadable journal is not an empty one: say so, with a retry that re-runs this tab.
+function renderUnreadable(container, reply, retry) {
+  container.innerHTML = '';
+  renderMasterLoadRetryStatus(container, reply.error || t('masters.load_error'), t('retry'), retry);
+}
+
+/// One read per mount: the first statement drawn pays for it, the rest ride it.
+function takeRefresh() {
+  const refresh = _refresh;
+  _refresh = false;
+  return refresh;
+}
 
 function tabButtons() {
   return TABS.map(({ key, labelKey }) => `
@@ -79,22 +83,19 @@ function integrityBadge(ok, okKey, mismatchKey) {
 // ── Trial Balance tab ──────────────────────────────────────────────────────────
 
 async function renderTrialBalance(container) {
-  const year = Number(_asOfDateTB.slice(0, 4));
-  const legsByAccount = await loadYearLegs(year);
-  const { rows, total_dr: totalDr, total_cr: totalCr, balanced } = trialBalance(_chart, legsByAccount, _asOfDateTB);
+  const reply = await trialBalance(_asOfDateTB, takeRefresh());
+  if (!reply.ok) { renderUnreadable(container, reply, () => renderTrialBalance(container)); return; }
+  const { rows, total_dr: totalDr, total_cr: totalCr, balanced } = reply;
 
-  const trs = rows.map((r) => {
-    const account = _chart.find((a) => a.code === r.acc_code);
-    return `
+  const trs = rows.map((r) => `
       <tr class="border-t border-slate-100 text-xs">
         <td class="px-3 py-1.5 font-mono">${r.acc_code}</td>
-        <td class="px-3 py-1.5">${accountName(account)}</td>
+        <td class="px-3 py-1.5">${accountName(r)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.opening)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.dr)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.cr)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.closing)}</td>
-      </tr>`;
-  }).join('');
+      </tr>`).join('');
 
   container.innerHTML = `
     <div class="print-doc print-root" data-report-title="${t('reports.tab.trial_balance')}" data-print-date="${today()}">
@@ -148,9 +149,10 @@ function monthRow(m, prevM) {
 }
 
 async function renderPnl(container) {
-  const legsByAccount = await loadYearLegs(_pnlYear);
-  const months = pnlMonthlyBreakdown(_chart, legsByAccount, _pnlYear);
-  const yearTotal = pnl(_chart, legsByAccount, `${_pnlYear}-01-01`, `${_pnlYear}-12-31`);
+  const monthly = await pnlMonthlyBreakdown(_pnlYear, takeRefresh());
+  if (!monthly.ok) { renderUnreadable(container, monthly, () => renderPnl(container)); return; }
+  const months = monthly.months;
+  const yearTotal = await pnl(_pnlYear, false);
 
   const trs = months.map((m, i) => monthRow(m, i > 0 ? months[i - 1] : null)).join('');
 
@@ -201,22 +203,19 @@ async function renderPnl(container) {
 // ── Balance Sheet tab ──────────────────────────────────────────────────────────
 
 async function renderBalanceSheet(container) {
-  const year = Number(_asOfDateBS.slice(0, 4));
-  const legsByAccount = await loadYearLegs(year);
+  const reply = await balanceSheet(_asOfDateBS, takeRefresh());
+  if (!reply.ok) { renderUnreadable(container, reply, () => renderBalanceSheet(container)); return; }
   const {
     assets, liabilities, equity,
     total_assets: totalAssets, total_liabilities: totalLiab, total_liab_equity: totalLiabEquity, balanced,
-  } = balanceSheet(_chart, legsByAccount, _asOfDateBS);
+  } = reply;
 
-  const rowsFor = (list) => list.map((r) => {
-    const account = _chart.find((a) => a.code === r.acc);
-    return `
+  const rowsFor = (list) => list.map((r) => `
       <tr class="border-t border-slate-100 text-xs">
         <td class="px-3 py-1.5 font-mono">${r.acc}</td>
-        <td class="px-3 py-1.5">${accountName(account)}</td>
+        <td class="px-3 py-1.5">${accountName(r)}</td>
         <td class="px-3 py-1.5 text-right font-mono">${fmtAmt(r.amt)}</td>
-      </tr>`;
-  }).join('');
+      </tr>`).join('');
 
   container.innerHTML = `
     <div class="print-doc print-root" data-report-title="${t('reports.tab.balance_sheet')}" data-print-date="${today()}">
@@ -273,9 +272,7 @@ async function renderActiveTab(root) {
 
 export async function render(root) {
   // F-24-09: route-guard (F-24-05) is the authoritative gate for /accounting/*, not this view.
-  const repo = getLedgerRepo();
-  _chart          = repo ? await repo.chartOfAccounts() : [];
-  _legsByYear     = new Map();
+  _refresh        = true;
   _tab            = TAB_TB;
   _asOfDateTB     = today();
   _asOfDateBS     = today();

@@ -26,6 +26,7 @@ import { usersErrorMessage } from './users-error-message.js';
 // fail. Decision comes from the same Rust action policy every other screen's can() reaches
 // (action_policy.rs via governance_action_guard), never a role-name string compared here.
 import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
+import { bindEmptyStateActions } from '../../components/empty-state.js';
 
 const TOAST_MS = 4_000;
 const DEFAULT_ACTIVE_FILTER = '';
@@ -64,7 +65,9 @@ async function _applyAndRender(root, refresh = false) {
     toast('error', reply.error);
   }
   const rows = reply.ok ? reply.users : [];
-  renderUsersTable(wrap, rows);
+  // The reply's own ok/total ride through: an unreadable table and a filter that matched nothing
+  // are different answers, and the empty branch is the only place that can still tell them apart.
+  renderUsersTable(wrap, rows, reply);
   bindRowActions(wrap, rows, {
     onEdit:       (user) => openEditUserModal(user, { onSaved: () => _reload(root) }),
     onDeactivate: (user) => _onDeactivate(root, user),
@@ -118,11 +121,26 @@ function bindFilterBar(root) {
   });
 }
 
+/// The empty-state card carries real buttons (clear filter / retry). Unbound they would be
+/// placebos — an affordance that admits it changes nothing is worse than no affordance.
+function bindEmptyState(root) {
+  bindEmptyStateActions(root, {
+    onClearFilter: () => {
+      _filter = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
+      root.querySelector('#usr-filter-bar').innerHTML = filterBarHtml(_filter);
+      bindFilterBar(root);
+      _applyAndRender(root);
+    },
+    onRetry: () => _reload(root),
+  });
+}
+
 export async function render(root) {
   _filter = { search: '', role: '', activeFilter: DEFAULT_ACTIVE_FILTER };
   root.innerHTML = shellHtml();
   root.querySelector('#usr-filter-bar').innerHTML = filterBarHtml(_filter);
   bindFilterBar(root);
+  bindEmptyState(root);
   // Buttons render only when can() admits the action (shellHtml above) — optional chaining here
   // is what a hidden button (no element to bind) needs, not a second permission decision.
   root.querySelector('#btn-add-user')?.addEventListener('click', () => {

@@ -11,8 +11,10 @@ import { ROLE_VALUES, ROLE_LABEL_KEYS } from '../../../core_abstractions/ports/m
 // The server (default_policy.cedar) is the authority; this is only the affordance, so a session
 // caught between a stale cache and a real 403 still fails safe there, not here.
 import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
+import { emptyStateRowHtml, emptyStateVariant } from '../../components/empty-state.js';
 
 const SKELETON_ROWS = 4;
+const USERS_COLUMN_COUNT = 5;
 const STATUS_FILTER_ACTIVE = 'active';
 const STATUS_FILTER_INACTIVE = 'inactive';
 
@@ -65,13 +67,33 @@ export function renderUsersSkeleton(container) {
     </div>`;
 }
 
-export function renderUsersTable(container, users) {
-  if (!users.length) {
-    container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 border border-slate-200 rounded-lg">—</div>`;
-    return;
-  }
+/// `reply` is the composer's own { ok, total } — an unreadable table and a filter that matched
+/// nothing are different answers and must not draw the same card. The header row is rendered
+/// either way: a table that loses its <thead> reads as a screen that broke.
+export function renderUsersTable(container, users, reply = { ok: true, total: 0 }) {
+  const rows = users.length ? userRowsHtml(users) : emptyStateRowHtml({
+    colspan: USERS_COLUMN_COUNT,
+    variant: emptyStateVariant(reply),
+    entity:  t('admin.users.empty.entity'),
+  });
 
-  const rows = users.map((u) => `
+  container.innerHTML = `
+    <table class="w-full border border-slate-200 rounded-lg overflow-hidden">
+      <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase">
+        <tr>
+          <th class="px-3 py-2 text-left">${t('admin.users.column.email')}</th>
+          <th class="px-3 py-2 text-left">${t('admin.users.column.display_name')}</th>
+          <th class="px-3 py-2 text-left">${t('admin.users.column.role')}</th>
+          <th class="px-3 py-2 text-left">${t('admin.users.column.active')}</th>
+          <th class="px-3 py-2 text-left">${t('admin.users.column.actions')}</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function userRowsHtml(users) {
+  return users.map((u) => `
     <tr class="border-t border-slate-100 text-xs ${u.active ? '' : 'opacity-60'}" data-user-email="${u.email}">
       <td class="px-3 py-2">${u.email}</td>
       <td class="px-3 py-2">${u.display_name || ''}</td>
@@ -88,20 +110,6 @@ export function renderUsersTable(container, users) {
         </div>
       </td>
     </tr>`).join('');
-
-  container.innerHTML = `
-    <table class="w-full border border-slate-200 rounded-lg overflow-hidden">
-      <thead class="bg-slate-50 text-[11px] text-slate-500 uppercase">
-        <tr>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.email')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.display_name')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.role')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.active')}</th>
-          <th class="px-3 py-2 text-left">${t('admin.users.column.actions')}</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
 }
 
 /// Delegated click handling — handlers = { onEdit(user), onDeactivate(user), onReactivate(user) }.

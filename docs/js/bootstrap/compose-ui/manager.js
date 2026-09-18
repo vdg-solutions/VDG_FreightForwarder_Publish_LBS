@@ -209,31 +209,29 @@ export function composeManager(wasm) {
       wasm.manager_manifest_overview({ manifests: manifests || [], now_ms: Date.now(), tz_offset_min: tz() }),
   });
 
+  // The books never travel in. The screen names a bound, a year, an account or an entry, and wasm
+  // reads the journal; `refresh: true` is the screen saying its copy is stale (mount, or after a
+  // write), so a tab switch or a keystroke costs no read.
   bindLedgerAggregator({
-    trialBalance: (chart, legsByAccount, asOfDate) =>
-      wasm.manager_ledger_trial_balance({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || '' }),
-    pnl: (chart, legsByAccount, dateFrom, dateTo) => wasm.manager_ledger_pnl({
-      chart: chart || [], legs_by_account: legsByAccount || {}, date_from: dateFrom || '', date_to: dateTo || '',
-    }),
-    pnlMonthlyBreakdown: (chart, legsByAccount, year) =>
-      wasm.manager_ledger_pnl_monthly({ chart: chart || [], legs_by_account: legsByAccount || {}, year: Number(year) || 0 }).months,
-    balanceSheet: (chart, legsByAccount, asOfDate) =>
-      wasm.manager_ledger_balance_sheet({ chart: chart || [], legs_by_account: legsByAccount || {}, as_of_date: asOfDate || '' }),
-    entryTotals: (legs) => wasm.manager_ledger_entry_totals({ legs: legs || [] }),
+    trialBalance: (asOfDate, refresh = false) =>
+      wasm.manager_ledger_trial_balance({ as_of_date: asOfDate || '', refresh }),
+    pnl: (year, refresh = false) => wasm.manager_ledger_pnl({ year: Number(year) || 0, refresh }),
+    pnlMonthlyBreakdown: (year, refresh = false) =>
+      wasm.manager_ledger_pnl_monthly({ year: Number(year) || 0, refresh }),
+    balanceSheet: (asOfDate, refresh = false) =>
+      wasm.manager_ledger_balance_sheet({ as_of_date: asOfDate || '', refresh }),
+    entryTotals: (entryId) => wasm.manager_ledger_entry_totals({ entry_id: entryId || '' }),
   });
 
   bindLedgerComposer({
-    groupChartByType: (accounts) => wasm.manager_ledger_chart_groups({ accounts: accounts || [] }).groups,
-    filterLegs: (legs, { dateFrom = '', dateTo = '', minAmount = null, maxAmount = null, search = '' } = {}) =>
-      wasm.manager_ledger_filter_legs({
-        legs: legs || [], date_from: dateFrom || '', date_to: dateTo || '',
+    groupChartByType: () => wasm.manager_ledger_chart_groups({}),
+    ledgerLegs: (accCode, { dateFrom = '', dateTo = '', minAmount = null, maxAmount = null, search = '', refresh = false } = {}) =>
+      wasm.manager_ledger_legs({
+        acc_code: accCode || '', date_from: dateFrom || '', date_to: dateTo || '',
         min_amount: minAmount === '' || minAmount == null ? null : Number(minAmount),
         max_amount: maxAmount === '' || maxAmount == null ? null : Number(maxAmount),
-        search: search || '',
-      }).legs,
-    computeRunningBalances: (legs, balanceSide, opening = 0) =>
-      wasm.manager_ledger_running_balances({ legs: legs || [], balance_side: balanceSide || '', opening: Number(opening) || 0 }).legs,
-    buildLedgerCSV: (rows) => wasm.manager_ledger_csv({ rows: rows || [] }).csv,
+        search: search || '', refresh,
+      }),
   });
 
   bindLedgerReconciler({

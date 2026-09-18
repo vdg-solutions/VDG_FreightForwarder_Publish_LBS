@@ -6,6 +6,7 @@
 
 import { t, currentLocale, fmtNumber } from '../../../kernel/core_abstractions/i18n/index.js';
 import { navigate } from '../router.js';
+import { trackOverlay } from '../helpers/mount-overlay.js';
 
 // reason_code (Rust-minted, vdg_freight::outbox::attention::REASON_CODE_* and
 // attention_intent_rules::CODE_*) -> i18n key. Computed lookup, not a literal t() call — mirrors
@@ -220,8 +221,11 @@ export async function openSyncAttentionModal() {
     const button = ev.target.closest?.(`[${ACTION_ATTR}]`);
     if (button) onAction(dlg, button, items);
   });
+  // showModal() holds `inert` over the whole document — a route change while it is open must end
+  // it, or the new screen renders behind a modal nothing can dismiss (mount-overlay.js).
+  const untrack = trackOverlay(dlg);
   document.body.appendChild(dlg);
-  dlg.addEventListener('close', () => dlg.remove());
+  dlg.addEventListener('close', () => { untrack(); dlg.remove(); });
   dlg.showModal();
 }
 

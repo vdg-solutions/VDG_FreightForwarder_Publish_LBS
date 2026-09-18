@@ -90,7 +90,7 @@ class VdgDetailPanel extends LitElement {
     this.transitioning = false; this.timeline = null;
     this.commissionEl = null;
     this.wasmReady = typeof window.__vdg_wasm?.flows_apply_event === 'function';
-    this.removeAttribute('hidden');
+    this._setHidden(false);
     requestAnimationFrame(() => {
       this.classList.remove('translate-x-full');
       this.classList.add('translate-x-0');
@@ -106,9 +106,19 @@ class VdgDetailPanel extends LitElement {
     this.classList.add('translate-x-full');
     this._removeEscListener();
     setTimeout(() => {
-      this.setAttribute('hidden', '');
+      this._setHidden(true);
       this.dispatchEvent(new CustomEvent('vdg:panel-closed', { bubbles: true, composed: true, detail: {} }));
     }, SLIDE_DURATION_MS);
+  }
+
+  // The `hidden` ATTRIBUTE loses to a Tailwind display utility on the same element — equal
+  // specificity, `.flex` emitted later — so setting it alone left the closed drawer laid out,
+  // merely translated past the right edge: its close button sat at x=1918 in a 1476px viewport,
+  // unclickable, with the Esc handler already torn off. The display class goes with the attribute.
+  _setHidden(on) {
+    this.classList.toggle('flex', !on);
+    if (on) this.setAttribute('hidden', '');
+    else    this.removeAttribute('hidden');
   }
 
   _removeEscListener() {

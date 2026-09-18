@@ -1,5 +1,14 @@
 // Route → lazy view module map
 
+/// Routes that moved, or that a reader can reasonably guess wrong. They REDIRECT — the address
+/// bar must end up naming the screen actually shown, which is the whole complaint behind
+/// `#/admin/audit`: it rendered the dashboard and left its own URL standing.
+export const ROUTE_ALIASES = {
+  // The user-administration screens live under /admin, the audit trail under /manager. Reaching
+  // for /admin/audit is the obvious mistake and it silently drew a plausible wrong screen.
+  '/admin/audit': '/manager/audit',
+};
+
 export const VIEWS = {
   '/dashboard':       () => import('../implementations/ui/bootstrap/views/dashboard.js'),
   '/shipments':       () => import('../implementations/ui/bootstrap/views/shipments.js'),

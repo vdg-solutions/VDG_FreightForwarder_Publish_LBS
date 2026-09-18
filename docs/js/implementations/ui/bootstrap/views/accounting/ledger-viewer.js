@@ -1,11 +1,14 @@
 // Accountant Ledger Viewer — F-23-04
 // Browse chart of accounts -> per-account legs, filter, running balance, CSV export.
+//
+// The view holds NO rows. It used to fetch the chart into `_accounts` and the account's legs into
+// `_rawLegs`, then hand the same rows back to be filtered, balanced and exported — three crossings
+// of rows it had just read out. It now names the account and the filter bar; the legs, the side
+// they accumulate on, the opening balance, the order and the export file are one answer.
 
 import { t, currentLocale }  from '../../../../kernel/core_abstractions/i18n/index.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
-import {
-  groupChartByType, filterLegs, computeRunningBalances, buildLedgerCSV,
-} from '../../../core_abstractions/ports/manager/ledger-composer.js';
+import { groupChartByType, ledgerLegs } from '../../../core_abstractions/ports/manager/ledger-composer.js';
 import { renderReconcileStatus, runReconciliationNow } from './ledger-reconcile-control.js';
 import { loadOpeningBalance, openingRowHtml } from './ledger-opening-balance.js';
 import { can } from '../../../core_abstractions/ports/governance/action-guard.js';
@@ -28,6 +31,7 @@ const LEGS_TAG       = 'ledger:legs';
 const BALANCE_TAG    = 'ledger:balance';
 const REPOST_TAG     = 'ledger:repost-panel';
 const OPENING_TAG    = 'ledger:opening-balance';
+const ACCOUNT_BUTTON_CLASS = 'w-full text-left px-2 py-1.5 text-xs rounded hover:bg-slate-100';
 // F-19-75: below RENDER_MOUNT_TIMEOUT_MS (8000ms) so a stalled initial load's inline retry
 // paints before mount-view.js's outer mount-timeout fallback can fire.
 const VIEW_DATA_LOAD_BUDGET_MS = 6_000;
@@ -43,26 +47,18 @@ function defaultFilter() {
   };
 }
 
-let _accounts        = [];
-let _selectedAccount = null;
-let _rawLegs          = [];
-let _filter           = defaultFilter();
+let _selectedCode    = null;
+let _filter          = defaultFilter();
 let _lastReconciliation = null; // F-23-06: latest reconciliation-log.jsonl record, or null
 let _selectedEntryId = null, _selectedLeg = null; // F-19-78: selected posted entry_id + its leg
 let _opening = null; // F-42-02: số dư đầu kỳ of the filter window, for the selected account
+let _csv = '';       // the export of exactly the rows on screen, built with them
 
 function accountName(account) {
   return currentLocale() === 'vi' ? account.name_vi : account.name_en;
 }
 
 function fmtAmount(n) { return n ? Number(n).toLocaleString('vi-VN') : '—'; }
-
-function displayedRows() {
-  if (!_selectedAccount) return [];
-  const filtered = filterLegs(_rawLegs, _filter);
-  return computeRunningBalances(filtered, _selectedAccount.balance_side, _opening?.live ?? 0)
-    .slice().reverse();
-}
 
 function shellHtml() {
   return `
@@ -112,32 +108,35 @@ function shellHtml() {
     </div>`;
 }
 
-function renderChartTree(root) {
+function renderChartTree(root, groups) {
   const tree = root.querySelector('#chart-tree');
-  const groups = groupChartByType(_accounts);
   tree.innerHTML = groups.map((g) => `
     <div class="mb-3" data-acct-group="${g.type}">
       <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 px-2 pb-1">
         ${t(TYPE_LABEL_KEYS[g.type])}
       </div>
       ${g.accounts.map((a) => `
-        <button data-acct-code="${a.code}"
-          class="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-slate-100 ${_selectedAccount?.code === a.code ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}">
+        <button data-acct-code="${a.code}" class="${ACCOUNT_BUTTON_CLASS} text-slate-700">
           ${a.code} — ${accountName(a)}
         </button>`).join('')}
     </div>`).join('');
 
   tree.querySelectorAll('[data-acct-code]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const account = _accounts.find((a) => a.code === btn.dataset.acctCode);
-      if (account) selectAccount(root, account);
-    });
+    btn.addEventListener('click', () => selectAccount(root, btn.dataset.acctCode));
   });
 }
 
-function renderLegsTable(root) {
+/// Which account is current is a drawing decision, so it repaints the buttons rather than the tree
+/// — re-rendering would mean holding the chart rows to re-render FROM.
+function highlightAccount(root) {
+  root.querySelectorAll('[data-acct-code]').forEach((btn) => {
+    const active = btn.dataset.acctCode === _selectedCode;
+    btn.className = `${ACCOUNT_BUTTON_CLASS} ${active ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`;
+  });
+}
+
+function renderLegsTable(root, rows) {
   const panel = root.querySelector('#legs-panel');
-  const rows  = displayedRows();
 
   // F-42-02: a window with no movement still has an opening balance, and "no legs" must not
   // read as "nothing here" when the account carries a balance into the period.
@@ -191,7 +190,7 @@ function renderLegsTable(root) {
 
   // AC-07: row click selects the posted entry the Reverse control targets.
   bindLegRowInteractions(panel, rows, {
-    onSelectRow: (entryId, leg) => { _selectedEntryId = entryId; _selectedLeg = leg; renderLegsTable(root); },
+    onSelectRow: (entryId, leg) => { _selectedEntryId = entryId; _selectedLeg = leg; renderLegsTable(root, rows); },
   });
 
   updateReverseControl(root);
@@ -203,53 +202,61 @@ function updateReverseControl(root) {
     actorId:         currentUserEmail(), ledgerRepo: getLedgerRepo(),
     onDone: () => {
       _selectedEntryId = null; _selectedLeg = null;
-      if (_selectedAccount) selectAccount(root, _selectedAccount);
+      if (_selectedCode) selectAccount(root, _selectedCode);
     },
   });
 }
 
-async function refreshBalanceBanner(repo, account) {
+async function refreshBalanceBanner(repo, accCode) {
   const banner = document.getElementById('closing-balance-banner');
   if (!banner) return;
   if (!repo) { banner.textContent = ''; return; }
-  const balRes = await safeMasterLoad(() => repo.getBalance(account.code, _filter.dateTo), BALANCE_TAG);
+  const balRes = await safeMasterLoad(() => repo.getBalance(accCode, _filter.dateTo), BALANCE_TAG);
   banner.textContent = balRes.ok ? `${t('ledger.closing_balance')}: ${fmtAmount(balRes.value.balance)}` : '';
 }
 
-// F-19-75 AC-06: single account-year file is one bounded Drive read; a stall paints an
-// inline retry in #legs-panel that re-runs this same call, instead of hanging the render.
-async function selectAccount(root, account) {
-  _selectedAccount = account;
+// F-19-75 AC-06: single account-year file is one bounded read; a stall paints an inline retry in
+// #legs-panel that re-runs this same call, instead of hanging the render.
+async function selectAccount(root, accCode) {
+  _selectedCode = accCode;
   _selectedEntryId = null; _selectedLeg = null; // F-19-78: prior selection belonged to the previous account
-  renderChartTree(root);
-  const repo  = getLedgerRepo();
-  const panel = root.querySelector('#legs-panel');
-  if (!repo) { _rawLegs = []; renderLegsTable(root); return; }
+  highlightAccount(root);
+  await loadLegs(root, true);
+  await refreshBalanceBanner(getLedgerRepo(), accCode);
+}
 
-  const year = Number(_filter.dateFrom.slice(0, 4));
-  const legsRes = await safeMasterLoad(
-    () => repo.listLegs(year, account.code, _filter.dateFrom, _filter.dateTo), LEGS_TAG,
+/// `refresh` says the account or the window changed; a filter keystroke re-asks the snapshot wasm
+/// already holds and costs no read.
+async function loadLegs(root, refresh) {
+  if (!_selectedCode) return;
+  const panel = root.querySelector('#legs-panel');
+  const res = await safeMasterLoad(
+    () => ledgerLegs(_selectedCode, { ..._filter, refresh }), LEGS_TAG, VIEW_DATA_LOAD_BUDGET_MS,
   );
-  if (!legsRes.ok) {
-    renderMasterLoadRetryStatus(panel, t('masters.load_error'), t('retry'), () => selectAccount(root, account));
+  if (!res.ok || !res.value.ok) {
+    const message = res.ok ? res.value.error : null;
+    renderMasterLoadRetryStatus(panel, message || t('masters.load_error'), t('retry'), () => loadLegs(root, true));
     return;
   }
-  _rawLegs = legsRes.value;
-  // F-42-02: the window's opening balance — seeds the running column and heads the table.
-  const openRes = await safeMasterLoad(
-    () => loadOpeningBalance(repo, window.__vdg_repo, account.code, _filter.dateFrom), OPENING_TAG,
-  );
-  _opening = openRes.ok ? openRes.value : null;
-  await refreshBalanceBanner(repo, account);
-  renderLegsTable(root);
+  _csv = res.value.csv;
+  // F-42-02: the window's opening balance seeds the running column and heads the table; only the
+  // signed-off figure beside it needs a second read, and only when the window moves.
+  if (refresh) {
+    const openRes = await safeMasterLoad(
+      () => loadOpeningBalance(window.__vdg_repo, _selectedCode, _filter.dateFrom, res.value.opening), OPENING_TAG,
+    );
+    _opening = openRes.ok ? openRes.value : null;
+  }
+  renderLegsTable(root, res.value.legs);
 }
 
 function bindFilterInputs(root) {
-  const bind = (id, key, onDateChange) => {
+  const bind = (id, key, movesTheWindow) => {
     root.querySelector(`#${id}`)?.addEventListener('input', async (e) => {
       _filter[key] = e.target.value;
-      if (onDateChange && _selectedAccount) await selectAccount(root, _selectedAccount);
-      else renderLegsTable(root);
+      await loadLegs(root, movesTheWindow);
+      // The closing banner is bounded by dateTo, so it only moves when the window does.
+      if (movesTheWindow && _selectedCode) await refreshBalanceBanner(getLedgerRepo(), _selectedCode);
     });
   };
   bind('f-date-from',  'dateFrom',  true);
@@ -260,46 +267,44 @@ function bindFilterInputs(root) {
 }
 
 function exportCsv() {
-  if (!_selectedAccount) return;
-  const csv  = buildLedgerCSV(displayedRows());
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  if (!_selectedCode) return;
+  const blob = new Blob([_csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `vdg-ledger-${_selectedAccount.code}-${todayLocal()}.csv`;
+  a.download = `vdg-ledger-${_selectedCode}-${todayLocal()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 }
 
 // F-19-75: paint-shell-first + bounded initial load, mirrors masters-customers.js/air-rates.js.
 async function loadInitial(root, repo) {
-  if (!repo) { _accounts = []; _lastReconciliation = null; renderChartTree(root); return; }
   if (isViewSuperseded(root)) return;
 
   const [chartRes, reconRes] = await Promise.all([
-    safeMasterLoad(() => repo.chartOfAccounts(), CHART_TAG, VIEW_DATA_LOAD_BUDGET_MS),
+    safeMasterLoad(() => groupChartByType(), CHART_TAG, VIEW_DATA_LOAD_BUDGET_MS),
     safeMasterLoad(() => repo.getLastReconciliation(), RECON_TAG, VIEW_DATA_LOAD_BUDGET_MS),
   ]);
   if (isViewSuperseded(root)) return;
 
-  if (!chartRes.ok) { // chart is essential — no account tree without it
+  if (!chartRes.ok || !chartRes.value.ok) { // chart is essential — no account tree without it
     const tree = root.querySelector('#chart-tree');
-    renderMasterLoadRetryStatus(tree, t('masters.load_error'), t('retry'), () => loadInitial(root, repo));
+    const message = chartRes.ok ? chartRes.value.error : null;
+    renderMasterLoadRetryStatus(tree, message || t('masters.load_error'), t('retry'), () => loadInitial(root, repo));
     return;
   }
-  _accounts           = chartRes.value;
   _lastReconciliation = reconRes.ok ? reconRes.value : null; // reconciliation optional
-  renderChartTree(root);
+  renderChartTree(root, chartRes.value.groups);
   renderReconcileStatus(root, _lastReconciliation);
-  renderUnbalancedList(root, repo, _lastReconciliation?.unbalanced_ids ?? []);
+  renderUnbalancedList(root, _lastReconciliation?.unbalanced_ids ?? []);
 }
 
 export async function render(root) {
   // F-24-09: route-guard (F-24-05) is the authoritative gate for /accounting/*, not this view.
   const repo = getLedgerRepo();
 
-  _selectedAccount    = null;
-  _rawLegs            = [];
+  _selectedCode       = null;
+  _csv                = '';
   _filter             = defaultFilter();
   _lastReconciliation = null;
   _selectedEntryId    = null; _selectedLeg = null;
@@ -315,7 +320,7 @@ export async function render(root) {
     _lastReconciliation = await runReconciliationNow(root, getLedgerRepo()) ?? _lastReconciliation;
   });
 
-  await loadInitial(root, repo);
+  if (repo) await loadInitial(root, repo);
 
   // F-29-24: repost trigger — never boot-wired, only mounted here on demand. The action guard's
   // own verdict, not auth-gate.js's legacy inline gate (F-24-09 AC-01: this view must not

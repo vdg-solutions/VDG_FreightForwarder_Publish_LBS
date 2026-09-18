@@ -10,6 +10,16 @@ import { showConfirm }    from '../../helpers/show-confirm.js';
 import { t }              from '../../../../kernel/core_abstractions/i18n/index.js';
 import { mountAgGrid } from '../../../../kernel/core_abstractions/i18n/ag-grid-locale.js';
 import { patchUser }      from '../../../../storage/core_abstractions/user-directory.js';
+import { mountOverlay } from '../../helpers/mount-overlay.js';
+
+// The wizard is a full-screen fixed backdrop on <body>, so the view-root swap cannot reach it and
+// a second click used to stack a second one. mountOverlay makes it exclusive and hands its
+// lifetime to the route seam; its own ✕/backdrop close still removes it first.
+function mountWizard(wizard) {
+  const untrack = mountOverlay(wizard);
+  wizard.addEventListener('close', untrack, { once: true });
+}
+
 
 const MASTERS_RE               = /^\/manager\/masters\/([^/]+)$/;
 const KIND_CUSTOMER            = 'customers';
@@ -202,7 +212,7 @@ function renderDataQuality(container, customers, shipments, pnlLines) {
     const wizard = document.createElement('vdg-dup-wizard');
     wizard.clusters = allClusters.map((c) => ({ a: c.a, b: c.b, score: c.score ?? 0 }));
     wizard.repo     = getRepo();
-    document.body.appendChild(wizard);
+    mountWizard(wizard);
   });
 }
 
@@ -231,7 +241,7 @@ async function renderCustomersMaster(root) {
     const wizard   = document.createElement('vdg-dup-wizard');
     wizard.clusters = clusters.map((c) => ({ a: c.a, b: c.b, score: c.score ?? 0 }));
     wizard.repo     = repo;
-    document.body.appendChild(wizard);
+    mountWizard(wizard);
   });
 
   try {

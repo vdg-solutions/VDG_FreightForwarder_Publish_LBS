@@ -11,24 +11,14 @@
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
 import { listCloseRecords } from '../../../core_abstractions/ports/governance/period-close.js';
-import { openingBalanceFor, periodOfDate, isPeriodStart, dayBefore } from '../../../core_abstractions/ports/governance/period-opening-balance.js';
+import { openingBalanceFor, periodOfDate, isPeriodStart } from '../../../core_abstractions/ports/governance/period-opening-balance.js';
 
 /**
+ * `live` arrives with the legs — manager_ledger_legs reads the journal for the window and the
+ * balance it opens at together, so this only has to find the signed-off figure beside it.
  * @returns {Promise<{live:number, stamped:object|null, mismatch:boolean}>}
  */
-export async function loadOpeningBalance(ledgerRepo, dataRepo, accountCode, dateFrom) {
-  const asOf = dayBefore(dateFrom);
-  if (!ledgerRepo || !asOf) return { live: 0, stamped: null, mismatch: false };
-
-  let live = 0;
-  try {
-    const res = await ledgerRepo.getBalance(accountCode, asOf);
-    live = Number(res?.balance) || 0;
-  } catch (err) {
-    console.error('[ledger] opening balance read failed:', err); // DEV — seed stays 0, row says so
-    return { live: 0, stamped: null, mismatch: false };
-  }
-
+export async function loadOpeningBalance(dataRepo, accountCode, dateFrom, live) {
   // A stamped opening belongs to a period, so it may only be claimed when the window opens on
   // the period's first day; mid-month, the signed-off figure answers a different question.
   if (!isPeriodStart(dateFrom)) return { live, stamped: null, mismatch: false };

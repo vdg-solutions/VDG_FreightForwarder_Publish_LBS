@@ -137,6 +137,28 @@ export function emptyStateHtml(opts) {
 }
 
 /**
+ * The same three cards, placed INSIDE a table body so the header row survives an empty result.
+ * A hand-rolled <table> has no AG Grid overlay to float a card over, and the two admin screens
+ * that own one used to answer an empty filter by overwriting the whole container with a bare
+ * "—" — losing the <thead> with it and saying nothing about why there was nothing.
+ * @param {object} opts - `emptyStateHtml` options plus `colspan`, the table's column count
+ */
+export function emptyStateRowHtml({ colspan, ...opts }) {
+  return `<tr><td colspan="${colspan}" class="p-0">${emptyStateHtml(opts)}</td></tr>`;
+}
+
+/**
+ * Which card an empty table owes the reader, taken from the reply's OWN fields. `ok` separates a
+ * read that failed from one that legitimately matched nothing — the reply DTOs carry it for
+ * exactly this, and collapsing both to an empty array is what let the two render identically.
+ * @param {{ ok?: boolean, total?: number }} reply
+ */
+export function emptyStateVariant({ ok = true, total = 0 } = {}) {
+  if (!ok) return EMPTY_STATE_VARIANT.LOAD_FAILED;
+  return total > 0 ? EMPTY_STATE_VARIANT.FILTERED : EMPTY_STATE_VARIANT.FIRST_RUN;
+}
+
+/**
  * The load-outcome type a view's read produces, widened beyond pass/fail (owner: a sibling read-
  * side fix lets a collection load land as "N good, M skipped" instead of aborting the whole
  * collection on one bad record — this type is where that count has to live, not collapsed to a

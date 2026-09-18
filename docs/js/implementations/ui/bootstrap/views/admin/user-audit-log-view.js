@@ -9,8 +9,10 @@ import { t, currentLocale, fmtStamp } from '../../../../kernel/core_abstractions
 import { mountDateHints } from '../../util/date-input-hint.js';
 import { auditLogRows, auditLogCsv } from '../../../core_abstractions/ports/manager/user-audit-log-composer.js';
 import { todayLocal } from '../../../../kernel/core_abstractions/util/today-local.js';
+import { emptyStateRowHtml, emptyStateVariant, bindEmptyStateActions } from '../../components/empty-state.js';
 
 const REVOKE_URL_MS = 5_000;
+const AUDIT_COLUMN_COUNT = 5;
 
 let _range = { from: '', to: '' };
 
@@ -32,29 +34,15 @@ function shellHtml() {
     </div>`;
 }
 
-function renderTable(container, rows) {
-  if (!rows.length) {
-    container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 border border-slate-200 rounded-lg">—</div>`;
-    return;
-  }
-
-  const trs = rows.map((r) => {
-    const rawAction = r.action || '';
-    const localizedAction = rawAction ? t(`admin.users.audit_log.action.${rawAction}`) : '';
-    // fallback if missing
-    const displayAction = localizedAction.startsWith('admin.users') ? rawAction : localizedAction;
-
-    return `
-    <tr class="border-t border-slate-100 text-xs align-top">
-      <td class="px-3 py-2 whitespace-nowrap">${fmtStamp(r.ts)}</td>
-      <td class="px-3 py-2">${r.actor_email || ''}</td>
-      <td class="px-3 py-2">${displayAction}</td>
-      <td class="px-3 py-2">${r.target_email || ''}</td>
-      <td class="px-3 py-2 font-mono text-[11px] text-slate-500 max-w-[420px] break-words">
-        ${JSON.stringify(r.before ?? null)} &rarr; ${JSON.stringify(r.after ?? null)}
-      </td>
-    </tr>`;
-  }).join('');
+/// `reply` is wasm's own { ok, total }: a trail that could not be READ and a range that simply
+/// holds nothing are different answers on a compliance screen, and the header row stays up in
+/// both — an empty result used to replace the whole table, <thead> included, with a bare "—".
+function renderTable(container, rows, reply = { ok: true, total: 0 }) {
+  const trs = rows.length ? auditRowsHtml(rows) : emptyStateRowHtml({
+    colspan: AUDIT_COLUMN_COUNT,
+    variant: emptyStateVariant(reply),
+    entity:  t('audit.empty.entity'),
+  });
 
   container.innerHTML = `
     <table class="w-full border border-slate-200 rounded-lg overflow-hidden">
@@ -71,10 +59,30 @@ function renderTable(container, rows) {
     </table>`;
 }
 
+function auditRowsHtml(rows) {
+  return rows.map((r) => {
+    const rawAction = r.action || '';
+    const localizedAction = rawAction ? t(`admin.users.audit_log.action.${rawAction}`) : '';
+    // fallback if missing
+    const displayAction = localizedAction.startsWith('admin.users') ? rawAction : localizedAction;
+
+    return `
+    <tr class="border-t border-slate-100 text-xs align-top">
+      <td class="px-3 py-2 whitespace-nowrap">${fmtStamp(r.ts)}</td>
+      <td class="px-3 py-2">${r.actor_email || ''}</td>
+      <td class="px-3 py-2">${displayAction}</td>
+      <td class="px-3 py-2">${r.target_email || ''}</td>
+      <td class="px-3 py-2 font-mono text-[11px] text-slate-500 max-w-[420px] break-words">
+        ${JSON.stringify(r.before ?? null)} &rarr; ${JSON.stringify(r.after ?? null)}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
 async function applyAndRender(root) {
   const reply = await auditLogRows(_range);
   const rows  = reply.ok ? reply.records : [];
-  renderTable(root.querySelector('#aud-table-wrap'), rows);
+  renderTable(root.querySelector('#aud-table-wrap'), rows, reply);
   const countEl = root.querySelector('#aud-count');
   // An unreadable trail says so. Rendering it as `0 / 0` reads as "nobody has touched an account",
   // which is the one answer a compliance screen must never give when it did not run.
@@ -100,6 +108,20 @@ export async function render(root) {
   _range = { from: '', to: '' };
   root.innerHTML = shellHtml();
   mountDateHints(root);
+
+  // The empty-state card carries real buttons — clearing the range and retrying the read both
+  // have to DO something here, or the card is offering the reader a control that is a placebo.
+  bindEmptyStateActions(root, {
+    onClearFilter: () => {
+      _range = { from: '', to: '' };
+      const fromEl = root.querySelector('#aud-from');
+      const toEl   = root.querySelector('#aud-to');
+      if (fromEl) fromEl.value = '';
+      if (toEl)   toEl.value   = '';
+      applyAndRender(root);
+    },
+    onRetry: () => applyAndRender(root),
+  });
 
   await applyAndRender(root);
 

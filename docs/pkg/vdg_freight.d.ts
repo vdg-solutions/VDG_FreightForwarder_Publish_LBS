@@ -915,29 +915,25 @@ export function manager_ledger_apply_repost(req: any): Promise<any>;
 
 export function manager_ledger_auto_reconcile(req: any): Promise<any>;
 
-export function manager_ledger_balance_sheet(req: any): any;
+export function manager_ledger_balance_sheet(req: any): Promise<any>;
 
-export function manager_ledger_chart_groups(req: any): any;
+export function manager_ledger_chart_groups(req: any): Promise<any>;
 
-export function manager_ledger_csv(req: any): any;
+export function manager_ledger_entry_totals(req: any): Promise<any>;
 
-export function manager_ledger_entry_totals(req: any): any;
-
-export function manager_ledger_filter_legs(req: any): any;
+export function manager_ledger_legs(req: any): Promise<any>;
 
 export function manager_ledger_plan_repost(req: any): Promise<any>;
 
-export function manager_ledger_pnl(req: any): any;
+export function manager_ledger_pnl(req: any): Promise<any>;
 
-export function manager_ledger_pnl_monthly(req: any): any;
+export function manager_ledger_pnl_monthly(req: any): Promise<any>;
 
 export function manager_ledger_purge_orphans(req: any): Promise<any>;
 
 export function manager_ledger_reconcile(req: any): Promise<any>;
 
-export function manager_ledger_running_balances(req: any): any;
-
-export function manager_ledger_trial_balance(req: any): any;
+export function manager_ledger_trial_balance(req: any): Promise<any>;
 
 export function manager_manifest_overview(req: any): any;
 
@@ -1593,18 +1589,16 @@ export interface InitOutput {
     readonly manager_finance_dashboard: (a: number, b: number) => void;
     readonly manager_ledger_apply_repost: (a: number) => number;
     readonly manager_ledger_auto_reconcile: (a: number) => number;
-    readonly manager_ledger_balance_sheet: (a: number, b: number) => void;
-    readonly manager_ledger_chart_groups: (a: number, b: number) => void;
-    readonly manager_ledger_csv: (a: number, b: number) => void;
-    readonly manager_ledger_entry_totals: (a: number, b: number) => void;
-    readonly manager_ledger_filter_legs: (a: number, b: number) => void;
+    readonly manager_ledger_balance_sheet: (a: number) => number;
+    readonly manager_ledger_chart_groups: (a: number) => number;
+    readonly manager_ledger_entry_totals: (a: number) => number;
+    readonly manager_ledger_legs: (a: number) => number;
     readonly manager_ledger_plan_repost: (a: number) => number;
-    readonly manager_ledger_pnl: (a: number, b: number) => void;
-    readonly manager_ledger_pnl_monthly: (a: number, b: number) => void;
+    readonly manager_ledger_pnl: (a: number) => number;
+    readonly manager_ledger_pnl_monthly: (a: number) => number;
     readonly manager_ledger_purge_orphans: (a: number) => number;
     readonly manager_ledger_reconcile: (a: number) => number;
-    readonly manager_ledger_running_balances: (a: number, b: number) => void;
-    readonly manager_ledger_trial_balance: (a: number, b: number) => void;
+    readonly manager_ledger_trial_balance: (a: number) => number;
     readonly manager_manifest_overview: (a: number, b: number) => void;
     readonly manager_margin_pct: (a: number, b: number) => number;
     readonly manager_notification_from_event: (a: number) => number;
@@ -1791,11 +1785,11 @@ export interface InitOutput {
     readonly wasmentityrepo_users_upsert: (a: number, b: number, c: number) => number;
     readonly workspace_header_currency: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly workspace_selectable_currencies: (a: number) => void;
+    readonly wasmentityrepo_userRepo: (a: number) => number;
     readonly wasmentityrepo_fxRateRepo: (a: number) => number;
     readonly wasmentityrepo_ledgerRepo: (a: number) => number;
-    readonly wasmentityrepo_userRepo: (a: number) => number;
-    readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_wasmentityrepo_free: (a: number, b: number) => void;
+    readonly __wbg_userrepo_free: (a: number, b: number) => void;
     readonly __wbg_ledgerrepo_free: (a: number, b: number) => void;
     readonly __wbg_fxraterepo_free: (a: number, b: number) => void;
     readonly rust_sqlite_wasm_abort: () => void;
@@ -1808,9 +1802,9 @@ export interface InitOutput {
     readonly rust_sqlite_wasm_realloc: (a: number, b: number) => number;
     readonly sqlite3_os_end: () => number;
     readonly sqlite3_os_init: () => number;
-    readonly __wasm_bindgen_func_elem_16866: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_16879: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_12373: (a: number, b: number) => void;
+    readonly __wasm_bindgen_func_elem_16924: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_16937: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_12431: (a: number, b: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

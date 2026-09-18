@@ -2,6 +2,8 @@
 // Each navigation swaps #view-root for a fresh empty element with the same id/classes, so a
 // superseded render's captured node reference is detached and its late innerHTML write is a no-op.
 // Element identity is the generation token: only the newest element stays attached as #view-root.
+import { closeRouteOverlays } from '../helpers/mount-overlay.js';
+
 const VIEW_ROOT_ID = 'view-root';
 
 // F-19-72 AC-05: same-route supersession — a mount timeout paints the shell fallback into the
@@ -14,6 +16,9 @@ export function markViewSuperseded(root) { if (root) _superseded.add(root); }
 export function isViewSuperseded(root)   { return !root || _superseded.has(root) || root.isConnected === false; }
 
 export function freshViewRoot() {
+  // Body-attached overlays live OUTSIDE the node swapped below, so the swap alone never ends one.
+  // This is the seam that knows a route is over — mount-overlay.js holds the registry.
+  closeRouteOverlays();
   const current = document.getElementById(VIEW_ROOT_ID);
   const fresh   = current.cloneNode(false);   // same tag + id + classes, no children
   markViewSuperseded(current);                // belt-and-suspenders — navigation already detaches

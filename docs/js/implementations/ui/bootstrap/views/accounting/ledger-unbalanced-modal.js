@@ -2,13 +2,17 @@
 // Extracted from ledger-viewer.js for the 350-line cap.
 
 import { t } from '../../../../kernel/core_abstractions/i18n/index.js';
-import { entryTotals } from '../../../core_abstractions/ports/manager/ledger-aggregator.js';
+import { trackOverlay } from '../../helpers/mount-overlay.js';
 
 function fmtAmount(n) { return n ? Number(n).toLocaleString('vi-VN') : '—'; }
 
 // AC-08: resolve the entry's source shipment/commission and dispatch the same drill-through
 // event the per-leg source column already uses (vdg:open-detail contract, F-23-04 precedent).
-export function jumpToUnbalancedEntry(entryId, legs) {
+//
+// `totals` is the whole answer manager_ledger_entry_totals gave: the entry's legs and their sums,
+// read together. The caller used to scan the legs out itself and hand them back for the totals.
+export function jumpToUnbalancedEntry(entryId, totals) {
+  const { legs, debitSum, creditSum, diff } = totals;
   const source = legs[0]?.source;
   if (source) {
     window.dispatchEvent(new CustomEvent('vdg:open-detail', {
@@ -17,8 +21,6 @@ export function jumpToUnbalancedEntry(entryId, legs) {
   }
 
   // Fallback / immediate view: display the legs in a modal to show exactly what is unbalanced
-  const { debitSum, creditSum, diff } = entryTotals(legs);
-
   const trs = legs.map(l => `
     <tr class="border-b border-slate-100">
       <td class="px-3 py-2 font-mono">${l.account_code}</td>
@@ -63,7 +65,9 @@ export function jumpToUnbalancedEntry(entryId, legs) {
   `;
   // CSP's script-src-attr blocks an inline onclick on the deployed build (ADO #124).
   dlg.addEventListener('click', (ev) => { if (ev.target.closest?.('[data-dialog-close]')) dlg.close(); });
+  // Same seam as every other body-mounted modal: the route swap ends it (mount-overlay.js).
+  const untrack = trackOverlay(dlg);
   document.body.appendChild(dlg);
-  dlg.addEventListener('close', () => dlg.remove());
+  dlg.addEventListener('close', () => { untrack(); dlg.remove(); });
   dlg.showModal();
 }
